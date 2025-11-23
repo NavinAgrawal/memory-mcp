@@ -2156,15 +2156,6 @@ export class KnowledgeGraphManager {
   }
 
   /**
-   * Resolve multiple tags through aliases
-   */
-  private async resolveTags(tags: string[]): Promise<string[]> {
-    const resolved = await Promise.all(tags.map(tag => this.resolveTag(tag)));
-    // Return unique values
-    return [...new Set(resolved)];
-  }
-
-  /**
    * Add a tag alias (synonym mapping)
    * @param alias - The alias/synonym
    * @param canonical - The canonical (main) tag name
