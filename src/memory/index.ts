@@ -1720,17 +1720,17 @@ export class KnowledgeGraphManager {
       .map(a => a.alias);
   }
 
-  // Phase 4: Export graph in various formats
+  // Phase 4 & Tier 0 D1: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
-   * Supports JSON, CSV, and GraphML formats for different use cases.
+   * Supports JSON, CSV, GraphML, GEXF, DOT, Markdown, and Mermaid formats.
    *
-   * @param format - Export format: 'json', 'csv', or 'graphml'
+   * @param format - Export format: 'json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid'
    * @param filter - Optional filter object with same structure as searchByDateRange
    * @returns Exported graph data as a formatted string
    */
   async exportGraph(
-    format: 'json' | 'csv' | 'graphml',
+    format: 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid',
     filter?: {
       startDate?: string;
       endDate?: string;
@@ -1758,6 +1758,14 @@ export class KnowledgeGraphManager {
         return this.exportAsCsv(graph);
       case 'graphml':
         return this.exportAsGraphML(graph);
+      case 'gexf':
+        return this.exportAsGEXF(graph);
+      case 'dot':
+        return this.exportAsDOT(graph);
+      case 'markdown':
+        return this.exportAsMarkdown(graph);
+      case 'mermaid':
+        return this.exportAsMermaid(graph);
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
@@ -1911,6 +1919,292 @@ export class KnowledgeGraphManager {
     // Close graph and graphml
     lines.push('  </graph>');
     lines.push('</graphml>');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as GEXF (Graph Exchange XML Format) for Gephi
+   * GEXF is the native format for Gephi and supports dynamic graphs
+   */
+  private exportAsGEXF(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    // Helper function to escape XML special characters
+    const escapeXml = (str: string | undefined | null): string => {
+      if (str === undefined || str === null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    };
+
+    // GEXF header
+    lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+    lines.push('<gexf xmlns="http://www.gexf.net/1.2draft" version="1.2">');
+    lines.push('  <meta>');
+    lines.push(`    <creator>Memory MCP Server</creator>`);
+    lines.push(`    <description>Knowledge Graph Export</description>`);
+    lines.push('  </meta>');
+    lines.push('  <graph mode="static" defaultedgetype="directed">');
+
+    // Define node attributes
+    lines.push('    <attributes class="node">');
+    lines.push('      <attribute id="0" title="entityType" type="string"/>');
+    lines.push('      <attribute id="1" title="observations" type="string"/>');
+    lines.push('      <attribute id="2" title="createdAt" type="string"/>');
+    lines.push('      <attribute id="3" title="lastModified" type="string"/>');
+    lines.push('      <attribute id="4" title="tags" type="string"/>');
+    lines.push('      <attribute id="5" title="importance" type="double"/>');
+    lines.push('    </attributes>');
+
+    // Define edge attributes
+    lines.push('    <attributes class="edge">');
+    lines.push('      <attribute id="0" title="relationType" type="string"/>');
+    lines.push('      <attribute id="1" title="createdAt" type="string"/>');
+    lines.push('      <attribute id="2" title="lastModified" type="string"/>');
+    lines.push('    </attributes>');
+
+    // Add nodes
+    lines.push('    <nodes>');
+    for (const entity of graph.entities) {
+      const nodeId = escapeXml(entity.name);
+      lines.push(`      <node id="${nodeId}" label="${nodeId}">`);
+      lines.push('        <attvalues>');
+      lines.push(`          <attvalue for="0" value="${escapeXml(entity.entityType)}"/>`);
+      lines.push(`          <attvalue for="1" value="${escapeXml(entity.observations.join('; '))}"/>`);
+      if (entity.createdAt) {
+        lines.push(`          <attvalue for="2" value="${escapeXml(entity.createdAt)}"/>`);
+      }
+      if (entity.lastModified) {
+        lines.push(`          <attvalue for="3" value="${escapeXml(entity.lastModified)}"/>`);
+      }
+      if (entity.tags && entity.tags.length > 0) {
+        lines.push(`          <attvalue for="4" value="${escapeXml(entity.tags.join('; '))}"/>`);
+      }
+      if (entity.importance !== undefined) {
+        lines.push(`          <attvalue for="5" value="${entity.importance}"/>`);
+      }
+      lines.push('        </attvalues>');
+      lines.push('      </node>');
+    }
+    lines.push('    </nodes>');
+
+    // Add edges
+    lines.push('    <edges>');
+    let edgeId = 0;
+    for (const relation of graph.relations) {
+      const sourceId = escapeXml(relation.from);
+      const targetId = escapeXml(relation.to);
+      lines.push(`      <edge id="${edgeId}" source="${sourceId}" target="${targetId}">`);
+      lines.push('        <attvalues>');
+      lines.push(`          <attvalue for="0" value="${escapeXml(relation.relationType)}"/>`);
+      if (relation.createdAt) {
+        lines.push(`          <attvalue for="1" value="${escapeXml(relation.createdAt)}"/>`);
+      }
+      if (relation.lastModified) {
+        lines.push(`          <attvalue for="2" value="${escapeXml(relation.lastModified)}"/>`);
+      }
+      lines.push('        </attvalues>');
+      lines.push('      </edge>');
+      edgeId++;
+    }
+    lines.push('    </edges>');
+
+    lines.push('  </graph>');
+    lines.push('</gexf>');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as DOT format for GraphViz
+   * DOT is a plain text graph description language
+   */
+  private exportAsDOT(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    // Helper function to escape DOT identifiers and strings
+    const escapeDot = (str: string): string => {
+      return '"' + str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"';
+    };
+
+    // DOT header
+    lines.push('digraph KnowledgeGraph {');
+    lines.push('  rankdir=LR;');
+    lines.push('  node [shape=box, style=rounded];');
+    lines.push('');
+
+    // Add nodes
+    for (const entity of graph.entities) {
+      const nodeId = escapeDot(entity.name);
+      const label = [
+        `${entity.name}`,
+        `Type: ${entity.entityType}`,
+      ];
+
+      if (entity.tags && entity.tags.length > 0) {
+        label.push(`Tags: ${entity.tags.join(', ')}`);
+      }
+      if (entity.importance !== undefined) {
+        label.push(`Importance: ${entity.importance}`);
+      }
+      if (entity.observations.length > 0) {
+        label.push(`Observations: ${entity.observations.length}`);
+      }
+
+      const labelStr = escapeDot(label.join('\\n'));
+      lines.push(`  ${nodeId} [label=${labelStr}];`);
+    }
+
+    lines.push('');
+
+    // Add edges
+    for (const relation of graph.relations) {
+      const fromId = escapeDot(relation.from);
+      const toId = escapeDot(relation.to);
+      const label = escapeDot(relation.relationType);
+      lines.push(`  ${fromId} -> ${toId} [label=${label}];`);
+    }
+
+    lines.push('}');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as Markdown for human-readable documentation
+   */
+  private exportAsMarkdown(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    lines.push('# Knowledge Graph Export');
+    lines.push('');
+    lines.push(`**Exported:** ${new Date().toISOString()}`);
+    lines.push(`**Entities:** ${graph.entities.length}`);
+    lines.push(`**Relations:** ${graph.relations.length}`);
+    lines.push('');
+
+    // Entities section
+    lines.push('## Entities');
+    lines.push('');
+
+    for (const entity of graph.entities) {
+      lines.push(`### ${entity.name}`);
+      lines.push('');
+      lines.push(`- **Type:** ${entity.entityType}`);
+
+      if (entity.tags && entity.tags.length > 0) {
+        lines.push(`- **Tags:** ${entity.tags.map(t => `\`${t}\``).join(', ')}`);
+      }
+
+      if (entity.importance !== undefined) {
+        lines.push(`- **Importance:** ${entity.importance}/10`);
+      }
+
+      if (entity.createdAt) {
+        lines.push(`- **Created:** ${entity.createdAt}`);
+      }
+
+      if (entity.lastModified) {
+        lines.push(`- **Modified:** ${entity.lastModified}`);
+      }
+
+      if (entity.observations.length > 0) {
+        lines.push('');
+        lines.push('**Observations:**');
+        for (const obs of entity.observations) {
+          lines.push(`- ${obs}`);
+        }
+      }
+
+      lines.push('');
+    }
+
+    // Relations section
+    if (graph.relations.length > 0) {
+      lines.push('## Relations');
+      lines.push('');
+
+      for (const relation of graph.relations) {
+        lines.push(`- **${relation.from}** → *${relation.relationType}* → **${relation.to}**`);
+      }
+
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as Mermaid diagram syntax
+   * Can be rendered in GitHub, GitLab, and many documentation tools
+   */
+  private exportAsMermaid(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    // Helper to sanitize node IDs for Mermaid
+    const sanitizeId = (str: string): string => {
+      return str.replace(/[^a-zA-Z0-9_]/g, '_');
+    };
+
+    // Helper to escape text in labels
+    const escapeLabel = (str: string): string => {
+      return str.replace(/"/g, '#quot;');
+    };
+
+    lines.push('graph LR');
+    lines.push('  %% Knowledge Graph');
+    lines.push('');
+
+    // Create node ID mapping
+    const nodeIds = new Map<string, string>();
+    for (const entity of graph.entities) {
+      nodeIds.set(entity.name, sanitizeId(entity.name));
+    }
+
+    // Add nodes with labels
+    for (const entity of graph.entities) {
+      const nodeId = nodeIds.get(entity.name)!;
+      const labelParts: string[] = [entity.name];
+
+      if (entity.entityType) {
+        labelParts.push(`Type: ${entity.entityType}`);
+      }
+
+      if (entity.tags && entity.tags.length > 0) {
+        labelParts.push(`Tags: ${entity.tags.join(', ')}`);
+      }
+
+      const label = escapeLabel(labelParts.join('<br/>'));
+      lines.push(`  ${nodeId}["${label}"]`);
+
+      // Add styling based on importance
+      if (entity.importance !== undefined) {
+        if (entity.importance >= 7) {
+          lines.push(`  style ${nodeId} fill:#ff6b6b,stroke:#c92a2a`);
+        } else if (entity.importance >= 4) {
+          lines.push(`  style ${nodeId} fill:#ffd43b,stroke:#fab005`);
+        } else {
+          lines.push(`  style ${nodeId} fill:#a9e34b,stroke:#74b816`);
+        }
+      }
+    }
+
+    lines.push('');
+
+    // Add relations
+    for (const relation of graph.relations) {
+      const fromId = nodeIds.get(relation.from);
+      const toId = nodeIds.get(relation.to);
+
+      if (fromId && toId) {
+        const label = escapeLabel(relation.relationType);
+        lines.push(`  ${fromId} -->|"${label}"| ${toId}`);
+      }
+    }
 
     return lines.join('\n');
   }
@@ -2619,14 +2913,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "export_graph",
-        description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
+        description: "Export the knowledge graph in various formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with optional filtering. Multiple formats support different visualization and documentation tools.",
         inputSchema: {
           type: "object",
           properties: {
             format: {
               type: "string",
-              enum: ["json", "csv", "graphml"],
-              description: "Export format: 'json' for pretty-printed JSON, 'csv' for comma-separated values with entities and relations sections, 'graphml' for GraphML XML format"
+              enum: ["json", "csv", "graphml", "gexf", "dot", "markdown", "mermaid"],
+              description: "Export format: 'json' (JSON data), 'csv' (spreadsheet), 'graphml' (Gephi/Cytoscape), 'gexf' (Gephi native), 'dot' (GraphViz), 'markdown' (documentation), 'mermaid' (diagrams)"
             },
             filter: {
               type: "object",
