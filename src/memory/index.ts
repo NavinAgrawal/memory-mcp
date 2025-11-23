@@ -147,6 +147,16 @@ export type BooleanQueryNode =
   | { type: 'NOT'; child: BooleanQueryNode }
   | { type: 'TERM'; field?: string; value: string };
 
+// Import result type
+export interface ImportResult {
+  entitiesAdded: number;
+  entitiesSkipped: number;
+  entitiesUpdated: number;
+  relationsAdded: number;
+  relationsSkipped: number;
+  errors: string[];
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
@@ -2208,6 +2218,367 @@ export class KnowledgeGraphManager {
 
     return lines.join('\n');
   }
+
+  // Tier 0 D2: Import capabilities with merge strategies
+  /**
+   * Import knowledge graph from various formats
+   * @param format - Import format: 'json', 'csv', or 'graphml'
+   * @param data - The import data as a string
+   * @param mergeStrategy - How to handle conflicts: 'replace', 'skip', 'merge', 'fail'
+   * @param dryRun - If true, preview changes without applying them
+   * @returns Import result with statistics
+   */
+  async importGraph(
+    format: 'json' | 'csv' | 'graphml',
+    data: string,
+    mergeStrategy: 'replace' | 'skip' | 'merge' | 'fail' = 'skip',
+    dryRun: boolean = false
+  ): Promise<ImportResult> {
+    let importedGraph: KnowledgeGraph;
+
+    // Parse the input data based on format
+    try {
+      switch (format) {
+        case 'json':
+          importedGraph = this.parseJsonImport(data);
+          break;
+        case 'csv':
+          importedGraph = this.parseCsvImport(data);
+          break;
+        case 'graphml':
+          importedGraph = this.parseGraphMLImport(data);
+          break;
+        default:
+          throw new Error(`Unsupported import format: ${format}`);
+      }
+    } catch (error) {
+      return {
+        entitiesAdded: 0,
+        entitiesSkipped: 0,
+        entitiesUpdated: 0,
+        relationsAdded: 0,
+        relationsSkipped: 0,
+        errors: [`Failed to parse ${format} data: ${error instanceof Error ? error.message : String(error)}`]
+      };
+    }
+
+    // Merge with existing graph
+    return await this.mergeImportedGraph(importedGraph, mergeStrategy, dryRun);
+  }
+
+  /**
+   * Parse JSON format import data
+   */
+  private parseJsonImport(data: string): KnowledgeGraph {
+    const parsed = JSON.parse(data);
+
+    // Validate structure
+    if (!parsed.entities || !Array.isArray(parsed.entities)) {
+      throw new Error('Invalid JSON: missing or invalid entities array');
+    }
+    if (!parsed.relations || !Array.isArray(parsed.relations)) {
+      throw new Error('Invalid JSON: missing or invalid relations array');
+    }
+
+    return {
+      entities: parsed.entities as Entity[],
+      relations: parsed.relations as Relation[]
+    };
+  }
+
+  /**
+   * Parse CSV format import data
+   * Expects format: # ENTITIES section with header, then # RELATIONS section with header
+   */
+  private parseCsvImport(data: string): KnowledgeGraph {
+    const lines = data.split('\n').map(line => line.trim()).filter(line => line);
+    const entities: Entity[] = [];
+    const relations: Relation[] = [];
+
+    let section: 'entities' | 'relations' | null = null;
+    let headerParsed = false;
+
+    // Helper to parse CSV line (handles quoted fields)
+    const parseCsvLine = (line: string): string[] => {
+      const fields: string[] = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i++;
+          } else {
+            // Toggle quotes
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          // Field separator
+          fields.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+
+      fields.push(current);
+      return fields;
+    };
+
+    for (const line of lines) {
+      // Section markers
+      if (line.startsWith('# ENTITIES')) {
+        section = 'entities';
+        headerParsed = false;
+        continue;
+      } else if (line.startsWith('# RELATIONS')) {
+        section = 'relations';
+        headerParsed = false;
+        continue;
+      }
+
+      // Skip comments
+      if (line.startsWith('#')) {
+        continue;
+      }
+
+      // Parse based on current section
+      if (section === 'entities') {
+        if (!headerParsed) {
+          headerParsed = true; // Skip header line
+          continue;
+        }
+
+        const fields = parseCsvLine(line);
+        if (fields.length >= 2) {
+          const entity: Entity = {
+            name: fields[0],
+            entityType: fields[1],
+            observations: fields[2] ? fields[2].split(';').map(s => s.trim()).filter(s => s) : [],
+            createdAt: fields[3] || undefined,
+            lastModified: fields[4] || undefined,
+            tags: fields[5] ? fields[5].split(';').map(s => s.trim().toLowerCase()).filter(s => s) : undefined,
+            importance: fields[6] ? parseFloat(fields[6]) : undefined
+          };
+          entities.push(entity);
+        }
+      } else if (section === 'relations') {
+        if (!headerParsed) {
+          headerParsed = true; // Skip header line
+          continue;
+        }
+
+        const fields = parseCsvLine(line);
+        if (fields.length >= 3) {
+          const relation: Relation = {
+            from: fields[0],
+            to: fields[1],
+            relationType: fields[2],
+            createdAt: fields[3] || undefined,
+            lastModified: fields[4] || undefined
+          };
+          relations.push(relation);
+        }
+      }
+    }
+
+    return { entities, relations };
+  }
+
+  /**
+   * Parse GraphML format import data
+   */
+  private parseGraphMLImport(data: string): KnowledgeGraph {
+    const entities: Entity[] = [];
+    const relations: Relation[] = [];
+
+    // Simple XML parsing using regex (for basic GraphML structure)
+    // Note: This is a simplified parser. For production, consider using a proper XML parser.
+
+    // Extract nodes
+    const nodeRegex = /<node\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/node>/g;
+    let nodeMatch;
+
+    while ((nodeMatch = nodeRegex.exec(data)) !== null) {
+      const nodeId = nodeMatch[1];
+      const nodeContent = nodeMatch[2];
+
+      // Extract attributes
+      const getDataValue = (key: string): string | undefined => {
+        const dataRegex = new RegExp(`<data\\s+key="${key}">([^<]*)<\/data>`);
+        const match = dataRegex.exec(nodeContent);
+        return match ? match[1] : undefined;
+      };
+
+      const entity: Entity = {
+        name: nodeId,
+        entityType: getDataValue('d0') || getDataValue('entityType') || 'unknown',
+        observations: (getDataValue('d1') || getDataValue('observations') || '').split(';').map(s => s.trim()).filter(s => s),
+        createdAt: getDataValue('d2') || getDataValue('createdAt'),
+        lastModified: getDataValue('d3') || getDataValue('lastModified'),
+        tags: (getDataValue('d4') || getDataValue('tags') || '').split(';').map(s => s.trim().toLowerCase()).filter(s => s),
+        importance: getDataValue('d5') || getDataValue('importance') ? parseFloat(getDataValue('d5') || getDataValue('importance') || '0') : undefined
+      };
+
+      entities.push(entity);
+    }
+
+    // Extract edges
+    const edgeRegex = /<edge\s+[^>]*source="([^"]+)"\s+target="([^"]+)"[^>]*>([\s\S]*?)<\/edge>/g;
+    let edgeMatch;
+
+    while ((edgeMatch = edgeRegex.exec(data)) !== null) {
+      const source = edgeMatch[1];
+      const target = edgeMatch[2];
+      const edgeContent = edgeMatch[3];
+
+      // Extract attributes
+      const getDataValue = (key: string): string | undefined => {
+        const dataRegex = new RegExp(`<data\\s+key="${key}">([^<]*)<\/data>`);
+        const match = dataRegex.exec(edgeContent);
+        return match ? match[1] : undefined;
+      };
+
+      const relation: Relation = {
+        from: source,
+        to: target,
+        relationType: getDataValue('e0') || getDataValue('relationType') || 'related_to',
+        createdAt: getDataValue('e1') || getDataValue('createdAt'),
+        lastModified: getDataValue('e2') || getDataValue('lastModified')
+      };
+
+      relations.push(relation);
+    }
+
+    return { entities, relations };
+  }
+
+  /**
+   * Merge imported graph with existing graph based on strategy
+   */
+  private async mergeImportedGraph(
+    importedGraph: KnowledgeGraph,
+    mergeStrategy: 'replace' | 'skip' | 'merge' | 'fail',
+    dryRun: boolean
+  ): Promise<ImportResult> {
+    const existingGraph = await this.loadGraph();
+    const result: ImportResult = {
+      entitiesAdded: 0,
+      entitiesSkipped: 0,
+      entitiesUpdated: 0,
+      relationsAdded: 0,
+      relationsSkipped: 0,
+      errors: []
+    };
+
+    // Create maps for quick lookup
+    const existingEntitiesMap = new Map<string, Entity>();
+    for (const entity of existingGraph.entities) {
+      existingEntitiesMap.set(entity.name, entity);
+    }
+
+    const existingRelationsSet = new Set<string>();
+    for (const relation of existingGraph.relations) {
+      existingRelationsSet.add(`${relation.from}|${relation.to}|${relation.relationType}`);
+    }
+
+    // Process entities
+    for (const importedEntity of importedGraph.entities) {
+      const existing = existingEntitiesMap.get(importedEntity.name);
+
+      if (!existing) {
+        // New entity - always add
+        result.entitiesAdded++;
+        if (!dryRun) {
+          existingGraph.entities.push(importedEntity);
+          existingEntitiesMap.set(importedEntity.name, importedEntity);
+        }
+      } else {
+        // Entity exists - apply strategy
+        switch (mergeStrategy) {
+          case 'replace':
+            result.entitiesUpdated++;
+            if (!dryRun) {
+              Object.assign(existing, importedEntity);
+            }
+            break;
+
+          case 'skip':
+            result.entitiesSkipped++;
+            break;
+
+          case 'merge':
+            result.entitiesUpdated++;
+            if (!dryRun) {
+              // Merge observations (unique)
+              const combinedObs = [...new Set([...existing.observations, ...importedEntity.observations])];
+              existing.observations = combinedObs;
+
+              // Merge tags (unique)
+              if (importedEntity.tags) {
+                existing.tags = existing.tags || [];
+                existing.tags = [...new Set([...existing.tags, ...importedEntity.tags])];
+              }
+
+              // Use imported importance if present
+              if (importedEntity.importance !== undefined) {
+                existing.importance = importedEntity.importance;
+              }
+
+              // Update timestamps
+              existing.lastModified = new Date().toISOString();
+            }
+            break;
+
+          case 'fail':
+            result.errors.push(`Entity "${importedEntity.name}" already exists`);
+            break;
+        }
+      }
+    }
+
+    // Process relations
+    for (const importedRelation of importedGraph.relations) {
+      const relationKey = `${importedRelation.from}|${importedRelation.to}|${importedRelation.relationType}`;
+
+      // Check if both entities exist
+      if (!existingEntitiesMap.has(importedRelation.from)) {
+        result.errors.push(`Relation source entity "${importedRelation.from}" does not exist`);
+        continue;
+      }
+      if (!existingEntitiesMap.has(importedRelation.to)) {
+        result.errors.push(`Relation target entity "${importedRelation.to}" does not exist`);
+        continue;
+      }
+
+      if (!existingRelationsSet.has(relationKey)) {
+        // New relation - always add
+        result.relationsAdded++;
+        if (!dryRun) {
+          existingGraph.relations.push(importedRelation);
+          existingRelationsSet.add(relationKey);
+        }
+      } else {
+        // Relation exists
+        if (mergeStrategy === 'fail') {
+          result.errors.push(`Relation "${relationKey}" already exists`);
+        } else {
+          result.relationsSkipped++;
+        }
+      }
+    }
+
+    // Save if not dry run and no errors
+    if (!dryRun && (mergeStrategy !== 'fail' || result.errors.length === 0)) {
+      await this.saveGraph(existingGraph);
+    }
+
+    return result;
+  }
 }
 
 let knowledgeGraphManager: KnowledgeGraphManager;
@@ -2912,6 +3283,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "import_graph",
+        description: "Import knowledge graph from JSON, CSV, or GraphML formats with configurable merge strategies. Supports dry-run mode for previewing changes before applying them.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            format: {
+              type: "string",
+              enum: ["json", "csv", "graphml"],
+              description: "Import format: 'json' (JSON data), 'csv' (spreadsheet with sections), 'graphml' (GraphML XML)"
+            },
+            data: {
+              type: "string",
+              description: "The import data as a string in the specified format"
+            },
+            mergeStrategy: {
+              type: "string",
+              enum: ["replace", "skip", "merge", "fail"],
+              description: "How to handle existing entities: 'replace' (overwrite), 'skip' (keep existing), 'merge' (combine data), 'fail' (error on conflict). Default: 'skip'"
+            },
+            dryRun: {
+              type: "boolean",
+              description: "If true, preview changes without applying them. Default: false"
+            },
+          },
+          required: ["format", "data"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "export_graph",
         description: "Export the knowledge graph in various formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with optional filtering. Multiple formats support different visualization and documentation tools.",
         inputSchema: {
@@ -3041,8 +3441,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getAliasesForTag(args.canonicalTag as string), null, 2) }] };
     case "resolve_tag":
       return { content: [{ type: "text", text: JSON.stringify({ tag: args.tag, resolved: await knowledgeGraphManager.resolveTag(args.tag as string) }, null, 2) }] };
+    case "import_graph":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.importGraph(args.format as 'json' | 'csv' | 'graphml', args.data as string, args.mergeStrategy as 'replace' | 'skip' | 'merge' | 'fail' | undefined, args.dryRun as boolean | undefined), null, 2) }] };
     case "export_graph":
-      return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
+      return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
