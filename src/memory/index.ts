@@ -130,6 +130,33 @@ export interface TagAlias {
   createdAt: string;
 }
 
+export interface SearchResult {
+  entity: Entity;
+  score: number;
+  matchedFields: {
+    name?: boolean;
+    entityType?: boolean;
+    observations?: string[];
+  };
+}
+
+// Boolean search query AST types
+export type BooleanQueryNode =
+  | { type: 'AND'; children: BooleanQueryNode[] }
+  | { type: 'OR'; children: BooleanQueryNode[] }
+  | { type: 'NOT'; child: BooleanQueryNode }
+  | { type: 'TERM'; field?: string; value: string };
+
+// Import result type
+export interface ImportResult {
+  entitiesAdded: number;
+  entitiesSkipped: number;
+  entitiesUpdated: number;
+  relationsAdded: number;
+  relationsSkipped: number;
+  errors: string[];
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
@@ -1169,6 +1196,424 @@ export class KnowledgeGraphManager {
       .map(s => s.text);
   }
 
+  // Tier 0 C1: Full-text search with TF-IDF ranking
+  /**
+   * Tokenize text into lowercase words, removing punctuation
+   */
+  private tokenize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+  }
+
+  /**
+   * Calculate term frequency (TF) for a term in a document
+   * TF = (number of times term appears) / (total terms in document)
+   */
+  private calculateTF(term: string, document: string[]): number {
+    const termCount = document.filter(word => word === term).length;
+    return document.length > 0 ? termCount / document.length : 0;
+  }
+
+  /**
+   * Calculate inverse document frequency (IDF) for a term across all documents
+   * IDF = log(total documents / documents containing term)
+   */
+  private calculateIDF(term: string, documents: string[][]): number {
+    const docsWithTerm = documents.filter(doc => doc.includes(term)).length;
+    if (docsWithTerm === 0) return 0;
+    return Math.log(documents.length / docsWithTerm);
+  }
+
+  /**
+   * Calculate TF-IDF score for a term in a document
+   * TF-IDF = TF * IDF
+   */
+  private calculateTFIDF(term: string, document: string[], allDocuments: string[][]): number {
+    const tf = this.calculateTF(term, document);
+    const idf = this.calculateIDF(term, allDocuments);
+    return tf * idf;
+  }
+
+  /**
+   * Convert an entity to a searchable document (concatenated text)
+   */
+  private entityToDocument(entity: Entity): string {
+    return [
+      entity.name,
+      entity.entityType,
+      ...entity.observations
+    ].join(' ');
+  }
+
+  /**
+   * Search nodes with TF-IDF ranking for relevance scoring
+   * @param query - Search query
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @param limit - Optional maximum number of results (default 50)
+   * @returns Array of search results with scores, sorted by relevance
+   */
+  async searchNodesRanked(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number,
+    limit: number = 50
+  ): Promise<SearchResult[]> {
+    const graph = await this.loadGraph();
+
+    // Normalize tags to lowercase for case-insensitive matching
+    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Tokenize query
+    const queryTerms = this.tokenize(query);
+
+    if (queryTerms.length === 0) {
+      return [];
+    }
+
+    // Convert all entities to tokenized documents
+    const allDocuments = graph.entities.map(e => this.tokenize(this.entityToDocument(e)));
+
+    // Calculate scores for each entity
+    const results: SearchResult[] = [];
+
+    for (let i = 0; i < graph.entities.length; i++) {
+      const entity = graph.entities[i];
+      const document = allDocuments[i];
+
+      // Apply tag filter
+      if (normalizedTags && normalizedTags.length > 0) {
+        if (!entity.tags || entity.tags.length === 0) continue;
+        const entityTags = entity.tags.map(tag => tag.toLowerCase());
+        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
+        if (!hasMatchingTag) continue;
+      }
+
+      // Apply importance filter
+      if (minImportance !== undefined && (entity.importance === undefined || entity.importance < minImportance)) {
+        continue;
+      }
+      if (maxImportance !== undefined && (entity.importance === undefined || entity.importance > maxImportance)) {
+        continue;
+      }
+
+      // Calculate TF-IDF score for each query term
+      let totalScore = 0;
+      const matchedFields: SearchResult['matchedFields'] = {};
+
+      for (const term of queryTerms) {
+        const tfidf = this.calculateTFIDF(term, document, allDocuments);
+        totalScore += tfidf;
+
+        // Track which fields matched
+        const nameLower = entity.name.toLowerCase();
+        const typeLower = entity.entityType.toLowerCase();
+
+        if (nameLower.includes(term)) {
+          matchedFields.name = true;
+        }
+        if (typeLower.includes(term)) {
+          matchedFields.entityType = true;
+        }
+
+        const matchedObs = entity.observations.filter(obs =>
+          obs.toLowerCase().includes(term)
+        );
+        if (matchedObs.length > 0) {
+          if (!matchedFields.observations) {
+            matchedFields.observations = [];
+          }
+          matchedFields.observations.push(...matchedObs);
+        }
+      }
+
+      // Only include entities with non-zero scores
+      if (totalScore > 0) {
+        results.push({
+          entity,
+          score: totalScore,
+          matchedFields
+        });
+      }
+    }
+
+    // Sort by score (descending) and apply limit
+    return results
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+  }
+
+  // Tier 0 C3: Boolean search with query parser
+  /**
+   * Tokenize a boolean search query into tokens
+   */
+  private tokenizeBooleanQuery(query: string): string[] {
+    const tokens: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < query.length; i++) {
+      const char = query[i];
+
+      if (char === '"') {
+        if (inQuotes) {
+          // End of quoted string
+          tokens.push(current);
+          current = '';
+          inQuotes = false;
+        } else {
+          // Start of quoted string
+          if (current.trim()) {
+            tokens.push(current.trim());
+            current = '';
+          }
+          inQuotes = true;
+        }
+      } else if (!inQuotes && (char === '(' || char === ')')) {
+        // Parentheses are separate tokens
+        if (current.trim()) {
+          tokens.push(current.trim());
+          current = '';
+        }
+        tokens.push(char);
+      } else if (!inQuotes && /\s/.test(char)) {
+        // Whitespace outside quotes
+        if (current.trim()) {
+          tokens.push(current.trim());
+          current = '';
+        }
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) {
+      tokens.push(current.trim());
+    }
+
+    return tokens;
+  }
+
+  /**
+   * Parse a boolean search query into an AST
+   * Supports: AND, OR, NOT, parentheses, field-specific queries (field:value)
+   */
+  private parseBooleanQuery(query: string): BooleanQueryNode {
+    const tokens = this.tokenizeBooleanQuery(query);
+    let position = 0;
+
+    const peek = (): string | undefined => tokens[position];
+    const consume = (): string | undefined => tokens[position++];
+
+    // Parse OR expressions (lowest precedence)
+    const parseOr = (): BooleanQueryNode => {
+      let left = parseAnd();
+
+      while (peek()?.toUpperCase() === 'OR') {
+        consume(); // consume 'OR'
+        const right = parseAnd();
+        left = { type: 'OR', children: [left, right] };
+      }
+
+      return left;
+    };
+
+    // Parse AND expressions
+    const parseAnd = (): BooleanQueryNode => {
+      let left = parseNot();
+
+      while (peek() && peek()?.toUpperCase() !== 'OR' && peek() !== ')') {
+        // Implicit AND if next token is not OR or )
+        if (peek()?.toUpperCase() === 'AND') {
+          consume(); // consume 'AND'
+        }
+        const right = parseNot();
+        left = { type: 'AND', children: [left, right] };
+      }
+
+      return left;
+    };
+
+    // Parse NOT expressions
+    const parseNot = (): BooleanQueryNode => {
+      if (peek()?.toUpperCase() === 'NOT') {
+        consume(); // consume 'NOT'
+        const child = parseNot();
+        return { type: 'NOT', child };
+      }
+      return parsePrimary();
+    };
+
+    // Parse primary expressions (terms, field queries, parentheses)
+    const parsePrimary = (): BooleanQueryNode => {
+      const token = peek();
+
+      if (!token) {
+        throw new Error('Unexpected end of query');
+      }
+
+      // Parentheses
+      if (token === '(') {
+        consume(); // consume '('
+        const node = parseOr();
+        if (consume() !== ')') {
+          throw new Error('Expected closing parenthesis');
+        }
+        return node;
+      }
+
+      // Field-specific query (field:value)
+      if (token.includes(':')) {
+        consume();
+        const [field, ...valueParts] = token.split(':');
+        const value = valueParts.join(':'); // Handle colons in value
+        return { type: 'TERM', field: field.toLowerCase(), value: value.toLowerCase() };
+      }
+
+      // Regular term
+      consume();
+      return { type: 'TERM', value: token.toLowerCase() };
+    };
+
+    const result = parseOr();
+
+    // Check for unconsumed tokens
+    if (position < tokens.length) {
+      throw new Error(`Unexpected token: ${tokens[position]}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Evaluate a boolean query AST against an entity
+   */
+  private evaluateBooleanQuery(node: BooleanQueryNode, entity: Entity): boolean {
+    switch (node.type) {
+      case 'AND':
+        return node.children.every(child => this.evaluateBooleanQuery(child, entity));
+
+      case 'OR':
+        return node.children.some(child => this.evaluateBooleanQuery(child, entity));
+
+      case 'NOT':
+        return !this.evaluateBooleanQuery(node.child, entity);
+
+      case 'TERM': {
+        const value = node.value;
+
+        // Field-specific search
+        if (node.field) {
+          switch (node.field) {
+            case 'name':
+              return entity.name.toLowerCase().includes(value);
+            case 'type':
+            case 'entitytype':
+              return entity.entityType.toLowerCase().includes(value);
+            case 'observation':
+            case 'observations':
+              return entity.observations.some(obs => obs.toLowerCase().includes(value));
+            case 'tag':
+            case 'tags':
+              return entity.tags ? entity.tags.some(tag => tag.toLowerCase().includes(value)) : false;
+            default:
+              // Unknown field, search all text fields
+              return this.entityMatchesTerm(entity, value);
+          }
+        }
+
+        // General search across all fields
+        return this.entityMatchesTerm(entity, value);
+      }
+    }
+  }
+
+  /**
+   * Check if entity matches a search term in any text field
+   */
+  private entityMatchesTerm(entity: Entity, term: string): boolean {
+    const termLower = term.toLowerCase();
+
+    return (
+      entity.name.toLowerCase().includes(termLower) ||
+      entity.entityType.toLowerCase().includes(termLower) ||
+      entity.observations.some(obs => obs.toLowerCase().includes(termLower)) ||
+      (entity.tags?.some(tag => tag.toLowerCase().includes(termLower)) || false)
+    );
+  }
+
+  /**
+   * Boolean search with support for AND, OR, NOT operators and field-specific queries
+   * @param query - Boolean query string (e.g., "name:Alice AND (type:person OR observation:programming)")
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @returns Filtered knowledge graph matching the boolean query
+   */
+  async booleanSearch(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    const graph = await this.loadGraph();
+
+    // Parse the query into an AST
+    let queryAst: BooleanQueryNode;
+    try {
+      queryAst = this.parseBooleanQuery(query);
+    } catch (error) {
+      throw new Error(`Failed to parse boolean query: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Normalize tags to lowercase for case-insensitive matching
+    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Filter entities
+    const filteredEntities = graph.entities.filter(e => {
+      // Evaluate boolean query
+      if (!this.evaluateBooleanQuery(queryAst, e)) {
+        return false;
+      }
+
+      // Apply tag filter
+      if (normalizedTags && normalizedTags.length > 0) {
+        if (!e.tags || e.tags.length === 0) return false;
+        const entityTags = e.tags.map(tag => tag.toLowerCase());
+        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
+        if (!hasMatchingTag) return false;
+      }
+
+      // Apply importance filter
+      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
+        return false;
+      }
+      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Create a Set of filtered entity names for quick lookup
+    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+
+    // Filter relations to only include those between filtered entities
+    const filteredRelations = graph.relations.filter(r =>
+      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
+    );
+
+    return {
+      entities: filteredEntities,
+      relations: filteredRelations,
+    };
+  }
+
   // Tier 0 B2: Tag aliases for synonym management
   private async loadTagAliases(): Promise<TagAlias[]> {
     try {
@@ -1285,17 +1730,17 @@ export class KnowledgeGraphManager {
       .map(a => a.alias);
   }
 
-  // Phase 4: Export graph in various formats
+  // Phase 4 & Tier 0 D1: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
-   * Supports JSON, CSV, and GraphML formats for different use cases.
+   * Supports JSON, CSV, GraphML, GEXF, DOT, Markdown, and Mermaid formats.
    *
-   * @param format - Export format: 'json', 'csv', or 'graphml'
+   * @param format - Export format: 'json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid'
    * @param filter - Optional filter object with same structure as searchByDateRange
    * @returns Exported graph data as a formatted string
    */
   async exportGraph(
-    format: 'json' | 'csv' | 'graphml',
+    format: 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid',
     filter?: {
       startDate?: string;
       endDate?: string;
@@ -1323,6 +1768,14 @@ export class KnowledgeGraphManager {
         return this.exportAsCsv(graph);
       case 'graphml':
         return this.exportAsGraphML(graph);
+      case 'gexf':
+        return this.exportAsGEXF(graph);
+      case 'dot':
+        return this.exportAsDOT(graph);
+      case 'markdown':
+        return this.exportAsMarkdown(graph);
+      case 'mermaid':
+        return this.exportAsMermaid(graph);
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
@@ -1478,6 +1931,653 @@ export class KnowledgeGraphManager {
     lines.push('</graphml>');
 
     return lines.join('\n');
+  }
+
+  /**
+   * Export graph as GEXF (Graph Exchange XML Format) for Gephi
+   * GEXF is the native format for Gephi and supports dynamic graphs
+   */
+  private exportAsGEXF(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    // Helper function to escape XML special characters
+    const escapeXml = (str: string | undefined | null): string => {
+      if (str === undefined || str === null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    };
+
+    // GEXF header
+    lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+    lines.push('<gexf xmlns="http://www.gexf.net/1.2draft" version="1.2">');
+    lines.push('  <meta>');
+    lines.push(`    <creator>Memory MCP Server</creator>`);
+    lines.push(`    <description>Knowledge Graph Export</description>`);
+    lines.push('  </meta>');
+    lines.push('  <graph mode="static" defaultedgetype="directed">');
+
+    // Define node attributes
+    lines.push('    <attributes class="node">');
+    lines.push('      <attribute id="0" title="entityType" type="string"/>');
+    lines.push('      <attribute id="1" title="observations" type="string"/>');
+    lines.push('      <attribute id="2" title="createdAt" type="string"/>');
+    lines.push('      <attribute id="3" title="lastModified" type="string"/>');
+    lines.push('      <attribute id="4" title="tags" type="string"/>');
+    lines.push('      <attribute id="5" title="importance" type="double"/>');
+    lines.push('    </attributes>');
+
+    // Define edge attributes
+    lines.push('    <attributes class="edge">');
+    lines.push('      <attribute id="0" title="relationType" type="string"/>');
+    lines.push('      <attribute id="1" title="createdAt" type="string"/>');
+    lines.push('      <attribute id="2" title="lastModified" type="string"/>');
+    lines.push('    </attributes>');
+
+    // Add nodes
+    lines.push('    <nodes>');
+    for (const entity of graph.entities) {
+      const nodeId = escapeXml(entity.name);
+      lines.push(`      <node id="${nodeId}" label="${nodeId}">`);
+      lines.push('        <attvalues>');
+      lines.push(`          <attvalue for="0" value="${escapeXml(entity.entityType)}"/>`);
+      lines.push(`          <attvalue for="1" value="${escapeXml(entity.observations.join('; '))}"/>`);
+      if (entity.createdAt) {
+        lines.push(`          <attvalue for="2" value="${escapeXml(entity.createdAt)}"/>`);
+      }
+      if (entity.lastModified) {
+        lines.push(`          <attvalue for="3" value="${escapeXml(entity.lastModified)}"/>`);
+      }
+      if (entity.tags && entity.tags.length > 0) {
+        lines.push(`          <attvalue for="4" value="${escapeXml(entity.tags.join('; '))}"/>`);
+      }
+      if (entity.importance !== undefined) {
+        lines.push(`          <attvalue for="5" value="${entity.importance}"/>`);
+      }
+      lines.push('        </attvalues>');
+      lines.push('      </node>');
+    }
+    lines.push('    </nodes>');
+
+    // Add edges
+    lines.push('    <edges>');
+    let edgeId = 0;
+    for (const relation of graph.relations) {
+      const sourceId = escapeXml(relation.from);
+      const targetId = escapeXml(relation.to);
+      lines.push(`      <edge id="${edgeId}" source="${sourceId}" target="${targetId}">`);
+      lines.push('        <attvalues>');
+      lines.push(`          <attvalue for="0" value="${escapeXml(relation.relationType)}"/>`);
+      if (relation.createdAt) {
+        lines.push(`          <attvalue for="1" value="${escapeXml(relation.createdAt)}"/>`);
+      }
+      if (relation.lastModified) {
+        lines.push(`          <attvalue for="2" value="${escapeXml(relation.lastModified)}"/>`);
+      }
+      lines.push('        </attvalues>');
+      lines.push('      </edge>');
+      edgeId++;
+    }
+    lines.push('    </edges>');
+
+    lines.push('  </graph>');
+    lines.push('</gexf>');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as DOT format for GraphViz
+   * DOT is a plain text graph description language
+   */
+  private exportAsDOT(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    // Helper function to escape DOT identifiers and strings
+    const escapeDot = (str: string): string => {
+      return '"' + str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"';
+    };
+
+    // DOT header
+    lines.push('digraph KnowledgeGraph {');
+    lines.push('  rankdir=LR;');
+    lines.push('  node [shape=box, style=rounded];');
+    lines.push('');
+
+    // Add nodes
+    for (const entity of graph.entities) {
+      const nodeId = escapeDot(entity.name);
+      const label = [
+        `${entity.name}`,
+        `Type: ${entity.entityType}`,
+      ];
+
+      if (entity.tags && entity.tags.length > 0) {
+        label.push(`Tags: ${entity.tags.join(', ')}`);
+      }
+      if (entity.importance !== undefined) {
+        label.push(`Importance: ${entity.importance}`);
+      }
+      if (entity.observations.length > 0) {
+        label.push(`Observations: ${entity.observations.length}`);
+      }
+
+      const labelStr = escapeDot(label.join('\\n'));
+      lines.push(`  ${nodeId} [label=${labelStr}];`);
+    }
+
+    lines.push('');
+
+    // Add edges
+    for (const relation of graph.relations) {
+      const fromId = escapeDot(relation.from);
+      const toId = escapeDot(relation.to);
+      const label = escapeDot(relation.relationType);
+      lines.push(`  ${fromId} -> ${toId} [label=${label}];`);
+    }
+
+    lines.push('}');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as Markdown for human-readable documentation
+   */
+  private exportAsMarkdown(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    lines.push('# Knowledge Graph Export');
+    lines.push('');
+    lines.push(`**Exported:** ${new Date().toISOString()}`);
+    lines.push(`**Entities:** ${graph.entities.length}`);
+    lines.push(`**Relations:** ${graph.relations.length}`);
+    lines.push('');
+
+    // Entities section
+    lines.push('## Entities');
+    lines.push('');
+
+    for (const entity of graph.entities) {
+      lines.push(`### ${entity.name}`);
+      lines.push('');
+      lines.push(`- **Type:** ${entity.entityType}`);
+
+      if (entity.tags && entity.tags.length > 0) {
+        lines.push(`- **Tags:** ${entity.tags.map(t => `\`${t}\``).join(', ')}`);
+      }
+
+      if (entity.importance !== undefined) {
+        lines.push(`- **Importance:** ${entity.importance}/10`);
+      }
+
+      if (entity.createdAt) {
+        lines.push(`- **Created:** ${entity.createdAt}`);
+      }
+
+      if (entity.lastModified) {
+        lines.push(`- **Modified:** ${entity.lastModified}`);
+      }
+
+      if (entity.observations.length > 0) {
+        lines.push('');
+        lines.push('**Observations:**');
+        for (const obs of entity.observations) {
+          lines.push(`- ${obs}`);
+        }
+      }
+
+      lines.push('');
+    }
+
+    // Relations section
+    if (graph.relations.length > 0) {
+      lines.push('## Relations');
+      lines.push('');
+
+      for (const relation of graph.relations) {
+        lines.push(`- **${relation.from}** → *${relation.relationType}* → **${relation.to}**`);
+      }
+
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Export graph as Mermaid diagram syntax
+   * Can be rendered in GitHub, GitLab, and many documentation tools
+   */
+  private exportAsMermaid(graph: KnowledgeGraph): string {
+    const lines: string[] = [];
+
+    // Helper to sanitize node IDs for Mermaid
+    const sanitizeId = (str: string): string => {
+      return str.replace(/[^a-zA-Z0-9_]/g, '_');
+    };
+
+    // Helper to escape text in labels
+    const escapeLabel = (str: string): string => {
+      return str.replace(/"/g, '#quot;');
+    };
+
+    lines.push('graph LR');
+    lines.push('  %% Knowledge Graph');
+    lines.push('');
+
+    // Create node ID mapping
+    const nodeIds = new Map<string, string>();
+    for (const entity of graph.entities) {
+      nodeIds.set(entity.name, sanitizeId(entity.name));
+    }
+
+    // Add nodes with labels
+    for (const entity of graph.entities) {
+      const nodeId = nodeIds.get(entity.name)!;
+      const labelParts: string[] = [entity.name];
+
+      if (entity.entityType) {
+        labelParts.push(`Type: ${entity.entityType}`);
+      }
+
+      if (entity.tags && entity.tags.length > 0) {
+        labelParts.push(`Tags: ${entity.tags.join(', ')}`);
+      }
+
+      const label = escapeLabel(labelParts.join('<br/>'));
+      lines.push(`  ${nodeId}["${label}"]`);
+
+      // Add styling based on importance
+      if (entity.importance !== undefined) {
+        if (entity.importance >= 7) {
+          lines.push(`  style ${nodeId} fill:#ff6b6b,stroke:#c92a2a`);
+        } else if (entity.importance >= 4) {
+          lines.push(`  style ${nodeId} fill:#ffd43b,stroke:#fab005`);
+        } else {
+          lines.push(`  style ${nodeId} fill:#a9e34b,stroke:#74b816`);
+        }
+      }
+    }
+
+    lines.push('');
+
+    // Add relations
+    for (const relation of graph.relations) {
+      const fromId = nodeIds.get(relation.from);
+      const toId = nodeIds.get(relation.to);
+
+      if (fromId && toId) {
+        const label = escapeLabel(relation.relationType);
+        lines.push(`  ${fromId} -->|"${label}"| ${toId}`);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  // Tier 0 D2: Import capabilities with merge strategies
+  /**
+   * Import knowledge graph from various formats
+   * @param format - Import format: 'json', 'csv', or 'graphml'
+   * @param data - The import data as a string
+   * @param mergeStrategy - How to handle conflicts: 'replace', 'skip', 'merge', 'fail'
+   * @param dryRun - If true, preview changes without applying them
+   * @returns Import result with statistics
+   */
+  async importGraph(
+    format: 'json' | 'csv' | 'graphml',
+    data: string,
+    mergeStrategy: 'replace' | 'skip' | 'merge' | 'fail' = 'skip',
+    dryRun: boolean = false
+  ): Promise<ImportResult> {
+    let importedGraph: KnowledgeGraph;
+
+    // Parse the input data based on format
+    try {
+      switch (format) {
+        case 'json':
+          importedGraph = this.parseJsonImport(data);
+          break;
+        case 'csv':
+          importedGraph = this.parseCsvImport(data);
+          break;
+        case 'graphml':
+          importedGraph = this.parseGraphMLImport(data);
+          break;
+        default:
+          throw new Error(`Unsupported import format: ${format}`);
+      }
+    } catch (error) {
+      return {
+        entitiesAdded: 0,
+        entitiesSkipped: 0,
+        entitiesUpdated: 0,
+        relationsAdded: 0,
+        relationsSkipped: 0,
+        errors: [`Failed to parse ${format} data: ${error instanceof Error ? error.message : String(error)}`]
+      };
+    }
+
+    // Merge with existing graph
+    return await this.mergeImportedGraph(importedGraph, mergeStrategy, dryRun);
+  }
+
+  /**
+   * Parse JSON format import data
+   */
+  private parseJsonImport(data: string): KnowledgeGraph {
+    const parsed = JSON.parse(data);
+
+    // Validate structure
+    if (!parsed.entities || !Array.isArray(parsed.entities)) {
+      throw new Error('Invalid JSON: missing or invalid entities array');
+    }
+    if (!parsed.relations || !Array.isArray(parsed.relations)) {
+      throw new Error('Invalid JSON: missing or invalid relations array');
+    }
+
+    return {
+      entities: parsed.entities as Entity[],
+      relations: parsed.relations as Relation[]
+    };
+  }
+
+  /**
+   * Parse CSV format import data
+   * Expects format: # ENTITIES section with header, then # RELATIONS section with header
+   */
+  private parseCsvImport(data: string): KnowledgeGraph {
+    const lines = data.split('\n').map(line => line.trim()).filter(line => line);
+    const entities: Entity[] = [];
+    const relations: Relation[] = [];
+
+    let section: 'entities' | 'relations' | null = null;
+    let headerParsed = false;
+
+    // Helper to parse CSV line (handles quoted fields)
+    const parseCsvLine = (line: string): string[] => {
+      const fields: string[] = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i++;
+          } else {
+            // Toggle quotes
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          // Field separator
+          fields.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+
+      fields.push(current);
+      return fields;
+    };
+
+    for (const line of lines) {
+      // Section markers
+      if (line.startsWith('# ENTITIES')) {
+        section = 'entities';
+        headerParsed = false;
+        continue;
+      } else if (line.startsWith('# RELATIONS')) {
+        section = 'relations';
+        headerParsed = false;
+        continue;
+      }
+
+      // Skip comments
+      if (line.startsWith('#')) {
+        continue;
+      }
+
+      // Parse based on current section
+      if (section === 'entities') {
+        if (!headerParsed) {
+          headerParsed = true; // Skip header line
+          continue;
+        }
+
+        const fields = parseCsvLine(line);
+        if (fields.length >= 2) {
+          const entity: Entity = {
+            name: fields[0],
+            entityType: fields[1],
+            observations: fields[2] ? fields[2].split(';').map(s => s.trim()).filter(s => s) : [],
+            createdAt: fields[3] || undefined,
+            lastModified: fields[4] || undefined,
+            tags: fields[5] ? fields[5].split(';').map(s => s.trim().toLowerCase()).filter(s => s) : undefined,
+            importance: fields[6] ? parseFloat(fields[6]) : undefined
+          };
+          entities.push(entity);
+        }
+      } else if (section === 'relations') {
+        if (!headerParsed) {
+          headerParsed = true; // Skip header line
+          continue;
+        }
+
+        const fields = parseCsvLine(line);
+        if (fields.length >= 3) {
+          const relation: Relation = {
+            from: fields[0],
+            to: fields[1],
+            relationType: fields[2],
+            createdAt: fields[3] || undefined,
+            lastModified: fields[4] || undefined
+          };
+          relations.push(relation);
+        }
+      }
+    }
+
+    return { entities, relations };
+  }
+
+  /**
+   * Parse GraphML format import data
+   */
+  private parseGraphMLImport(data: string): KnowledgeGraph {
+    const entities: Entity[] = [];
+    const relations: Relation[] = [];
+
+    // Simple XML parsing using regex (for basic GraphML structure)
+    // Note: This is a simplified parser. For production, consider using a proper XML parser.
+
+    // Extract nodes
+    const nodeRegex = /<node\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/node>/g;
+    let nodeMatch;
+
+    while ((nodeMatch = nodeRegex.exec(data)) !== null) {
+      const nodeId = nodeMatch[1];
+      const nodeContent = nodeMatch[2];
+
+      // Extract attributes
+      const getDataValue = (key: string): string | undefined => {
+        const dataRegex = new RegExp(`<data\\s+key="${key}">([^<]*)<\/data>`);
+        const match = dataRegex.exec(nodeContent);
+        return match ? match[1] : undefined;
+      };
+
+      const entity: Entity = {
+        name: nodeId,
+        entityType: getDataValue('d0') || getDataValue('entityType') || 'unknown',
+        observations: (getDataValue('d1') || getDataValue('observations') || '').split(';').map(s => s.trim()).filter(s => s),
+        createdAt: getDataValue('d2') || getDataValue('createdAt'),
+        lastModified: getDataValue('d3') || getDataValue('lastModified'),
+        tags: (getDataValue('d4') || getDataValue('tags') || '').split(';').map(s => s.trim().toLowerCase()).filter(s => s),
+        importance: getDataValue('d5') || getDataValue('importance') ? parseFloat(getDataValue('d5') || getDataValue('importance') || '0') : undefined
+      };
+
+      entities.push(entity);
+    }
+
+    // Extract edges
+    const edgeRegex = /<edge\s+[^>]*source="([^"]+)"\s+target="([^"]+)"[^>]*>([\s\S]*?)<\/edge>/g;
+    let edgeMatch;
+
+    while ((edgeMatch = edgeRegex.exec(data)) !== null) {
+      const source = edgeMatch[1];
+      const target = edgeMatch[2];
+      const edgeContent = edgeMatch[3];
+
+      // Extract attributes
+      const getDataValue = (key: string): string | undefined => {
+        const dataRegex = new RegExp(`<data\\s+key="${key}">([^<]*)<\/data>`);
+        const match = dataRegex.exec(edgeContent);
+        return match ? match[1] : undefined;
+      };
+
+      const relation: Relation = {
+        from: source,
+        to: target,
+        relationType: getDataValue('e0') || getDataValue('relationType') || 'related_to',
+        createdAt: getDataValue('e1') || getDataValue('createdAt'),
+        lastModified: getDataValue('e2') || getDataValue('lastModified')
+      };
+
+      relations.push(relation);
+    }
+
+    return { entities, relations };
+  }
+
+  /**
+   * Merge imported graph with existing graph based on strategy
+   */
+  private async mergeImportedGraph(
+    importedGraph: KnowledgeGraph,
+    mergeStrategy: 'replace' | 'skip' | 'merge' | 'fail',
+    dryRun: boolean
+  ): Promise<ImportResult> {
+    const existingGraph = await this.loadGraph();
+    const result: ImportResult = {
+      entitiesAdded: 0,
+      entitiesSkipped: 0,
+      entitiesUpdated: 0,
+      relationsAdded: 0,
+      relationsSkipped: 0,
+      errors: []
+    };
+
+    // Create maps for quick lookup
+    const existingEntitiesMap = new Map<string, Entity>();
+    for (const entity of existingGraph.entities) {
+      existingEntitiesMap.set(entity.name, entity);
+    }
+
+    const existingRelationsSet = new Set<string>();
+    for (const relation of existingGraph.relations) {
+      existingRelationsSet.add(`${relation.from}|${relation.to}|${relation.relationType}`);
+    }
+
+    // Process entities
+    for (const importedEntity of importedGraph.entities) {
+      const existing = existingEntitiesMap.get(importedEntity.name);
+
+      if (!existing) {
+        // New entity - always add
+        result.entitiesAdded++;
+        if (!dryRun) {
+          existingGraph.entities.push(importedEntity);
+          existingEntitiesMap.set(importedEntity.name, importedEntity);
+        }
+      } else {
+        // Entity exists - apply strategy
+        switch (mergeStrategy) {
+          case 'replace':
+            result.entitiesUpdated++;
+            if (!dryRun) {
+              Object.assign(existing, importedEntity);
+            }
+            break;
+
+          case 'skip':
+            result.entitiesSkipped++;
+            break;
+
+          case 'merge':
+            result.entitiesUpdated++;
+            if (!dryRun) {
+              // Merge observations (unique)
+              const combinedObs = [...new Set([...existing.observations, ...importedEntity.observations])];
+              existing.observations = combinedObs;
+
+              // Merge tags (unique)
+              if (importedEntity.tags) {
+                existing.tags = existing.tags || [];
+                existing.tags = [...new Set([...existing.tags, ...importedEntity.tags])];
+              }
+
+              // Use imported importance if present
+              if (importedEntity.importance !== undefined) {
+                existing.importance = importedEntity.importance;
+              }
+
+              // Update timestamps
+              existing.lastModified = new Date().toISOString();
+            }
+            break;
+
+          case 'fail':
+            result.errors.push(`Entity "${importedEntity.name}" already exists`);
+            break;
+        }
+      }
+    }
+
+    // Process relations
+    for (const importedRelation of importedGraph.relations) {
+      const relationKey = `${importedRelation.from}|${importedRelation.to}|${importedRelation.relationType}`;
+
+      // Check if both entities exist
+      if (!existingEntitiesMap.has(importedRelation.from)) {
+        result.errors.push(`Relation source entity "${importedRelation.from}" does not exist`);
+        continue;
+      }
+      if (!existingEntitiesMap.has(importedRelation.to)) {
+        result.errors.push(`Relation target entity "${importedRelation.to}" does not exist`);
+        continue;
+      }
+
+      if (!existingRelationsSet.has(relationKey)) {
+        // New relation - always add
+        result.relationsAdded++;
+        if (!dryRun) {
+          existingGraph.relations.push(importedRelation);
+          existingRelationsSet.add(relationKey);
+        }
+      } else {
+        // Relation exists
+        if (mergeStrategy === 'fail') {
+          result.errors.push(`Relation "${relationKey}" already exists`);
+        } else {
+          result.relationsSkipped++;
+        }
+      }
+    }
+
+    // Save if not dry run and no errors
+    if (!dryRun && (mergeStrategy !== 'fail' || result.errors.length === 0)) {
+      await this.saveGraph(existingGraph);
+    }
+
+    return result;
   }
 }
 
@@ -1660,8 +2760,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             query: { type: "string", description: "The search query to match against entity names, types, and observation content" },
-            tags: { 
-              type: "array", 
+            tags: {
+              type: "array",
               items: { type: "string" },
               description: "Optional array of tags to filter by (case-insensitive)"
             },
@@ -1672,6 +2772,40 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             maxImportance: {
               type: "number",
               description: "Optional maximum importance level (0-10)"
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "search_nodes_ranked",
+        description: "Search for nodes with TF-IDF relevance ranking. Returns results sorted by relevance score with match details. Better than basic search for finding the most relevant results.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query. Multiple terms will be analyzed for relevance using TF-IDF algorithm."
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional array of tags to filter by (case-insensitive)"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+            limit: {
+              type: "number",
+              description: "Maximum number of results to return (default 50)",
+              minimum: 1,
+              maximum: 200
             },
           },
           required: ["query"],
@@ -1989,6 +3123,34 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "boolean_search",
+        description: "Advanced boolean search with AND, OR, NOT operators and field-specific queries. Supports parentheses for grouping and quoted strings for exact phrases. Field prefixes: name:, type:, observation:, tag:. Example: 'name:Alice AND (type:person OR observation:\"likes programming\") NOT tag:archived'",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Boolean query string with operators (AND, OR, NOT) and optional field prefixes (name:, type:, observation:, tag:)"
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional additional tags to filter by"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "fuzzy_search",
         description: "Search with typo tolerance using Levenshtein distance algorithm. Finds entities even when query has typos or slight variations.",
         inputSchema: {
@@ -2121,15 +3283,44 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "export_graph",
-        description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
+        name: "import_graph",
+        description: "Import knowledge graph from JSON, CSV, or GraphML formats with configurable merge strategies. Supports dry-run mode for previewing changes before applying them.",
         inputSchema: {
           type: "object",
           properties: {
             format: {
               type: "string",
               enum: ["json", "csv", "graphml"],
-              description: "Export format: 'json' for pretty-printed JSON, 'csv' for comma-separated values with entities and relations sections, 'graphml' for GraphML XML format"
+              description: "Import format: 'json' (JSON data), 'csv' (spreadsheet with sections), 'graphml' (GraphML XML)"
+            },
+            data: {
+              type: "string",
+              description: "The import data as a string in the specified format"
+            },
+            mergeStrategy: {
+              type: "string",
+              enum: ["replace", "skip", "merge", "fail"],
+              description: "How to handle existing entities: 'replace' (overwrite), 'skip' (keep existing), 'merge' (combine data), 'fail' (error on conflict). Default: 'skip'"
+            },
+            dryRun: {
+              type: "boolean",
+              description: "If true, preview changes without applying them. Default: false"
+            },
+          },
+          required: ["format", "data"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "export_graph",
+        description: "Export the knowledge graph in various formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with optional filtering. Multiple formats support different visualization and documentation tools.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            format: {
+              type: "string",
+              enum: ["json", "csv", "graphml", "gexf", "dot", "markdown", "mermaid"],
+              description: "Export format: 'json' (JSON data), 'csv' (spreadsheet), 'graphml' (Gephi/Cytoscape), 'gexf' (Gephi native), 'dot' (GraphViz), 'markdown' (documentation), 'mermaid' (diagrams)"
             },
             filter: {
               type: "object",
@@ -2208,6 +3399,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: "Relations deleted successfully" }] };
     case "search_nodes":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.searchNodes(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+    case "search_nodes_ranked":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.searchNodesRanked(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined, args.limit as number | undefined), null, 2) }] };
     case "open_nodes":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.openNodes(args.names as string[]), null, 2) }] };
     case "search_by_date_range":
@@ -2233,6 +3426,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found` }] };
     case "update_saved_search":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.updateSavedSearch(args.name as string, args.updates as any), null, 2) }] };
+    case "boolean_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.booleanSearch(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
     case "fuzzy_search":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
     case "get_search_suggestions":
@@ -2246,8 +3441,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getAliasesForTag(args.canonicalTag as string), null, 2) }] };
     case "resolve_tag":
       return { content: [{ type: "text", text: JSON.stringify({ tag: args.tag, resolved: await knowledgeGraphManager.resolveTag(args.tag as string) }, null, 2) }] };
+    case "import_graph":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.importGraph(args.format as 'json' | 'csv' | 'graphml', args.data as string, args.mergeStrategy as 'replace' | 'skip' | 'merge' | 'fail' | undefined, args.dryRun as boolean | undefined), null, 2) }] };
     case "export_graph":
-      return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
+      return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
