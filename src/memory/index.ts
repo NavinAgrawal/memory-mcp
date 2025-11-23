@@ -123,15 +123,24 @@ export interface SavedSearch {
   useCount: number;
 }
 
+export interface TagAlias {
+  alias: string;
+  canonical: string;
+  description?: string;
+  createdAt: string;
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
+  private tagAliasesFilePath: string;
 
   constructor(private memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
     const dir = path.dirname(memoryFilePath);
     const basename = path.basename(memoryFilePath, path.extname(memoryFilePath));
     this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
+    this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
   }
 
   // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
@@ -1160,6 +1169,122 @@ export class KnowledgeGraphManager {
       .map(s => s.text);
   }
 
+  // Tier 0 B2: Tag aliases for synonym management
+  private async loadTagAliases(): Promise<TagAlias[]> {
+    try {
+      const data = await fs.readFile(this.tagAliasesFilePath, "utf-8");
+      const lines = data.split("\n").filter(line => line.trim() !== "");
+      return lines.map(line => JSON.parse(line) as TagAlias);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async saveTagAliases(aliases: TagAlias[]): Promise<void> {
+    const lines = aliases.map(a => JSON.stringify(a));
+    await fs.writeFile(this.tagAliasesFilePath, lines.join("\n"));
+  }
+
+  /**
+   * Resolve a tag through aliases to get its canonical form
+   * @param tag - Tag to resolve (can be alias or canonical)
+   * @returns Canonical tag name
+   */
+  async resolveTag(tag: string): Promise<string> {
+    const aliases = await this.loadTagAliases();
+    const normalized = tag.toLowerCase();
+
+    // Check if this tag is an alias
+    const alias = aliases.find(a => a.alias === normalized);
+    if (alias) {
+      return alias.canonical;
+    }
+
+    // Return as-is (might be canonical or unaliased tag)
+    return normalized;
+  }
+
+  /**
+   * Resolve multiple tags through aliases
+   */
+  private async resolveTags(tags: string[]): Promise<string[]> {
+    const resolved = await Promise.all(tags.map(tag => this.resolveTag(tag)));
+    // Return unique values
+    return [...new Set(resolved)];
+  }
+
+  /**
+   * Add a tag alias (synonym mapping)
+   * @param alias - The alias/synonym
+   * @param canonical - The canonical (main) tag name
+   * @param description - Optional description of the alias
+   */
+  async addTagAlias(alias: string, canonical: string, description?: string): Promise<TagAlias> {
+    const aliases = await this.loadTagAliases();
+    const normalizedAlias = alias.toLowerCase();
+    const normalizedCanonical = canonical.toLowerCase();
+
+    // Check if alias already exists
+    if (aliases.some(a => a.alias === normalizedAlias)) {
+      throw new Error(`Tag alias "${alias}" already exists`);
+    }
+
+    // Prevent aliasing to another alias (aliases should point to canonical tags)
+    if (aliases.some(a => a.canonical === normalizedAlias)) {
+      throw new Error(`Cannot create alias to "${alias}" because it is a canonical tag with existing aliases`);
+    }
+
+    const newAlias: TagAlias = {
+      alias: normalizedAlias,
+      canonical: normalizedCanonical,
+      description,
+      createdAt: new Date().toISOString()
+    };
+
+    aliases.push(newAlias);
+    await this.saveTagAliases(aliases);
+
+    return newAlias;
+  }
+
+  /**
+   * List all tag aliases
+   */
+  async listTagAliases(): Promise<TagAlias[]> {
+    return await this.loadTagAliases();
+  }
+
+  /**
+   * Remove a tag alias
+   */
+  async removeTagAlias(alias: string): Promise<boolean> {
+    const aliases = await this.loadTagAliases();
+    const normalizedAlias = alias.toLowerCase();
+    const initialLength = aliases.length;
+    const filtered = aliases.filter(a => a.alias !== normalizedAlias);
+
+    if (filtered.length === initialLength) {
+      return false; // Alias not found
+    }
+
+    await this.saveTagAliases(filtered);
+    return true;
+  }
+
+  /**
+   * Get all aliases for a canonical tag
+   */
+  async getAliasesForTag(canonicalTag: string): Promise<string[]> {
+    const aliases = await this.loadTagAliases();
+    const normalized = canonicalTag.toLowerCase();
+    return aliases
+      .filter(a => a.canonical === normalized)
+      .map(a => a.alias);
+  }
+
   // Phase 4: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
@@ -1919,6 +2044,83 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "add_tag_alias",
+        description: "Add a tag alias (synonym). When searching or filtering by the alias, it will automatically resolve to the canonical tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            alias: {
+              type: "string",
+              description: "The alias/synonym (e.g., 'ai')"
+            },
+            canonical: {
+              type: "string",
+              description: "The canonical tag name (e.g., 'artificial-intelligence')"
+            },
+            description: {
+              type: "string",
+              description: "Optional description of this alias mapping"
+            },
+          },
+          required: ["alias", "canonical"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "list_tag_aliases",
+        description: "List all tag aliases with their canonical mappings.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "remove_tag_alias",
+        description: "Remove a tag alias. The canonical tag remains unchanged.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            alias: {
+              type: "string",
+              description: "The alias to remove"
+            },
+          },
+          required: ["alias"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "get_aliases_for_tag",
+        description: "Get all aliases that point to a specific canonical tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            canonicalTag: {
+              type: "string",
+              description: "The canonical tag to get aliases for"
+            },
+          },
+          required: ["canonicalTag"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "resolve_tag",
+        description: "Resolve a tag (which may be an alias) to its canonical form.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            tag: {
+              type: "string",
+              description: "The tag to resolve"
+            },
+          },
+          required: ["tag"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "export_graph",
         description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
         inputSchema: {
@@ -1980,6 +2182,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.listSavedSearches(), null, 2) }] };
   }
 
+  if (name === "list_tag_aliases") {
+    return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.listTagAliases(), null, 2) }] };
+  }
+
   if (!args) {
     throw new Error(`No arguments provided for tool: ${name}`);
   }
@@ -2031,6 +2237,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
     case "get_search_suggestions":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getSearchSuggestions(args.query as string, args.maxSuggestions as number | undefined), null, 2) }] };
+    case "add_tag_alias":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.addTagAlias(args.alias as string, args.canonical as string, args.description as string | undefined), null, 2) }] };
+    case "remove_tag_alias":
+      const removed = await knowledgeGraphManager.removeTagAlias(args.alias as string);
+      return { content: [{ type: "text", text: removed ? `Tag alias "${args.alias}" removed successfully` : `Tag alias "${args.alias}" not found` }] };
+    case "get_aliases_for_tag":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getAliasesForTag(args.canonicalTag as string), null, 2) }] };
+    case "resolve_tag":
+      return { content: [{ type: "text", text: JSON.stringify({ tag: args.tag, resolved: await knowledgeGraphManager.resolveTag(args.tag as string) }, null, 2) }] };
     case "export_graph":
       return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
