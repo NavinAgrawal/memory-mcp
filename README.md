@@ -1,14 +1,14 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 
-An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for timestamps, search, categorization, and export capabilities.
+An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Knowledge graph-based persistent memory** that lets Claude remember information across conversations with powerful organization and analysis tools.
+> **Enterprise-grade knowledge graph** with hierarchical organization, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
 
 ## Table of Contents
 
@@ -32,16 +32,25 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - ✅ **Knowledge Graph Storage**: Entity-Relation-Observation model
 - ✅ **Persistent Memory**: Remember information across chat sessions
 - ✅ **Full CRUD Operations**: Create, read, update, delete entities and relations
-- ✅ **Flexible Search**: Text-based search across entities and observations
+- ✅ **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
 
-### Enhanced Features (Phases 1-4)
-- 🆕 **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
-- 🆕 **Date Range Search**: Filter entities/relations by creation or modification date
-- 🆕 **Graph Statistics**: Comprehensive analytics with counts, types, and temporal data
-- 🆕 **Tags System**: Categorize entities with case-insensitive tags
-- 🆕 **Importance Levels**: 0-10 scale for entity prioritization
-- 🆕 **Advanced Filtering**: Combine text, tags, importance, and date ranges
-- 🆕 **Multi-Format Export**: JSON, CSV, and GraphML for visualization tools (Gephi, Cytoscape, yEd)
+### v0.8.0 Major Features
+- 🚀 **Hierarchical Nesting**: Parent-child relationships for tree structures
+- 🚀 **Memory Compression**: Intelligent duplicate detection and merging
+- 🚀 **Smart Archiving**: Criteria-based archiving (age, importance, tags)
+- 🚀 **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching
+- 🚀 **Import/Export**: 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)
+- 🚀 **Tag Management**: Aliases, bulk operations, validation
+- 🚀 **Saved Searches**: Store and execute frequent queries
+- 🚀 **Graph Validation**: Integrity checks, orphan detection
+
+### Enhanced Features (v0.7.0)
+- ✅ **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
+- ✅ **Date Range Search**: Filter entities/relations by creation or modification date
+- ✅ **Graph Statistics**: Comprehensive analytics with counts, types, and temporal data
+- ✅ **Tags System**: Categorize entities with case-insensitive tags
+- ✅ **Importance Levels**: 0-10 scale for entity prioritization
+- ✅ **Advanced Filtering**: Combine text, tags, importance, and date ranges
 
 ### Comparison with Official Memory Server
 
@@ -51,36 +60,72 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | Relation Management | ✅ | ✅ |
 | Observation Tracking | ✅ | ✅ |
 | Basic Search | ✅ | ✅ |
+| **Hierarchical Nesting** | ❌ | ✅ Parent-child trees |
+| **Memory Compression** | ❌ | ✅ Duplicate detection |
+| **Smart Archiving** | ❌ | ✅ Criteria-based |
+| **Advanced Search** | ❌ | ✅ TF-IDF + Boolean |
+| **Fuzzy Search** | ❌ | ✅ Typo-tolerant |
+| **Saved Searches** | ❌ | ✅ Store queries |
+| **Tag Aliases** | ❌ | ✅ Synonyms |
+| **Graph Validation** | ❌ | ✅ Integrity checks |
 | **Timestamps** | ❌ | ✅ createdAt + lastModified |
-| **Date Range Search** | ❌ | ✅ |
-| **Graph Statistics** | ❌ | ✅ |
-| **Tags** | ❌ | ✅ |
 | **Importance Levels** | ❌ | ✅ 0-10 scale |
-| **Export Formats** | ❌ | ✅ JSON/CSV/GraphML |
-| **Total Tools** | 11 | **15** (+4 enhancements) |
+| **Export Formats** | ❌ | ✅ 7 formats |
+| **Import** | ❌ | ✅ 3 formats + merge |
+| **Total Tools** | 11 | **45** (+34 enhancements) |
+| **Code Size** | ~700 LOC | **4,550 LOC** (+549%) |
 
 ## What's New
 
-### Version 0.7.0 (Latest)
+### Version 0.8.0 (Latest - November 2025)
 
-**Phase 1 & 2: Timestamps & Analytics**
-- Automatic `createdAt` timestamp on entity/relation creation
-- Smart `lastModified` updates (only on actual changes)
-- Date range filtering with ISO 8601 format
-- Comprehensive graph statistics
+**🚀 Hierarchical Nesting (8 new tools)**
+- Parent-child entity relationships for tree structures
+- Cycle detection prevents circular references
+- Navigate ancestors, descendants, subtrees
+- Get root entities and hierarchy depth
 
-**Phase 3: Categorization**
-- Tags system with lowercase normalization
-- Importance levels (0-10) for entity prioritization
-- Enhanced filtering combining multiple criteria
+**🚀 Memory Compression (3 new tools)**
+- Find duplicates with multi-factor similarity scoring
+- Merge entities intelligently (combines observations/tags)
+- Auto-compress with dry-run preview
+- Weighted algorithm: Name 40%, Type 20%, Observations 30%, Tags 10%
 
-**Phase 4: Export & Visualization**
-- JSON export (pretty-printed)
-- CSV export (entities + relations with proper escaping)
-- GraphML export (for Gephi, Cytoscape, yEd)
-- All exports support filtering
+**🚀 Smart Archiving (1 new tool)**
+- Archive by age (olderThan), importance (< threshold), or tags
+- Multiple criteria with OR logic
+- Dry-run mode for safe preview
+- Clean removal from active graph
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+**🔍 Advanced Search (3 new tools)**
+- TF-IDF relevance ranking with scores
+- Boolean queries (AND, OR, NOT, parentheses)
+- Fuzzy search with typo tolerance
+- Field-specific queries (name:, type:, observation:, tag:)
+
+**📦 Import/Export (5 new tools + 4 formats)**
+- Import from JSON, CSV, GraphML with merge strategies
+- Export to GEXF (Gephi), DOT (GraphViz), Markdown, Mermaid
+- 7 total export formats for different use cases
+- Dry-run and preview modes
+
+**🏷️ Enhanced Tag Management (8 new tools)**
+- Tag aliases for synonyms
+- Bulk tag operations (add to multiple, replace, merge)
+- Saved searches with usage tracking
+- Graph validation with orphan detection
+
+**Stats:** +30 tools (15 → 45), +3,340 LOC (+276%), 4 storage files
+
+### Version 0.7.0 (November 2025)
+
+**Phase 1-4: Foundation Features**
+- Automatic timestamps (createdAt, lastModified)
+- Date range search and graph statistics
+- Tags system and importance levels (0-10)
+- Export to JSON, CSV, GraphML
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Quick Start
 
