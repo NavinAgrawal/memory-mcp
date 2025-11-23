@@ -31,6 +31,7 @@
     "build": "npm run build --workspace=src/memory",
     "watch": "npm run watch --workspace=src/memory",
     "test": "npm run test --workspace=src/memory",
+    "typecheck": "npm run typecheck --workspace=src/memory",
     "clean": "rm -rf src/memory/dist"
   },
   "dependencies": {
