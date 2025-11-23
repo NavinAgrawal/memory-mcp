@@ -1,7 +1,12 @@
 {
   "name": "@danielsimonjr/memory-mcp",
+<<<<<<< Updated upstream
   "version": "0.8.0",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, and 45 advanced tools",
+=======
+  "version": "0.7.2",
+  "description": "Enhanced MCP memory server with timestamps, tags, importance, search, and export (JSON/CSV/GraphML)",
+>>>>>>> Stashed changes
   "license": "MIT",
   "author": "Daniel Simon Jr. (https://github.com/danielsimonjr)",
   "homepage": "https://github.com/danielsimonjr/memory-mcp",
