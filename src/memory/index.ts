@@ -130,6 +130,16 @@ export interface TagAlias {
   createdAt: string;
 }
 
+export interface SearchResult {
+  entity: Entity;
+  score: number;
+  matchedFields: {
+    name?: boolean;
+    entityType?: boolean;
+    observations?: string[];
+  };
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
@@ -1169,6 +1179,158 @@ export class KnowledgeGraphManager {
       .map(s => s.text);
   }
 
+  // Tier 0 C1: Full-text search with TF-IDF ranking
+  /**
+   * Tokenize text into lowercase words, removing punctuation
+   */
+  private tokenize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+  }
+
+  /**
+   * Calculate term frequency (TF) for a term in a document
+   * TF = (number of times term appears) / (total terms in document)
+   */
+  private calculateTF(term: string, document: string[]): number {
+    const termCount = document.filter(word => word === term).length;
+    return document.length > 0 ? termCount / document.length : 0;
+  }
+
+  /**
+   * Calculate inverse document frequency (IDF) for a term across all documents
+   * IDF = log(total documents / documents containing term)
+   */
+  private calculateIDF(term: string, documents: string[][]): number {
+    const docsWithTerm = documents.filter(doc => doc.includes(term)).length;
+    if (docsWithTerm === 0) return 0;
+    return Math.log(documents.length / docsWithTerm);
+  }
+
+  /**
+   * Calculate TF-IDF score for a term in a document
+   * TF-IDF = TF * IDF
+   */
+  private calculateTFIDF(term: string, document: string[], allDocuments: string[][]): number {
+    const tf = this.calculateTF(term, document);
+    const idf = this.calculateIDF(term, allDocuments);
+    return tf * idf;
+  }
+
+  /**
+   * Convert an entity to a searchable document (concatenated text)
+   */
+  private entityToDocument(entity: Entity): string {
+    return [
+      entity.name,
+      entity.entityType,
+      ...entity.observations
+    ].join(' ');
+  }
+
+  /**
+   * Search nodes with TF-IDF ranking for relevance scoring
+   * @param query - Search query
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @param limit - Optional maximum number of results (default 50)
+   * @returns Array of search results with scores, sorted by relevance
+   */
+  async searchNodesRanked(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number,
+    limit: number = 50
+  ): Promise<SearchResult[]> {
+    const graph = await this.loadGraph();
+
+    // Normalize tags to lowercase for case-insensitive matching
+    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Tokenize query
+    const queryTerms = this.tokenize(query);
+
+    if (queryTerms.length === 0) {
+      return [];
+    }
+
+    // Convert all entities to tokenized documents
+    const allDocuments = graph.entities.map(e => this.tokenize(this.entityToDocument(e)));
+
+    // Calculate scores for each entity
+    const results: SearchResult[] = [];
+
+    for (let i = 0; i < graph.entities.length; i++) {
+      const entity = graph.entities[i];
+      const document = allDocuments[i];
+
+      // Apply tag filter
+      if (normalizedTags && normalizedTags.length > 0) {
+        if (!entity.tags || entity.tags.length === 0) continue;
+        const entityTags = entity.tags.map(tag => tag.toLowerCase());
+        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
+        if (!hasMatchingTag) continue;
+      }
+
+      // Apply importance filter
+      if (minImportance !== undefined && (entity.importance === undefined || entity.importance < minImportance)) {
+        continue;
+      }
+      if (maxImportance !== undefined && (entity.importance === undefined || entity.importance > maxImportance)) {
+        continue;
+      }
+
+      // Calculate TF-IDF score for each query term
+      let totalScore = 0;
+      const matchedFields: SearchResult['matchedFields'] = {};
+
+      for (const term of queryTerms) {
+        const tfidf = this.calculateTFIDF(term, document, allDocuments);
+        totalScore += tfidf;
+
+        // Track which fields matched
+        const nameLower = entity.name.toLowerCase();
+        const typeLower = entity.entityType.toLowerCase();
+
+        if (nameLower.includes(term)) {
+          matchedFields.name = true;
+        }
+        if (typeLower.includes(term)) {
+          matchedFields.entityType = true;
+        }
+
+        const matchedObs = entity.observations.filter(obs =>
+          obs.toLowerCase().includes(term)
+        );
+        if (matchedObs.length > 0) {
+          if (!matchedFields.observations) {
+            matchedFields.observations = [];
+          }
+          matchedFields.observations.push(...matchedObs);
+        }
+      }
+
+      // Only include entities with non-zero scores
+      if (totalScore > 0) {
+        results.push({
+          entity,
+          score: totalScore,
+          matchedFields
+        });
+      }
+    }
+
+    // Sort by score (descending) and apply limit
+    return results
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+  }
+
   // Tier 0 B2: Tag aliases for synonym management
   private async loadTagAliases(): Promise<TagAlias[]> {
     try {
@@ -1660,8 +1822,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             query: { type: "string", description: "The search query to match against entity names, types, and observation content" },
-            tags: { 
-              type: "array", 
+            tags: {
+              type: "array",
               items: { type: "string" },
               description: "Optional array of tags to filter by (case-insensitive)"
             },
@@ -1672,6 +1834,40 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             maxImportance: {
               type: "number",
               description: "Optional maximum importance level (0-10)"
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "search_nodes_ranked",
+        description: "Search for nodes with TF-IDF relevance ranking. Returns results sorted by relevance score with match details. Better than basic search for finding the most relevant results.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query. Multiple terms will be analyzed for relevance using TF-IDF algorithm."
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional array of tags to filter by (case-insensitive)"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+            limit: {
+              type: "number",
+              description: "Maximum number of results to return (default 50)",
+              minimum: 1,
+              maximum: 200
             },
           },
           required: ["query"],
@@ -2208,6 +2404,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: "Relations deleted successfully" }] };
     case "search_nodes":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.searchNodes(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+    case "search_nodes_ranked":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.searchNodesRanked(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined, args.limit as number | undefined), null, 2) }] };
     case "open_nodes":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.openNodes(args.names as string[]), null, 2) }] };
     case "search_by_date_range":
