@@ -86,9 +86,117 @@ export interface GraphStats {
   relationDateRange?: { earliest: string; latest: string };
 }
 
+export interface ValidationReport {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  summary: {
+    totalErrors: number;
+    totalWarnings: number;
+    orphanedRelationsCount: number;
+    entitiesWithoutRelationsCount: number;
+  };
+}
+
+export interface ValidationError {
+  type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
+  message: string;
+  details?: any;
+}
+
+export interface ValidationWarning {
+  type: 'isolated_entity' | 'empty_observations' | 'missing_metadata';
+  message: string;
+  details?: any;
+}
+
+export interface SavedSearch {
+  name: string;
+  description?: string;
+  query: string;
+  tags?: string[];
+  minImportance?: number;
+  maxImportance?: number;
+  entityType?: string;
+  createdAt: string;
+  lastUsed?: string;
+  useCount: number;
+}
+
+export interface TagAlias {
+  alias: string;
+  canonical: string;
+  description?: string;
+  createdAt: string;
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
-  constructor(private memoryFilePath: string) {}
+  private savedSearchesFilePath: string;
+  private tagAliasesFilePath: string;
+
+  constructor(private memoryFilePath: string) {
+    // Saved searches file is stored alongside the memory file
+    const dir = path.dirname(memoryFilePath);
+    const basename = path.basename(memoryFilePath, path.extname(memoryFilePath));
+    this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
+    this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
+  }
+
+  // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
+  /**
+   * Calculate Levenshtein distance between two strings
+   * Returns the minimum number of single-character edits needed to change one word into another
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const m = str1.length;
+    const n = str2.length;
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,    // deletion
+            dp[i][j - 1] + 1,    // insertion
+            dp[i - 1][j - 1] + 1 // substitution
+          );
+        }
+      }
+    }
+
+    return dp[m][n];
+  }
+
+  /**
+   * Check if two strings are fuzzy matches based on similarity threshold
+   * @param str1 - First string to compare
+   * @param str2 - Second string to compare
+   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
+   * @returns true if strings are similar enough
+   */
+  private isFuzzyMatch(str1: string, str2: string, threshold: number = 0.7): boolean {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+
+    // Exact match
+    if (s1 === s2) return true;
+
+    // One contains the other
+    if (s1.includes(s2) || s2.includes(s1)) return true;
+
+    // Calculate similarity using Levenshtein distance
+    const distance = this.levenshteinDistance(s1, s2);
+    const maxLength = Math.max(s1.length, s2.length);
+    const similarity = 1 - (distance / maxLength);
+
+    return similarity >= threshold;
+  }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
     try {
@@ -592,6 +700,591 @@ export class KnowledgeGraphManager {
     return { entityName, importance };
   }
 
+  // Tier 0 B5: Bulk tag operations for efficient tag management
+  /**
+   * Add tags to multiple entities in a single operation
+   */
+  async addTagsToMultipleEntities(entityNames: string[], tags: string[]): Promise<{ entityName: string; addedTags: string[] }[]> {
+    const graph = await this.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedTags = tags.map(tag => tag.toLowerCase());
+    const results: { entityName: string; addedTags: string[] }[] = [];
+
+    for (const entityName of entityNames) {
+      const entity = graph.entities.find(e => e.name === entityName);
+      if (!entity) {
+        continue; // Skip non-existent entities
+      }
+
+      // Initialize tags array if it doesn't exist
+      if (!entity.tags) {
+        entity.tags = [];
+      }
+
+      // Filter out duplicates
+      const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
+      entity.tags.push(...newTags);
+
+      // Update lastModified timestamp if tags were added
+      if (newTags.length > 0) {
+        entity.lastModified = timestamp;
+      }
+
+      results.push({ entityName, addedTags: newTags });
+    }
+
+    await this.saveGraph(graph);
+    return results;
+  }
+
+  /**
+   * Replace a tag with a new tag across all entities (rename tag)
+   */
+  async replaceTag(oldTag: string, newTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    const graph = await this.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedOldTag = oldTag.toLowerCase();
+    const normalizedNewTag = newTag.toLowerCase();
+    const affectedEntities: string[] = [];
+
+    for (const entity of graph.entities) {
+      if (!entity.tags || !entity.tags.includes(normalizedOldTag)) {
+        continue;
+      }
+
+      // Replace old tag with new tag
+      const index = entity.tags.indexOf(normalizedOldTag);
+      entity.tags[index] = normalizedNewTag;
+      entity.lastModified = timestamp;
+      affectedEntities.push(entity.name);
+    }
+
+    await this.saveGraph(graph);
+    return { affectedEntities, count: affectedEntities.length };
+  }
+
+  /**
+   * Merge two tags into one (combine tag1 and tag2 into targetTag)
+   */
+  async mergeTags(tag1: string, tag2: string, targetTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    const graph = await this.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedTag1 = tag1.toLowerCase();
+    const normalizedTag2 = tag2.toLowerCase();
+    const normalizedTargetTag = targetTag.toLowerCase();
+    const affectedEntities: string[] = [];
+
+    for (const entity of graph.entities) {
+      if (!entity.tags) {
+        continue;
+      }
+
+      const hasTag1 = entity.tags.includes(normalizedTag1);
+      const hasTag2 = entity.tags.includes(normalizedTag2);
+
+      if (!hasTag1 && !hasTag2) {
+        continue;
+      }
+
+      // Remove both tags
+      entity.tags = entity.tags.filter(tag => tag !== normalizedTag1 && tag !== normalizedTag2);
+
+      // Add target tag if not already present
+      if (!entity.tags.includes(normalizedTargetTag)) {
+        entity.tags.push(normalizedTargetTag);
+      }
+
+      entity.lastModified = timestamp;
+      affectedEntities.push(entity.name);
+    }
+
+    await this.saveGraph(graph);
+    return { affectedEntities, count: affectedEntities.length };
+  }
+
+  // Tier 0 A1: Graph validation for data integrity
+  /**
+   * Validate the knowledge graph for integrity issues and provide a detailed report
+   */
+  async validateGraph(): Promise<ValidationReport> {
+    const graph = await this.loadGraph();
+    const errors: ValidationError[] = [];
+    const warnings: ValidationWarning[] = [];
+
+    // Create a set of all entity names for fast lookup
+    const entityNames = new Set(graph.entities.map(e => e.name));
+
+    // Check for orphaned relations (relations pointing to non-existent entities)
+    for (const relation of graph.relations) {
+      if (!entityNames.has(relation.from)) {
+        errors.push({
+          type: 'orphaned_relation',
+          message: `Relation has non-existent source entity: "${relation.from}"`,
+          details: { relation, missingEntity: relation.from }
+        });
+      }
+      if (!entityNames.has(relation.to)) {
+        errors.push({
+          type: 'orphaned_relation',
+          message: `Relation has non-existent target entity: "${relation.to}"`,
+          details: { relation, missingEntity: relation.to }
+        });
+      }
+    }
+
+    // Check for duplicate entity names
+    const entityNameCounts = new Map<string, number>();
+    for (const entity of graph.entities) {
+      const count = entityNameCounts.get(entity.name) || 0;
+      entityNameCounts.set(entity.name, count + 1);
+    }
+    for (const [name, count] of entityNameCounts.entries()) {
+      if (count > 1) {
+        errors.push({
+          type: 'duplicate_entity',
+          message: `Duplicate entity name found: "${name}" (${count} instances)`,
+          details: { entityName: name, count }
+        });
+      }
+    }
+
+    // Check for entities with invalid data
+    for (const entity of graph.entities) {
+      if (!entity.name || entity.name.trim() === '') {
+        errors.push({
+          type: 'invalid_data',
+          message: 'Entity has empty or missing name',
+          details: { entity }
+        });
+      }
+      if (!entity.entityType || entity.entityType.trim() === '') {
+        errors.push({
+          type: 'invalid_data',
+          message: `Entity "${entity.name}" has empty or missing entityType`,
+          details: { entity }
+        });
+      }
+      if (!Array.isArray(entity.observations)) {
+        errors.push({
+          type: 'invalid_data',
+          message: `Entity "${entity.name}" has invalid observations (not an array)`,
+          details: { entity }
+        });
+      }
+    }
+
+    // Warnings: Check for isolated entities (no relations)
+    const entitiesInRelations = new Set<string>();
+    for (const relation of graph.relations) {
+      entitiesInRelations.add(relation.from);
+      entitiesInRelations.add(relation.to);
+    }
+    for (const entity of graph.entities) {
+      if (!entitiesInRelations.has(entity.name) && graph.relations.length > 0) {
+        warnings.push({
+          type: 'isolated_entity',
+          message: `Entity "${entity.name}" has no relations to other entities`,
+          details: { entityName: entity.name }
+        });
+      }
+    }
+
+    // Warnings: Check for entities with empty observations
+    for (const entity of graph.entities) {
+      if (entity.observations.length === 0) {
+        warnings.push({
+          type: 'empty_observations',
+          message: `Entity "${entity.name}" has no observations`,
+          details: { entityName: entity.name }
+        });
+      }
+    }
+
+    // Warnings: Check for missing metadata (createdAt, lastModified)
+    for (const entity of graph.entities) {
+      if (!entity.createdAt) {
+        warnings.push({
+          type: 'missing_metadata',
+          message: `Entity "${entity.name}" is missing createdAt timestamp`,
+          details: { entityName: entity.name, field: 'createdAt' }
+        });
+      }
+      if (!entity.lastModified) {
+        warnings.push({
+          type: 'missing_metadata',
+          message: `Entity "${entity.name}" is missing lastModified timestamp`,
+          details: { entityName: entity.name, field: 'lastModified' }
+        });
+      }
+    }
+
+    // Count specific issues
+    const orphanedRelationsCount = errors.filter(e => e.type === 'orphaned_relation').length;
+    const entitiesWithoutRelationsCount = warnings.filter(w => w.type === 'isolated_entity').length;
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      summary: {
+        totalErrors: errors.length,
+        totalWarnings: warnings.length,
+        orphanedRelationsCount,
+        entitiesWithoutRelationsCount
+      }
+    };
+  }
+
+  // Tier 0 C4: Saved searches for efficient query management
+  private async loadSavedSearches(): Promise<SavedSearch[]> {
+    try {
+      const data = await fs.readFile(this.savedSearchesFilePath, "utf-8");
+      const lines = data.split("\n").filter(line => line.trim() !== "");
+      return lines.map(line => JSON.parse(line) as SavedSearch);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async saveSavedSearches(searches: SavedSearch[]): Promise<void> {
+    const lines = searches.map(s => JSON.stringify(s));
+    await fs.writeFile(this.savedSearchesFilePath, lines.join("\n"));
+  }
+
+  /**
+   * Save a search query for later reuse
+   */
+  async saveSearch(search: Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>): Promise<SavedSearch> {
+    const searches = await this.loadSavedSearches();
+
+    // Check if name already exists
+    if (searches.some(s => s.name === search.name)) {
+      throw new Error(`Saved search with name "${search.name}" already exists`);
+    }
+
+    const newSearch: SavedSearch = {
+      ...search,
+      createdAt: new Date().toISOString(),
+      useCount: 0
+    };
+
+    searches.push(newSearch);
+    await this.saveSavedSearches(searches);
+
+    return newSearch;
+  }
+
+  /**
+   * List all saved searches
+   */
+  async listSavedSearches(): Promise<SavedSearch[]> {
+    return await this.loadSavedSearches();
+  }
+
+  /**
+   * Get a specific saved search by name
+   */
+  async getSavedSearch(name: string): Promise<SavedSearch | null> {
+    const searches = await this.loadSavedSearches();
+    return searches.find(s => s.name === name) || null;
+  }
+
+  /**
+   * Execute a saved search by name
+   */
+  async executeSavedSearch(name: string): Promise<KnowledgeGraph> {
+    const searches = await this.loadSavedSearches();
+    const search = searches.find(s => s.name === name);
+
+    if (!search) {
+      throw new Error(`Saved search "${name}" not found`);
+    }
+
+    // Update usage statistics
+    search.lastUsed = new Date().toISOString();
+    search.useCount++;
+    await this.saveSavedSearches(searches);
+
+    // Execute the search
+    return await this.searchNodes(
+      search.query,
+      search.tags,
+      search.minImportance,
+      search.maxImportance
+    );
+  }
+
+  /**
+   * Delete a saved search
+   */
+  async deleteSavedSearch(name: string): Promise<boolean> {
+    const searches = await this.loadSavedSearches();
+    const initialLength = searches.length;
+    const filtered = searches.filter(s => s.name !== name);
+
+    if (filtered.length === initialLength) {
+      return false; // Search not found
+    }
+
+    await this.saveSavedSearches(filtered);
+    return true;
+  }
+
+  /**
+   * Update a saved search
+   */
+  async updateSavedSearch(name: string, updates: Partial<Omit<SavedSearch, 'name' | 'createdAt' | 'useCount' | 'lastUsed'>>): Promise<SavedSearch> {
+    const searches = await this.loadSavedSearches();
+    const search = searches.find(s => s.name === name);
+
+    if (!search) {
+      throw new Error(`Saved search "${name}" not found`);
+    }
+
+    // Apply updates
+    Object.assign(search, updates);
+
+    await this.saveSavedSearches(searches);
+    return search;
+  }
+
+  /**
+   * Fuzzy search for entities with typo tolerance
+   * @param query - Search query
+   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @returns Filtered knowledge graph with fuzzy matches
+   */
+  async fuzzySearch(
+    query: string,
+    threshold: number = 0.7,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    const graph = await this.loadGraph();
+
+    // Normalize tags to lowercase for case-insensitive matching
+    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Filter entities using fuzzy matching
+    const filteredEntities = graph.entities.filter(e => {
+      // Fuzzy text search
+      const matchesQuery =
+        this.isFuzzyMatch(e.name, query, threshold) ||
+        this.isFuzzyMatch(e.entityType, query, threshold) ||
+        e.observations.some(o =>
+          // For observations, split into words and check each word
+          o.toLowerCase().split(/\s+/).some(word =>
+            this.isFuzzyMatch(word, query, threshold)
+          ) ||
+          // Also check if the observation contains the query
+          this.isFuzzyMatch(o, query, threshold)
+        );
+
+      if (!matchesQuery) return false;
+
+      // Tag filter
+      if (normalizedTags && normalizedTags.length > 0) {
+        if (!e.tags || e.tags.length === 0) return false;
+        const entityTags = e.tags.map(tag => tag.toLowerCase());
+        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
+        if (!hasMatchingTag) return false;
+      }
+
+      // Importance filter
+      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
+        return false;
+      }
+      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Create a Set of filtered entity names for quick lookup
+    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+
+    // Filter relations to only include those between filtered entities
+    const filteredRelations = graph.relations.filter(r =>
+      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
+    );
+
+    return {
+      entities: filteredEntities,
+      relations: filteredRelations,
+    };
+  }
+
+  /**
+   * Get "did you mean?" suggestions for a query
+   * @param query - The search query
+   * @param maxSuggestions - Maximum number of suggestions to return
+   * @returns Array of suggested entity/type names
+   */
+  async getSearchSuggestions(query: string, maxSuggestions: number = 5): Promise<string[]> {
+    const graph = await this.loadGraph();
+    const queryLower = query.toLowerCase();
+
+    interface Suggestion {
+      text: string;
+      similarity: number;
+    }
+
+    const suggestions: Suggestion[] = [];
+
+    // Check entity names
+    for (const entity of graph.entities) {
+      const distance = this.levenshteinDistance(queryLower, entity.name.toLowerCase());
+      const maxLength = Math.max(queryLower.length, entity.name.length);
+      const similarity = 1 - (distance / maxLength);
+
+      if (similarity > 0.5 && similarity < 1.0) { // Not exact match but similar
+        suggestions.push({ text: entity.name, similarity });
+      }
+    }
+
+    // Check entity types
+    const uniqueTypes = [...new Set(graph.entities.map(e => e.entityType))];
+    for (const type of uniqueTypes) {
+      const distance = this.levenshteinDistance(queryLower, type.toLowerCase());
+      const maxLength = Math.max(queryLower.length, type.length);
+      const similarity = 1 - (distance / maxLength);
+
+      if (similarity > 0.5 && similarity < 1.0) {
+        suggestions.push({ text: type, similarity });
+      }
+    }
+
+    // Sort by similarity and return top suggestions
+    return suggestions
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, maxSuggestions)
+      .map(s => s.text);
+  }
+
+  // Tier 0 B2: Tag aliases for synonym management
+  private async loadTagAliases(): Promise<TagAlias[]> {
+    try {
+      const data = await fs.readFile(this.tagAliasesFilePath, "utf-8");
+      const lines = data.split("\n").filter(line => line.trim() !== "");
+      return lines.map(line => JSON.parse(line) as TagAlias);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async saveTagAliases(aliases: TagAlias[]): Promise<void> {
+    const lines = aliases.map(a => JSON.stringify(a));
+    await fs.writeFile(this.tagAliasesFilePath, lines.join("\n"));
+  }
+
+  /**
+   * Resolve a tag through aliases to get its canonical form
+   * @param tag - Tag to resolve (can be alias or canonical)
+   * @returns Canonical tag name
+   */
+  async resolveTag(tag: string): Promise<string> {
+    const aliases = await this.loadTagAliases();
+    const normalized = tag.toLowerCase();
+
+    // Check if this tag is an alias
+    const alias = aliases.find(a => a.alias === normalized);
+    if (alias) {
+      return alias.canonical;
+    }
+
+    // Return as-is (might be canonical or unaliased tag)
+    return normalized;
+  }
+
+  /**
+   * Resolve multiple tags through aliases
+   */
+  private async resolveTags(tags: string[]): Promise<string[]> {
+    const resolved = await Promise.all(tags.map(tag => this.resolveTag(tag)));
+    // Return unique values
+    return [...new Set(resolved)];
+  }
+
+  /**
+   * Add a tag alias (synonym mapping)
+   * @param alias - The alias/synonym
+   * @param canonical - The canonical (main) tag name
+   * @param description - Optional description of the alias
+   */
+  async addTagAlias(alias: string, canonical: string, description?: string): Promise<TagAlias> {
+    const aliases = await this.loadTagAliases();
+    const normalizedAlias = alias.toLowerCase();
+    const normalizedCanonical = canonical.toLowerCase();
+
+    // Check if alias already exists
+    if (aliases.some(a => a.alias === normalizedAlias)) {
+      throw new Error(`Tag alias "${alias}" already exists`);
+    }
+
+    // Prevent aliasing to another alias (aliases should point to canonical tags)
+    if (aliases.some(a => a.canonical === normalizedAlias)) {
+      throw new Error(`Cannot create alias to "${alias}" because it is a canonical tag with existing aliases`);
+    }
+
+    const newAlias: TagAlias = {
+      alias: normalizedAlias,
+      canonical: normalizedCanonical,
+      description,
+      createdAt: new Date().toISOString()
+    };
+
+    aliases.push(newAlias);
+    await this.saveTagAliases(aliases);
+
+    return newAlias;
+  }
+
+  /**
+   * List all tag aliases
+   */
+  async listTagAliases(): Promise<TagAlias[]> {
+    return await this.loadTagAliases();
+  }
+
+  /**
+   * Remove a tag alias
+   */
+  async removeTagAlias(alias: string): Promise<boolean> {
+    const aliases = await this.loadTagAliases();
+    const normalizedAlias = alias.toLowerCase();
+    const initialLength = aliases.length;
+    const filtered = aliases.filter(a => a.alias !== normalizedAlias);
+
+    if (filtered.length === initialLength) {
+      return false; // Alias not found
+    }
+
+    await this.saveTagAliases(filtered);
+    return true;
+  }
+
+  /**
+   * Get all aliases for a canonical tag
+   */
+  async getAliasesForTag(canonicalTag: string): Promise<string[]> {
+    const aliases = await this.loadTagAliases();
+    const normalized = canonicalTag.toLowerCase();
+    return aliases
+      .filter(a => a.canonical === normalized)
+      .map(a => a.alias);
+  }
+
   // Phase 4: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
@@ -794,7 +1487,7 @@ let knowledgeGraphManager: KnowledgeGraphManager;
 // The server instance and tools exposed to Claude
 const server = new Server({
   name: "memory-server",
-  version: "0.7.0",
+  version: "0.8.0",
 },    {
     capabilities: {
       tools: {},
@@ -1099,6 +1792,335 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "add_tags_to_multiple_entities",
+        description: "Add tags to multiple entities in a single operation. Efficient bulk operation for tag management.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            entityNames: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of entity names to add tags to"
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of tags to add to all specified entities"
+            },
+          },
+          required: ["entityNames", "tags"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "replace_tag",
+        description: "Replace (rename) a tag across all entities in the knowledge graph. All instances of the old tag will be replaced with the new tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            oldTag: {
+              type: "string",
+              description: "The tag to be replaced"
+            },
+            newTag: {
+              type: "string",
+              description: "The new tag to replace it with"
+            },
+          },
+          required: ["oldTag", "newTag"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "merge_tags",
+        description: "Merge two tags into a single target tag across all entities. Entities with either tag1 or tag2 (or both) will end up with only the target tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            tag1: {
+              type: "string",
+              description: "First tag to merge"
+            },
+            tag2: {
+              type: "string",
+              description: "Second tag to merge"
+            },
+            targetTag: {
+              type: "string",
+              description: "The resulting tag after merging"
+            },
+          },
+          required: ["tag1", "tag2", "targetTag"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "validate_graph",
+        description: "Validate the knowledge graph for integrity issues. Checks for orphaned relations, duplicate entities, invalid data, isolated entities, and missing metadata. Returns a detailed validation report.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "save_search",
+        description: "Save a search query for later reuse. Allows saving complex search parameters with a name and optional description.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Unique name for the saved search"
+            },
+            description: {
+              type: "string",
+              description: "Optional description of what this search is for"
+            },
+            query: {
+              type: "string",
+              description: "The search query text"
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional tags to filter by"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+            entityType: {
+              type: "string",
+              description: "Optional entity type to filter by"
+            },
+          },
+          required: ["name", "query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "list_saved_searches",
+        description: "List all saved searches with their metadata, including usage statistics.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "execute_saved_search",
+        description: "Execute a previously saved search by name. Automatically tracks usage statistics (last used time and use count).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the saved search to execute"
+            },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "delete_saved_search",
+        description: "Delete a saved search by name.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the saved search to delete"
+            },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "update_saved_search",
+        description: "Update the parameters of a saved search. Can update query, description, tags, importance levels, and entity type.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the saved search to update"
+            },
+            updates: {
+              type: "object",
+              properties: {
+                description: {
+                  type: "string",
+                  description: "New description"
+                },
+                query: {
+                  type: "string",
+                  description: "New search query"
+                },
+                tags: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "New tags filter"
+                },
+                minImportance: {
+                  type: "number",
+                  description: "New minimum importance"
+                },
+                maxImportance: {
+                  type: "number",
+                  description: "New maximum importance"
+                },
+                entityType: {
+                  type: "string",
+                  description: "New entity type filter"
+                },
+              },
+              description: "Fields to update in the saved search"
+            },
+          },
+          required: ["name", "updates"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "fuzzy_search",
+        description: "Search with typo tolerance using Levenshtein distance algorithm. Finds entities even when query has typos or slight variations.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query (can have typos)"
+            },
+            threshold: {
+              type: "number",
+              description: "Similarity threshold (0.0 to 1.0). Default 0.7. Higher = stricter matching",
+              minimum: 0.0,
+              maximum: 1.0
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional tags to filter by"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "get_search_suggestions",
+        description: "Get 'did you mean?' suggestions for a search query. Returns similar entity names and types based on fuzzy matching.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query to get suggestions for"
+            },
+            maxSuggestions: {
+              type: "number",
+              description: "Maximum number of suggestions to return (default 5)",
+              minimum: 1,
+              maximum: 20
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "add_tag_alias",
+        description: "Add a tag alias (synonym). When searching or filtering by the alias, it will automatically resolve to the canonical tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            alias: {
+              type: "string",
+              description: "The alias/synonym (e.g., 'ai')"
+            },
+            canonical: {
+              type: "string",
+              description: "The canonical tag name (e.g., 'artificial-intelligence')"
+            },
+            description: {
+              type: "string",
+              description: "Optional description of this alias mapping"
+            },
+          },
+          required: ["alias", "canonical"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "list_tag_aliases",
+        description: "List all tag aliases with their canonical mappings.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "remove_tag_alias",
+        description: "Remove a tag alias. The canonical tag remains unchanged.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            alias: {
+              type: "string",
+              description: "The alias to remove"
+            },
+          },
+          required: ["alias"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "get_aliases_for_tag",
+        description: "Get all aliases that point to a specific canonical tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            canonicalTag: {
+              type: "string",
+              description: "The canonical tag to get aliases for"
+            },
+          },
+          required: ["canonicalTag"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "resolve_tag",
+        description: "Resolve a tag (which may be an alias) to its canonical form.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            tag: {
+              type: "string",
+              description: "The tag to resolve"
+            },
+          },
+          required: ["tag"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "export_graph",
         description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
         inputSchema: {
@@ -1152,6 +2174,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getGraphStats(), null, 2) }] };
   }
 
+  if (name === "validate_graph") {
+    return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.validateGraph(), null, 2) }] };
+  }
+
+  if (name === "list_saved_searches") {
+    return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.listSavedSearches(), null, 2) }] };
+  }
+
+  if (name === "list_tag_aliases") {
+    return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.listTagAliases(), null, 2) }] };
+  }
+
   if (!args) {
     throw new Error(`No arguments provided for tool: ${name}`);
   }
@@ -1184,6 +2218,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.removeTags(args.entityName as string, args.tags as string[]), null, 2) }] };
     case "set_importance":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.setImportance(args.entityName as string, args.importance as number), null, 2) }] };
+    case "add_tags_to_multiple_entities":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.addTagsToMultipleEntities(args.entityNames as string[], args.tags as string[]), null, 2) }] };
+    case "replace_tag":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.replaceTag(args.oldTag as string, args.newTag as string), null, 2) }] };
+    case "merge_tags":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.mergeTags(args.tag1 as string, args.tag2 as string, args.targetTag as string), null, 2) }] };
+    case "save_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.saveSearch(args as Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>), null, 2) }] };
+    case "execute_saved_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.executeSavedSearch(args.name as string), null, 2) }] };
+    case "delete_saved_search":
+      const deleted = await knowledgeGraphManager.deleteSavedSearch(args.name as string);
+      return { content: [{ type: "text", text: deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found` }] };
+    case "update_saved_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.updateSavedSearch(args.name as string, args.updates as any), null, 2) }] };
+    case "fuzzy_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+    case "get_search_suggestions":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getSearchSuggestions(args.query as string, args.maxSuggestions as number | undefined), null, 2) }] };
+    case "add_tag_alias":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.addTagAlias(args.alias as string, args.canonical as string, args.description as string | undefined), null, 2) }] };
+    case "remove_tag_alias":
+      const removed = await knowledgeGraphManager.removeTagAlias(args.alias as string);
+      return { content: [{ type: "text", text: removed ? `Tag alias "${args.alias}" removed successfully` : `Tag alias "${args.alias}" not found` }] };
+    case "get_aliases_for_tag":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getAliasesForTag(args.canonicalTag as string), null, 2) }] };
+    case "resolve_tag":
+      return { content: [{ type: "text", text: JSON.stringify({ tag: args.tag, resolved: await knowledgeGraphManager.resolveTag(args.tag as string) }, null, 2) }] };
     case "export_graph":
       return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
