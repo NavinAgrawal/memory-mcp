@@ -86,6 +86,30 @@ export interface GraphStats {
   relationDateRange?: { earliest: string; latest: string };
 }
 
+export interface ValidationReport {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  summary: {
+    totalErrors: number;
+    totalWarnings: number;
+    orphanedRelationsCount: number;
+    entitiesWithoutRelationsCount: number;
+  };
+}
+
+export interface ValidationError {
+  type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
+  message: string;
+  details?: any;
+}
+
+export interface ValidationWarning {
+  type: 'isolated_entity' | 'empty_observations' | 'missing_metadata';
+  message: string;
+  details?: any;
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
   constructor(private memoryFilePath: string) {}
@@ -592,6 +616,241 @@ export class KnowledgeGraphManager {
     return { entityName, importance };
   }
 
+  // Tier 0 B5: Bulk tag operations for efficient tag management
+  /**
+   * Add tags to multiple entities in a single operation
+   */
+  async addTagsToMultipleEntities(entityNames: string[], tags: string[]): Promise<{ entityName: string; addedTags: string[] }[]> {
+    const graph = await this.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedTags = tags.map(tag => tag.toLowerCase());
+    const results: { entityName: string; addedTags: string[] }[] = [];
+
+    for (const entityName of entityNames) {
+      const entity = graph.entities.find(e => e.name === entityName);
+      if (!entity) {
+        continue; // Skip non-existent entities
+      }
+
+      // Initialize tags array if it doesn't exist
+      if (!entity.tags) {
+        entity.tags = [];
+      }
+
+      // Filter out duplicates
+      const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
+      entity.tags.push(...newTags);
+
+      // Update lastModified timestamp if tags were added
+      if (newTags.length > 0) {
+        entity.lastModified = timestamp;
+      }
+
+      results.push({ entityName, addedTags: newTags });
+    }
+
+    await this.saveGraph(graph);
+    return results;
+  }
+
+  /**
+   * Replace a tag with a new tag across all entities (rename tag)
+   */
+  async replaceTag(oldTag: string, newTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    const graph = await this.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedOldTag = oldTag.toLowerCase();
+    const normalizedNewTag = newTag.toLowerCase();
+    const affectedEntities: string[] = [];
+
+    for (const entity of graph.entities) {
+      if (!entity.tags || !entity.tags.includes(normalizedOldTag)) {
+        continue;
+      }
+
+      // Replace old tag with new tag
+      const index = entity.tags.indexOf(normalizedOldTag);
+      entity.tags[index] = normalizedNewTag;
+      entity.lastModified = timestamp;
+      affectedEntities.push(entity.name);
+    }
+
+    await this.saveGraph(graph);
+    return { affectedEntities, count: affectedEntities.length };
+  }
+
+  /**
+   * Merge two tags into one (combine tag1 and tag2 into targetTag)
+   */
+  async mergeTags(tag1: string, tag2: string, targetTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    const graph = await this.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedTag1 = tag1.toLowerCase();
+    const normalizedTag2 = tag2.toLowerCase();
+    const normalizedTargetTag = targetTag.toLowerCase();
+    const affectedEntities: string[] = [];
+
+    for (const entity of graph.entities) {
+      if (!entity.tags) {
+        continue;
+      }
+
+      const hasTag1 = entity.tags.includes(normalizedTag1);
+      const hasTag2 = entity.tags.includes(normalizedTag2);
+
+      if (!hasTag1 && !hasTag2) {
+        continue;
+      }
+
+      // Remove both tags
+      entity.tags = entity.tags.filter(tag => tag !== normalizedTag1 && tag !== normalizedTag2);
+
+      // Add target tag if not already present
+      if (!entity.tags.includes(normalizedTargetTag)) {
+        entity.tags.push(normalizedTargetTag);
+      }
+
+      entity.lastModified = timestamp;
+      affectedEntities.push(entity.name);
+    }
+
+    await this.saveGraph(graph);
+    return { affectedEntities, count: affectedEntities.length };
+  }
+
+  // Tier 0 A1: Graph validation for data integrity
+  /**
+   * Validate the knowledge graph for integrity issues and provide a detailed report
+   */
+  async validateGraph(): Promise<ValidationReport> {
+    const graph = await this.loadGraph();
+    const errors: ValidationError[] = [];
+    const warnings: ValidationWarning[] = [];
+
+    // Create a set of all entity names for fast lookup
+    const entityNames = new Set(graph.entities.map(e => e.name));
+
+    // Check for orphaned relations (relations pointing to non-existent entities)
+    for (const relation of graph.relations) {
+      if (!entityNames.has(relation.from)) {
+        errors.push({
+          type: 'orphaned_relation',
+          message: `Relation has non-existent source entity: "${relation.from}"`,
+          details: { relation, missingEntity: relation.from }
+        });
+      }
+      if (!entityNames.has(relation.to)) {
+        errors.push({
+          type: 'orphaned_relation',
+          message: `Relation has non-existent target entity: "${relation.to}"`,
+          details: { relation, missingEntity: relation.to }
+        });
+      }
+    }
+
+    // Check for duplicate entity names
+    const entityNameCounts = new Map<string, number>();
+    for (const entity of graph.entities) {
+      const count = entityNameCounts.get(entity.name) || 0;
+      entityNameCounts.set(entity.name, count + 1);
+    }
+    for (const [name, count] of entityNameCounts.entries()) {
+      if (count > 1) {
+        errors.push({
+          type: 'duplicate_entity',
+          message: `Duplicate entity name found: "${name}" (${count} instances)`,
+          details: { entityName: name, count }
+        });
+      }
+    }
+
+    // Check for entities with invalid data
+    for (const entity of graph.entities) {
+      if (!entity.name || entity.name.trim() === '') {
+        errors.push({
+          type: 'invalid_data',
+          message: 'Entity has empty or missing name',
+          details: { entity }
+        });
+      }
+      if (!entity.entityType || entity.entityType.trim() === '') {
+        errors.push({
+          type: 'invalid_data',
+          message: `Entity "${entity.name}" has empty or missing entityType`,
+          details: { entity }
+        });
+      }
+      if (!Array.isArray(entity.observations)) {
+        errors.push({
+          type: 'invalid_data',
+          message: `Entity "${entity.name}" has invalid observations (not an array)`,
+          details: { entity }
+        });
+      }
+    }
+
+    // Warnings: Check for isolated entities (no relations)
+    const entitiesInRelations = new Set<string>();
+    for (const relation of graph.relations) {
+      entitiesInRelations.add(relation.from);
+      entitiesInRelations.add(relation.to);
+    }
+    for (const entity of graph.entities) {
+      if (!entitiesInRelations.has(entity.name) && graph.relations.length > 0) {
+        warnings.push({
+          type: 'isolated_entity',
+          message: `Entity "${entity.name}" has no relations to other entities`,
+          details: { entityName: entity.name }
+        });
+      }
+    }
+
+    // Warnings: Check for entities with empty observations
+    for (const entity of graph.entities) {
+      if (entity.observations.length === 0) {
+        warnings.push({
+          type: 'empty_observations',
+          message: `Entity "${entity.name}" has no observations`,
+          details: { entityName: entity.name }
+        });
+      }
+    }
+
+    // Warnings: Check for missing metadata (createdAt, lastModified)
+    for (const entity of graph.entities) {
+      if (!entity.createdAt) {
+        warnings.push({
+          type: 'missing_metadata',
+          message: `Entity "${entity.name}" is missing createdAt timestamp`,
+          details: { entityName: entity.name, field: 'createdAt' }
+        });
+      }
+      if (!entity.lastModified) {
+        warnings.push({
+          type: 'missing_metadata',
+          message: `Entity "${entity.name}" is missing lastModified timestamp`,
+          details: { entityName: entity.name, field: 'lastModified' }
+        });
+      }
+    }
+
+    // Count specific issues
+    const orphanedRelationsCount = errors.filter(e => e.type === 'orphaned_relation').length;
+    const entitiesWithoutRelationsCount = warnings.filter(w => w.type === 'isolated_entity').length;
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      summary: {
+        totalErrors: errors.length,
+        totalWarnings: warnings.length,
+        orphanedRelationsCount,
+        entitiesWithoutRelationsCount
+      }
+    };
+  }
+
   // Phase 4: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
@@ -794,7 +1053,7 @@ let knowledgeGraphManager: KnowledgeGraphManager;
 // The server instance and tools exposed to Claude
 const server = new Server({
   name: "memory-server",
-  version: "0.7.0",
+  version: "0.8.0",
 },    {
     capabilities: {
       tools: {},
@@ -1099,6 +1358,78 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "add_tags_to_multiple_entities",
+        description: "Add tags to multiple entities in a single operation. Efficient bulk operation for tag management.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            entityNames: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of entity names to add tags to"
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of tags to add to all specified entities"
+            },
+          },
+          required: ["entityNames", "tags"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "replace_tag",
+        description: "Replace (rename) a tag across all entities in the knowledge graph. All instances of the old tag will be replaced with the new tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            oldTag: {
+              type: "string",
+              description: "The tag to be replaced"
+            },
+            newTag: {
+              type: "string",
+              description: "The new tag to replace it with"
+            },
+          },
+          required: ["oldTag", "newTag"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "merge_tags",
+        description: "Merge two tags into a single target tag across all entities. Entities with either tag1 or tag2 (or both) will end up with only the target tag.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            tag1: {
+              type: "string",
+              description: "First tag to merge"
+            },
+            tag2: {
+              type: "string",
+              description: "Second tag to merge"
+            },
+            targetTag: {
+              type: "string",
+              description: "The resulting tag after merging"
+            },
+          },
+          required: ["tag1", "tag2", "targetTag"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "validate_graph",
+        description: "Validate the knowledge graph for integrity issues. Checks for orphaned relations, duplicate entities, invalid data, isolated entities, and missing metadata. Returns a detailed validation report.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
         name: "export_graph",
         description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
         inputSchema: {
@@ -1152,6 +1483,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getGraphStats(), null, 2) }] };
   }
 
+  if (name === "validate_graph") {
+    return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.validateGraph(), null, 2) }] };
+  }
+
   if (!args) {
     throw new Error(`No arguments provided for tool: ${name}`);
   }
@@ -1184,6 +1519,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.removeTags(args.entityName as string, args.tags as string[]), null, 2) }] };
     case "set_importance":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.setImportance(args.entityName as string, args.importance as number), null, 2) }] };
+    case "add_tags_to_multiple_entities":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.addTagsToMultipleEntities(args.entityNames as string[], args.tags as string[]), null, 2) }] };
+    case "replace_tag":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.replaceTag(args.oldTag as string, args.newTag as string), null, 2) }] };
+    case "merge_tags":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.mergeTags(args.tag1 as string, args.tag2 as string, args.targetTag as string), null, 2) }] };
     case "export_graph":
       return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
