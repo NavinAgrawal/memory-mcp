@@ -49,7 +49,7 @@ describe('levenshteinDistance', () => {
 
   describe('different lengths', () => {
     it('should handle strings of different lengths', () => {
-      expect(levenshteinDistance('short', 'muchlonger')).toBe(7);
+      expect(levenshteinDistance('short', 'muchlonger')).toBe(8);
       expect(levenshteinDistance('a', 'abc')).toBe(2);
     });
   });
