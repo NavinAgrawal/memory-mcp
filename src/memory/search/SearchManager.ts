@@ -21,16 +21,16 @@ import { SavedSearchManager } from './SavedSearchManager.js';
 export class SearchManager {
   private basicSearch: BasicSearch;
   private rankedSearch: RankedSearch;
-  private booleanSearch: BooleanSearch;
-  private fuzzySearch: FuzzySearch;
+  private booleanSearcher: BooleanSearch;
+  private fuzzySearcher: FuzzySearch;
   private searchSuggestions: SearchSuggestions;
   private savedSearchManager: SavedSearchManager;
 
   constructor(storage: GraphStorage, savedSearchesFilePath: string) {
     this.basicSearch = new BasicSearch(storage);
     this.rankedSearch = new RankedSearch(storage);
-    this.booleanSearch = new BooleanSearch(storage);
-    this.fuzzySearch = new FuzzySearch(storage);
+    this.booleanSearcher = new BooleanSearch(storage);
+    this.fuzzySearcher = new FuzzySearch(storage);
     this.searchSuggestions = new SearchSuggestions(storage);
     this.savedSearchManager = new SavedSearchManager(savedSearchesFilePath, this.basicSearch);
   }
@@ -122,7 +122,7 @@ export class SearchManager {
     minImportance?: number,
     maxImportance?: number
   ): Promise<KnowledgeGraph> {
-    return this.booleanSearch.booleanSearch(query, tags, minImportance, maxImportance);
+    return this.booleanSearcher.booleanSearch(query, tags, minImportance, maxImportance);
   }
 
   // ==================== Fuzzy Search ====================
@@ -144,7 +144,7 @@ export class SearchManager {
     minImportance?: number,
     maxImportance?: number
   ): Promise<KnowledgeGraph> {
-    return this.fuzzySearch.fuzzySearch(query, threshold, tags, minImportance, maxImportance);
+    return this.fuzzySearcher.fuzzySearch(query, threshold, tags, minImportance, maxImportance);
   }
 
   // ==================== Search Suggestions ====================

@@ -27,8 +27,8 @@ export class SavedSearchManager {
   private async loadSavedSearches(): Promise<SavedSearch[]> {
     try {
       const data = await fs.readFile(this.savedSearchesFilePath, 'utf-8');
-      const lines = data.split('\n').filter(line => line.trim() !== '');
-      return lines.map(line => JSON.parse(line) as SavedSearch);
+      const lines = data.split('\n').filter((line: string) => line.trim() !== '');
+      return lines.map((line: string) => JSON.parse(line) as SavedSearch);
     } catch (error) {
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
         return [];

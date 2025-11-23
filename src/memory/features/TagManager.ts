@@ -23,8 +23,8 @@ export class TagManager {
   private async loadTagAliases(): Promise<TagAlias[]> {
     try {
       const data = await fs.readFile(this.tagAliasesFilePath, 'utf-8');
-      const lines = data.split('\n').filter(line => line.trim() !== '');
-      return lines.map(line => JSON.parse(line) as TagAlias);
+      const lines = data.split('\n').filter((line: string) => line.trim() !== '');
+      return lines.map((line: string) => JSON.parse(line) as TagAlias);
     } catch (error) {
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
         return [];

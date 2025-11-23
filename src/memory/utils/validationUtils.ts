@@ -6,7 +6,7 @@
  * @module utils/validationUtils
  */
 
-import type { Entity, Relation } from '../types/index.js';
+// Validation utilities - uses any for flexible validation
 
 /**
  * Validation result with status and error messages.

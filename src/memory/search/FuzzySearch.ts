@@ -6,7 +6,7 @@
  * @module search/FuzzySearch
  */
 
-import type { Entity, KnowledgeGraph } from '../types/index.js';
+import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 

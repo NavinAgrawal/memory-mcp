@@ -6,7 +6,7 @@
  * @module search/RankedSearch
  */
 
-import type { SearchResult, Entity, KnowledgeGraph } from '../types/index.js';
+import type { SearchResult } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
 

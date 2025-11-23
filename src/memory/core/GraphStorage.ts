@@ -44,9 +44,9 @@ export class GraphStorage {
   async loadGraph(): Promise<KnowledgeGraph> {
     try {
       const data = await fs.readFile(this.memoryFilePath, 'utf-8');
-      const lines = data.split('\n').filter(line => line.trim() !== '');
+      const lines = data.split('\n').filter((line: string) => line.trim() !== '');
 
-      return lines.reduce((graph: KnowledgeGraph, line) => {
+      return lines.reduce((graph: KnowledgeGraph, line: string) => {
         const item = JSON.parse(line);
 
         if (item.type === 'entity') {
