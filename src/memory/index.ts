@@ -140,6 +140,13 @@ export interface SearchResult {
   };
 }
 
+// Boolean search query AST types
+export type BooleanQueryNode =
+  | { type: 'AND'; children: BooleanQueryNode[] }
+  | { type: 'OR'; children: BooleanQueryNode[] }
+  | { type: 'NOT'; child: BooleanQueryNode }
+  | { type: 'TERM'; field?: string; value: string };
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
@@ -1331,6 +1338,272 @@ export class KnowledgeGraphManager {
       .slice(0, limit);
   }
 
+  // Tier 0 C3: Boolean search with query parser
+  /**
+   * Tokenize a boolean search query into tokens
+   */
+  private tokenizeBooleanQuery(query: string): string[] {
+    const tokens: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < query.length; i++) {
+      const char = query[i];
+
+      if (char === '"') {
+        if (inQuotes) {
+          // End of quoted string
+          tokens.push(current);
+          current = '';
+          inQuotes = false;
+        } else {
+          // Start of quoted string
+          if (current.trim()) {
+            tokens.push(current.trim());
+            current = '';
+          }
+          inQuotes = true;
+        }
+      } else if (!inQuotes && (char === '(' || char === ')')) {
+        // Parentheses are separate tokens
+        if (current.trim()) {
+          tokens.push(current.trim());
+          current = '';
+        }
+        tokens.push(char);
+      } else if (!inQuotes && /\s/.test(char)) {
+        // Whitespace outside quotes
+        if (current.trim()) {
+          tokens.push(current.trim());
+          current = '';
+        }
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) {
+      tokens.push(current.trim());
+    }
+
+    return tokens;
+  }
+
+  /**
+   * Parse a boolean search query into an AST
+   * Supports: AND, OR, NOT, parentheses, field-specific queries (field:value)
+   */
+  private parseBooleanQuery(query: string): BooleanQueryNode {
+    const tokens = this.tokenizeBooleanQuery(query);
+    let position = 0;
+
+    const peek = (): string | undefined => tokens[position];
+    const consume = (): string | undefined => tokens[position++];
+
+    // Parse OR expressions (lowest precedence)
+    const parseOr = (): BooleanQueryNode => {
+      let left = parseAnd();
+
+      while (peek()?.toUpperCase() === 'OR') {
+        consume(); // consume 'OR'
+        const right = parseAnd();
+        left = { type: 'OR', children: [left, right] };
+      }
+
+      return left;
+    };
+
+    // Parse AND expressions
+    const parseAnd = (): BooleanQueryNode => {
+      let left = parseNot();
+
+      while (peek() && peek()?.toUpperCase() !== 'OR' && peek() !== ')') {
+        // Implicit AND if next token is not OR or )
+        if (peek()?.toUpperCase() === 'AND') {
+          consume(); // consume 'AND'
+        }
+        const right = parseNot();
+        left = { type: 'AND', children: [left, right] };
+      }
+
+      return left;
+    };
+
+    // Parse NOT expressions
+    const parseNot = (): BooleanQueryNode => {
+      if (peek()?.toUpperCase() === 'NOT') {
+        consume(); // consume 'NOT'
+        const child = parseNot();
+        return { type: 'NOT', child };
+      }
+      return parsePrimary();
+    };
+
+    // Parse primary expressions (terms, field queries, parentheses)
+    const parsePrimary = (): BooleanQueryNode => {
+      const token = peek();
+
+      if (!token) {
+        throw new Error('Unexpected end of query');
+      }
+
+      // Parentheses
+      if (token === '(') {
+        consume(); // consume '('
+        const node = parseOr();
+        if (consume() !== ')') {
+          throw new Error('Expected closing parenthesis');
+        }
+        return node;
+      }
+
+      // Field-specific query (field:value)
+      if (token.includes(':')) {
+        consume();
+        const [field, ...valueParts] = token.split(':');
+        const value = valueParts.join(':'); // Handle colons in value
+        return { type: 'TERM', field: field.toLowerCase(), value: value.toLowerCase() };
+      }
+
+      // Regular term
+      consume();
+      return { type: 'TERM', value: token.toLowerCase() };
+    };
+
+    const result = parseOr();
+
+    // Check for unconsumed tokens
+    if (position < tokens.length) {
+      throw new Error(`Unexpected token: ${tokens[position]}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Evaluate a boolean query AST against an entity
+   */
+  private evaluateBooleanQuery(node: BooleanQueryNode, entity: Entity): boolean {
+    switch (node.type) {
+      case 'AND':
+        return node.children.every(child => this.evaluateBooleanQuery(child, entity));
+
+      case 'OR':
+        return node.children.some(child => this.evaluateBooleanQuery(child, entity));
+
+      case 'NOT':
+        return !this.evaluateBooleanQuery(node.child, entity);
+
+      case 'TERM': {
+        const value = node.value;
+
+        // Field-specific search
+        if (node.field) {
+          switch (node.field) {
+            case 'name':
+              return entity.name.toLowerCase().includes(value);
+            case 'type':
+            case 'entitytype':
+              return entity.entityType.toLowerCase().includes(value);
+            case 'observation':
+            case 'observations':
+              return entity.observations.some(obs => obs.toLowerCase().includes(value));
+            case 'tag':
+            case 'tags':
+              return entity.tags ? entity.tags.some(tag => tag.toLowerCase().includes(value)) : false;
+            default:
+              // Unknown field, search all text fields
+              return this.entityMatchesTerm(entity, value);
+          }
+        }
+
+        // General search across all fields
+        return this.entityMatchesTerm(entity, value);
+      }
+    }
+  }
+
+  /**
+   * Check if entity matches a search term in any text field
+   */
+  private entityMatchesTerm(entity: Entity, term: string): boolean {
+    const termLower = term.toLowerCase();
+
+    return (
+      entity.name.toLowerCase().includes(termLower) ||
+      entity.entityType.toLowerCase().includes(termLower) ||
+      entity.observations.some(obs => obs.toLowerCase().includes(termLower)) ||
+      (entity.tags?.some(tag => tag.toLowerCase().includes(termLower)) || false)
+    );
+  }
+
+  /**
+   * Boolean search with support for AND, OR, NOT operators and field-specific queries
+   * @param query - Boolean query string (e.g., "name:Alice AND (type:person OR observation:programming)")
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @returns Filtered knowledge graph matching the boolean query
+   */
+  async booleanSearch(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    const graph = await this.loadGraph();
+
+    // Parse the query into an AST
+    let queryAst: BooleanQueryNode;
+    try {
+      queryAst = this.parseBooleanQuery(query);
+    } catch (error) {
+      throw new Error(`Failed to parse boolean query: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Normalize tags to lowercase for case-insensitive matching
+    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Filter entities
+    const filteredEntities = graph.entities.filter(e => {
+      // Evaluate boolean query
+      if (!this.evaluateBooleanQuery(queryAst, e)) {
+        return false;
+      }
+
+      // Apply tag filter
+      if (normalizedTags && normalizedTags.length > 0) {
+        if (!e.tags || e.tags.length === 0) return false;
+        const entityTags = e.tags.map(tag => tag.toLowerCase());
+        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
+        if (!hasMatchingTag) return false;
+      }
+
+      // Apply importance filter
+      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
+        return false;
+      }
+      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Create a Set of filtered entity names for quick lookup
+    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+
+    // Filter relations to only include those between filtered entities
+    const filteredRelations = graph.relations.filter(r =>
+      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
+    );
+
+    return {
+      entities: filteredEntities,
+      relations: filteredRelations,
+    };
+  }
+
   // Tier 0 B2: Tag aliases for synonym management
   private async loadTagAliases(): Promise<TagAlias[]> {
     try {
@@ -2185,6 +2458,34 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "boolean_search",
+        description: "Advanced boolean search with AND, OR, NOT operators and field-specific queries. Supports parentheses for grouping and quoted strings for exact phrases. Field prefixes: name:, type:, observation:, tag:. Example: 'name:Alice AND (type:person OR observation:\"likes programming\") NOT tag:archived'",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Boolean query string with operators (AND, OR, NOT) and optional field prefixes (name:, type:, observation:, tag:)"
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional additional tags to filter by"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "fuzzy_search",
         description: "Search with typo tolerance using Levenshtein distance algorithm. Finds entities even when query has typos or slight variations.",
         inputSchema: {
@@ -2431,6 +2732,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found` }] };
     case "update_saved_search":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.updateSavedSearch(args.name as string, args.updates as any), null, 2) }] };
+    case "boolean_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.booleanSearch(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
     case "fuzzy_search":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
     case "get_search_suggestions":
