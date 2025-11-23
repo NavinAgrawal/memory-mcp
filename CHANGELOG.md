@@ -5,6 +5,160 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-11-23
+
+### Added - Core Features: Hierarchical Nesting, Compression, and Archiving
+
+#### Phase 2: Hierarchical Nesting (8 new tools)
+**New Field:**
+- **parentId** (string): Optional parent entity reference for tree structures
+
+**New Tools:**
+- **set_entity_parent** - Set or remove entity parent with cycle detection
+- **get_children** - Get immediate children of an entity
+- **get_parent** - Get parent of an entity
+- **get_ancestors** - Get all ancestors (parent chain to root)
+- **get_descendants** - Get all descendants recursively
+- **get_subtree** - Get entity + descendants with relations
+- **get_root_entities** - Get all entities with no parent
+- **get_entity_depth** - Get depth in hierarchy (0 = root)
+
+**Features:**
+- Parent-child relationships for tree-like organization
+- Cycle detection prevents circular relationships
+- BFS traversal for descendants
+- Depth calculation for hierarchy analysis
+
+**Use Cases:**
+- Projects → Features → Tasks → Subtasks
+- Documents → Folders → Files → Sections
+- Categories → Subcategories → Specific Items
+
+#### Phase 3: Memory Compression (3 new tools)
+**New Interface:**
+- **CompressionResult** - Statistics for compression operations
+  - duplicatesFound, entitiesMerged, observationsCompressed
+  - relationsConsolidated, spaceFreed, mergedEntities
+
+**New Tools:**
+- **find_duplicates** - Find similar entities by threshold (default 0.8)
+- **merge_entities** - Merge multiple entities into one
+- **compress_graph** - Automated compression with dry-run mode
+
+**Features:**
+- Multi-factor similarity scoring (name, type, observations, tags)
+- Weighted algorithm: Name 40%, Type 20%, Observations 30%, Tags 10%
+- Levenshtein distance for name matching
+- Jaccard similarity for set overlap
+- Intelligent merging: combines unique observations/tags, preserves highest importance
+
+**Use Cases:**
+- Duplicate cleanup: Merge "Project Alpha" / "project-alpha"
+- Data consolidation: Unify fragmented knowledge
+- Storage optimization: Reduce graph size
+- Quality improvement: Automated deduplication
+
+#### Phase 4: Memory Archiving (1 new tool)
+**New Tool:**
+- **archive_entities** - Archive by age, importance, or tags
+
+**Criteria (OR logic):**
+- **olderThan** - Archive entities last modified before ISO date
+- **importanceLessThan** - Archive entities below importance threshold
+- **tags** - Archive entities with specific tags
+
+**Features:**
+- Multiple criteria support with OR logic
+- Dry-run mode for safe preview
+- Clean removal from active graph
+- Relation cleanup for archived entities
+
+**Use Cases:**
+- Temporal: Archive entities > 6 months old
+- Priority: Archive low-importance (< 3) entities
+- Status: Archive "completed", "draft", "deprecated" tags
+- Capacity: Keep active memory focused on current work
+
+### Added - Tier 0 Enhancements (9 features, 18 new tools)
+
+#### Week 1: Core Quality Improvements
+
+**B5: Bulk Tag Operations (3 tools)**
+- **add_tags_to_multiple** - Add tags to multiple entities at once
+- **replace_tag** - Rename tag globally across all entities
+- **merge_tags** - Combine two tags into one
+
+**A1: Graph Validation (1 tool)**
+- **validate_graph** - Comprehensive graph integrity checks
+  - Orphaned relations detection
+  - Duplicate entity detection
+  - Invalid data validation
+  - Warnings for isolated entities, empty observations, missing metadata
+
+**C4: Saved Searches (5 tools)**
+- **save_search** - Save search query with metadata
+- **list_saved_searches** - List all saved searches
+- **get_saved_search** - Retrieve saved search
+- **execute_saved_search** - Run saved search with usage tracking
+- **delete_saved_search** - Remove saved search
+- **update_saved_search** - Modify saved search
+
+**C2: Fuzzy Search (2 tools)**
+- **fuzzy_search** - Typo-tolerant search using Levenshtein distance
+- **get_search_suggestions** - "Did you mean?" suggestions
+
+**B2: Tag Aliases (5 tools)**
+- **add_tag_alias** - Create tag synonym (e.g., "ai" → "artificial-intelligence")
+- **list_tag_aliases** - List all aliases
+- **get_aliases_for_tag** - Get aliases for canonical tag
+- **remove_tag_alias** - Delete alias
+- **resolve_tag** - Resolve alias to canonical form
+
+#### Week 2: Advanced Search & Import/Export
+
+**C1: Full-Text Search with TF-IDF Ranking (1 tool)**
+- **search_nodes_ranked** - Relevance-based search with TF-IDF scoring
+  - Multi-term query support
+  - Field-level match tracking
+  - Configurable result limit (default 50, max 200)
+  - Returns scores and matched fields
+
+**C3: Boolean Search (1 tool)**
+- **boolean_search** - Advanced queries with logical operators
+  - Operators: AND, OR, NOT, parentheses
+  - Field-specific: name:, type:, observation:, tag:
+  - Quoted strings for exact phrases
+  - Recursive descent parser with AST evaluation
+
+**D1: Additional Export Formats (4 new formats)**
+- **GEXF** - Gephi native format with full attributes
+- **DOT** - GraphViz for publication-quality graphs
+- **Markdown** - Human-readable documentation
+- **Mermaid** - Embedded diagrams with importance-based coloring
+- Updated export_graph tool to support 7 total formats
+
+**D2: Import Capabilities (1 tool)**
+- **import_graph** - Import from JSON, CSV, GraphML
+  - Merge strategies: replace, skip, merge, fail
+  - Dry-run mode for preview
+  - ImportResult with detailed statistics
+  - Error handling and validation
+
+### Changed
+- Updated version from 0.7.0 to 0.8.0
+- Total code expansion: 1,210 → 4,550 lines (+3,340 lines, +276%)
+- Total MCP tools: 15 → 45 tools (+30 new, +200%)
+- Export formats: 3 → 7 formats (+133%)
+- Storage files: 1 → 4 files (memory.jsonl, saved-searches, tag-aliases, archive)
+
+### Technical Notes
+- All new fields optional for backward compatibility
+- Cycle detection for hierarchies prevents invalid states
+- Multi-factor similarity scoring for intelligent compression
+- Criteria-based archiving with OR logic
+- Dry-run modes for safe preview of destructive operations
+- Comprehensive error handling throughout
+
 ## [0.7.0] - 2025-11-09
 
 ### Added - Phase 4: Export & Batch Operations
