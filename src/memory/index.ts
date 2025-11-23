@@ -110,9 +110,29 @@ export interface ValidationWarning {
   details?: any;
 }
 
+export interface SavedSearch {
+  name: string;
+  description?: string;
+  query: string;
+  tags?: string[];
+  minImportance?: number;
+  maxImportance?: number;
+  entityType?: string;
+  createdAt: string;
+  lastUsed?: string;
+  useCount: number;
+}
+
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
-  constructor(private memoryFilePath: string) {}
+  private savedSearchesFilePath: string;
+
+  constructor(private memoryFilePath: string) {
+    // Saved searches file is stored alongside the memory file
+    const dir = path.dirname(memoryFilePath);
+    const basename = path.basename(memoryFilePath, path.extname(memoryFilePath));
+    this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
+  }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
     try {
@@ -851,6 +871,122 @@ export class KnowledgeGraphManager {
     };
   }
 
+  // Tier 0 C4: Saved searches for efficient query management
+  private async loadSavedSearches(): Promise<SavedSearch[]> {
+    try {
+      const data = await fs.readFile(this.savedSearchesFilePath, "utf-8");
+      const lines = data.split("\n").filter(line => line.trim() !== "");
+      return lines.map(line => JSON.parse(line) as SavedSearch);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async saveSavedSearches(searches: SavedSearch[]): Promise<void> {
+    const lines = searches.map(s => JSON.stringify(s));
+    await fs.writeFile(this.savedSearchesFilePath, lines.join("\n"));
+  }
+
+  /**
+   * Save a search query for later reuse
+   */
+  async saveSearch(search: Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>): Promise<SavedSearch> {
+    const searches = await this.loadSavedSearches();
+
+    // Check if name already exists
+    if (searches.some(s => s.name === search.name)) {
+      throw new Error(`Saved search with name "${search.name}" already exists`);
+    }
+
+    const newSearch: SavedSearch = {
+      ...search,
+      createdAt: new Date().toISOString(),
+      useCount: 0
+    };
+
+    searches.push(newSearch);
+    await this.saveSavedSearches(searches);
+
+    return newSearch;
+  }
+
+  /**
+   * List all saved searches
+   */
+  async listSavedSearches(): Promise<SavedSearch[]> {
+    return await this.loadSavedSearches();
+  }
+
+  /**
+   * Get a specific saved search by name
+   */
+  async getSavedSearch(name: string): Promise<SavedSearch | null> {
+    const searches = await this.loadSavedSearches();
+    return searches.find(s => s.name === name) || null;
+  }
+
+  /**
+   * Execute a saved search by name
+   */
+  async executeSavedSearch(name: string): Promise<KnowledgeGraph> {
+    const searches = await this.loadSavedSearches();
+    const search = searches.find(s => s.name === name);
+
+    if (!search) {
+      throw new Error(`Saved search "${name}" not found`);
+    }
+
+    // Update usage statistics
+    search.lastUsed = new Date().toISOString();
+    search.useCount++;
+    await this.saveSavedSearches(searches);
+
+    // Execute the search
+    return await this.searchNodes(
+      search.query,
+      search.tags,
+      search.minImportance,
+      search.maxImportance
+    );
+  }
+
+  /**
+   * Delete a saved search
+   */
+  async deleteSavedSearch(name: string): Promise<boolean> {
+    const searches = await this.loadSavedSearches();
+    const initialLength = searches.length;
+    const filtered = searches.filter(s => s.name !== name);
+
+    if (filtered.length === initialLength) {
+      return false; // Search not found
+    }
+
+    await this.saveSavedSearches(filtered);
+    return true;
+  }
+
+  /**
+   * Update a saved search
+   */
+  async updateSavedSearch(name: string, updates: Partial<Omit<SavedSearch, 'name' | 'createdAt' | 'useCount' | 'lastUsed'>>): Promise<SavedSearch> {
+    const searches = await this.loadSavedSearches();
+    const search = searches.find(s => s.name === name);
+
+    if (!search) {
+      throw new Error(`Saved search "${name}" not found`);
+    }
+
+    // Apply updates
+    Object.assign(search, updates);
+
+    await this.saveSavedSearches(searches);
+    return search;
+  }
+
   // Phase 4: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
@@ -1430,6 +1566,131 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "save_search",
+        description: "Save a search query for later reuse. Allows saving complex search parameters with a name and optional description.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Unique name for the saved search"
+            },
+            description: {
+              type: "string",
+              description: "Optional description of what this search is for"
+            },
+            query: {
+              type: "string",
+              description: "The search query text"
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional tags to filter by"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+            entityType: {
+              type: "string",
+              description: "Optional entity type to filter by"
+            },
+          },
+          required: ["name", "query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "list_saved_searches",
+        description: "List all saved searches with their metadata, including usage statistics.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "execute_saved_search",
+        description: "Execute a previously saved search by name. Automatically tracks usage statistics (last used time and use count).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the saved search to execute"
+            },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "delete_saved_search",
+        description: "Delete a saved search by name.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the saved search to delete"
+            },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "update_saved_search",
+        description: "Update the parameters of a saved search. Can update query, description, tags, importance levels, and entity type.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Name of the saved search to update"
+            },
+            updates: {
+              type: "object",
+              properties: {
+                description: {
+                  type: "string",
+                  description: "New description"
+                },
+                query: {
+                  type: "string",
+                  description: "New search query"
+                },
+                tags: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "New tags filter"
+                },
+                minImportance: {
+                  type: "number",
+                  description: "New minimum importance"
+                },
+                maxImportance: {
+                  type: "number",
+                  description: "New maximum importance"
+                },
+                entityType: {
+                  type: "string",
+                  description: "New entity type filter"
+                },
+              },
+              description: "Fields to update in the saved search"
+            },
+          },
+          required: ["name", "updates"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "export_graph",
         description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
         inputSchema: {
@@ -1487,6 +1748,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.validateGraph(), null, 2) }] };
   }
 
+  if (name === "list_saved_searches") {
+    return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.listSavedSearches(), null, 2) }] };
+  }
+
   if (!args) {
     throw new Error(`No arguments provided for tool: ${name}`);
   }
@@ -1525,6 +1790,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.replaceTag(args.oldTag as string, args.newTag as string), null, 2) }] };
     case "merge_tags":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.mergeTags(args.tag1 as string, args.tag2 as string, args.targetTag as string), null, 2) }] };
+    case "save_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.saveSearch(args as Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>), null, 2) }] };
+    case "execute_saved_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.executeSavedSearch(args.name as string), null, 2) }] };
+    case "delete_saved_search":
+      const deleted = await knowledgeGraphManager.deleteSavedSearch(args.name as string);
+      return { content: [{ type: "text", text: deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found` }] };
+    case "update_saved_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.updateSavedSearch(args.name as string, args.updates as any), null, 2) }] };
     case "export_graph":
       return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
