@@ -35,7 +35,9 @@ describe('KnowledgeGraphManager', () => {
 
       const newEntities = await manager.createEntities(entities);
       expect(newEntities).toHaveLength(2);
-      expect(newEntities).toEqual(entities);
+      // Entities now have timestamps, so check core fields
+      expect(newEntities[0].name).toBe(entities[0].name);
+      expect(newEntities[1].name).toBe(entities[1].name);
 
       const graph = await manager.readGraph();
       expect(graph.entities).toHaveLength(2);
@@ -74,7 +76,10 @@ describe('KnowledgeGraphManager', () => {
 
       const newRelations = await manager.createRelations(relations);
       expect(newRelations).toHaveLength(1);
-      expect(newRelations).toEqual(relations);
+      // Relations now have timestamps, so check core fields
+      expect(newRelations[0].from).toBe(relations[0].from);
+      expect(newRelations[0].to).toBe(relations[0].to);
+      expect(newRelations[0].relationType).toBe(relations[0].relationType);
 
       const graph = await manager.readGraph();
       expect(graph.relations).toHaveLength(1);
