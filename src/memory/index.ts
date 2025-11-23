@@ -134,6 +134,61 @@ export class KnowledgeGraphManager {
     this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
   }
 
+  // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
+  /**
+   * Calculate Levenshtein distance between two strings
+   * Returns the minimum number of single-character edits needed to change one word into another
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const m = str1.length;
+    const n = str2.length;
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,    // deletion
+            dp[i][j - 1] + 1,    // insertion
+            dp[i - 1][j - 1] + 1 // substitution
+          );
+        }
+      }
+    }
+
+    return dp[m][n];
+  }
+
+  /**
+   * Check if two strings are fuzzy matches based on similarity threshold
+   * @param str1 - First string to compare
+   * @param str2 - Second string to compare
+   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
+   * @returns true if strings are similar enough
+   */
+  private isFuzzyMatch(str1: string, str2: string, threshold: number = 0.7): boolean {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+
+    // Exact match
+    if (s1 === s2) return true;
+
+    // One contains the other
+    if (s1.includes(s2) || s2.includes(s1)) return true;
+
+    // Calculate similarity using Levenshtein distance
+    const distance = this.levenshteinDistance(s1, s2);
+    const maxLength = Math.max(s1.length, s2.length);
+    const similarity = 1 - (distance / maxLength);
+
+    return similarity >= threshold;
+  }
+
   private async loadGraph(): Promise<KnowledgeGraph> {
     try {
       const data = await fs.readFile(this.memoryFilePath, "utf-8");
@@ -987,6 +1042,124 @@ export class KnowledgeGraphManager {
     return search;
   }
 
+  /**
+   * Fuzzy search for entities with typo tolerance
+   * @param query - Search query
+   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @returns Filtered knowledge graph with fuzzy matches
+   */
+  async fuzzySearch(
+    query: string,
+    threshold: number = 0.7,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    const graph = await this.loadGraph();
+
+    // Normalize tags to lowercase for case-insensitive matching
+    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Filter entities using fuzzy matching
+    const filteredEntities = graph.entities.filter(e => {
+      // Fuzzy text search
+      const matchesQuery =
+        this.isFuzzyMatch(e.name, query, threshold) ||
+        this.isFuzzyMatch(e.entityType, query, threshold) ||
+        e.observations.some(o =>
+          // For observations, split into words and check each word
+          o.toLowerCase().split(/\s+/).some(word =>
+            this.isFuzzyMatch(word, query, threshold)
+          ) ||
+          // Also check if the observation contains the query
+          this.isFuzzyMatch(o, query, threshold)
+        );
+
+      if (!matchesQuery) return false;
+
+      // Tag filter
+      if (normalizedTags && normalizedTags.length > 0) {
+        if (!e.tags || e.tags.length === 0) return false;
+        const entityTags = e.tags.map(tag => tag.toLowerCase());
+        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
+        if (!hasMatchingTag) return false;
+      }
+
+      // Importance filter
+      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
+        return false;
+      }
+      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Create a Set of filtered entity names for quick lookup
+    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+
+    // Filter relations to only include those between filtered entities
+    const filteredRelations = graph.relations.filter(r =>
+      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
+    );
+
+    return {
+      entities: filteredEntities,
+      relations: filteredRelations,
+    };
+  }
+
+  /**
+   * Get "did you mean?" suggestions for a query
+   * @param query - The search query
+   * @param maxSuggestions - Maximum number of suggestions to return
+   * @returns Array of suggested entity/type names
+   */
+  async getSearchSuggestions(query: string, maxSuggestions: number = 5): Promise<string[]> {
+    const graph = await this.loadGraph();
+    const queryLower = query.toLowerCase();
+
+    interface Suggestion {
+      text: string;
+      similarity: number;
+    }
+
+    const suggestions: Suggestion[] = [];
+
+    // Check entity names
+    for (const entity of graph.entities) {
+      const distance = this.levenshteinDistance(queryLower, entity.name.toLowerCase());
+      const maxLength = Math.max(queryLower.length, entity.name.length);
+      const similarity = 1 - (distance / maxLength);
+
+      if (similarity > 0.5 && similarity < 1.0) { // Not exact match but similar
+        suggestions.push({ text: entity.name, similarity });
+      }
+    }
+
+    // Check entity types
+    const uniqueTypes = [...new Set(graph.entities.map(e => e.entityType))];
+    for (const type of uniqueTypes) {
+      const distance = this.levenshteinDistance(queryLower, type.toLowerCase());
+      const maxLength = Math.max(queryLower.length, type.length);
+      const similarity = 1 - (distance / maxLength);
+
+      if (similarity > 0.5 && similarity < 1.0) {
+        suggestions.push({ text: type, similarity });
+      }
+    }
+
+    // Sort by similarity and return top suggestions
+    return suggestions
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, maxSuggestions)
+      .map(s => s.text);
+  }
+
   // Phase 4: Export graph in various formats
   /**
    * Export the knowledge graph in the specified format with optional filtering.
@@ -1691,6 +1864,61 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "fuzzy_search",
+        description: "Search with typo tolerance using Levenshtein distance algorithm. Finds entities even when query has typos or slight variations.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query (can have typos)"
+            },
+            threshold: {
+              type: "number",
+              description: "Similarity threshold (0.0 to 1.0). Default 0.7. Higher = stricter matching",
+              minimum: 0.0,
+              maximum: 1.0
+            },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional tags to filter by"
+            },
+            minImportance: {
+              type: "number",
+              description: "Optional minimum importance level (0-10)"
+            },
+            maxImportance: {
+              type: "number",
+              description: "Optional maximum importance level (0-10)"
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "get_search_suggestions",
+        description: "Get 'did you mean?' suggestions for a search query. Returns similar entity names and types based on fuzzy matching.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query to get suggestions for"
+            },
+            maxSuggestions: {
+              type: "number",
+              description: "Maximum number of suggestions to return (default 5)",
+              minimum: 1,
+              maximum: 20
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
         name: "export_graph",
         description: "Export the knowledge graph in various formats (JSON, CSV, or GraphML) with optional filtering. GraphML format is compatible with graph visualization tools like Gephi and Cytoscape.",
         inputSchema: {
@@ -1799,6 +2027,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found` }] };
     case "update_saved_search":
       return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.updateSavedSearch(args.name as string, args.updates as any), null, 2) }] };
+    case "fuzzy_search":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+    case "get_search_suggestions":
+      return { content: [{ type: "text", text: JSON.stringify(await knowledgeGraphManager.getSearchSuggestions(args.query as string, args.maxSuggestions as number | undefined), null, 2) }] };
     case "export_graph":
       return { content: [{ type: "text", text: await knowledgeGraphManager.exportGraph(args.format as 'json' | 'csv' | 'graphml', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
     default:
