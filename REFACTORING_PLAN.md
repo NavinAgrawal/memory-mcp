@@ -66,75 +66,114 @@ The file contains the following functional domains:
 4. **Testability**: Pure functions and mockable dependencies
 5. **Gradual Migration**: Refactor incrementally without breaking changes
 6. **Backward Compatibility**: Maintain all existing APIs
+7. **File Size Constraint**: **ALL files MUST be under 500 lines** (including tests)
 
 ### Module Organization Strategy
 
 ```
 src/memory/
-├── index.ts                      # Entry point - server initialization (100 lines)
+├── index.ts                      # Entry point - server initialization (<50 lines)
 ├── types/                        # TypeScript types and interfaces
-│   ├── index.ts                 # Re-exports all types
-│   ├── entity.types.ts          # Entity, Relation, KnowledgeGraph
-│   ├── search.types.ts          # SearchResult, SavedSearch, BooleanQueryNode
-│   ├── analytics.types.ts       # GraphStats, ValidationReport, ValidationError
-│   ├── import-export.types.ts   # ImportResult, CompressionResult
-│   └── tag.types.ts             # TagAlias
+│   ├── index.ts                 # Re-exports all types (<50 lines)
+│   ├── entity.types.ts          # Entity, Relation, KnowledgeGraph (<100 lines)
+│   ├── search.types.ts          # SearchResult, SavedSearch, BooleanQueryNode (<100 lines)
+│   ├── analytics.types.ts       # GraphStats, ValidationReport, ValidationError (<150 lines)
+│   ├── import-export.types.ts   # ImportResult, CompressionResult (<50 lines)
+│   └── tag.types.ts             # TagAlias (<50 lines)
 ├── core/                         # Core business logic
-│   ├── KnowledgeGraphManager.ts # Main manager (facade pattern)
-│   ├── GraphStorage.ts          # File I/O operations (loadGraph, saveGraph)
-│   ├── EntityManager.ts         # CRUD for entities
-│   ├── RelationManager.ts       # CRUD for relations
-│   └── ObservationManager.ts    # CRUD for observations
+│   ├── KnowledgeGraphManager.ts # Main manager - facade pattern (<350 lines)
+│   ├── GraphStorage.ts          # File I/O operations (<150 lines)
+│   ├── EntityManager.ts         # CRUD for entities (<200 lines)
+│   ├── RelationManager.ts       # CRUD for relations (<150 lines)
+│   └── ObservationManager.ts    # CRUD for observations (<100 lines)
 ├── search/                       # Search functionality
-│   ├── SearchManager.ts         # Orchestrates all search operations
-│   ├── BasicSearch.ts           # searchNodes, openNodes
-│   ├── RankedSearch.ts          # TF-IDF ranking algorithm
-│   ├── BooleanSearch.ts         # Boolean query parsing and evaluation
-│   ├── FuzzySearch.ts           # Fuzzy matching with Levenshtein
-│   ├── SearchSuggestions.ts     # Auto-complete suggestions
-│   └── SavedSearchManager.ts    # Saved search operations
+│   ├── SearchManager.ts         # Orchestrates all search operations (<200 lines)
+│   ├── BasicSearch.ts           # searchNodes, openNodes (<200 lines)
+│   ├── RankedSearch.ts          # TF-IDF ranking algorithm (<300 lines)
+│   ├── BooleanSearch.ts         # Boolean query parsing and evaluation (<350 lines)
+│   ├── FuzzySearch.ts           # Fuzzy matching with Levenshtein (<150 lines)
+│   ├── SearchSuggestions.ts     # Auto-complete suggestions (<150 lines)
+│   └── SavedSearchManager.ts    # Saved search operations (<200 lines)
 ├── features/                     # Feature-specific managers
-│   ├── TagManager.ts            # Tag operations and aliases
-│   ├── ImportanceManager.ts     # Importance level operations
-│   ├── HierarchyManager.ts      # Parent-child relationships
-│   ├── AnalyticsManager.ts      # Statistics and validation
-│   ├── CompressionManager.ts    # Deduplication and merging
-│   ├── ArchiveManager.ts        # Archiving operations
-│   └── ImportExportManager.ts   # Multi-format import/export
+│   ├── TagManager.ts            # Tag operations and aliases (<400 lines)
+│   ├── ImportanceManager.ts     # Importance level operations (<50 lines)
+│   ├── HierarchyManager.ts      # Parent-child relationships (<450 lines)
+│   ├── AnalyticsManager.ts      # Statistics and validation (<300 lines)
+│   ├── CompressionManager.ts    # Deduplication and merging (<400 lines)
+│   ├── ArchiveManager.ts        # Archiving operations (<150 lines)
+│   └── import-export/           # Multi-format import/export (subdivided)
+│       ├── ImportExportManager.ts # Orchestrator (<150 lines)
+│       ├── ExportManager.ts     # Export orchestration (<200 lines)
+│       ├── ImportManager.ts     # Import orchestration (<200 lines)
+│       └── formats/             # Format-specific handlers
+│           ├── JSONExporter.ts    # (<100 lines)
+│           ├── JSONImporter.ts    # (<100 lines)
+│           ├── CSVExporter.ts     # (<150 lines)
+│           ├── CSVImporter.ts     # (<200 lines)
+│           ├── GraphMLExporter.ts # (<200 lines)
+│           ├── GraphMLImporter.ts # (<200 lines)
+│           ├── GEXFExporter.ts    # (<200 lines)
+│           ├── DOTExporter.ts     # (<150 lines)
+│           ├── MarkdownExporter.ts # (<150 lines)
+│           └── MermaidExporter.ts  # (<150 lines)
 ├── utils/                        # Utility functions
-│   ├── levenshtein.ts           # String distance calculations
-│   ├── tfidf.ts                 # TF-IDF algorithms
-│   ├── dateUtils.ts             # Date range filtering
-│   ├── validationUtils.ts       # Data validation helpers
-│   └── pathUtils.ts             # File path management
+│   ├── levenshtein.ts           # String distance calculations (<50 lines)
+│   ├── tfidf.ts                 # TF-IDF algorithms (<150 lines)
+│   ├── dateUtils.ts             # Date range filtering (<100 lines)
+│   ├── validationUtils.ts       # Data validation helpers (<150 lines)
+│   └── pathUtils.ts             # File path management (<100 lines)
 ├── mcp/                          # MCP Server setup
-│   ├── server.ts                # Server initialization
-│   ├── tools/                   # Tool definitions
-│   │   ├── index.ts             # Tool registry
-│   │   ├── entity.tools.ts      # Entity CRUD tool definitions
-│   │   ├── search.tools.ts      # Search tool definitions
-│   │   ├── tag.tools.ts         # Tag tool definitions
-│   │   ├── hierarchy.tools.ts   # Hierarchy tool definitions
-│   │   ├── analytics.tools.ts   # Analytics tool definitions
-│   │   └── import-export.tools.ts # Import/Export tool definitions
-│   └── handlers/                # Tool request handlers
-│       ├── index.ts             # Handler registry
-│       ├── entity.handlers.ts   # Entity tool handlers
-│       ├── search.handlers.ts   # Search tool handlers
-│       ├── tag.handlers.ts      # Tag tool handlers
-│       ├── hierarchy.handlers.ts # Hierarchy tool handlers
-│       ├── analytics.handlers.ts # Analytics tool handlers
-│       └── import-export.handlers.ts # Import/Export tool handlers
-├── __tests__/                    # Tests (existing)
-│   ├── file-path.test.ts
-│   ├── knowledge-graph.test.ts
-│   ├── entity.test.ts           # NEW: Entity operations tests
-│   ├── search.test.ts           # NEW: Search tests
-│   ├── hierarchy.test.ts        # NEW: Hierarchy tests
-│   └── compression.test.ts      # NEW: Compression tests
+│   ├── server.ts                # Server initialization (<100 lines)
+│   ├── tools/                   # Tool definitions (each <200 lines)
+│   │   ├── index.ts             # Tool registry (<100 lines)
+│   │   ├── entity.tools.ts      # Entity CRUD tool definitions (<150 lines)
+│   │   ├── search.tools.ts      # Search tool definitions (<250 lines)
+│   │   ├── tag.tools.ts         # Tag tool definitions (<300 lines)
+│   │   ├── hierarchy.tools.ts   # Hierarchy tool definitions (<250 lines)
+│   │   ├── analytics.tools.ts   # Analytics tool definitions (<100 lines)
+│   │   └── import-export.tools.ts # Import/Export tool definitions (<250 lines)
+│   └── handlers/                # Tool request handlers (each <250 lines)
+│       ├── index.ts             # Handler registry (<150 lines)
+│       ├── entity.handlers.ts   # Entity tool handlers (<150 lines)
+│       ├── search.handlers.ts   # Search tool handlers (<250 lines)
+│       ├── tag.handlers.ts      # Tag tool handlers (<250 lines)
+│       ├── hierarchy.handlers.ts # Hierarchy tool handlers (<200 lines)
+│       ├── analytics.handlers.ts # Analytics tool handlers (<100 lines)
+│       └── import-export.handlers.ts # Import/Export tool handlers (<200 lines)
+├── __tests__/                    # Tests (each test file <400 lines)
+│   ├── unit/                    # Unit tests
+│   │   ├── core/
+│   │   │   ├── EntityManager.test.ts       # (<300 lines)
+│   │   │   ├── RelationManager.test.ts     # (<250 lines)
+│   │   │   ├── ObservationManager.test.ts  # (<200 lines)
+│   │   │   └── GraphStorage.test.ts        # (<250 lines)
+│   │   ├── search/
+│   │   │   ├── BasicSearch.test.ts         # (<300 lines)
+│   │   │   ├── RankedSearch.test.ts        # (<350 lines)
+│   │   │   ├── BooleanSearch.test.ts       # (<400 lines)
+│   │   │   └── FuzzySearch.test.ts         # (<250 lines)
+│   │   ├── features/
+│   │   │   ├── TagManager.test.ts          # (<400 lines)
+│   │   │   ├── HierarchyManager.test.ts    # (<400 lines)
+│   │   │   ├── CompressionManager.test.ts  # (<350 lines)
+│   │   │   └── ArchiveManager.test.ts      # (<250 lines)
+│   │   └── utils/
+│   │       ├── levenshtein.test.ts         # (<100 lines)
+│   │       ├── tfidf.test.ts               # (<150 lines)
+│   │       └── dateUtils.test.ts           # (<100 lines)
+│   ├── integration/             # Integration tests (each <400 lines)
+│   │   ├── entity-operations.test.ts       # (<350 lines)
+│   │   ├── search-operations.test.ts       # (<400 lines)
+│   │   ├── hierarchy-operations.test.ts    # (<350 lines)
+│   │   └── import-export.test.ts           # (<400 lines)
+│   └── performance/             # Performance tests (each <300 lines)
+│       ├── search-benchmark.test.ts        # (<300 lines)
+│       └── large-graph.test.ts             # (<250 lines)
 └── config/                       # Configuration
-    └── constants.ts             # Constants and defaults
+    └── constants.ts             # Constants and defaults (<100 lines)
 ```
+
+**File Size Guarantee**: ALL files will be under 500 lines. Large modules are subdivided further.
 
 ---
 
@@ -527,23 +566,55 @@ export class KnowledgeGraphManager {
 **Size**: ~150 lines
 
 #### `ImportExportManager.ts`
-**Responsibility**: Multi-format import/export
+**Responsibility**: Multi-format import/export orchestration
 
 **Methods**:
 - `exportGraph(format: '...', filter?: {...}): Promise<string>`
 - `importGraph(format: '...', data: string, mergeStrategy?: '...', dryRun?: boolean): Promise<ImportResult>`
-- `exportJSON(graph: KnowledgeGraph): string`
-- `exportCSV(graph: KnowledgeGraph): string`
-- `exportGraphML(graph: KnowledgeGraph): string`
-- `exportGEXF(graph: KnowledgeGraph): string`
-- `exportDOT(graph: KnowledgeGraph): string`
-- `exportMarkdown(graph: KnowledgeGraph): string`
-- `exportMermaid(graph: KnowledgeGraph): string`
-- `importJSON(data: string): KnowledgeGraph`
-- `importCSV(data: string): KnowledgeGraph`
-- `importGraphML(data: string): KnowledgeGraph`
 
-**Size**: ~850 lines (largest complex module)
+**Size**: ~150 lines (delegates to format-specific modules)
+
+**Note**: This is split into multiple submodules to stay under 500 lines:
+
+##### `features/import-export/ExportManager.ts` (~200 lines)
+- Orchestrates all export formats
+- Applies filters before export
+- Delegates to format-specific exporters
+
+##### `features/import-export/ImportManager.ts` (~200 lines)
+- Orchestrates all import formats
+- Handles merge strategies
+- Validates imported data
+
+##### `features/import-export/formats/JSONExporter.ts` (~100 lines)
+- `exportJSON(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/CSVExporter.ts` (~150 lines)
+- `exportCSV(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/GraphMLExporter.ts` (~200 lines)
+- `exportGraphML(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/GEXFExporter.ts` (~200 lines)
+- `exportGEXF(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/DOTExporter.ts` (~150 lines)
+- `exportDOT(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/MarkdownExporter.ts` (~150 lines)
+- `exportMarkdown(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/MermaidExporter.ts` (~150 lines)
+- `exportMermaid(graph: KnowledgeGraph): string`
+
+##### `features/import-export/formats/JSONImporter.ts` (~100 lines)
+- `importJSON(data: string): KnowledgeGraph`
+
+##### `features/import-export/formats/CSVImporter.ts` (~200 lines)
+- `importCSV(data: string): KnowledgeGraph`
+
+##### `features/import-export/formats/GraphMLImporter.ts` (~200 lines)
+- `importGraphML(data: string): KnowledgeGraph`
 
 ---
 
@@ -1272,12 +1343,13 @@ src/memory/__tests__/
 ## Success Criteria
 
 ### Code Quality Metrics
-- ✅ Average file size < 500 lines
-- ✅ No file > 1000 lines
+- ✅ **STRICT: ALL files < 500 lines** (no exceptions)
+- ✅ Average file size < 250 lines
 - ✅ Test coverage > 85%
 - ✅ Cyclomatic complexity < 10 per function
 - ✅ Zero ESLint errors
 - ✅ Zero TypeScript errors
+- ✅ Each test file < 400 lines (split into multiple files if needed)
 
 ### Functional Metrics
 - ✅ All 45 tools working
@@ -1355,16 +1427,38 @@ The refactoring maintains 100% backward compatibility while positioning the code
 
 ## Appendix A: File Size Comparison
 
-| Module | Current (lines) | Target (lines) | Reduction |
-|--------|----------------|----------------|-----------|
-| index.ts | 4,187 | 30 | -99.3% |
-| Types | (in index.ts) | 187 | N/A |
-| Core Managers | (in index.ts) | 800 | N/A |
-| Search Modules | (in index.ts) | 1,350 | N/A |
-| Feature Managers | (in index.ts) | 2,300 | N/A |
-| Utils | (in index.ts) | 360 | N/A |
-| MCP Layer | (in index.ts) | 2,000 | N/A |
-| **Total** | **4,187** | **7,027** | +68% |
+### Core Implementation Files
+
+| Module | Current (lines) | Target (lines) | Files | Max per file |
+|--------|----------------|----------------|-------|--------------|
+| index.ts | 4,187 | 50 | 1 | 50 |
+| Types | (in index.ts) | 500 | 6 | 150 |
+| Core Managers | (in index.ts) | 950 | 5 | 350 |
+| Search Modules | (in index.ts) | 1,550 | 7 | 350 |
+| Feature Managers | (in index.ts) | 2,650 | 17 | 450 |
+| Utils | (in index.ts) | 550 | 5 | 150 |
+| MCP Layer | (in index.ts) | 2,600 | 14 | 300 |
+| **Total Implementation** | **4,187** | **8,850** | **55** | **<500** |
+
+### Test Files
+
+| Test Type | Files | Total Lines | Max per file |
+|-----------|-------|-------------|--------------|
+| Unit Tests | 15 | 4,500 | 400 |
+| Integration Tests | 4 | 1,400 | 400 |
+| Performance Tests | 2 | 550 | 300 |
+| **Total Tests** | **21** | **6,450** | **<400** |
+
+### Overall Statistics
+
+| Metric | Value |
+|--------|-------|
+| Total Files (implementation) | 55 |
+| Total Files (tests) | 21 |
+| **Total Files** | **76** |
+| **Total Lines (all)** | **~15,300** |
+| **Largest File** | **<500 lines** |
+| **Average File Size** | **~201 lines** |
 
 **Note**: Total line count increases due to:
 - Module boundaries (imports/exports)
@@ -1372,8 +1466,9 @@ The refactoring maintains 100% backward compatibility while positioning the code
 - More comprehensive error handling
 - Additional documentation
 - More extensive tests
+- **Aggressive file splitting to stay under 500-line limit**
 
-This is a **positive trade-off** - we exchange raw line count for dramatically improved maintainability, testability, and code organization.
+This is a **positive trade-off** - we exchange raw line count for dramatically improved maintainability, testability, and code organization. Every file is easily reviewable and testable.
 
 ---
 
