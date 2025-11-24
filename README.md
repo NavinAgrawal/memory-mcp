@@ -13,7 +13,6 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 ## Table of Contents
 
 - [Features](#features)
-- [What's New](#whats-new)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Core Concepts](#core-concepts)
@@ -30,35 +29,28 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 ## Features
 
 ### Core Memory Capabilities
-- ✅ **Knowledge Graph Storage**: Entity-Relation-Observation model
-- ✅ **Persistent Memory**: Remember information across chat sessions
-- ✅ **Full CRUD Operations**: Create, read, update, delete entities and relations
-- ✅ **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
+- **Knowledge Graph Storage**: Entity-Relation-Observation model for structured memory
+- **Persistent Memory**: Information persists across chat sessions with JSONL storage
+- **Full CRUD Operations**: Create, read, update, delete entities and relations
+- **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
 
-### v0.9.0 Architecture Update
-- 🏗️ **Modular Architecture**: Refactored from 4,187-line monolith to 40+ focused modules
-- 📦 **Clean Separation**: Types, Utils, Core, Search, Features modules
-- ✅ **100% Test Coverage**: All 51 tests passing with TypeScript strict mode
-- 🎯 **Developer Experience**: Comprehensive JSDoc, barrel exports, dependency injection
-- ⚡ **Performance**: Better tree-shaking, faster imports, parallel development
+### Advanced Features
+- **Hierarchical Nesting**: Parent-child relationships for organizing tree structures (8 tools)
+- **Memory Compression**: Intelligent duplicate detection and merging with similarity scoring (3 tools)
+- **Smart Archiving**: Criteria-based archiving by age, importance, or tags (1 tool)
+- **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching (3 tools)
+- **Import/Export**: 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)
+- **Tag Management**: Aliases, bulk operations, and validation (11 tools)
+- **Saved Searches**: Store and execute frequent queries (5 tools)
+- **Graph Validation**: Integrity checks and orphan detection (1 tool)
 
-### v0.8.0 Major Features
-- 🚀 **Hierarchical Nesting**: Parent-child relationships for tree structures (8 tools)
-- 🚀 **Memory Compression**: Intelligent duplicate detection and merging (3 tools)
-- 🚀 **Smart Archiving**: Criteria-based archiving by age, importance, tags (1 tool)
-- 🚀 **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching (3 tools)
-- 🚀 **Import/Export**: 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)
-- 🚀 **Tag Management**: Aliases, bulk operations, validation (11 tools)
-- 🚀 **Saved Searches**: Store and execute frequent queries (5 tools)
-- 🚀 **Graph Validation**: Integrity checks, orphan detection (1 tool)
-
-### Enhanced Features (v0.7.0)
-- ✅ **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
-- ✅ **Date Range Search**: Filter entities/relations by creation or modification date
-- ✅ **Graph Statistics**: Comprehensive analytics with counts, types, and temporal data
-- ✅ **Tags System**: Categorize entities with case-insensitive tags
-- ✅ **Importance Levels**: 0-10 scale for entity prioritization
-- ✅ **Advanced Filtering**: Combine text, tags, importance, and date ranges
+### Data Management
+- **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
+- **Date Range Search**: Filter entities/relations by creation or modification date
+- **Graph Statistics**: Comprehensive analytics with counts, types, and temporal data
+- **Tags System**: Categorize entities with case-insensitive tags and aliases
+- **Importance Levels**: 0-10 scale for entity prioritization
+- **Advanced Filtering**: Combine text, tags, importance, and date ranges
 
 ### Comparison with Official Memory Server
 
@@ -84,150 +76,32 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Caching Layer** | ❌ | ✅ In-memory (instant reads) |
 | **Backup & Restore** | ❌ | ✅ Point-in-time recovery |
 | **Transactions** | ❌ | ✅ ACID guarantees |
-| **Security** | ⚠️ Vulnerabilities | ✅ 0 CVEs |
-| **Test Coverage** | Basic | ✅ 83 tests (comprehensive) |
+| **Security** | Basic | ✅ Input validation |
+| **Reliability** | Basic | ✅ Backups & Transactions |
+| **Performance** | Basic | ✅ Caching & Optimizations |
 | **Total Tools** | 11 | **45** (+309%) |
 | **Code Structure** | Monolithic | **Modular** (40+ files) |
-| **Code Size** | ~700 LOC | **5,200 LOC** (+642%) |
-| **Avg File Size** | N/A | **~200 lines** |
 
-## What's New
+## Key Features
 
-### Version 0.11.5 (Latest - November 2025)
+### Production-Ready Enterprise Capabilities
 
-**🔐 Production-Ready Enterprise Features**
+**🔐 Security & Data Integrity**
+- **Input Validation**: Zod-based schemas validate all inputs, preventing malformed data and injection attacks
+- **Transaction Support**: ACID-compliant transactions with automatic rollback on failures
+- **Backup & Restore**: Point-in-time recovery with timestamped backups and metadata
+- **Data Protection**: Comprehensive validation with size limits, range checks, and format enforcement
 
-Critical improvements for production deployments with enhanced security, performance, and data integrity:
+**⚡ Performance Optimizations**
+- **Smart Caching**: In-memory cache with write-through invalidation for instant reads
+- **Optimized Algorithms**: 50x faster duplicate detection using two-level bucketing (O(n²) → O(n·k))
+- **Efficient Storage**: JSONL format with modular architecture for better tree-shaking
 
-**🛡️ Security & Validation (v0.11.0 - v0.11.1)**
-- ✅ **All Security Vulnerabilities Fixed**: 0 CVEs (updated vitest 2.1.8 → 4.0.13)
-- ✅ **Input Validation with Zod**: 14 comprehensive schemas prevent malformed data & injection attacks
-  - Entity/Relation validation with size constraints
-  - Importance range validation (0-10)
-  - Batch operation limits (1-1000 items)
-  - ISO 8601 date validation
-  - Tag/observation length limits
-
-**⚡ Performance Optimizations (v0.11.2 - v0.11.3)**
-- ✅ **O(n²) → O(n·k) Duplicate Detection**: 50x faster for large graphs (10k entities: 50M → 1M comparisons)
-  - Two-level bucketing strategy (type + name prefix)
-  - Maintains accuracy while dramatically improving speed
-- ✅ **In-Memory Caching Layer**: Eliminates repeated disk reads
-  - O(n) → O(1) for read-heavy workloads
-  - Write-through invalidation ensures consistency
-  - Deep copy returns prevent cache pollution
-
-**🔒 Data Protection & Integrity (v0.11.4 - v0.11.5)**
-- ✅ **Backup & Restore System**: Point-in-time recovery with metadata
-  - Timestamped backups with entity/relation counts
-  - Automatic cleanup (keep N most recent)
-  - Backup browsing and selective restoration
-- ✅ **Transaction Support**: ACID-compliant atomic operations
-  - Begin/Commit/Rollback with automatic backup
-  - Stage multiple operations, commit atomically
-  - All succeed together or all fail (no partial failures)
-  - Critical for data integrity in production
-
-**📊 Impact Summary**
-- **Security**: 0 vulnerabilities, comprehensive input validation
-- **Performance**: 50x faster duplicate detection, near-instant graph reads
-- **Reliability**: Full backup/restore, atomic transactions, zero data corruption risk
-- **Production**: Enterprise-grade data protection and integrity guarantees
-
-### Version 0.9.0 (November 2025)
-
-**🏗️ Major Architecture Refactoring**
-
-Complete codebase restructure from monolithic file (4,187 lines) to clean, modular architecture:
-
-**New Module Structure:**
-```
-src/memory/
-├── types/        (6 files)  - Type definitions
-├── utils/        (5 files)  - Utility functions
-├── core/         (5 files)  - Storage & managers
-├── search/       (8 files)  - Search implementations
-└── features/     (9 files)  - Feature managers
-```
-
-**Key Improvements:**
-- ✅ **40 TypeScript modules** (avg ~200 lines each)
-- ✅ **100% test coverage** - All 51 tests passing
-- ✅ **TypeScript strict mode** - Full type safety
-- ✅ **Dependency injection** - Flexible, testable design
-- ✅ **Barrel exports** - Clean import paths
-- ✅ **Backward compatible** - No breaking changes
-
-**Developer Experience:**
-```typescript
-// Use the main orchestrator
-import { KnowledgeGraphManager } from './memory/core';
-
-// Or use specific modules
-import { EntityManager } from './memory/core';
-import { RankedSearch } from './memory/search';
-import { CompressionManager } from './memory/features';
-```
-
-**Benefits:**
-- ⚡ Faster imports (tree-shaking)
-- 🧪 Easier testing (isolated modules)
-- 👥 Parallel development
-- 📖 Clear module boundaries
-- 🔧 Better maintainability
-
-See [CHANGELOG.md](CHANGELOG.md) for complete details.
-
-### Version 0.8.0 (November 2025)
-
-**🚀 Hierarchical Nesting (8 new tools)**
-- Parent-child entity relationships for tree structures
-- Cycle detection prevents circular references
-- Navigate ancestors, descendants, subtrees
-- Get root entities and hierarchy depth
-- Use cases: Projects → Features → Tasks → Subtasks
-
-**🚀 Memory Compression (3 new tools)**
-- Find duplicates with multi-factor similarity scoring
-- Merge entities intelligently (combines observations/tags)
-- Auto-compress with dry-run preview
-- Weighted algorithm: Name 40%, Type 20%, Observations 30%, Tags 10%
-
-**🚀 Smart Archiving (1 new tool)**
-- Archive by age (olderThan), importance (< threshold), or tags
-- Multiple criteria with OR logic
-- Dry-run mode for safe preview
-- Clean removal from active graph with relation cleanup
-
-**🔍 Advanced Search (3 new tools)**
-- TF-IDF relevance ranking with scores
-- Boolean queries (AND, OR, NOT, parentheses)
-- Fuzzy search with typo tolerance
-- Field-specific queries (name:, type:, observation:, tag:)
-
-**📦 Import/Export (5 new tools + 4 formats)**
-- Import from JSON, CSV, GraphML with merge strategies
-- Export to GEXF (Gephi), DOT (GraphViz), Markdown, Mermaid
-- 7 total export formats for different use cases
-- Dry-run and preview modes
-
-**🏷️ Enhanced Tag Management (8 new tools)**
-- Tag aliases for synonyms
-- Bulk tag operations (add to multiple, replace, merge)
-- Saved searches with usage tracking
-- Graph validation with orphan detection
-
-**Stats:** +30 tools (15 → 45), +3,340 LOC (+276%), 4 storage files
-
-### Version 0.7.0 (November 2025)
-
-**Phase 1-4: Foundation Features**
-- Automatic timestamps (createdAt, lastModified)
-- Date range search and graph statistics
-- Tags system and importance levels (0-10)
-- Export to JSON, CSV, GraphML
-
-See [CHANGELOG.md](CHANGELOG.md) for complete version history.
+**🏗️ Architecture**
+- **Modular Design**: Clean separation of concerns across 40+ focused modules
+- **Type Safety**: Full TypeScript strict mode with comprehensive type definitions
+- **Dependency Injection**: Flexible, testable design with clear module boundaries
+- **Developer Experience**: Barrel exports, JSDoc documentation, and comprehensive test coverage
 
 ## Quick Start
 
@@ -1668,11 +1542,13 @@ npm run typecheck # TypeScript type checking
 ```
 memory-mcp/
 ├── src/memory/
-│   ├── index.ts              # Main implementation (4,550 LOC)
+│   ├── types/                # Type definitions
+│   ├── utils/                # Utility functions
+│   ├── core/                 # Storage & managers
+│   ├── search/               # Search implementations
+│   ├── features/             # Feature managers
 │   ├── dist/                 # Compiled output
 │   ├── __tests__/            # Test files
-│   │   ├── knowledge-graph.test.ts
-│   │   └── file-path.test.ts
 │   └── package.json
 ├── CHANGELOG.md              # Version history
 ├── HIERARCHY_GUIDE.md        # Nesting guide
@@ -1680,7 +1556,6 @@ memory-mcp/
 ├── ARCHIVING_GUIDE.md        # Archiving guide
 ├── QUERY_LANGUAGE.md         # Boolean search reference
 ├── MIGRATION_GUIDE.md        # Upgrade guide
-├── IMPROVEMENT_PLAN.md       # Implementation roadmap
 ├── package.json              # Root package
 └── README.md                 # This file
 ```
@@ -1726,22 +1601,24 @@ Enhanced fork of [Model Context Protocol memory server](https://github.com/model
 
 **Original License:** MIT
 
-### Enhancements (v0.8.0)
+### Enhancements
 
 **Developer:** [Daniel Simon Jr.](https://github.com/danielsimonjr)
 
 **Major Features Added:**
-- Hierarchical nesting with parent-child relationships (8 tools)
-- Memory compression with duplicate detection (3 tools)
-- Smart archiving with criteria-based filtering (1 tool)
-- Advanced search: TF-IDF, boolean, fuzzy (3 tools)
-- Import/export: 7 formats with merge strategies
-- Tag management: aliases, bulk operations (11 tools)
-- Saved searches with usage tracking (5 tools)
-- Graph validation and integrity checks (1 tool)
-- Comprehensive documentation (5 guides, 3,600+ lines)
-
-**Stats:** 45 tools (+309%), 4,550 LOC (+549%), 4 storage files
+- Hierarchical nesting with parent-child relationships
+- Memory compression with intelligent duplicate detection
+- Smart archiving with criteria-based filtering
+- Advanced search: TF-IDF, boolean, and fuzzy matching
+- Multi-format import/export with merge strategies
+- Enhanced tag management with aliases and bulk operations
+- Saved searches with usage tracking
+- Graph validation and integrity checks
+- Transaction support with ACID guarantees
+- Backup and restore capabilities
+- Input validation and security hardening
+- Performance optimizations and caching
+- Comprehensive documentation and guides
 
 ### Community
 
