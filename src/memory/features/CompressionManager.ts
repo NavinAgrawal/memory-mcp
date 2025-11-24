@@ -92,7 +92,12 @@ export class CompressionManager {
   /**
    * Find duplicate entities in the graph based on similarity threshold.
    *
-   * Uses pairwise comparison with similarity scoring.
+   * OPTIMIZED: Uses bucketing strategies to reduce O(n²) comparisons:
+   * 1. Buckets entities by entityType (only compare same types)
+   * 2. Within each type, buckets by name prefix (first 2 chars normalized)
+   * 3. Only compares entities within same or adjacent buckets
+   *
+   * Complexity: O(n·k) where k is average bucket size (typically << n)
    *
    * @param threshold - Similarity threshold (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD
    * @returns Array of duplicate groups (each group has similar entities)
@@ -102,26 +107,69 @@ export class CompressionManager {
     const duplicateGroups: string[][] = [];
     const processed = new Set<string>();
 
-    for (let i = 0; i < graph.entities.length; i++) {
-      const entity1 = graph.entities[i];
-      if (processed.has(entity1.name)) continue;
+    // Step 1: Bucket entities by type (reduces comparisons drastically)
+    const typeMap = new Map<string, Entity[]>();
+    for (const entity of graph.entities) {
+      const normalizedType = entity.entityType.toLowerCase();
+      if (!typeMap.has(normalizedType)) {
+        typeMap.set(normalizedType, []);
+      }
+      typeMap.get(normalizedType)!.push(entity);
+    }
 
-      const group: string[] = [entity1.name];
+    // Step 2: For each type bucket, sub-bucket by name prefix
+    for (const entities of typeMap.values()) {
+      // Skip single-entity types (no duplicates possible)
+      if (entities.length < 2) continue;
 
-      for (let j = i + 1; j < graph.entities.length; j++) {
-        const entity2 = graph.entities[j];
-        if (processed.has(entity2.name)) continue;
-
-        const similarity = this.calculateEntitySimilarity(entity1, entity2);
-        if (similarity >= threshold) {
-          group.push(entity2.name);
-          processed.add(entity2.name);
+      // Create name prefix buckets (first 2 chars, normalized)
+      const prefixMap = new Map<string, Entity[]>();
+      for (const entity of entities) {
+        const prefix = entity.name.toLowerCase().slice(0, 2);
+        if (!prefixMap.has(prefix)) {
+          prefixMap.set(prefix, []);
         }
+        prefixMap.get(prefix)!.push(entity);
       }
 
-      if (group.length > 1) {
-        duplicateGroups.push(group);
-        processed.add(entity1.name);
+      // Step 3: Compare only within buckets (or adjacent buckets for fuzzy matching)
+      const prefixKeys = Array.from(prefixMap.keys()).sort();
+
+      for (let bucketIdx = 0; bucketIdx < prefixKeys.length; bucketIdx++) {
+        const currentPrefix = prefixKeys[bucketIdx];
+        const currentBucket = prefixMap.get(currentPrefix)!;
+
+        // Collect entities to compare: current bucket + adjacent buckets
+        const candidateEntities: Entity[] = [...currentBucket];
+
+        // Add next bucket if exists (handles fuzzy prefix matching)
+        if (bucketIdx + 1 < prefixKeys.length) {
+          candidateEntities.push(...prefixMap.get(prefixKeys[bucketIdx + 1])!);
+        }
+
+        // Compare entities within candidate pool
+        for (let i = 0; i < currentBucket.length; i++) {
+          const entity1 = currentBucket[i];
+          if (processed.has(entity1.name)) continue;
+
+          const group: string[] = [entity1.name];
+
+          for (let j = 0; j < candidateEntities.length; j++) {
+            const entity2 = candidateEntities[j];
+            if (entity1.name === entity2.name || processed.has(entity2.name)) continue;
+
+            const similarity = this.calculateEntitySimilarity(entity1, entity2);
+            if (similarity >= threshold) {
+              group.push(entity2.name);
+              processed.add(entity2.name);
+            }
+          }
+
+          if (group.length > 1) {
+            duplicateGroups.push(group);
+            processed.add(entity1.name);
+          }
+        }
       }
     }
 
