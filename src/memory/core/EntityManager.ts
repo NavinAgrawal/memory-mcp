@@ -8,7 +8,8 @@
 
 import type { Entity } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
-import { EntityNotFoundError, InvalidImportanceError } from '../utils/errors.js';
+import { EntityNotFoundError, InvalidImportanceError, ValidationError } from '../utils/errors.js';
+import { BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema } from '../utils/index.js';
 
 /**
  * Minimum importance value (least important).
@@ -60,6 +61,13 @@ export class EntityManager {
    * ```
    */
   async createEntities(entities: Entity[]): Promise<Entity[]> {
+    // Validate input
+    const validation = BatchCreateEntitiesSchema.safeParse(entities);
+    if (!validation.success) {
+      const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
+      throw new ValidationError('Invalid entity data', errors);
+    }
+
     const graph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 
@@ -120,6 +128,13 @@ export class EntityManager {
    * ```
    */
   async deleteEntities(entityNames: string[]): Promise<void> {
+    // Validate input
+    const validation = EntityNamesSchema.safeParse(entityNames);
+    if (!validation.success) {
+      const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
+      throw new ValidationError('Invalid entity names', errors);
+    }
+
     const graph = await this.storage.loadGraph();
 
     graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
@@ -198,6 +213,13 @@ export class EntityManager {
    * ```
    */
   async updateEntity(name: string, updates: Partial<Entity>): Promise<Entity> {
+    // Validate input
+    const validation = UpdateEntitySchema.safeParse(updates);
+    if (!validation.success) {
+      const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
+      throw new ValidationError('Invalid update data', errors);
+    }
+
     const graph = await this.storage.loadGraph();
     const entity = graph.entities.find(e => e.name === name);
 

@@ -5,6 +5,23 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2025-11-24
+
+### Added
+- **Input Validation with Zod Schemas**: Comprehensive runtime type validation for all input data
+  - Created `utils/schemas.ts` with 14 validation schemas covering all input types
+  - `EntitySchema` & `CreateEntitySchema`: Validate entity structure, names, types, observations, tags, importance (0-10)
+  - `RelationSchema` & `CreateRelationSchema`: Validate relation structure with from/to/relationType
+  - `UpdateEntitySchema`: Partial validation for entity updates
+  - `BatchCreateEntitiesSchema` & `BatchCreateRelationsSchema`: Array validation with size constraints (1-1000 items)
+  - `SearchQuerySchema`, `DateRangeSchema`, `TagAliasSchema`: Specialized validation for search and tag operations
+  - Integrated validation into EntityManager (createEntities, deleteEntities, updateEntity)
+  - Integrated validation into RelationManager (createRelations, deleteRelations)
+  - ValidationError now provides detailed error messages with field paths
+  - Prevents malformed data, SQL injection-style attacks, and invalid importance values
+  - All 51 tests passing with strict TypeScript mode ✅
+  - Files: `utils/schemas.ts`, `utils/index.ts`, `core/EntityManager.ts`, `core/RelationManager.ts`
+
 ## [0.11.0] - 2025-11-24
 
 ### Security
