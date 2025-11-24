@@ -131,7 +131,7 @@ describe('EntityManager', () => {
           importance: 8,
           tags: ['team'],
           parentId: 'Company',
-        },
+        } as any, // Bypass TypeScript type checking for this test
       ]);
 
       expect(entities[0].importance).toBe(8);
@@ -189,7 +189,7 @@ describe('EntityManager', () => {
           entityType: 'person',
           observations: ['Software engineer'],
           importance: 8,
-        },
+        } as any,
       ]);
     });
 
@@ -222,7 +222,7 @@ describe('EntityManager', () => {
           entityType: 'person',
           observations: ['Engineer'],
           importance: 5,
-        },
+        } as any,
       ]);
     });
 
