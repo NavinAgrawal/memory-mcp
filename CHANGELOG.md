@@ -5,6 +5,23 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.5] - 2025-11-24
+
+### Added
+- **Transaction Support for Atomic Operations**: Prevents data corruption with ACID guarantees
+  - Created `TransactionManager` for atomic multi-operation transactions
+  - `begin()`: Start a new transaction
+  - `commit()`: Apply all staged operations atomically (auto-rollback on failure)
+  - `rollback()`: Manually rollback transaction to pre-transaction state
+  - Stage operations: `createEntity()`, `updateEntity()`, `deleteEntity()`, `createRelation()`, `deleteRelation()`
+  - Provides ACID guarantees: Atomicity, Consistency, Isolation, Durability
+  - Creates automatic backup before commit for rollback capability
+  - All operations succeed together or all fail (no partial failures)
+  - Detailed transaction result with operation counts and error messages
+  - Critical for data integrity in production systems
+  - All 51 tests passing ✅
+  - Files: `core/TransactionManager.ts`, `core/index.ts`
+
 ## [0.11.4] - 2025-11-24
 
 ### Added
