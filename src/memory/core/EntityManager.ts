@@ -8,6 +8,7 @@
 
 import type { Entity } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
+import { EntityNotFoundError, InvalidImportanceError } from '../utils/errors.js';
 
 /**
  * Minimum importance value (least important).
@@ -54,7 +55,7 @@ export class EntityManager {
         // Validate importance
         if (e.importance !== undefined) {
           if (e.importance < MIN_IMPORTANCE || e.importance > MAX_IMPORTANCE) {
-            throw new Error(`Importance must be between ${MIN_IMPORTANCE} and ${MAX_IMPORTANCE}, got ${e.importance}`);
+            throw new InvalidImportanceError(e.importance, MIN_IMPORTANCE, MAX_IMPORTANCE);
           }
           entity.importance = e.importance;
         }
@@ -109,7 +110,7 @@ export class EntityManager {
     const entity = graph.entities.find(e => e.name === name);
 
     if (!entity) {
-      throw new Error(`Entity with name ${name} not found`);
+      throw new EntityNotFoundError(name);
     }
 
     // Apply updates

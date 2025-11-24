@@ -5,6 +5,38 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2025-11-24
+
+### Added
+- **Custom Error Classes**: Comprehensive error type hierarchy for better error handling
+  - `KnowledgeGraphError`: Base error class with error codes
+  - `EntityNotFoundError`, `RelationNotFoundError`, `DuplicateEntityError`
+  - `ValidationError`, `CycleDetectedError`, `InvalidImportanceError`
+  - `FileOperationError`, `ImportError`, `ExportError`, `InsufficientEntitiesError`
+  - All errors include error codes for programmatic handling
+  - Files: `utils/errors.ts`, `core/EntityManager.ts`
+
+### Changed
+- **Error Handling**: EntityManager now uses custom error types
+  - Better error messages with context
+  - Enables programmatic error handling
+
+## [0.9.3] - 2025-11-24
+
+### Changed
+- **Type Safety Improved**: Replaced `any` with `unknown` in validation utils
+  - Added `isObject()` type guard for runtime validation
+  - Files: `utils/validationUtils.ts`
+
+### Added
+- **JSDoc Documentation**: Comprehensive documentation for KnowledgeGraphManager getters
+  - All getter properties have detailed JSDoc with examples
+  - Files: `core/KnowledgeGraphManager.ts`
+
+### Fixed
+- **Import Fix**: Removed `as any` type casting in KnowledgeGraphManager
+  - Properly imports and uses BasicSearch instance
+
 ## [0.9.2] - 2025-11-24
 
 ### Changed
