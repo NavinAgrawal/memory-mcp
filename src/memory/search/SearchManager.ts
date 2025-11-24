@@ -38,13 +38,34 @@ export class SearchManager {
   // ==================== Basic Search ====================
 
   /**
-   * Simple text-based search.
+   * Perform a simple text-based search across entity names and observations.
    *
-   * @param query - Text to search for
-   * @param tags - Optional tags filter
-   * @param minImportance - Optional minimum importance
-   * @param maxImportance - Optional maximum importance
-   * @returns Filtered knowledge graph
+   * This is the primary search method that searches through entity names,
+   * observations, and types using case-insensitive substring matching.
+   * Optionally filter by tags and importance range.
+   *
+   * @param query - Text to search for (case-insensitive, searches names/observations/types)
+   * @param tags - Optional array of tags to filter results (lowercase)
+   * @param minImportance - Optional minimum importance value (0-10)
+   * @param maxImportance - Optional maximum importance value (0-10)
+   * @returns KnowledgeGraph containing matching entities and their relations
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // Simple text search
+   * const results = await manager.searchNodes('Alice');
+   *
+   * // Search with tag filter
+   * const engineeringResults = await manager.searchNodes('project', ['engineering']);
+   *
+   * // Search with importance range
+   * const importantResults = await manager.searchNodes('critical', undefined, 8, 10);
+   *
+   * // Combined filters
+   * const filtered = await manager.searchNodes('bug', ['backend'], 5, 10);
+   * ```
    */
   async searchNodes(
     query: string,
@@ -86,14 +107,41 @@ export class SearchManager {
   // ==================== Ranked Search ====================
 
   /**
-   * TF-IDF ranked search.
+   * Perform TF-IDF ranked search with relevance scoring.
    *
-   * @param query - Search query
-   * @param tags - Optional tags filter
-   * @param minImportance - Optional minimum importance
-   * @param maxImportance - Optional maximum importance
-   * @param limit - Maximum results to return
-   * @returns Array of search results sorted by relevance
+   * Uses Term Frequency-Inverse Document Frequency algorithm to rank results
+   * by relevance to the query. Results are sorted by score (highest first).
+   * This is ideal for finding the most relevant entities for a search query.
+   *
+   * @param query - Search query (analyzed for term frequency)
+   * @param tags - Optional array of tags to filter results (lowercase)
+   * @param minImportance - Optional minimum importance value (0-10)
+   * @param maxImportance - Optional maximum importance value (0-10)
+   * @param limit - Maximum number of results to return (default: 50, max: 200)
+   * @returns Array of SearchResult objects sorted by relevance score (descending)
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // Basic ranked search
+   * const results = await manager.searchNodesRanked('machine learning algorithms');
+   * results.forEach(r => {
+   *   console.log(`${r.entity.name} (score: ${r.score})`);
+   * });
+   *
+   * // Limit to top 10 most relevant results
+   * const top10 = await manager.searchNodesRanked('database optimization', undefined, undefined, undefined, 10);
+   *
+   * // Ranked search with filters
+   * const relevantImportant = await manager.searchNodesRanked(
+   *   'security vulnerability',
+   *   ['security', 'critical'],
+   *   8,
+   *   10,
+   *   20
+   * );
+   * ```
    */
   async searchNodesRanked(
     query: string,
@@ -108,13 +156,34 @@ export class SearchManager {
   // ==================== Boolean Search ====================
 
   /**
-   * Boolean search with AND, OR, NOT operators.
+   * Perform boolean search with AND, OR, NOT operators.
    *
-   * @param query - Boolean query string
-   * @param tags - Optional tags filter
-   * @param minImportance - Optional minimum importance
-   * @param maxImportance - Optional maximum importance
-   * @returns Filtered knowledge graph
+   * Supports complex boolean logic for precise search queries.
+   * Use AND/OR/NOT operators (case-insensitive) to combine search terms.
+   * Parentheses are supported for grouping.
+   *
+   * @param query - Boolean query string (e.g., "alice AND bob", "frontend OR backend NOT legacy")
+   * @param tags - Optional array of tags to filter results (lowercase)
+   * @param minImportance - Optional minimum importance value (0-10)
+   * @param maxImportance - Optional maximum importance value (0-10)
+   * @returns KnowledgeGraph containing entities matching the boolean expression
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // AND operator - entities matching all terms
+   * const both = await manager.booleanSearch('database AND performance');
+   *
+   * // OR operator - entities matching any term
+   * const either = await manager.booleanSearch('frontend OR backend');
+   *
+   * // NOT operator - exclude terms
+   * const excluding = await manager.booleanSearch('API NOT deprecated');
+   *
+   * // Complex queries with grouping
+   * const complex = await manager.booleanSearch('(react OR vue) AND (component OR hook) NOT legacy');
+   * ```
    */
   async booleanSearch(
     query: string,
@@ -128,14 +197,33 @@ export class SearchManager {
   // ==================== Fuzzy Search ====================
 
   /**
-   * Fuzzy search with typo tolerance.
+   * Perform fuzzy search with typo tolerance.
    *
-   * @param query - Search query
-   * @param threshold - Similarity threshold (0.0 to 1.0)
-   * @param tags - Optional tags filter
-   * @param minImportance - Optional minimum importance
-   * @param maxImportance - Optional maximum importance
-   * @returns Filtered knowledge graph
+   * Uses Levenshtein distance to find entities that approximately match the query,
+   * making it ideal for handling typos and variations in spelling.
+   * Higher threshold values require closer matches.
+   *
+   * @param query - Search query (will match approximate spellings)
+   * @param threshold - Similarity threshold from 0.0 (very lenient) to 1.0 (exact match). Default: 0.7
+   * @param tags - Optional array of tags to filter results (lowercase)
+   * @param minImportance - Optional minimum importance value (0-10)
+   * @param maxImportance - Optional maximum importance value (0-10)
+   * @returns KnowledgeGraph containing entities with similar names/observations
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // Find entities even with typos
+   * const results = await manager.fuzzySearch('databse'); // Will match "database"
+   *
+   * // Adjust threshold for strictness
+   * const strict = await manager.fuzzySearch('optmization', 0.9); // Requires very close match
+   * const lenient = await manager.fuzzySearch('optmization', 0.6); // More tolerant of differences
+   *
+   * // Fuzzy search with filters
+   * const filtered = await manager.fuzzySearch('secrity', 0.7, ['important'], 7, 10);
+   * ```
    */
   async fuzzySearch(
     query: string,
@@ -163,10 +251,34 @@ export class SearchManager {
   // ==================== Saved Searches ====================
 
   /**
-   * Save a search query.
+   * Save a search query for later reuse.
    *
-   * @param search - Search parameters
-   * @returns Newly created saved search
+   * Saved searches store query parameters and can be re-executed later.
+   * The system tracks usage count and last used timestamp automatically.
+   *
+   * @param search - Search parameters (name, query, and optional filters)
+   * @returns Newly created SavedSearch object with metadata
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // Save a simple search
+   * const saved = await manager.saveSearch({
+   *   name: 'High Priority Bugs',
+   *   query: 'bug',
+   *   tags: ['critical'],
+   *   minImportance: 8
+   * });
+   *
+   * // Save a complex search
+   * await manager.saveSearch({
+   *   name: 'Recent Frontend Work',
+   *   query: 'component OR hook',
+   *   tags: ['frontend', 'react'],
+   *   searchType: 'boolean'
+   * });
+   * ```
    */
   async saveSearch(
     search: Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>
@@ -194,10 +306,30 @@ export class SearchManager {
   }
 
   /**
-   * Execute a saved search.
+   * Execute a saved search by name.
    *
-   * @param name - Search name
-   * @returns Search results
+   * Runs a previously saved search with its stored parameters.
+   * Automatically updates the search's useCount and lastUsed timestamp.
+   *
+   * @param name - The unique name of the saved search to execute
+   * @returns KnowledgeGraph containing the search results
+   * @throws Error if saved search not found
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // Execute a saved search
+   * const results = await manager.executeSavedSearch('High Priority Bugs');
+   * console.log(`Found ${results.entities.length} high priority bugs`);
+   *
+   * // Handle missing saved search
+   * try {
+   *   await manager.executeSavedSearch('NonExistent');
+   * } catch (error) {
+   *   console.error('Search not found');
+   * }
+   * ```
    */
   async executeSavedSearch(name: string): Promise<KnowledgeGraph> {
     return this.savedSearchManager.executeSavedSearch(name);

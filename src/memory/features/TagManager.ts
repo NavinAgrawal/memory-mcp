@@ -46,11 +46,32 @@ export class TagManager {
   /**
    * Resolve a tag through aliases to get its canonical form.
    *
-   * If the tag is an alias, returns the canonical tag.
-   * Otherwise, returns the tag as-is (normalized to lowercase).
+   * This method follows the alias chain to find the canonical (main) tag name.
+   * All tags are normalized to lowercase for consistency.
+   * If the tag has no alias, it returns the tag itself as canonical.
    *
    * @param tag - Tag to resolve (can be alias or canonical)
    * @returns Canonical tag name (lowercase)
+   *
+   * @example
+   * ```typescript
+   * const manager = new TagManager(tagAliasesPath);
+   *
+   * // Set up: assume "js" is aliased to "javascript"
+   * await manager.addTagAlias('js', 'javascript');
+   *
+   * // Resolve alias to canonical
+   * const canonical = await manager.resolveTag('js');
+   * console.log(canonical); // "javascript"
+   *
+   * // Resolve canonical tag (returns as-is)
+   * const unchanged = await manager.resolveTag('javascript');
+   * console.log(unchanged); // "javascript"
+   *
+   * // Resolve unknown tag (returns normalized)
+   * const unknown = await manager.resolveTag('PYTHON');
+   * console.log(unknown); // "python"
+   * ```
    */
   async resolveTag(tag: string): Promise<string> {
     const aliases = await this.loadTagAliases();
@@ -69,15 +90,47 @@ export class TagManager {
   /**
    * Add a tag alias (synonym mapping).
    *
-   * Prevents:
-   * - Duplicate aliases
-   * - Aliasing to another alias (must alias to canonical tags)
+   * Creates a mapping from an alias (synonym) to a canonical (main) tag.
+   * This enables flexible tagging where users can use different terms
+   * that all resolve to the same canonical tag.
    *
-   * @param alias - The alias/synonym
-   * @param canonical - The canonical (main) tag name
-   * @param description - Optional description of the alias
-   * @returns Newly created tag alias
-   * @throws Error if alias already exists or would create chained aliases
+   * Validation rules:
+   * - Prevents duplicate aliases (same alias can't map to different canonicals)
+   * - Prevents chained aliases (alias must point to canonical, not another alias)
+   * - All tags are normalized to lowercase
+   *
+   * @param alias - The alias/synonym (will be normalized to lowercase)
+   * @param canonical - The canonical (main) tag name (will be normalized to lowercase)
+   * @param description - Optional description explaining the alias relationship
+   * @returns Newly created TagAlias object with metadata
+   * @throws {Error} If alias already exists or would create chained aliases
+   *
+   * @example
+   * ```typescript
+   * const manager = new TagManager(tagAliasesPath);
+   *
+   * // Create simple alias
+   * await manager.addTagAlias('js', 'javascript', 'Common abbreviation');
+   *
+   * // Create multiple aliases for same canonical
+   * await manager.addTagAlias('py', 'python');
+   * await manager.addTagAlias('py3', 'python', 'Python 3.x');
+   *
+   * // Error: duplicate alias
+   * try {
+   *   await manager.addTagAlias('js', 'ecmascript'); // Fails - 'js' already aliased
+   * } catch (error) {
+   *   console.error('Alias already exists');
+   * }
+   *
+   * // Error: chained alias
+   * await manager.addTagAlias('js', 'javascript');
+   * try {
+   *   await manager.addTagAlias('javascript', 'ecmascript'); // Fails - can't alias canonical
+   * } catch (error) {
+   *   console.error('Cannot create chained aliases');
+   * }
+   * ```
    */
   async addTagAlias(alias: string, canonical: string, description?: string): Promise<TagAlias> {
     const aliases = await this.loadTagAliases();
@@ -139,10 +192,32 @@ export class TagManager {
   }
 
   /**
-   * Get all aliases for a canonical tag.
+   * Get all aliases (synonyms) for a canonical tag.
    *
-   * @param canonicalTag - Canonical tag name
-   * @returns Array of alias names
+   * Returns all alias names that resolve to the specified canonical tag.
+   * Useful for discovering alternative names users might use for a tag.
+   * The canonical tag name is normalized to lowercase.
+   *
+   * @param canonicalTag - Canonical tag name (will be normalized to lowercase)
+   * @returns Array of alias names (all lowercase)
+   *
+   * @example
+   * ```typescript
+   * const manager = new TagManager(tagAliasesPath);
+   *
+   * // Set up some aliases
+   * await manager.addTagAlias('js', 'javascript');
+   * await manager.addTagAlias('ecmascript', 'javascript');
+   * await manager.addTagAlias('es6', 'javascript');
+   *
+   * // Get all aliases for canonical tag
+   * const aliases = await manager.getAliasesForTag('javascript');
+   * console.log(aliases); // ['js', 'ecmascript', 'es6']
+   *
+   * // Empty array if no aliases
+   * const noAliases = await manager.getAliasesForTag('python');
+   * console.log(noAliases); // []
+   * ```
    */
   async getAliasesForTag(canonicalTag: string): Promise<string[]> {
     const aliases = await this.loadTagAliases();

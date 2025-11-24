@@ -5,6 +5,51 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.4] - 2025-11-24
+
+### Added
+- **Comprehensive Improvements Summary**: Created `IMPROVEMENTS_SUMMARY.md` documenting all enhancements
+  - Complete version-by-version changelog from v0.9.4 to v0.10.3
+  - Detailed impact analysis and metrics
+  - Before/after code comparisons
+  - Best practices established
+  - Developer experience improvements documented
+  - Achievement summary: All 10 planned improvements completed ✅
+
+## [0.10.3] - 2025-11-24
+
+### Added
+- **Centralized Configuration Constants**: Created `utils/constants.ts` for application-wide constants
+  - `FILE_EXTENSIONS`: Centralized file extension constants (JSONL, JSON)
+  - `FILE_SUFFIXES`: File name suffixes for auxiliary files (saved searches, tag aliases)
+  - `DEFAULT_FILE_NAMES`: Default file naming conventions
+  - `ENV_VARS`: Environment variable names for configuration
+  - `LOG_PREFIXES`: Consistent log message prefixes
+  - Improves maintainability and reduces magic strings throughout codebase
+  - Files: `utils/constants.ts`, `utils/index.ts`
+
+## [0.10.2] - 2025-11-24
+
+### Added
+- **JSDoc Documentation for TagManager**: Comprehensive API documentation for tag alias system
+  - `resolveTag()`: Tag resolution with alias following examples
+  - `addTagAlias()`: Alias creation with validation rules and error scenarios
+  - `getAliasesForTag()`: Retrieve all aliases for a canonical tag
+  - Detailed examples showing synonym mapping and tag normalization
+  - Files: `features/TagManager.ts`
+
+## [0.10.1] - 2025-11-24
+
+### Added
+- **JSDoc Documentation for SearchManager**: Comprehensive API documentation for key search methods
+  - `searchNodes()`: Enhanced basic search documentation with filtering examples
+  - `searchNodesRanked()`: TF-IDF ranked search with relevance scoring examples
+  - `booleanSearch()`: Boolean operators with complex query examples
+  - `fuzzySearch()`: Typo-tolerant search with threshold tuning examples
+  - `saveSearch()`: Saved search creation with metadata tracking
+  - `executeSavedSearch()`: Execute saved searches with usage tracking
+  - Files: `search/SearchManager.ts`
+
 ## [0.10.0] - 2025-11-24
 
 ### Changed
