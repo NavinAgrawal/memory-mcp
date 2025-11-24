@@ -18,10 +18,42 @@ export class RelationManager {
   /**
    * Create multiple relations in a single batch operation.
    *
-   * Filters out duplicates and adds timestamps automatically.
+   * This method performs the following operations:
+   * - Filters out duplicate relations (same from, to, and relationType)
+   * - Automatically adds createdAt and lastModified timestamps
+   * - Validates that entities referenced in relations exist (should be done by caller)
+   *
+   * A relation is considered duplicate if another relation exists with the same:
+   * - from entity name
+   * - to entity name
+   * - relationType
    *
    * @param relations - Array of relations to create
-   * @returns Promise resolving to newly created relations
+   * @returns Promise resolving to array of newly created relations (excludes duplicates)
+   *
+   * @example
+   * ```typescript
+   * const manager = new RelationManager(storage);
+   *
+   * // Create single relation
+   * const results = await manager.createRelations([{
+   *   from: 'Alice',
+   *   to: 'Bob',
+   *   relationType: 'works_with'
+   * }]);
+   *
+   * // Create multiple relations at once
+   * await manager.createRelations([
+   *   { from: 'Alice', to: 'Project_X', relationType: 'contributes_to' },
+   *   { from: 'Bob', to: 'Project_X', relationType: 'leads' },
+   *   { from: 'Charlie', to: 'Alice', relationType: 'reports_to' }
+   * ]);
+   *
+   * // Duplicate relations are filtered out
+   * await manager.createRelations([
+   *   { from: 'Alice', to: 'Bob', relationType: 'works_with' } // Already exists, won't be added
+   * ]);
+   * ```
    */
   async createRelations(relations: Relation[]): Promise<Relation[]> {
     const graph = await this.storage.loadGraph();
@@ -46,11 +78,42 @@ export class RelationManager {
   }
 
   /**
-   * Delete multiple relations.
+   * Delete multiple relations in a single batch operation.
    *
-   * Updates lastModified timestamp on affected entities.
+   * This method performs the following operations:
+   * - Removes all specified relations from the graph
+   * - Automatically updates lastModified timestamp for all affected entities
+   * - Silently ignores relations that don't exist (no error thrown)
    *
-   * @param relations - Array of relations to delete
+   * An entity is considered "affected" if it appears as either the source (from)
+   * or target (to) of any deleted relation.
+   *
+   * @param relations - Array of relations to delete. Each relation is matched by from, to, and relationType.
+   * @returns Promise that resolves when deletion is complete
+   *
+   * @example
+   * ```typescript
+   * const manager = new RelationManager(storage);
+   *
+   * // Delete single relation
+   * await manager.deleteRelations([{
+   *   from: 'Alice',
+   *   to: 'Bob',
+   *   relationType: 'works_with'
+   * }]);
+   *
+   * // Delete multiple relations at once
+   * await manager.deleteRelations([
+   *   { from: 'Alice', to: 'Project_X', relationType: 'contributes_to' },
+   *   { from: 'Bob', to: 'Project_X', relationType: 'leads' }
+   * ]);
+   * // Note: Alice, Bob, and Project_X will all have their lastModified timestamp updated
+   *
+   * // Safe to delete non-existent relations
+   * await manager.deleteRelations([
+   *   { from: 'NonExistent', to: 'AlsoNonExistent', relationType: 'fake' } // No error
+   * ]);
+   * ```
    */
   async deleteRelations(relations: Relation[]): Promise<void> {
     const graph = await this.storage.loadGraph();
@@ -83,10 +146,36 @@ export class RelationManager {
   }
 
   /**
-   * Get all relations involving an entity.
+   * Retrieve all relations involving a specific entity.
    *
-   * @param entityName - Entity name
-   * @returns Promise resolving to array of relations
+   * This is a read-only operation that returns all relations where the specified
+   * entity appears as either the source (from) or target (to) of the relation.
+   * Entity names are case-sensitive.
+   *
+   * @param entityName - The unique name of the entity to find relations for
+   * @returns Promise resolving to array of Relation objects (empty array if no relations found)
+   *
+   * @example
+   * ```typescript
+   * const manager = new RelationManager(storage);
+   *
+   * // Get all relations for an entity
+   * const aliceRelations = await manager.getRelations('Alice');
+   * // Returns: [
+   * //   { from: 'Alice', to: 'Bob', relationType: 'works_with' },
+   * //   { from: 'Alice', to: 'Project_X', relationType: 'contributes_to' },
+   * //   { from: 'Charlie', to: 'Alice', relationType: 'reports_to' }
+   * // ]
+   *
+   * // Process relations by type
+   * const relations = await manager.getRelations('Alice');
+   * const outgoing = relations.filter(r => r.from === 'Alice');
+   * const incoming = relations.filter(r => r.to === 'Alice');
+   *
+   * // Handle entity with no relations
+   * const noRelations = await manager.getRelations('IsolatedEntity');
+   * console.log(noRelations); // []
+   * ```
    */
   async getRelations(entityName: string): Promise<Relation[]> {
     const graph = await this.storage.loadGraph();

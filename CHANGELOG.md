@@ -5,6 +5,52 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.9] - 2025-11-24
+
+### Changed
+- **Improved Error Handling in HierarchyManager**: Use custom error types throughout
+  - Replaced generic Error with EntityNotFoundError for missing entities
+  - Replaced generic Error with CycleDetectedError for hierarchy cycles
+  - Updated JSDoc @throws annotations with specific error types
+  - Enables better programmatic error handling for hierarchical operations
+  - Files: `features/HierarchyManager.ts`
+
+## [0.9.8] - 2025-11-24
+
+### Added
+- **JSDoc Documentation for RelationManager**: Comprehensive API documentation for all public methods
+  - `createRelations()`: Batch creation with duplicate filtering and timestamp management
+  - `deleteRelations()`: Cascading timestamp updates for affected entities
+  - `getRelations()`: Bidirectional relation lookup with filtering examples
+  - Files: `core/RelationManager.ts`
+
+## [0.9.7] - 2025-11-24
+
+### Added
+- **JSDoc Documentation for ObservationManager**: Comprehensive API documentation for all public methods
+  - `addObservations()`: Batch addition with duplicate filtering and timestamp updates
+  - `deleteObservations()`: Safe deletion with automatic timestamp management
+  - Detailed examples showing single and multi-entity operations
+  - Files: `core/ObservationManager.ts`
+
+## [0.9.6] - 2025-11-24
+
+### Changed
+- **Improved Error Handling in ObservationManager**: Use EntityNotFoundError instead of generic Error
+  - Better error messages with consistent error codes
+  - Enables programmatic error handling for observation operations
+  - Files: `core/ObservationManager.ts`
+
+## [0.9.5] - 2025-11-24
+
+### Added
+- **JSDoc Documentation for EntityManager**: Comprehensive API documentation for all public methods
+  - `createEntities()`: Detailed docs with batch creation examples, error handling, and timestamp behavior
+  - `deleteEntities()`: Cascading deletion behavior documented with examples
+  - `getEntity()`: Read-only retrieval with null-handling examples
+  - `updateEntity()`: Partial update patterns with multiple field examples
+  - Files: `core/EntityManager.ts`
+
 ## [0.9.4] - 2025-11-24
 
 ### Added
