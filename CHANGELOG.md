@@ -5,6 +5,16 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2025-11-24
+
+### Security
+- **Fixed All Security Vulnerabilities**: Updated dependencies to resolve 6 moderate CVEs
+  - Updated `vitest` from 2.1.8 to 4.0.13
+  - Updated `@vitest/coverage-v8` from 2.1.8 to latest
+  - Resolved esbuild vulnerability (GHSA-67mh-4wv8-2f99)
+  - All dependencies now secure with 0 vulnerabilities ✅
+  - Files: `src/memory/package.json`
+
 ## [0.10.4] - 2025-11-24
 
 ### Added
