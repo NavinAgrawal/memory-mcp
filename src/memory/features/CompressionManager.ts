@@ -9,6 +9,7 @@
 import type { Entity, Relation, CompressionResult } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
+import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
 
 /**
  * Default threshold for duplicate detection (80% similarity).
@@ -142,18 +143,19 @@ export class CompressionManager {
    * @param entityNames - Names of entities to merge (first one is kept)
    * @param targetName - Optional new name for merged entity (default: first entity name)
    * @returns The merged entity
-   * @throws Error if less than 2 entities or entity not found
+   * @throws {InsufficientEntitiesError} If less than 2 entities provided
+   * @throws {EntityNotFoundError} If any entity not found
    */
   async mergeEntities(entityNames: string[], targetName?: string): Promise<Entity> {
     if (entityNames.length < 2) {
-      throw new Error('At least 2 entities required for merging');
+      throw new InsufficientEntitiesError('merging', 2, entityNames.length);
     }
 
     const graph = await this.storage.loadGraph();
     const entitiesToMerge = entityNames.map(name => {
       const entity = graph.entities.find(e => e.name === name);
       if (!entity) {
-        throw new Error(`Entity "${name}" not found`);
+        throw new EntityNotFoundError(name);
       }
       return entity;
     });
