@@ -5,6 +5,20 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] - 2025-11-24
+
+### Added
+- **In-Memory Caching Layer for GraphStorage**: Eliminates repeated disk reads for performance
+  - Implemented in-memory cache for knowledge graph data
+  - Cache populated on first `loadGraph()` call
+  - Returns deep copy of cached data to prevent external mutations
+  - Cache automatically invalidated after every `saveGraph()` write
+  - Added `clearCache()` method for manual cache invalidation
+  - Reduces disk I/O from O(n) to O(1) for read-heavy workloads
+  - Maintains data consistency with write-through invalidation strategy
+  - All 51 tests passing ✅
+  - Files: `core/GraphStorage.ts`
+
 ## [0.11.2] - 2025-11-24
 
 ### Changed
