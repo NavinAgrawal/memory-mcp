@@ -8,6 +8,8 @@
 
 import type { Relation } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
+import { ValidationError } from '../utils/errors.js';
+import { BatchCreateRelationsSchema, DeleteRelationsSchema } from '../utils/index.js';
 
 /**
  * Manages relation operations with automatic timestamp handling.
@@ -56,6 +58,13 @@ export class RelationManager {
    * ```
    */
   async createRelations(relations: Relation[]): Promise<Relation[]> {
+    // Validate input
+    const validation = BatchCreateRelationsSchema.safeParse(relations);
+    if (!validation.success) {
+      const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
+      throw new ValidationError('Invalid relation data', errors);
+    }
+
     const graph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 
@@ -116,6 +125,13 @@ export class RelationManager {
    * ```
    */
   async deleteRelations(relations: Relation[]): Promise<void> {
+    // Validate input
+    const validation = DeleteRelationsSchema.safeParse(relations);
+    if (!validation.success) {
+      const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
+      throw new ValidationError('Invalid relation data', errors);
+    }
+
     const graph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 

@@ -16,6 +16,9 @@ import type { KnowledgeGraph, Entity, Relation } from '../types/index.js';
  * Uses JSONL (JSON Lines) format where each line is a separate JSON object
  * representing either an entity or a relation.
  *
+ * OPTIMIZED: Implements in-memory caching to avoid repeated disk reads.
+ * Cache is invalidated on every write operation to ensure consistency.
+ *
  * @example
  * ```typescript
  * const storage = new GraphStorage('/path/to/memory.jsonl');
@@ -26,6 +29,12 @@ import type { KnowledgeGraph, Entity, Relation } from '../types/index.js';
  */
 export class GraphStorage {
   /**
+   * In-memory cache of the knowledge graph.
+   * Null when cache is empty or invalidated.
+   */
+  private cache: KnowledgeGraph | null = null;
+
+  /**
    * Create a new GraphStorage instance.
    *
    * @param memoryFilePath - Absolute path to the JSONL file
@@ -35,6 +44,9 @@ export class GraphStorage {
   /**
    * Load the knowledge graph from disk.
    *
+   * OPTIMIZED: Uses in-memory cache to avoid repeated disk reads.
+   * Cache is populated on first load and invalidated on writes.
+   *
    * Reads the JSONL file and reconstructs the graph structure.
    * Returns empty graph if file doesn't exist.
    *
@@ -42,11 +54,21 @@ export class GraphStorage {
    * @throws Error if file exists but cannot be read or parsed
    */
   async loadGraph(): Promise<KnowledgeGraph> {
+    // Return cached graph if available
+    if (this.cache !== null) {
+      // Return a deep copy to prevent external mutations from affecting cache
+      return {
+        entities: this.cache.entities.map(e => ({ ...e })),
+        relations: this.cache.relations.map(r => ({ ...r })),
+      };
+    }
+
+    // Cache miss - load from disk
     try {
       const data = await fs.readFile(this.memoryFilePath, 'utf-8');
       const lines = data.split('\n').filter((line: string) => line.trim() !== '');
 
-      return lines.reduce((graph: KnowledgeGraph, line: string) => {
+      const graph = lines.reduce((graph: KnowledgeGraph, line: string) => {
         const item = JSON.parse(line);
 
         if (item.type === 'entity') {
@@ -69,9 +91,20 @@ export class GraphStorage {
 
         return graph;
       }, { entities: [], relations: [] });
+
+      // Populate cache
+      this.cache = graph;
+
+      // Return a deep copy
+      return {
+        entities: graph.entities.map(e => ({ ...e })),
+        relations: graph.relations.map(r => ({ ...r })),
+      };
     } catch (error) {
       // File doesn't exist - return empty graph
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
+        const emptyGraph = { entities: [], relations: [] };
+        this.cache = emptyGraph;
         return { entities: [], relations: [] };
       }
       throw error;
@@ -80,6 +113,8 @@ export class GraphStorage {
 
   /**
    * Save the knowledge graph to disk.
+   *
+   * OPTIMIZED: Invalidates cache after write to ensure consistency.
    *
    * Writes the graph to JSONL format, with one JSON object per line.
    *
@@ -119,6 +154,20 @@ export class GraphStorage {
     ];
 
     await fs.writeFile(this.memoryFilePath, lines.join('\n'));
+
+    // Invalidate cache to ensure next load reads fresh data
+    this.cache = null;
+  }
+
+  /**
+   * Manually clear the cache.
+   *
+   * Useful for testing or when external processes modify the file.
+   *
+   * @returns void
+   */
+  clearCache(): void {
+    this.cache = null;
   }
 
   /**

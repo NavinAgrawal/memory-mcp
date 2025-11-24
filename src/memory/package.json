@@ -1,6 +1,6 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "0.11.0",
+  "version": "0.11.3",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, and 45 advanced tools",
   "license": "MIT",
   "author": "Daniel Simon Jr. (https://github.com/danielsimonjr)",
@@ -37,7 +37,8 @@
     "typecheck": "tsc --noEmit --noUnusedLocals --noUnusedParameters --strict"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.21.1"
+    "@modelcontextprotocol/sdk": "^1.21.1",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^22",
