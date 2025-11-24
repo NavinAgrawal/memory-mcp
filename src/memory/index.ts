@@ -35,9 +35,9 @@ export async function ensureMemoryFilePath(): Promise<string> {
       return newMemoryPath;
     } catch {
       // Old file exists, new file doesn't - migrate
-      console.error('DETECTED: Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
+      console.log('[INFO] Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
       await fs.rename(oldMemoryPath, newMemoryPath);
-      console.error('COMPLETED: Successfully migrated memory.json to memory.jsonl');
+      console.log('[INFO] Successfully migrated memory.json to memory.jsonl');
       return newMemoryPath;
     }
   } catch {
@@ -4178,7 +4178,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Knowledge Graph MCP Server running on stdio");
+  console.log('[INFO] Knowledge Graph MCP Server running on stdio');
 }
 
 main().catch((error) => {
