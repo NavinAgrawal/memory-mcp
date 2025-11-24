@@ -11,6 +11,16 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
 
 /**
+ * Default maximum number of search results to return.
+ */
+export const DEFAULT_SEARCH_LIMIT = 50;
+
+/**
+ * Maximum allowed search result limit to prevent resource exhaustion.
+ */
+export const MAX_SEARCH_LIMIT = 200;
+
+/**
  * Performs TF-IDF ranked search.
  */
 export class RankedSearch {
@@ -23,7 +33,7 @@ export class RankedSearch {
    * @param tags - Optional tags filter
    * @param minImportance - Optional minimum importance
    * @param maxImportance - Optional maximum importance
-   * @param limit - Maximum results to return (default 50)
+   * @param limit - Maximum results to return (default DEFAULT_SEARCH_LIMIT, max MAX_SEARCH_LIMIT)
    * @returns Array of search results sorted by relevance
    */
   async searchNodesRanked(
@@ -31,8 +41,10 @@ export class RankedSearch {
     tags?: string[],
     minImportance?: number,
     maxImportance?: number,
-    limit: number = 50
+    limit: number = DEFAULT_SEARCH_LIMIT
   ): Promise<SearchResult[]> {
+    // Enforce maximum search limit
+    const effectiveLimit = Math.min(limit, MAX_SEARCH_LIMIT);
     const graph = await this.storage.loadGraph();
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
@@ -100,9 +112,9 @@ export class RankedSearch {
       }
     }
 
-    // Sort by score descending and apply limit
+    // Sort by score descending and apply effective limit
     return results
       .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+      .slice(0, effectiveLimit);
   }
 }

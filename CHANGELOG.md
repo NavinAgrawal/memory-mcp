@@ -5,6 +5,23 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2025-11-24
+
+### Changed
+- **Magic Numbers Extracted**: Replaced hardcoded values with named constants
+  - `SIMILARITY_WEIGHTS` in `CompressionManager.ts` (NAME: 40%, TYPE: 20%, OBSERVATIONS: 30%, TAGS: 10%)
+  - `DEFAULT_DUPLICATE_THRESHOLD` (0.8) in `CompressionManager.ts`
+  - `DEFAULT_SEARCH_LIMIT` (50) and `MAX_SEARCH_LIMIT` (200) in `RankedSearch.ts`
+  - `MIN_IMPORTANCE` (0) and `MAX_IMPORTANCE` (10) in `EntityManager.ts`
+  - `DEFAULT_FUZZY_THRESHOLD` (0.7) in `FuzzySearch.ts`
+  - All constants are now documented and configurable
+  - Improves code maintainability and tunability
+
+### Fixed
+- **Search Limit Enforcement**: Added MAX_SEARCH_LIMIT enforcement in ranked search
+  - Prevents resource exhaustion from excessively large limit values
+  - Automatically caps limit at 200 results maximum
+
 ## [0.9.1] - 2025-11-24
 
 ### Fixed

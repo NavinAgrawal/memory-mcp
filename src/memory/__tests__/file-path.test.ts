@@ -85,7 +85,7 @@ describe('ensureMemoryFilePath', () => {
       // Create old memory.json file
       await fs.writeFile(oldMemoryPath, '{"test":"data"}');
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       const result = await ensureMemoryFilePath();
 
@@ -98,15 +98,15 @@ describe('ensureMemoryFilePath', () => {
       expect(newFileExists).toBe(true);
       expect(oldFileExists).toBe(false);
 
-      // Verify console messages
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('DETECTED: Found legacy memory.json file')
+      // Verify console messages (now using console.log instead of console.error)
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[INFO] Found legacy memory.json file')
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('COMPLETED: Successfully migrated')
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[INFO] Successfully migrated')
       );
 
-      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
     });
 
     it('should use new file when both old and new files exist', async () => {

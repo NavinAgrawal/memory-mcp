@@ -10,6 +10,16 @@ import type { Entity } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
 
 /**
+ * Minimum importance value (least important).
+ */
+export const MIN_IMPORTANCE = 0;
+
+/**
+ * Maximum importance value (most important).
+ */
+export const MAX_IMPORTANCE = 10;
+
+/**
  * Manages entity operations with automatic timestamp handling.
  */
 export class EntityManager {
@@ -43,8 +53,8 @@ export class EntityManager {
 
         // Validate importance
         if (e.importance !== undefined) {
-          if (e.importance < 0 || e.importance > 10) {
-            throw new Error(`Importance must be between 0 and 10, got ${e.importance}`);
+          if (e.importance < MIN_IMPORTANCE || e.importance > MAX_IMPORTANCE) {
+            throw new Error(`Importance must be between ${MIN_IMPORTANCE} and ${MAX_IMPORTANCE}, got ${e.importance}`);
           }
           entity.importance = e.importance;
         }

@@ -11,6 +11,28 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 
 /**
+ * Default threshold for duplicate detection (80% similarity).
+ */
+export const DEFAULT_DUPLICATE_THRESHOLD = 0.8;
+
+/**
+ * Similarity scoring weights for entity comparison.
+ * These values determine the relative importance of each factor when calculating
+ * entity similarity. Higher weights give more importance to that factor.
+ * Total weights must sum to 1.0 (100%).
+ */
+export const SIMILARITY_WEIGHTS = {
+  /** Weight for name similarity using Levenshtein distance (40%) */
+  NAME: 0.4,
+  /** Weight for exact entity type match (20%) */
+  TYPE: 0.2,
+  /** Weight for observation overlap using Jaccard similarity (30%) */
+  OBSERVATIONS: 0.3,
+  /** Weight for tag overlap using Jaccard similarity (10%) */
+  TAGS: 0.1,
+} as const;
+
+/**
  * Manages graph compression through duplicate detection and merging.
  */
 export class CompressionManager {
@@ -19,11 +41,8 @@ export class CompressionManager {
   /**
    * Calculate similarity between two entities using multiple heuristics.
    *
-   * Scoring weights:
-   * - Name similarity (Levenshtein): 40%
-   * - Type exact match: 20%
-   * - Observation overlap (Jaccard): 30%
-   * - Tag overlap (Jaccard): 10%
+   * Uses configurable weights defined in SIMILARITY_WEIGHTS constant.
+   * See SIMILARITY_WEIGHTS for the breakdown of scoring factors.
    *
    * @param e1 - First entity
    * @param e2 - Second entity
@@ -37,14 +56,14 @@ export class CompressionManager {
     const nameDistance = levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
     const maxNameLength = Math.max(e1.name.length, e2.name.length);
     const nameSimilarity = 1 - nameDistance / maxNameLength;
-    score += nameSimilarity * 0.4; // 40% weight
-    factors += 0.4;
+    score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;
+    factors += SIMILARITY_WEIGHTS.NAME;
 
     // Type similarity (exact match)
     if (e1.entityType.toLowerCase() === e2.entityType.toLowerCase()) {
-      score += 0.2; // 20% weight
+      score += SIMILARITY_WEIGHTS.TYPE;
     }
-    factors += 0.2;
+    factors += SIMILARITY_WEIGHTS.TYPE;
 
     // Observation overlap (Jaccard similarity)
     const obs1Set = new Set(e1.observations.map(o => o.toLowerCase()));
@@ -52,8 +71,8 @@ export class CompressionManager {
     const intersection = new Set([...obs1Set].filter(x => obs2Set.has(x)));
     const union = new Set([...obs1Set, ...obs2Set]);
     const observationSimilarity = union.size > 0 ? intersection.size / union.size : 0;
-    score += observationSimilarity * 0.3; // 30% weight
-    factors += 0.3;
+    score += observationSimilarity * SIMILARITY_WEIGHTS.OBSERVATIONS;
+    factors += SIMILARITY_WEIGHTS.OBSERVATIONS;
 
     // Tag overlap (Jaccard similarity)
     if (e1.tags && e2.tags && (e1.tags.length > 0 || e2.tags.length > 0)) {
@@ -62,8 +81,8 @@ export class CompressionManager {
       const tagIntersection = new Set([...tags1Set].filter(x => tags2Set.has(x)));
       const tagUnion = new Set([...tags1Set, ...tags2Set]);
       const tagSimilarity = tagUnion.size > 0 ? tagIntersection.size / tagUnion.size : 0;
-      score += tagSimilarity * 0.1; // 10% weight
-      factors += 0.1;
+      score += tagSimilarity * SIMILARITY_WEIGHTS.TAGS;
+      factors += SIMILARITY_WEIGHTS.TAGS;
     }
 
     return factors > 0 ? score / factors : 0;
@@ -74,10 +93,10 @@ export class CompressionManager {
    *
    * Uses pairwise comparison with similarity scoring.
    *
-   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.8
+   * @param threshold - Similarity threshold (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD
    * @returns Array of duplicate groups (each group has similar entities)
    */
-  async findDuplicates(threshold: number = 0.8): Promise<string[][]> {
+  async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]> {
     const graph = await this.storage.loadGraph();
     const duplicateGroups: string[][] = [];
     const processed = new Set<string>();
@@ -218,11 +237,11 @@ export class CompressionManager {
   /**
    * Compress the knowledge graph by finding and merging duplicates.
    *
-   * @param threshold - Similarity threshold for duplicate detection (0.0 to 1.0)
+   * @param threshold - Similarity threshold for duplicate detection (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD
    * @param dryRun - If true, only report what would be compressed without applying changes
    * @returns Compression result with statistics
    */
-  async compressGraph(threshold: number = 0.8, dryRun: boolean = false): Promise<CompressionResult> {
+  async compressGraph(threshold: number = DEFAULT_DUPLICATE_THRESHOLD, dryRun: boolean = false): Promise<CompressionResult> {
     const initialGraph = await this.storage.loadGraph();
     const initialSize = JSON.stringify(initialGraph).length;
 
