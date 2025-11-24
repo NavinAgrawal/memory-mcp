@@ -5,6 +5,20 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2025-11-24
+
+### Fixed
+- **Console Logging**: Replaced `console.error()` with `console.log()` for informational messages
+  - Migration messages now use `[INFO]` prefix
+  - Server startup messages now use `[INFO]` prefix
+  - Keeps `console.error()` only for actual error conditions
+  - Affected files: `index.ts`, `utils/pathUtils.ts`
+
+### Changed
+- **Dependencies**: Updated npm dependencies to latest compatible versions
+  - Improved security posture
+  - Reduced deprecated dependency warnings
+
 ## [0.9.0] - 2025-11-23
 
 ### Changed - Major Refactoring: Modular Architecture
