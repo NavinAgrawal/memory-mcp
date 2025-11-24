@@ -99,7 +99,7 @@ export const CreateEntitySchema = z.object({
   parentId: entityNameSchema.optional(),
   createdAt: isoDateSchema.optional(),
   lastModified: isoDateSchema.optional(),
-}).strict();
+});
 
 /**
  * Entity update input schema.
@@ -112,7 +112,7 @@ export const UpdateEntitySchema = z.object({
   tags: z.array(tagSchema).optional(),
   importance: importanceSchema.optional(),
   parentId: entityNameSchema.optional(),
-}).strict();
+});
 
 /**
  * Complete Relation schema with all fields.
@@ -137,7 +137,7 @@ export const CreateRelationSchema = z.object({
   relationType: relationTypeSchema,
   createdAt: isoDateSchema.optional(),
   lastModified: isoDateSchema.optional(),
-}).strict();
+});
 
 /**
  * Search query validation.
