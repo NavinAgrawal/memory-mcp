@@ -5,6 +5,22 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.4] - 2025-11-24
+
+### Added
+- **Backup and Restore Functionality**: Complete data protection with point-in-time recovery
+  - Created `BackupManager` for managing graph backups
+  - `createBackup()`: Create timestamped backups with metadata (entity/relation counts, file size, description)
+  - `listBackups()`: List all available backups sorted by timestamp (newest first)
+  - `restoreFromBackup()`: Restore graph from any backup file
+  - `deleteBackup()`: Delete specific backup and metadata files
+  - `cleanOldBackups()`: Automatic cleanup keeping N most recent backups (default: 10)
+  - Backups stored in `.backups` directory with format: `backup_YYYY-MM-DD_HH-MM-SS-mmm.jsonl`
+  - Each backup includes metadata file with timestamp, counts, and optional description
+  - Provides critical data protection for production systems
+  - All 51 tests passing ✅
+  - Files: `features/BackupManager.ts`, `features/index.ts`
+
 ## [0.11.3] - 2025-11-24
 
 ### Added
