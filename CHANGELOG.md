@@ -5,6 +5,15 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2025-11-24
+
+### Added
+- **JSDoc Documentation for ObservationManager**: Comprehensive API documentation for all public methods
+  - `addObservations()`: Batch addition with duplicate filtering and timestamp updates
+  - `deleteObservations()`: Safe deletion with automatic timestamp management
+  - Detailed examples showing single and multi-entity operations
+  - Files: `core/ObservationManager.ts`
+
 ## [0.9.6] - 2025-11-24
 
 ### Changed
