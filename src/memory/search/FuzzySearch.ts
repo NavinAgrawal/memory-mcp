@@ -11,6 +11,13 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 
 /**
+ * Default fuzzy search similarity threshold (70% match required).
+ * Lower values are more permissive (more typos tolerated).
+ * Higher values are stricter (fewer typos tolerated).
+ */
+export const DEFAULT_FUZZY_THRESHOLD = 0.7;
+
+/**
  * Performs fuzzy search with configurable similarity threshold.
  */
 export class FuzzySearch {
@@ -23,7 +30,7 @@ export class FuzzySearch {
    * Matches if similarity >= threshold (0.0 to 1.0).
    *
    * @param query - Search query
-   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
+   * @param threshold - Similarity threshold (0.0 to 1.0), default DEFAULT_FUZZY_THRESHOLD
    * @param tags - Optional tags filter
    * @param minImportance - Optional minimum importance
    * @param maxImportance - Optional maximum importance
@@ -31,7 +38,7 @@ export class FuzzySearch {
    */
   async fuzzySearch(
     query: string,
-    threshold: number = 0.7,
+    threshold: number = DEFAULT_FUZZY_THRESHOLD,
     tags?: string[],
     minImportance?: number,
     maxImportance?: number
