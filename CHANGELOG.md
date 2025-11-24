@@ -5,6 +5,16 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.9] - 2025-11-24
+
+### Changed
+- **Improved Error Handling in HierarchyManager**: Use custom error types throughout
+  - Replaced generic Error with EntityNotFoundError for missing entities
+  - Replaced generic Error with CycleDetectedError for hierarchy cycles
+  - Updated JSDoc @throws annotations with specific error types
+  - Enables better programmatic error handling for hierarchical operations
+  - Files: `features/HierarchyManager.ts`
+
 ## [0.9.8] - 2025-11-24
 
 ### Added
