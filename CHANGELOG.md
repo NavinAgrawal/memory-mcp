@@ -5,6 +5,14 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.6] - 2025-11-24
+
+### Changed
+- **Improved Error Handling in ObservationManager**: Use EntityNotFoundError instead of generic Error
+  - Better error messages with consistent error codes
+  - Enables programmatic error handling for observation operations
+  - Files: `core/ObservationManager.ts`
+
 ## [0.9.5] - 2025-11-24
 
 ### Added

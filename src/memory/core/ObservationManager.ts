@@ -7,6 +7,7 @@
  */
 
 import type { GraphStorage } from './GraphStorage.js';
+import { EntityNotFoundError } from '../utils/errors.js';
 
 /**
  * Result of adding observations to an entity.
@@ -40,7 +41,7 @@ export class ObservationManager {
       const entity = graph.entities.find(e => e.name === o.entityName);
 
       if (!entity) {
-        throw new Error(`Entity with name ${o.entityName} not found`);
+        throw new EntityNotFoundError(o.entityName);
       }
 
       const newObservations = o.contents.filter(
