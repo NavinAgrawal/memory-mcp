@@ -5,6 +5,28 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Integration Tests (Task 2.5)** - End-to-end workflow testing
+
+  **Integration Workflow Tests**: +12 tests
+  - Entity Creation and Search Workflow: Complete CRUD with multi-method search validation
+  - Compression and Search Workflow: Duplicate merging with search consistency
+  - Batch Update Workflow: Atomic updates with timestamp consistency verification
+  - Complex Query Workflow: Boolean queries on large datasets, ranked search with filters
+  - Date Range and Tag Workflow: Temporal filtering combined with tag filters
+  - Error Handling Workflows: Deferred integrity, atomic rollback validation
+  - Real-World Scenario: Complete team knowledge base (15+ operations)
+  - Performance Testing: 100+ entities search efficiency (<1 second)
+  - Files: `__tests__/integration/workflows.test.ts`
+
+### Testing
+- **Test Count**: 337 tests (up from 325, +12 integration tests, +4% increase)
+- **Integration Coverage**: End-to-end workflows validated across all managers
+- **All Tests Passing**: 337/337 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
 ## [0.14.0] - 2025-11-25
 
 ### Added
