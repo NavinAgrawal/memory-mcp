@@ -28,6 +28,10 @@ export {
   ENV_VARS,
   DEFAULT_BASE_DIR,
   LOG_PREFIXES,
+  SIMILARITY_WEIGHTS,
+  DEFAULT_DUPLICATE_THRESHOLD,
+  SEARCH_LIMITS,
+  IMPORTANCE_RANGE,
 } from './constants.js';
 export {
   EntitySchema,

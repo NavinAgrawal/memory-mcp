@@ -6,6 +6,8 @@
  * @module utils/validationUtils
  */
 
+import { IMPORTANCE_RANGE } from './constants.js';
+
 /**
  * Validation result with status and error messages.
  */
@@ -108,8 +110,8 @@ export function validateRelation(relation: unknown): ValidationResult {
 export function validateImportance(importance: number): boolean {
   return typeof importance === 'number'
     && !isNaN(importance)
-    && importance >= 0
-    && importance <= 10;
+    && importance >= IMPORTANCE_RANGE.MIN
+    && importance <= IMPORTANCE_RANGE.MAX;
 }
 
 /**

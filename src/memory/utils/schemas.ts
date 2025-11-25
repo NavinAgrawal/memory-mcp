@@ -8,12 +8,13 @@
  */
 
 import { z } from 'zod';
+import { IMPORTANCE_RANGE } from './constants.js';
 
 /**
- * Importance range constants (must match EntityManager constants).
+ * Importance range constants (imported from centralized constants).
  */
-const MIN_IMPORTANCE = 0;
-const MAX_IMPORTANCE = 10;
+const MIN_IMPORTANCE = IMPORTANCE_RANGE.MIN;
+const MAX_IMPORTANCE = IMPORTANCE_RANGE.MAX;
 
 /**
  * ISO 8601 date string validation.
