@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 25.0% complete (1,047/3,994 lines removed)
+**Status:** 🚧 25.7% complete (1,076/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 3,147 lines
+**Current:** 3,118 lines
 
 ### Completed Phases
 
@@ -139,17 +139,21 @@
 
 **Total Phase 1-7 Progress:** 1,047 lines removed (25.0%)
 
-### Remaining Work (~2,947 lines to refactor)
+#### ✅ Phase 8: Observation Management Delegation (v0.31.0) - COMPLETE
+- Added addObservations() method to EntityManager (handles duplicate detection)
+- Added deleteObservations() method to EntityManager (handles cascade updates)
+- Removed addObservations() implementation (19 lines) → delegates to EntityManager
+- Removed deleteObservations() implementation (16 lines) → delegates to EntityManager
+- Updated error handling to use EntityNotFoundError
+- Fixed test expectations for new error message format
+- **Progress**: 3,147 → 3,118 lines (29 lines removed, 0.9%)
 
-#### 🔄 Phase 8-12: Replace Remaining Duplicate Implementations
+**Total Phase 1-8 Progress:** 1,076 lines removed (25.7%)
+
+### Remaining Work (~2,918 lines to refactor)
+
+#### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
-
-1. **Entity Update Operations** (~50 lines)
-   - `addObservations()` → use EntityManager (needs implementation)
-   - `deleteObservations()` → use EntityManager (needs implementation)
-   - Duplicate detection → use CompressionManager
-   - Entity merging logic
-   - Observation deduplication
 
 7. **Tag Management** (~200 lines)
    - Tag operations → use TagManager
@@ -253,12 +257,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 20.1% complete (v0.24.0-v0.29.0)
+- **Sprint 4:** 🚧 25.7% complete (v0.24.0-v0.31.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.29.0
+- **Current Version:** v0.31.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 3,351 lines (target: <200)
+- **index.ts Size:** 3,118 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -315,5 +319,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.29.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (20.1%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.31.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (25.7%) | Sprint 5 ⏳ Planned

@@ -142,23 +142,7 @@ export class KnowledgeGraphManager {
   }
 
   async addObservations(observations: { entityName: string; contents: string[] }[]): Promise<{ entityName: string; addedObservations: string[] }[]> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-    const results = observations.map(o => {
-      const entity = graph.entities.find(e => e.name === o.entityName);
-      if (!entity) {
-        throw new Error(`Entity with name ${o.entityName} not found`);
-      }
-      const newObservations = o.contents.filter(content => !entity.observations.includes(content));
-      entity.observations.push(...newObservations);
-      // Update lastModified timestamp if observations were added
-      if (newObservations.length > 0) {
-        entity.lastModified = timestamp;
-      }
-      return { entityName: o.entityName, addedObservations: newObservations };
-    });
-    await this.saveGraph(graph);
-    return results;
+    return this.entityManager.addObservations(observations);
   }
 
   async deleteEntities(entityNames: string[]): Promise<void> {
@@ -166,20 +150,7 @@ export class KnowledgeGraphManager {
   }
 
   async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-    deletions.forEach(d => {
-      const entity = graph.entities.find(e => e.name === d.entityName);
-      if (entity) {
-        const originalLength = entity.observations.length;
-        entity.observations = entity.observations.filter(o => !d.observations.includes(o));
-        // Update lastModified timestamp if observations were deleted
-        if (entity.observations.length < originalLength) {
-          entity.lastModified = timestamp;
-        }
-      }
-    });
-    await this.saveGraph(graph);
+    return this.entityManager.deleteObservations(deletions);
   }
 
   async deleteRelations(relations: Relation[]): Promise<void> {

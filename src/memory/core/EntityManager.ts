@@ -309,4 +309,108 @@ export class EntityManager {
     await this.storage.saveGraph(graph);
     return updatedEntities;
   }
+
+  /**
+   * Add observations to multiple entities in a single batch operation.
+   *
+   * This method performs the following operations:
+   * - Adds new observations to specified entities
+   * - Filters out duplicate observations (already present)
+   * - Updates lastModified timestamp only if new observations were added
+   *
+   * @param observations - Array of entity names and observations to add
+   * @returns Promise resolving to array of results showing which observations were added
+   * @throws {EntityNotFoundError} If any entity is not found
+   *
+   * @example
+   * ```typescript
+   * const manager = new EntityManager(storage);
+   *
+   * // Add observations to multiple entities
+   * const results = await manager.addObservations([
+   *   { entityName: 'Alice', contents: ['Completed project X', 'Started project Y'] },
+   *   { entityName: 'Bob', contents: ['Joined team meeting'] }
+   * ]);
+   *
+   * // Check what was added (duplicates are filtered out)
+   * results.forEach(r => {
+   *   console.log(`${r.entityName}: added ${r.addedObservations.length} new observations`);
+   * });
+   * ```
+   */
+  async addObservations(
+    observations: { entityName: string; contents: string[] }[]
+  ): Promise<{ entityName: string; addedObservations: string[] }[]> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+
+    const results = observations.map(o => {
+      const entity = graph.entities.find(e => e.name === o.entityName);
+      if (!entity) {
+        throw new EntityNotFoundError(o.entityName);
+      }
+
+      const newObservations = o.contents.filter(content => !entity.observations.includes(content));
+      entity.observations.push(...newObservations);
+
+      // Update lastModified timestamp if observations were added
+      if (newObservations.length > 0) {
+        entity.lastModified = timestamp;
+      }
+
+      return { entityName: o.entityName, addedObservations: newObservations };
+    });
+
+    await this.storage.saveGraph(graph);
+    return results;
+  }
+
+  /**
+   * Delete observations from multiple entities in a single batch operation.
+   *
+   * This method performs the following operations:
+   * - Removes specified observations from entities
+   * - Updates lastModified timestamp only if observations were deleted
+   * - Silently ignores entities that don't exist (no error thrown)
+   *
+   * @param deletions - Array of entity names and observations to delete
+   * @returns Promise that resolves when deletion is complete
+   *
+   * @example
+   * ```typescript
+   * const manager = new EntityManager(storage);
+   *
+   * // Delete observations from multiple entities
+   * await manager.deleteObservations([
+   *   { entityName: 'Alice', observations: ['Old observation 1', 'Old observation 2'] },
+   *   { entityName: 'Bob', observations: ['Outdated info'] }
+   * ]);
+   *
+   * // Safe to delete from non-existent entities (no error)
+   * await manager.deleteObservations([
+   *   { entityName: 'NonExistent', observations: ['Some text'] }
+   * ]); // No error thrown
+   * ```
+   */
+  async deleteObservations(
+    deletions: { entityName: string; observations: string[] }[]
+  ): Promise<void> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+
+    deletions.forEach(d => {
+      const entity = graph.entities.find(e => e.name === d.entityName);
+      if (entity) {
+        const originalLength = entity.observations.length;
+        entity.observations = entity.observations.filter(o => !d.observations.includes(o));
+
+        // Update lastModified timestamp if observations were deleted
+        if (entity.observations.length < originalLength) {
+          entity.lastModified = timestamp;
+        }
+      }
+    });
+
+    await this.storage.saveGraph(graph);
+  }
 }

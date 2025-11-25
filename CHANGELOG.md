@@ -5,6 +5,32 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Observation Management Delegation - Phase 8** - Delegate observation operations to EntityManager
+
+  **Added Observation Methods to EntityManager**: Enhanced EntityManager with batch observation operations
+  - Added addObservations() method to EntityManager (handles duplicate detection and timestamp updates)
+  - Added deleteObservations() method to EntityManager (handles cascade updates and timestamps)
+  - Removed addObservations() implementation from index.ts (19 lines) → delegates to EntityManager
+  - Removed deleteObservations() implementation from index.ts (16 lines) → delegates to EntityManager
+  - Updated error handling to use EntityNotFoundError instead of generic Error
+  - Fixed test expectation to match EntityNotFoundError message format
+
+  **Impact**:
+  - Reduced index.ts from 3,147 lines to 3,118 lines (29 lines removed, 0.9% reduction)
+  - Centralized observation management in EntityManager
+  - Consistent error handling using EntityNotFoundError
+  - Improved code organization with all entity operations in one module
+  - EntityManager now handles full entity lifecycle: create, read, update, delete, and observation management
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 3,118 lines (25.7% total reduction)
+  - Phases 1-8: 1,076 lines removed total
+  - Remaining: ~2,918 lines of implementation code to refactor
+
 ## [0.30.0] - 2025-11-25
 
 ### Changed
