@@ -9,6 +9,7 @@
 import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
+import { SEARCH_LIMITS } from '../utils/constants.js';
 
 /**
  * Default fuzzy search similarity threshold (70% match required).
@@ -24,7 +25,7 @@ export class FuzzySearch {
   constructor(private storage: GraphStorage) {}
 
   /**
-   * Fuzzy search for entities with typo tolerance.
+   * Fuzzy search for entities with typo tolerance and pagination.
    *
    * Uses Levenshtein distance to calculate similarity between strings.
    * Matches if similarity >= threshold (0.0 to 1.0).
@@ -34,17 +35,25 @@ export class FuzzySearch {
    * @param tags - Optional tags filter
    * @param minImportance - Optional minimum importance
    * @param maxImportance - Optional maximum importance
-   * @returns Filtered knowledge graph with fuzzy matches
+   * @param offset - Number of results to skip (default: 0)
+   * @param limit - Maximum number of results (default: 50, max: 200)
+   * @returns Filtered knowledge graph with fuzzy matches and pagination applied
    */
   async fuzzySearch(
     query: string,
     threshold: number = DEFAULT_FUZZY_THRESHOLD,
     tags?: string[],
     minImportance?: number,
-    maxImportance?: number
+    maxImportance?: number,
+    offset: number = 0,
+    limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
     const graph = await this.storage.loadGraph();
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Validate pagination parameters
+    const validatedOffset = Math.max(0, offset);
+    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
 
     // Filter entities using fuzzy matching
     const filteredEntities = graph.entities.filter(e => {
@@ -84,13 +93,16 @@ export class FuzzySearch {
       return true;
     });
 
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+    // Apply pagination
+    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+
+    const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(
       r => filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
     );
 
     return {
-      entities: filteredEntities,
+      entities: paginatedEntities,
       relations: filteredRelations,
     };
   }

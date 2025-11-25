@@ -8,6 +8,7 @@
 
 import type { BooleanQueryNode, Entity, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
+import { SEARCH_LIMITS } from '../utils/constants.js';
 
 /**
  * Performs boolean search with query parsing and AST evaluation.
@@ -16,7 +17,7 @@ export class BooleanSearch {
   constructor(private storage: GraphStorage) {}
 
   /**
-   * Boolean search with support for AND, OR, NOT operators and field-specific queries.
+   * Boolean search with support for AND, OR, NOT operators, field-specific queries, and pagination.
    *
    * Query syntax examples:
    * - "alice AND programming" - Both terms must match
@@ -28,13 +29,17 @@ export class BooleanSearch {
    * @param tags - Optional tags filter
    * @param minImportance - Optional minimum importance
    * @param maxImportance - Optional maximum importance
-   * @returns Filtered knowledge graph matching the boolean query
+   * @param offset - Number of results to skip (default: 0)
+   * @param limit - Maximum number of results (default: 50, max: 200)
+   * @returns Filtered knowledge graph matching the boolean query with pagination applied
    */
   async booleanSearch(
     query: string,
     tags?: string[],
     minImportance?: number,
-    maxImportance?: number
+    maxImportance?: number,
+    offset: number = 0,
+    limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
     const graph = await this.storage.loadGraph();
 
@@ -49,6 +54,10 @@ export class BooleanSearch {
     }
 
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Validate pagination parameters
+    const validatedOffset = Math.max(0, offset);
+    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
 
     // Filter entities
     const filteredEntities = graph.entities.filter(e => {
@@ -76,12 +85,15 @@ export class BooleanSearch {
       return true;
     });
 
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+    // Apply pagination
+    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+
+    const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(
       r => filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
     );
 
-    return { entities: filteredEntities, relations: filteredRelations };
+    return { entities: paginatedEntities, relations: filteredRelations };
   }
 
   /**
