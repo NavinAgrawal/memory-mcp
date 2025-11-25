@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 20.1% complete (843/3,994 lines removed)
+**Status:** 🚧 25.0% complete (1,047/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 3,351 lines
+**Current:** 3,147 lines
 
 ### Completed Phases
 
@@ -128,21 +128,25 @@
 
 **Total Phase 1-6 Progress:** 843 lines removed (20.1%)
 
-### Remaining Work (~3,151 lines to refactor)
+#### ✅ Phase 7: Compression Operations Delegation (v0.30.0) - COMPLETE
+- Removed findDuplicates() implementation (35 lines) → delegates to CompressionManager
+- Removed mergeEntities() implementation (89 lines) → delegates to CompressionManager
+- Removed compressGraph() implementation (51 lines) → delegates to CompressionManager
+- Removed calculateEntitySimilarity() helper (39 lines)
+- Removed SIMILARITY_WEIGHTS and levenshteinDistance from imports
+- Added CompressionManager instance coordinating duplicate detection and merging
+- **Progress**: 3,351 → 3,147 lines (204 lines removed, 6.1%)
 
-#### 🔄 Phase 7-12: Replace Remaining Duplicate Implementations
+**Total Phase 1-7 Progress:** 1,047 lines removed (25.0%)
+
+### Remaining Work (~2,947 lines to refactor)
+
+#### 🔄 Phase 8-12: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
 
 1. **Entity Update Operations** (~50 lines)
    - `addObservations()` → use EntityManager (needs implementation)
    - `deleteObservations()` → use EntityManager (needs implementation)
-   - Term tokenization
-
-5. **Boolean Query Parsing** (~300 lines)
-   - Query parser → use BooleanSearch module
-   - AST generation and evaluation
-
-6. **Compression Operations** (~400 lines)
    - Duplicate detection → use CompressionManager
    - Entity merging logic
    - Observation deduplication

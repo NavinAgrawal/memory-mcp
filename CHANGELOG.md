@@ -5,6 +5,34 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Compression Operations Delegation - Phase 7** - Delegate duplicate detection and merging to CompressionManager
+
+  **Removed Duplicate Compression Logic**: Refactored KnowledgeGraphManager to use CompressionManager module
+  - Removed findDuplicates() implementation (35 lines) → delegates to CompressionManager
+  - Removed mergeEntities() implementation (89 lines) → delegates to CompressionManager
+  - Removed compressGraph() implementation (51 lines) → delegates to CompressionManager
+  - Removed calculateEntitySimilarity() helper method (39 lines)
+  - Removed SIMILARITY_WEIGHTS and levenshteinDistance from imports (unused after delegation)
+  - Added CompressionManager instance to KnowledgeGraphManager
+
+  **Impact**:
+  - Reduced index.ts from 3,351 lines to 3,147 lines (204 lines removed, 6.1% reduction)
+  - Eliminated ~200 lines of duplicate compression and similarity calculation logic
+  - Single source of truth for duplicate detection with configurable similarity weights
+  - Improved separation of concerns (compression logic fully abstracted)
+  - CompressionManager uses multi-factor similarity scoring (name, type, observations, tags)
+  - Duplicate detection with Levenshtein distance and Jaccard similarity
+  - Merge operations with observation/tag deduplication and importance aggregation
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 3,147 lines (25.0% total reduction)
+  - Phases 1-7: 1,047 lines removed total
+  - Remaining: ~2,947 lines of implementation code to refactor
+
 ## [0.29.0] - 2025-11-25
 
 ### Changed

@@ -11,16 +11,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from './utils/logger.js';
 import {
-  SIMILARITY_WEIGHTS,
   DEFAULT_DUPLICATE_THRESHOLD,
   SEARCH_LIMITS,
   IMPORTANCE_RANGE
 } from './utils/constants.js';
-import { levenshteinDistance } from './utils/levenshtein.js';
 import { GraphStorage } from './core/GraphStorage.js';
 import { EntityManager } from './core/EntityManager.js';
 import { RelationManager } from './core/RelationManager.js';
 import { SearchManager } from './search/SearchManager.js';
+import { CompressionManager } from './features/CompressionManager.js';
 import type {
   Entity,
   Relation,
@@ -101,6 +100,7 @@ export class KnowledgeGraphManager {
   private entityManager: EntityManager;
   private relationManager: RelationManager;
   private searchManager: SearchManager;
+  private compressionManager: CompressionManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -112,6 +112,7 @@ export class KnowledgeGraphManager {
     this.entityManager = new EntityManager(this.storage);
     this.relationManager = new RelationManager(this.storage);
     this.searchManager = new SearchManager(this.storage, this.savedSearchesFilePath);
+    this.compressionManager = new CompressionManager(this.storage);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
@@ -980,83 +981,12 @@ export class KnowledgeGraphManager {
 
   // Phase 3: Memory compression - duplicate detection and merging
   /**
-   * Calculate similarity between two entities using multiple heuristics
-   * Returns a score from 0 (completely different) to 1 (identical)
-   */
-  private calculateEntitySimilarity(e1: Entity, e2: Entity): number {
-    let score = 0;
-    let factors = 0;
-
-    // Name similarity (Levenshtein-based)
-    const nameDistance = levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
-    const maxNameLength = Math.max(e1.name.length, e2.name.length);
-    const nameSimilarity = 1 - (nameDistance / maxNameLength);
-    score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;
-    factors += SIMILARITY_WEIGHTS.NAME;
-
-    // Type similarity (exact match)
-    if (e1.entityType.toLowerCase() === e2.entityType.toLowerCase()) {
-      score += SIMILARITY_WEIGHTS.TYPE;
-    }
-    factors += SIMILARITY_WEIGHTS.TYPE;
-
-    // Observation overlap
-    const obs1Set = new Set(e1.observations.map(o => o.toLowerCase()));
-    const obs2Set = new Set(e2.observations.map(o => o.toLowerCase()));
-    const intersection = new Set([...obs1Set].filter(x => obs2Set.has(x)));
-    const union = new Set([...obs1Set, ...obs2Set]);
-    const observationSimilarity = union.size > 0 ? intersection.size / union.size : 0;
-    score += observationSimilarity * SIMILARITY_WEIGHTS.OBSERVATION;
-    factors += SIMILARITY_WEIGHTS.OBSERVATION;
-
-    // Tag overlap
-    if (e1.tags && e2.tags && (e1.tags.length > 0 || e2.tags.length > 0)) {
-      const tags1Set = new Set(e1.tags.map(t => t.toLowerCase()));
-      const tags2Set = new Set(e2.tags.map(t => t.toLowerCase()));
-      const tagIntersection = new Set([...tags1Set].filter(x => tags2Set.has(x)));
-      const tagUnion = new Set([...tags1Set, ...tags2Set]);
-      const tagSimilarity = tagUnion.size > 0 ? tagIntersection.size / tagUnion.size : 0;
-      score += tagSimilarity * SIMILARITY_WEIGHTS.TAG;
-      factors += SIMILARITY_WEIGHTS.TAG;
-    }
-
-    return factors > 0 ? score / factors : 0;
-  }
-
-  /**
    * Find duplicate entities in the graph based on similarity threshold
    * @param threshold - Similarity threshold (0.0 to 1.0), default 0.8
    * @returns Array of duplicate groups (each group has similar entities)
    */
   async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]> {
-    const graph = await this.loadGraph();
-    const duplicateGroups: string[][] = [];
-    const processed = new Set<string>();
-
-    for (let i = 0; i < graph.entities.length; i++) {
-      const entity1 = graph.entities[i];
-      if (processed.has(entity1.name)) continue;
-
-      const group: string[] = [entity1.name];
-
-      for (let j = i + 1; j < graph.entities.length; j++) {
-        const entity2 = graph.entities[j];
-        if (processed.has(entity2.name)) continue;
-
-        const similarity = this.calculateEntitySimilarity(entity1, entity2);
-        if (similarity >= threshold) {
-          group.push(entity2.name);
-          processed.add(entity2.name);
-        }
-      }
-
-      if (group.length > 1) {
-        duplicateGroups.push(group);
-        processed.add(entity1.name);
-      }
-    }
-
-    return duplicateGroups;
+    return this.compressionManager.findDuplicates(threshold);
   }
 
   /**
@@ -1066,93 +996,7 @@ export class KnowledgeGraphManager {
    * @returns The merged entity
    */
   async mergeEntities(entityNames: string[], targetName?: string): Promise<Entity> {
-    if (entityNames.length < 2) {
-      throw new Error('At least 2 entities required for merging');
-    }
-
-    const graph = await this.loadGraph();
-    const entitiesToMerge = entityNames.map(name => {
-      const entity = graph.entities.find(e => e.name === name);
-      if (!entity) {
-        throw new Error(`Entity "${name}" not found`);
-      }
-      return entity;
-    });
-
-    const keepEntity = entitiesToMerge[0];
-    const mergeEntities = entitiesToMerge.slice(1);
-
-    // Merge observations (unique)
-    const allObservations = new Set<string>();
-    for (const entity of entitiesToMerge) {
-      entity.observations.forEach(obs => allObservations.add(obs));
-    }
-    keepEntity.observations = Array.from(allObservations);
-
-    // Merge tags (unique)
-    const allTags = new Set<string>();
-    for (const entity of entitiesToMerge) {
-      if (entity.tags) {
-        entity.tags.forEach(tag => allTags.add(tag));
-      }
-    }
-    if (allTags.size > 0) {
-      keepEntity.tags = Array.from(allTags);
-    }
-
-    // Use highest importance
-    const importances = entitiesToMerge
-      .map(e => e.importance)
-      .filter(imp => imp !== undefined) as number[];
-    if (importances.length > 0) {
-      keepEntity.importance = Math.max(...importances);
-    }
-
-    // Use earliest createdAt
-    const createdDates = entitiesToMerge
-      .map(e => e.createdAt)
-      .filter(date => date !== undefined) as string[];
-    if (createdDates.length > 0) {
-      keepEntity.createdAt = createdDates.sort()[0];
-    }
-
-    // Update lastModified
-    keepEntity.lastModified = new Date().toISOString();
-
-    // Rename if requested
-    if (targetName && targetName !== keepEntity.name) {
-      // Update all relations pointing to old name
-      graph.relations.forEach(rel => {
-        if (rel.from === keepEntity.name) rel.from = targetName;
-        if (rel.to === keepEntity.name) rel.to = targetName;
-      });
-      keepEntity.name = targetName;
-    }
-
-    // Update relations from merged entities to point to kept entity
-    for (const mergeEntity of mergeEntities) {
-      graph.relations.forEach(rel => {
-        if (rel.from === mergeEntity.name) rel.from = keepEntity.name;
-        if (rel.to === mergeEntity.name) rel.to = keepEntity.name;
-      });
-    }
-
-    // Remove duplicate relations
-    const uniqueRelations = new Map<string, Relation>();
-    for (const relation of graph.relations) {
-      const key = `${relation.from}|${relation.to}|${relation.relationType}`;
-      if (!uniqueRelations.has(key)) {
-        uniqueRelations.set(key, relation);
-      }
-    }
-    graph.relations = Array.from(uniqueRelations.values());
-
-    // Remove merged entities
-    const mergeNames = new Set(mergeEntities.map(e => e.name));
-    graph.entities = graph.entities.filter(e => !mergeNames.has(e.name));
-
-    await this.saveGraph(graph);
-    return keepEntity;
+    return this.compressionManager.mergeEntities(entityNames, targetName);
   }
 
   /**
@@ -1162,55 +1006,7 @@ export class KnowledgeGraphManager {
    * @returns Compression result with statistics
    */
   async compressGraph(threshold: number = 0.8, dryRun: boolean = false): Promise<CompressionResult> {
-    const initialGraph = await this.loadGraph();
-    const initialSize = JSON.stringify(initialGraph).length;
-
-    const duplicateGroups = await this.findDuplicates(threshold);
-    const result: CompressionResult = {
-      duplicatesFound: duplicateGroups.reduce((sum, group) => sum + group.length, 0),
-      entitiesMerged: 0,
-      observationsCompressed: 0,
-      relationsConsolidated: 0,
-      spaceFreed: 0,
-      mergedEntities: []
-    };
-
-    if (dryRun) {
-      // Just report what would happen
-      for (const group of duplicateGroups) {
-        result.mergedEntities.push({
-          kept: group[0],
-          merged: group.slice(1)
-        });
-        result.entitiesMerged += group.length - 1;
-      }
-      return result;
-    }
-
-    // Actually merge duplicates
-    for (const group of duplicateGroups) {
-      try {
-        await this.mergeEntities(group);
-        result.mergedEntities.push({
-          kept: group[0],
-          merged: group.slice(1)
-        });
-        result.entitiesMerged += group.length - 1;
-      } catch (error) {
-        // Skip groups that fail to merge
-        logger.error(`Failed to merge group ${group}:`, error);
-      }
-    }
-
-    // Calculate space saved
-    const finalGraph = await this.loadGraph();
-    const finalSize = JSON.stringify(finalGraph).length;
-    result.spaceFreed = initialSize - finalSize;
-
-    // Count compressed observations (removed duplicates)
-    result.observationsCompressed = result.entitiesMerged; // Approximation
-
-    return result;
+    return this.compressionManager.compressGraph(threshold, dryRun);
   }
 
   // Phase 4: Memory archiving system
