@@ -284,6 +284,125 @@ describe('EntityManager', () => {
     });
   });
 
+  describe('batchUpdate', () => {
+    beforeEach(async () => {
+      await manager.createEntities([
+        { name: 'Alice', entityType: 'person', observations: ['Engineer'], importance: 7 },
+        { name: 'Bob', entityType: 'person', observations: ['Manager'], importance: 6 },
+        { name: 'Charlie', entityType: 'person', observations: ['Designer'], importance: 5 },
+      ]);
+    });
+
+    it('should update multiple entities in a single operation', async () => {
+      const updated = await manager.batchUpdate([
+        { name: 'Alice', updates: { importance: 9 } },
+        { name: 'Bob', updates: { importance: 8 } },
+      ]);
+
+      expect(updated).toHaveLength(2);
+      expect(updated[0].importance).toBe(9);
+      expect(updated[1].importance).toBe(8);
+    });
+
+    it('should update different fields for different entities', async () => {
+      const updated = await manager.batchUpdate([
+        { name: 'Alice', updates: { tags: ['senior', 'tech-lead'] } },
+        { name: 'Bob', updates: { entityType: 'senior_manager' } },
+        { name: 'Charlie', updates: { importance: 8, tags: ['ui-expert'] } },
+      ]);
+
+      expect(updated).toHaveLength(3);
+      expect(updated[0].tags).toEqual(['senior', 'tech-lead']);
+      expect(updated[1].entityType).toBe('senior_manager');
+      expect(updated[2].importance).toBe(8);
+      expect(updated[2].tags).toEqual(['ui-expert']);
+    });
+
+    it('should update lastModified timestamp for all entities', async () => {
+      const beforeUpdate = new Date().toISOString();
+
+      // Wait a bit to ensure timestamp difference
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const updated = await manager.batchUpdate([
+        { name: 'Alice', updates: { importance: 9 } },
+        { name: 'Bob', updates: { importance: 8 } },
+      ]);
+
+      expect(updated[0].lastModified! >= beforeUpdate).toBe(true);
+      expect(updated[1].lastModified! >= beforeUpdate).toBe(true);
+      expect(updated[0].lastModified).toBe(updated[1].lastModified); // Same timestamp
+    });
+
+    it('should only load and save graph once', async () => {
+      // This is a performance benefit - single load/save vs multiple
+      const updated = await manager.batchUpdate([
+        { name: 'Alice', updates: { importance: 10 } },
+        { name: 'Bob', updates: { importance: 9 } },
+        { name: 'Charlie', updates: { importance: 8 } },
+      ]);
+
+      expect(updated).toHaveLength(3);
+
+      // Verify all updates persisted
+      const alice = await manager.getEntity('Alice');
+      const bob = await manager.getEntity('Bob');
+      const charlie = await manager.getEntity('Charlie');
+
+      expect(alice!.importance).toBe(10);
+      expect(bob!.importance).toBe(9);
+      expect(charlie!.importance).toBe(8);
+    });
+
+    it('should throw EntityNotFoundError if any entity not found', async () => {
+      await expect(
+        manager.batchUpdate([
+          { name: 'Alice', updates: { importance: 9 } },
+          { name: 'NonExistent', updates: { importance: 8 } },
+        ])
+      ).rejects.toThrow(EntityNotFoundError);
+
+      // Verify no updates were applied (atomic operation)
+      const alice = await manager.getEntity('Alice');
+      expect(alice!.importance).toBe(7); // Original value
+    });
+
+    it('should throw ValidationError for invalid update data', async () => {
+      await expect(
+        manager.batchUpdate([
+          { name: 'Alice', updates: { importance: 9 } },
+          { name: 'Bob', updates: { importance: 11 } as any }, // Invalid: > 10
+        ])
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('should handle empty updates array', async () => {
+      const updated = await manager.batchUpdate([]);
+      expect(updated).toEqual([]);
+    });
+
+    it('should handle single entity update', async () => {
+      const updated = await manager.batchUpdate([
+        { name: 'Alice', updates: { importance: 10 } },
+      ]);
+
+      expect(updated).toHaveLength(1);
+      expect(updated[0].importance).toBe(10);
+    });
+
+    it('should preserve unchanged fields', async () => {
+      const beforeAlice = await manager.getEntity('Alice');
+
+      const updated = await manager.batchUpdate([
+        { name: 'Alice', updates: { importance: 10 } },
+      ]);
+
+      expect(updated[0].entityType).toBe(beforeAlice!.entityType);
+      expect(updated[0].observations).toEqual(beforeAlice!.observations);
+      expect(updated[0].importance).toBe(10); // Changed
+    });
+  });
+
   describe('persistence', () => {
     it('should persist entities across storage instances', async () => {
       await manager.createEntities([

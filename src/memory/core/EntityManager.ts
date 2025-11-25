@@ -234,4 +234,70 @@ export class EntityManager {
     await this.storage.saveGraph(graph);
     return entity;
   }
+
+  /**
+   * Update multiple entities in a single batch operation.
+   *
+   * This method is more efficient than calling updateEntity multiple times
+   * as it loads and saves the graph only once. All updates are applied atomically.
+   * The lastModified timestamp is automatically updated for all entities.
+   *
+   * @param updates - Array of updates, each containing entity name and changes
+   * @returns Promise resolving to array of updated entities
+   * @throws {EntityNotFoundError} If any entity is not found
+   * @throws {ValidationError} If any update data is invalid
+   *
+   * @example
+   * ```typescript
+   * const manager = new EntityManager(storage);
+   *
+   * // Update multiple entities at once
+   * const updated = await manager.batchUpdate([
+   *   { name: 'Alice', updates: { importance: 9 } },
+   *   { name: 'Bob', updates: { importance: 8, tags: ['senior'] } },
+   *   { name: 'Charlie', updates: { entityType: 'lead_engineer' } }
+   * ]);
+   *
+   * console.log(`Updated ${updated.length} entities`);
+   *
+   * // Efficiently update many entities (single graph load/save)
+   * const massUpdate = employees.map(name => ({
+   *   name,
+   *   updates: { tags: ['team-2024'] }
+   * }));
+   * await manager.batchUpdate(massUpdate);
+   * ```
+   */
+  async batchUpdate(
+    updates: Array<{ name: string; updates: Partial<Entity> }>
+  ): Promise<Entity[]> {
+    // Validate all updates first
+    for (const { updates: updateData } of updates) {
+      const validation = UpdateEntitySchema.safeParse(updateData);
+      if (!validation.success) {
+        const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
+        throw new ValidationError('Invalid update data', errors);
+      }
+    }
+
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+    const updatedEntities: Entity[] = [];
+
+    for (const { name, updates: updateData } of updates) {
+      const entity = graph.entities.find(e => e.name === name);
+
+      if (!entity) {
+        throw new EntityNotFoundError(name);
+      }
+
+      // Apply updates
+      Object.assign(entity, updateData);
+      entity.lastModified = timestamp;
+      updatedEntities.push(entity);
+    }
+
+    await this.storage.saveGraph(graph);
+    return updatedEntities;
+  }
 }
