@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 4.7% complete (199/3,994 lines removed)
+**Status:** 🚧 5.7% complete (240/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 3,995 lines
+**Current:** 3,954 lines
 
 ### Completed Phases
 
@@ -104,11 +104,13 @@
 - Updated unit tests for consistency
 - **Progress**: 4,030 → 3,995 lines (35 lines removed, 0.8%)
 
-#### 📋 Phase 5: Relation Operations Delegation (v0.28.0) - PLANNED
-- Replace `createRelations()` implementation (15 lines) with RelationManager delegation
-- Replace `deleteRelations()` implementation (26 lines) with RelationManager delegation
-- Add RelationManager instance to KnowledgeGraphManager constructor
-- **Progress**: Not started
+#### ✅ Phase 5: Relation Operations Delegation (v0.28.0) - COMPLETE
+- Removed `createRelations()` implementation (15 lines) and replaced with RelationManager delegation
+- Removed `deleteRelations()` implementation (26 lines) and replaced with RelationManager delegation
+- Added RelationManager instance to KnowledgeGraphManager constructor
+- **Progress**: 3,995 → 3,954 lines (41 lines removed, 1.0%)
+
+**Total Sprint 4a Progress:** 76 lines removed (1.8%)
 
 ### Remaining Work (~3,754 lines to refactor after 4a)
 
@@ -246,12 +248,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 4.7% complete (v0.24.0-v0.27.0)
+- **Sprint 4:** 🚧 5.7% complete (v0.24.0-v0.28.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.27.0
+- **Current Version:** v0.28.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 3,995 lines (target: <200)
+- **index.ts Size:** 3,954 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -308,5 +310,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.27.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (4.7%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.28.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (5.7%) | Sprint 5 ⏳ Planned

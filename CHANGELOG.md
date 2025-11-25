@@ -5,6 +5,31 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2025-11-25
+
+### Changed
+- **Sprint 4a: Relation Operations Delegation - Phase 5** - Delegate relation operations to RelationManager
+
+  **Removed Duplicate Relation Operations**: Refactored KnowledgeGraphManager to use RelationManager module
+  - Removed 15-line duplicate createRelations() implementation
+  - Removed 26-line duplicate deleteRelations() implementation
+  - Added RelationManager instance to KnowledgeGraphManager
+  - Replaced inline implementations with delegation to relationManager.createRelations() and relationManager.deleteRelations()
+
+  **Impact**:
+  - Reduced index.ts from 3,995 lines to 3,954 lines (41 lines removed)
+  - Eliminated duplicate relation creation and deletion logic
+  - Single source of truth for relation operations with proper validation
+  - Improved separation of concerns (relation management abstracted)
+  - RelationManager now handles validation, timestamp management, and affected entity updates
+  - Cascading lastModified updates for entities involved in deleted relations
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 3,954 lines (5.7% total reduction)
+  - Phases 1-5: 240 lines removed total
+  - Remaining: ~3,754 lines of implementation code to refactor
+
 ## [0.27.0] - 2025-11-25
 
 ### Changed
