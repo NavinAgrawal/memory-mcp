@@ -25,12 +25,29 @@ export enum OperationType {
 }
 
 /**
- * Represents a single operation in a transaction.
+ * Represents a single operation in a transaction using discriminated union.
  */
-export interface TransactionOperation {
-  type: OperationType;
-  data: any;
-}
+export type TransactionOperation =
+  | {
+      type: OperationType.CREATE_ENTITY;
+      data: Omit<Entity, 'createdAt' | 'lastModified'>;
+    }
+  | {
+      type: OperationType.UPDATE_ENTITY;
+      data: { name: string; updates: Partial<Entity> };
+    }
+  | {
+      type: OperationType.DELETE_ENTITY;
+      data: { name: string };
+    }
+  | {
+      type: OperationType.CREATE_RELATION;
+      data: Omit<Relation, 'createdAt' | 'lastModified'>;
+    }
+  | {
+      type: OperationType.DELETE_RELATION;
+      data: { from: string; to: string; relationType: string };
+    };
 
 /**
  * Transaction execution result.
@@ -445,8 +462,11 @@ export class TransactionManager {
         break;
       }
 
-      default:
-        throw new KnowledgeGraphError(`Unknown operation type: ${operation.type}`, 'UNKNOWN_OPERATION');
+      default: {
+        // Exhaustiveness check - TypeScript will error if we miss a case
+        const _exhaustiveCheck: never = operation;
+        throw new KnowledgeGraphError(`Unknown operation type: ${(_exhaustiveCheck as TransactionOperation).type}`, 'UNKNOWN_OPERATION');
+      }
     }
   }
 }

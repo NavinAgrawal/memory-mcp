@@ -109,13 +109,13 @@ export interface ValidationReport {
 export interface ValidationError {
   type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ValidationWarning {
   type: 'isolated_entity' | 'empty_observations' | 'missing_metadata';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface SavedSearch {
