@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![Changelog](https://img.shields.io/badge/changelog-latest-orange.svg)](CHANGELOG.md)
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **archiving**, **advanced search**, and **multi-format import/export**.
 
@@ -23,6 +24,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - [Configuration](#configuration)
 - [Development](#development)
 - [Contributing](#contributing)
+- [Changelog](#changelog)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
 
@@ -1495,6 +1497,7 @@ Detailed documentation for advanced features:
 - **[ARCHIVING_GUIDE.md](ARCHIVING_GUIDE.md)** - Memory lifecycle and long-term storage (1 tool)
 - **[QUERY_LANGUAGE.md](QUERY_LANGUAGE.md)** - Boolean search syntax reference
 - **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Upgrade guide from v0.7.0 to v0.8.0
+- **[CHANGELOG.md](CHANGELOG.md)** - Complete version history and release notes
 
 ## Configuration
 
@@ -1624,6 +1627,20 @@ We welcome contributions!
 - 📚 Improve documentation
 - 🧪 Add tests
 - 🌍 Translate guides
+
+## Changelog
+
+All notable changes to this project are documented in **[CHANGELOG.md](CHANGELOG.md)**.
+
+The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and tracks:
+- **Added**: New features and capabilities
+- **Changed**: Changes to existing functionality
+- **Deprecated**: Soon-to-be removed features
+- **Removed**: Removed features
+- **Fixed**: Bug fixes
+- **Security**: Security improvements
+
+**Current version**: v0.11.6 - [View full changelog →](CHANGELOG.md)
 
 ## License
 
