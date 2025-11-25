@@ -413,4 +413,188 @@ export class EntityManager {
 
     await this.storage.saveGraph(graph);
   }
+
+  /**
+   * Add tags to an entity.
+   *
+   * Tags are normalized to lowercase and duplicates are filtered out.
+   *
+   * @param entityName - Name of the entity
+   * @param tags - Tags to add
+   * @returns Result with entity name and added tags
+   * @throws {EntityNotFoundError} If entity is not found
+   */
+  async addTags(entityName: string, tags: string[]): Promise<{ entityName: string; addedTags: string[] }> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+
+    const entity = graph.entities.find(e => e.name === entityName);
+    if (!entity) {
+      throw new EntityNotFoundError(entityName);
+    }
+
+    // Initialize tags array if it doesn't exist
+    if (!entity.tags) {
+      entity.tags = [];
+    }
+
+    // Normalize tags to lowercase and filter out duplicates
+    const normalizedTags = tags.map(tag => tag.toLowerCase());
+    const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
+
+    entity.tags.push(...newTags);
+
+    // Update lastModified timestamp if tags were added
+    if (newTags.length > 0) {
+      entity.lastModified = timestamp;
+    }
+
+    await this.storage.saveGraph(graph);
+
+    return { entityName, addedTags: newTags };
+  }
+
+  /**
+   * Remove tags from an entity.
+   *
+   * @param entityName - Name of the entity
+   * @param tags - Tags to remove
+   * @returns Result with entity name and removed tags
+   * @throws {EntityNotFoundError} If entity is not found
+   */
+  async removeTags(entityName: string, tags: string[]): Promise<{ entityName: string; removedTags: string[] }> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+
+    const entity = graph.entities.find(e => e.name === entityName);
+    if (!entity) {
+      throw new EntityNotFoundError(entityName);
+    }
+
+    if (!entity.tags) {
+      return { entityName, removedTags: [] };
+    }
+
+    // Normalize tags to lowercase
+    const normalizedTags = tags.map(tag => tag.toLowerCase());
+    const originalLength = entity.tags.length;
+
+    // Filter out the tags to remove
+    entity.tags = entity.tags.filter(tag => !normalizedTags.includes(tag.toLowerCase()));
+
+    const removedTags = normalizedTags.filter(tag =>
+      originalLength > entity.tags!.length ||
+      !entity.tags!.map(t => t.toLowerCase()).includes(tag)
+    );
+
+    // Update lastModified timestamp if tags were removed
+    if (entity.tags.length < originalLength) {
+      entity.lastModified = timestamp;
+    }
+
+    await this.storage.saveGraph(graph);
+
+    return { entityName, removedTags };
+  }
+
+  /**
+   * Set importance level for an entity.
+   *
+   * @param entityName - Name of the entity
+   * @param importance - Importance level (0-10)
+   * @returns Result with entity name and importance
+   * @throws {EntityNotFoundError} If entity is not found
+   * @throws {Error} If importance is out of range
+   */
+  async setImportance(entityName: string, importance: number): Promise<{ entityName: string; importance: number }> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+
+    // Validate importance range (0-10)
+    if (importance < 0 || importance > 10) {
+      throw new Error(`Importance must be between 0 and 10, got ${importance}`);
+    }
+
+    const entity = graph.entities.find(e => e.name === entityName);
+    if (!entity) {
+      throw new EntityNotFoundError(entityName);
+    }
+
+    entity.importance = importance;
+    entity.lastModified = timestamp;
+
+    await this.storage.saveGraph(graph);
+
+    return { entityName, importance };
+  }
+
+  /**
+   * Add tags to multiple entities in a single operation.
+   *
+   * @param entityNames - Names of entities to tag
+   * @param tags - Tags to add to each entity
+   * @returns Array of results showing which tags were added to each entity
+   */
+  async addTagsToMultipleEntities(entityNames: string[], tags: string[]): Promise<{ entityName: string; addedTags: string[] }[]> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedTags = tags.map(tag => tag.toLowerCase());
+    const results: { entityName: string; addedTags: string[] }[] = [];
+
+    for (const entityName of entityNames) {
+      const entity = graph.entities.find(e => e.name === entityName);
+      if (!entity) {
+        continue; // Skip non-existent entities
+      }
+
+      // Initialize tags array if it doesn't exist
+      if (!entity.tags) {
+        entity.tags = [];
+      }
+
+      // Filter out duplicates
+      const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
+      entity.tags.push(...newTags);
+
+      // Update lastModified timestamp if tags were added
+      if (newTags.length > 0) {
+        entity.lastModified = timestamp;
+      }
+
+      results.push({ entityName, addedTags: newTags });
+    }
+
+    await this.storage.saveGraph(graph);
+    return results;
+  }
+
+  /**
+   * Replace a tag with a new tag across all entities (rename tag).
+   *
+   * @param oldTag - Tag to replace
+   * @param newTag - New tag value
+   * @returns Result with affected entities and count
+   */
+  async replaceTag(oldTag: string, newTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedOldTag = oldTag.toLowerCase();
+    const normalizedNewTag = newTag.toLowerCase();
+    const affectedEntities: string[] = [];
+
+    for (const entity of graph.entities) {
+      if (!entity.tags || !entity.tags.includes(normalizedOldTag)) {
+        continue;
+      }
+
+      // Replace old tag with new tag
+      const index = entity.tags.indexOf(normalizedOldTag);
+      entity.tags[index] = normalizedNewTag;
+      entity.lastModified = timestamp;
+      affectedEntities.push(entity.name);
+    }
+
+    await this.storage.saveGraph(graph);
+    return { affectedEntities, count: affectedEntities.length };
+  }
 }

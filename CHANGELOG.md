@@ -5,6 +5,39 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Tag Operations Delegation - Phase 11** - Delegate entity tag operations to EntityManager
+
+  **Added Tag Methods to EntityManager**: Enhanced EntityManager with comprehensive tag management capabilities
+  - Added addTags() method to EntityManager (handles normalization and deduplication)
+  - Added removeTags() method to EntityManager (handles tag removal with timestamps)
+  - Added setImportance() method to EntityManager (validates importance range 0-10)
+  - Added addTagsToMultipleEntities() method for bulk tagging operations
+  - Added replaceTag() method for renaming tags across all entities
+  - Removed addTags() implementation from index.ts (29 lines) → delegates to EntityManager
+  - Removed removeTags() implementation from index.ts (33 lines) → delegates to EntityManager
+  - Removed setImportance() implementation from index.ts (22 lines) → delegates to EntityManager
+  - Removed addTagsToMultipleEntities() implementation from index.ts (32 lines) → delegates to EntityManager
+  - Removed replaceTag() implementation from index.ts (24 lines) → delegates to EntityManager
+  - Removed IMPORTANCE_RANGE import (no longer needed after delegation)
+
+  **Impact**:
+  - Reduced index.ts from 2,207 lines to 2,083 lines (124 lines removed, 5.6% reduction)
+  - Centralized all entity tag management in EntityManager
+  - Tag normalization (lowercase) handled consistently
+  - Duplicate tag filtering automated
+  - Timestamp updates on tag modifications
+  - EntityManager now provides complete entity lifecycle management (CRUD + observations + tags + importance)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 2,083 lines (49.7% total reduction)
+  - Phases 1-11: 2,111 lines removed total
+  - Remaining: ~1,883 lines of implementation code to refactor
+
 ## [0.33.0] - 2025-11-25
 
 ### Changed

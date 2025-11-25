@@ -12,8 +12,7 @@ import { fileURLToPath } from 'url';
 import { logger } from './utils/logger.js';
 import {
   DEFAULT_DUPLICATE_THRESHOLD,
-  SEARCH_LIMITS,
-  IMPORTANCE_RANGE
+  SEARCH_LIMITS
 } from './utils/constants.js';
 import { GraphStorage } from './core/GraphStorage.js';
 import { EntityManager } from './core/EntityManager.js';
@@ -266,92 +265,17 @@ export class KnowledgeGraphManager {
   }
   // Phase 3: Add tags to an entity
   async addTags(entityName: string, tags: string[]): Promise<{ entityName: string; addedTags: string[] }> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-
-    const entity = graph.entities.find(e => e.name === entityName);
-    if (!entity) {
-      throw new Error(`Entity with name ${entityName} not found`);
-    }
-
-    // Initialize tags array if it doesn't exist
-    if (!entity.tags) {
-      entity.tags = [];
-    }
-
-    // Normalize tags to lowercase and filter out duplicates
-    const normalizedTags = tags.map(tag => tag.toLowerCase());
-    const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
-
-    entity.tags.push(...newTags);
-
-    // Update lastModified timestamp if tags were added
-    if (newTags.length > 0) {
-      entity.lastModified = timestamp;
-    }
-
-    await this.saveGraph(graph);
-
-    return { entityName, addedTags: newTags };
+    return this.entityManager.addTags(entityName, tags);
   }
 
   // Phase 3: Remove tags from an entity
   async removeTags(entityName: string, tags: string[]): Promise<{ entityName: string; removedTags: string[] }> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-
-    const entity = graph.entities.find(e => e.name === entityName);
-    if (!entity) {
-      throw new Error(`Entity with name ${entityName} not found`);
-    }
-
-    if (!entity.tags) {
-      return { entityName, removedTags: [] };
-    }
-
-    // Normalize tags to lowercase
-    const normalizedTags = tags.map(tag => tag.toLowerCase());
-    const originalLength = entity.tags.length;
-
-    // Filter out the tags to remove
-    entity.tags = entity.tags.filter(tag => !normalizedTags.includes(tag.toLowerCase()));
-
-    const removedTags = normalizedTags.filter(tag => 
-      originalLength > entity.tags!.length || 
-      !entity.tags!.map(t => t.toLowerCase()).includes(tag)
-    );
-
-    // Update lastModified timestamp if tags were removed
-    if (entity.tags.length < originalLength) {
-      entity.lastModified = timestamp;
-    }
-
-    await this.saveGraph(graph);
-
-    return { entityName, removedTags };
+    return this.entityManager.removeTags(entityName, tags);
   }
 
   // Phase 3: Set importance level for an entity
   async setImportance(entityName: string, importance: number): Promise<{ entityName: string; importance: number }> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-
-    // Validate importance range
-    if (importance < IMPORTANCE_RANGE.MIN || importance > IMPORTANCE_RANGE.MAX) {
-      throw new Error(`Importance must be between ${IMPORTANCE_RANGE.MIN} and ${IMPORTANCE_RANGE.MAX}, got ${importance}`);
-    }
-
-    const entity = graph.entities.find(e => e.name === entityName);
-    if (!entity) {
-      throw new Error(`Entity with name ${entityName} not found`);
-    }
-
-    entity.importance = importance;
-    entity.lastModified = timestamp;
-
-    await this.saveGraph(graph);
-
-    return { entityName, importance };
+    return this.entityManager.setImportance(entityName, importance);
   }
 
   // Tier 0 B5: Bulk tag operations for efficient tag management
@@ -359,62 +283,14 @@ export class KnowledgeGraphManager {
    * Add tags to multiple entities in a single operation
    */
   async addTagsToMultipleEntities(entityNames: string[], tags: string[]): Promise<{ entityName: string; addedTags: string[] }[]> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-    const normalizedTags = tags.map(tag => tag.toLowerCase());
-    const results: { entityName: string; addedTags: string[] }[] = [];
-
-    for (const entityName of entityNames) {
-      const entity = graph.entities.find(e => e.name === entityName);
-      if (!entity) {
-        continue; // Skip non-existent entities
-      }
-
-      // Initialize tags array if it doesn't exist
-      if (!entity.tags) {
-        entity.tags = [];
-      }
-
-      // Filter out duplicates
-      const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
-      entity.tags.push(...newTags);
-
-      // Update lastModified timestamp if tags were added
-      if (newTags.length > 0) {
-        entity.lastModified = timestamp;
-      }
-
-      results.push({ entityName, addedTags: newTags });
-    }
-
-    await this.saveGraph(graph);
-    return results;
+    return this.entityManager.addTagsToMultipleEntities(entityNames, tags);
   }
 
   /**
    * Replace a tag with a new tag across all entities (rename tag)
    */
   async replaceTag(oldTag: string, newTag: string): Promise<{ affectedEntities: string[]; count: number }> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-    const normalizedOldTag = oldTag.toLowerCase();
-    const normalizedNewTag = newTag.toLowerCase();
-    const affectedEntities: string[] = [];
-
-    for (const entity of graph.entities) {
-      if (!entity.tags || !entity.tags.includes(normalizedOldTag)) {
-        continue;
-      }
-
-      // Replace old tag with new tag
-      const index = entity.tags.indexOf(normalizedOldTag);
-      entity.tags[index] = normalizedNewTag;
-      entity.lastModified = timestamp;
-      affectedEntities.push(entity.name);
-    }
-
-    await this.saveGraph(graph);
-    return { affectedEntities, count: affectedEntities.length };
+    return this.entityManager.replaceTag(oldTag, newTag);
   }
 
   /**
