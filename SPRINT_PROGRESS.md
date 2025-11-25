@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 20.1% complete (843/3,994 lines removed)
+**Status:** 🚧 28.5% complete (1,195/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 3,351 lines
+**Current:** 2,999 lines
 
 ### Completed Phases
 
@@ -128,24 +128,48 @@
 
 **Total Phase 1-6 Progress:** 843 lines removed (20.1%)
 
-### Remaining Work (~3,151 lines to refactor)
+#### ✅ Phase 7: Compression Operations Delegation (v0.30.0) - COMPLETE
+- Removed findDuplicates() implementation (35 lines) → delegates to CompressionManager
+- Removed mergeEntities() implementation (89 lines) → delegates to CompressionManager
+- Removed compressGraph() implementation (51 lines) → delegates to CompressionManager
+- Removed calculateEntitySimilarity() helper (39 lines)
+- Removed SIMILARITY_WEIGHTS and levenshteinDistance from imports
+- Added CompressionManager instance coordinating duplicate detection and merging
+- **Progress**: 3,351 → 3,147 lines (204 lines removed, 6.1%)
 
-#### 🔄 Phase 7-12: Replace Remaining Duplicate Implementations
+**Total Phase 1-7 Progress:** 1,047 lines removed (25.0%)
+
+#### ✅ Phase 8: Observation Management Delegation (v0.31.0) - COMPLETE
+- Added addObservations() method to EntityManager (handles duplicate detection)
+- Added deleteObservations() method to EntityManager (handles cascade updates)
+- Removed addObservations() implementation (19 lines) → delegates to EntityManager
+- Removed deleteObservations() implementation (16 lines) → delegates to EntityManager
+- Updated error handling to use EntityNotFoundError
+- Fixed test expectations for new error message format
+- **Progress**: 3,147 → 3,118 lines (29 lines removed, 0.9%)
+
+**Total Phase 1-8 Progress:** 1,076 lines removed (25.7%)
+
+#### ✅ Phase 9: Hierarchy Operations Delegation (v0.32.0) - COMPLETE
+- Removed setEntityParent() implementation (27 lines) → delegates to HierarchyManager
+- Removed wouldCreateCycle() helper method (19 lines) → encapsulated in HierarchyManager
+- Removed getChildren() implementation (10 lines) → delegates to HierarchyManager
+- Removed getParent() implementation (15 lines) → delegates to HierarchyManager
+- Removed getAncestors() implementation (18 lines) → delegates to HierarchyManager
+- Removed getDescendants() implementation (23 lines) → delegates to HierarchyManager
+- Removed getSubtree() implementation (22 lines) → delegates to HierarchyManager
+- Removed getRootEntities() implementation (4 lines) → delegates to HierarchyManager
+- Removed getEntityDepth() implementation (4 lines) → delegates to HierarchyManager
+- Removed moveEntity() implementation (3 lines) → delegates to HierarchyManager
+- Added HierarchyManager instance coordinating all hierarchy operations
+- **Progress**: 3,118 → 2,999 lines (119 lines removed, 3.8%)
+
+**Total Phase 1-9 Progress:** 1,195 lines removed (28.5%)
+
+### Remaining Work (~2,799 lines to refactor)
+
+#### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
-
-1. **Entity Update Operations** (~50 lines)
-   - `addObservations()` → use EntityManager (needs implementation)
-   - `deleteObservations()` → use EntityManager (needs implementation)
-   - Term tokenization
-
-5. **Boolean Query Parsing** (~300 lines)
-   - Query parser → use BooleanSearch module
-   - AST generation and evaluation
-
-6. **Compression Operations** (~400 lines)
-   - Duplicate detection → use CompressionManager
-   - Entity merging logic
-   - Observation deduplication
 
 7. **Tag Management** (~200 lines)
    - Tag operations → use TagManager
@@ -249,12 +273,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 20.1% complete (v0.24.0-v0.29.0)
+- **Sprint 4:** 🚧 28.5% complete (v0.24.0-v0.32.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.29.0
+- **Current Version:** v0.32.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 3,351 lines (target: <200)
+- **index.ts Size:** 2,999 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -311,5 +335,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.29.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (20.1%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.32.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (28.5%) | Sprint 5 ⏳ Planned

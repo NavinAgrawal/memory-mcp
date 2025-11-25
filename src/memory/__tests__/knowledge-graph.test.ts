@@ -155,7 +155,7 @@ describe('KnowledgeGraphManager', () => {
         manager.addObservations([
           { entityName: 'NonExistent', contents: ['some observation'] },
         ])
-      ).rejects.toThrow('Entity with name NonExistent not found');
+      ).rejects.toThrow('Entity "NonExistent" not found');
     });
   });
 

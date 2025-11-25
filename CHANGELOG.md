@@ -5,6 +5,92 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Hierarchy Operations Delegation - Phase 9** - Delegate all hierarchy operations to HierarchyManager
+
+  **Removed Duplicate Hierarchy Implementations**: Refactored KnowledgeGraphManager to use HierarchyManager module
+  - Added HierarchyManager import and instance to KnowledgeGraphManager
+  - Removed setEntityParent() implementation (27 lines) → delegates to HierarchyManager
+  - Removed wouldCreateCycle() helper method (19 lines) → encapsulated in HierarchyManager
+  - Removed getChildren() implementation (10 lines) → delegates to HierarchyManager
+  - Removed getParent() implementation (15 lines) → delegates to HierarchyManager
+  - Removed getAncestors() implementation (18 lines) → delegates to HierarchyManager
+  - Removed getDescendants() implementation (23 lines) → delegates to HierarchyManager
+  - Removed getSubtree() implementation (22 lines) → delegates to HierarchyManager
+  - Removed getRootEntities() implementation (4 lines) → delegates to HierarchyManager
+  - Removed getEntityDepth() implementation (4 lines) → delegates to HierarchyManager
+  - Removed moveEntity() implementation (3 lines) → delegates to HierarchyManager
+
+  **Impact**:
+  - Reduced index.ts from 3,118 lines to 2,999 lines (119 lines removed, 3.8% reduction)
+  - Eliminated all hierarchy management logic from index.ts
+  - Centralized hierarchy operations in HierarchyManager
+  - Cycle detection logic now encapsulated in dedicated module
+  - Improved separation of concerns (hierarchy logic fully abstracted)
+  - All 9 hierarchy methods now use single source of truth
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 2,999 lines (28.5% total reduction)
+  - Phases 1-9: 1,195 lines removed total
+  - Remaining: ~2,799 lines of implementation code to refactor
+
+## [0.31.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Observation Management Delegation - Phase 8** - Delegate observation operations to EntityManager
+
+  **Added Observation Methods to EntityManager**: Enhanced EntityManager with batch observation operations
+  - Added addObservations() method to EntityManager (handles duplicate detection and timestamp updates)
+  - Added deleteObservations() method to EntityManager (handles cascade updates and timestamps)
+  - Removed addObservations() implementation from index.ts (19 lines) → delegates to EntityManager
+  - Removed deleteObservations() implementation from index.ts (16 lines) → delegates to EntityManager
+  - Updated error handling to use EntityNotFoundError instead of generic Error
+  - Fixed test expectation to match EntityNotFoundError message format
+
+  **Impact**:
+  - Reduced index.ts from 3,147 lines to 3,118 lines (29 lines removed, 0.9% reduction)
+  - Centralized observation management in EntityManager
+  - Consistent error handling using EntityNotFoundError
+  - Improved code organization with all entity operations in one module
+  - EntityManager now handles full entity lifecycle: create, read, update, delete, and observation management
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 3,118 lines (25.7% total reduction)
+  - Phases 1-8: 1,076 lines removed total
+  - Remaining: ~2,918 lines of implementation code to refactor
+
+## [0.30.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Compression Operations Delegation - Phase 7** - Delegate duplicate detection and merging to CompressionManager
+
+  **Removed Duplicate Compression Logic**: Refactored KnowledgeGraphManager to use CompressionManager module
+  - Removed findDuplicates() implementation (35 lines) → delegates to CompressionManager
+  - Removed mergeEntities() implementation (89 lines) → delegates to CompressionManager
+  - Removed compressGraph() implementation (51 lines) → delegates to CompressionManager
+  - Removed calculateEntitySimilarity() helper method (39 lines)
+  - Removed SIMILARITY_WEIGHTS and levenshteinDistance from imports (unused after delegation)
+  - Added CompressionManager instance to KnowledgeGraphManager
+
+  **Impact**:
+  - Reduced index.ts from 3,351 lines to 3,147 lines (204 lines removed, 6.1% reduction)
+  - Eliminated ~200 lines of duplicate compression and similarity calculation logic
+  - Single source of truth for duplicate detection with configurable similarity weights
+  - Improved separation of concerns (compression logic fully abstracted)
+  - CompressionManager uses multi-factor similarity scoring (name, type, observations, tags)
+  - Duplicate detection with Levenshtein distance and Jaccard similarity
+  - Merge operations with observation/tag deduplication and importance aggregation
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 3,147 lines (25.0% total reduction)
+  - Phases 1-7: 1,047 lines removed total
+  - Remaining: ~2,947 lines of implementation code to refactor
+
 ## [0.29.0] - 2025-11-25
 
 ### Changed
