@@ -5,6 +5,27 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Performance Tests (Task 2.7)** - Comprehensive performance benchmarks and budgets
+
+  **Performance Benchmark Tests**: +24 tests
+  - Entity Creation Performance (4 tests): 1 entity (<50ms), 100 entities (<200ms), 1000 entities (<1500ms), batch update 100 (<200ms)
+  - Relation Creation Performance (2 tests): 100 relations (<200ms), 1000 relations (<1500ms)
+  - Search Performance (6 tests): Basic search (<100ms), ranked search (<600ms), boolean search (<150ms), fuzzy search (<200ms), filtered search (<150ms), open 50 nodes (<100ms)
+  - Compression Performance (3 tests): Find duplicates in 100/500 entities (<300ms/<1500ms), compress graph (<400ms)
+  - Graph Loading/Saving (4 tests): Load 100/1000 entities (<100ms/<500ms), save 100/1000 entities (<150ms/<800ms)
+  - Complex Workflows (3 tests): Full CRUD (<300ms), bulk workflow (<500ms), complex query workflow (<400ms)
+  - Memory Efficiency (2 tests): 2000 entities, 5000 total elements (entities + relations)
+  - Files: `__tests__/performance/benchmarks.test.ts`
+
+### Testing
+- **Test Count**: 396 tests (up from 372, +24 performance tests, +6% increase)
+- **Performance Budgets**: All operations meet defined performance targets
+- **All Tests Passing**: 396/396 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
 ## [0.16.0] - 2025-11-25
 
 ### Added
