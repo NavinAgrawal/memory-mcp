@@ -5,6 +5,29 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Edge Case Tests (Task 2.6)** - Comprehensive robustness testing
+
+  **Edge Case Tests**: +35 tests
+  - Unicode and Special Characters: Emoji, mixed scripts (Cyrillic, CJK, Arabic), RTL text, zero-width chars
+  - Extreme Values: 100 observations, 50 tags, 250-char names, boundary importance values (0, 10)
+  - Empty/Null-like Values: Empty strings, whitespace-only names, empty arrays
+  - Search Edge Cases: Long queries (100+ words), empty queries, nested parentheses, fuzzy thresholds (0, 1)
+  - Relation Edge Cases: Self-references, circular relations (A→B→C→A), long relation types (90 chars), multiple relations
+  - Concurrent Operations: Simultaneous entity creations, concurrent reads/writes
+  - Validation Edge Cases: Invalid importance (-1, 11, 5.5), whitespace handling
+  - Large Graph Operations: 100+ relations per entity, 500+ entities performance (<2s)
+  - Special Query Characters: Regex patterns, SQL injection patterns, XSS patterns
+  - Files: `__tests__/edge-cases/edge-cases.test.ts`
+
+### Testing
+- **Test Count**: 372 tests (up from 337, +35 edge case tests, +10% increase)
+- **Edge Case Coverage**: Unicode, extreme values, concurrent operations, large graphs
+- **All Tests Passing**: 372/372 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
 ## [0.15.0] - 2025-11-25
 
 ### Added
