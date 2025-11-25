@@ -5,6 +5,42 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Graph Size Limits & Query Complexity Limits (Tasks 3.7 & 3.9)** - Resource protection
+
+  **Graph Size Limits (Task 3.7)**: Prevent resource exhaustion with entity and relation quotas
+  - Added GRAPH_LIMITS constants: MAX_ENTITIES (100,000), MAX_RELATIONS (1,000,000)
+  - EntityManager.createEntities() validates entity count before adding
+  - RelationManager.createRelations() validates relation count before adding
+  - Throws ValidationError if limits would be exceeded
+  - Pre-filters duplicates before checking limits for accuracy
+
+  **Query Complexity Limits (Task 3.9)**: Prevent complex boolean queries from exhausting resources
+  - Added QUERY_LIMITS constants: MAX_DEPTH (10), MAX_TERMS (50), MAX_OPERATORS (20), MAX_QUERY_LENGTH (5000)
+  - BooleanSearch validates query length before parsing
+  - BooleanSearch.validateQueryComplexity() checks nesting depth, term count, operator count
+  - BooleanSearch.calculateQueryComplexity() recursively analyzes query AST
+  - Throws ValidationError with specific metrics if complexity exceeds limits
+
+  **Features**:
+  - Centralized limit constants in utils/constants.ts
+  - Early validation before expensive operations
+  - Clear error messages with actual vs. maximum values
+  - Protection against malicious or accidental resource exhaustion
+  - Configurable limits for different deployment scenarios
+
+### Changed
+- EntityManager.createEntities() now validates graph size limits before adding entities
+- RelationManager.createRelations() now validates graph size limits before adding relations
+- BooleanSearch.booleanSearch() now validates query complexity before execution
+
+### Security
+- Protection against resource exhaustion attacks via large graphs
+- Protection against denial-of-service via complex boolean queries
+- Input validation prevents malicious query construction
+
 ## [0.20.0] - 2025-11-25
 
 ### Added

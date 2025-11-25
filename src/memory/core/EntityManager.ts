@@ -10,6 +10,7 @@ import type { Entity } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
 import { EntityNotFoundError, InvalidImportanceError, ValidationError } from '../utils/errors.js';
 import { BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema } from '../utils/index.js';
+import { GRAPH_LIMITS } from '../utils/constants.js';
 
 /**
  * Minimum importance value (least important).
@@ -71,8 +72,16 @@ export class EntityManager {
     const graph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 
-    const newEntities = entities
-      .filter(e => !graph.entities.some(existing => existing.name === e.name))
+    // Check graph size limits
+    const entitiesToAdd = entities.filter(e => !graph.entities.some(existing => existing.name === e.name));
+    if (graph.entities.length + entitiesToAdd.length > GRAPH_LIMITS.MAX_ENTITIES) {
+      throw new ValidationError(
+        'Graph size limit exceeded',
+        [`Adding ${entitiesToAdd.length} entities would exceed maximum of ${GRAPH_LIMITS.MAX_ENTITIES} entities`]
+      );
+    }
+
+    const newEntities = entitiesToAdd
       .map(e => {
         const entity: Entity = {
           ...e,
