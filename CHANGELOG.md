@@ -5,6 +5,36 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2025-11-25
+
+### Added
+- **Sprint 2: API Reference Documentation (Task 2.9)** - Complete API reference for all 45 tools
+
+  **API Documentation**: API.md (comprehensive tool reference)
+  - Entity Management (7 tools): createEntities, getEntity, updateEntity, deleteEntities, batchUpdateEntities, listEntities, observeEntity
+  - Relation Management (5 tools): createRelations, getRelations, deleteRelations, listRelations, getRelationTypes
+  - Search Operations (7 tools): searchNodes, searchNodesRanked, booleanSearch, fuzzySearch, openNodes, searchByDateRange, searchByTags
+  - Compression & Deduplication (3 tools): findDuplicates, mergeEntities, compressGraph
+  - Tag Management (5 tools): addTagsToEntities, removeTagsFromEntities, listTags, createTagAlias, getTagSuggestions
+  - Hierarchies (3 tools): setParent, getChildren, getDescendants
+  - Statistics (3 tools): getStats, getEntityTypeStats, getTagStats
+  - Export Operations (3 tools): exportGraph, exportEntities, exportByQuery
+  - Import Operations (1 tool): importGraph
+  - Graph Operations (2 tools): clearGraph, validateGraph
+  - Utility Operations (6 tools): searchSimilarEntities, getEntityHistory, bulkImportObservations, renameEntity, getRecentlyModified, getOrphanedEntities
+  - Common Patterns: Create & connect, search & update, find & merge duplicates
+  - Performance Guidelines: Benchmark table with expected times
+  - Best Practices: 7 recommended practices for optimal usage
+  - Files: `docs/API.md`
+
+### Documentation
+- **API Reference**: Complete reference for all 45 MCP tools (600+ lines)
+- **Tool Categories**: Organized into 11 functional categories
+- **Code Examples**: JSON examples for all tools and common patterns
+- **Performance Guidance**: Expected times for all operations
+- **Error Handling**: Standard error format documented
+- **Best Practices**: 7 guidelines for optimal usage
+
 ## [0.18.0] - 2025-11-25
 
 ### Added
