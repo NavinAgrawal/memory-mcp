@@ -5,6 +5,58 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Search Manager Tests (Task 2.4)** - Comprehensive test coverage for all search implementations
+
+  **BasicSearch Tests**: +37 tests
+  - searchNodes(): 21 tests for text search, tag filtering, importance filtering, combined filters
+  - openNodes(): 8 tests for entity retrieval by name, relation handling
+  - searchByDateRange(): 11 tests for date-based filtering with optional filters
+  - Edge cases: empty query, entities without tags/importance
+  - Coverage: 98.41% statement coverage
+  - Files: `__tests__/unit/search/BasicSearch.test.ts`
+
+  **RankedSearch Tests**: +35 tests
+  - TF-IDF Scoring: 6 tests for relevance ranking, multi-term queries, score calculation
+  - Matched Fields Tracking: 5 tests for name/type/observation match tracking
+  - Tag Filtering: 5 tests for single/multiple tag filtering with text search
+  - Importance Filtering: 5 tests for min/max/range filtering
+  - Search Limits: 4 tests for default/custom/max limit enforcement
+  - Edge Cases: 7 tests for empty query, special characters, unicode, stopwords
+  - Coverage: 100% statement/branch/function coverage
+  - Files: `__tests__/unit/search/RankedSearch.test.ts`
+
+  **BooleanSearch Tests**: +52 tests
+  - Boolean Operators: 11 tests for AND/OR/NOT operators, precedence
+  - Field-Specific Queries: 10 tests for name:/type:/observation:/tag: queries
+  - Quoted Strings: 3 tests for multi-word searches
+  - Query Parsing: Complex nested queries, parentheses grouping
+  - Error Handling: Malformed query detection (unclosed parenthesis, unexpected token)
+  - Coverage: 99.19% statement coverage, 100% function coverage
+  - Files: `__tests__/unit/search/BooleanSearch.test.ts`
+
+  **FuzzySearch Tests**: +53 tests
+  - Exact/Substring Matching: 5 tests for name/type/observation matching
+  - Typo Tolerance: 6 tests for single/transposed/missing/extra characters
+  - Threshold Variations: 6 tests for strict/permissive/default thresholds
+  - Levenshtein Distance: 4 tests for similarity calculation edge cases
+  - Word-level Matching: 3 tests for observation word matching with typos
+  - Combined Filters: 3 tests for fuzzy search with tag/importance filters
+  - Coverage: 97.5% statement coverage, 100% function coverage
+  - Files: `__tests__/unit/search/FuzzySearch.test.ts`
+
+### Testing
+- **Test Count**: 325 tests (up from 148, +177 search manager tests, +120% increase)
+- **New Coverage**:
+  - BasicSearch: 98.41% coverage (was 0%)
+  - RankedSearch: 100% coverage (was 0%)
+  - BooleanSearch: 99.19% coverage (was 0%)
+  - FuzzySearch: 97.5% coverage (was 0%)
+- **All Tests Passing**: 325/325 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
 ## [0.13.0] - 2025-11-25
 
 ### Added
