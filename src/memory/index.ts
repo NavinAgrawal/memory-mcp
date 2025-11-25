@@ -17,6 +17,7 @@ import {
   IMPORTANCE_RANGE
 } from './utils/constants.js';
 import { levenshteinDistance } from './utils/levenshtein.js';
+import { GraphStorage } from './core/GraphStorage.js';
 import type {
   Entity,
   Relation,
@@ -93,13 +94,23 @@ export type {
 export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
   private tagAliasesFilePath: string;
+  private storage: GraphStorage;
 
-  constructor(private memoryFilePath: string) {
+  constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
     const dir = path.dirname(memoryFilePath);
     const basename = path.basename(memoryFilePath, path.extname(memoryFilePath));
     this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
     this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
+    this.storage = new GraphStorage(memoryFilePath);
+  }
+
+  private async loadGraph(): Promise<KnowledgeGraph> {
+    return this.storage.loadGraph();
+  }
+
+  private async saveGraph(graph: KnowledgeGraph): Promise<void> {
+    return this.storage.saveGraph(graph);
   }
 
   // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
@@ -126,66 +137,6 @@ export class KnowledgeGraphManager {
     const similarity = 1 - (distance / maxLength);
 
     return similarity >= threshold;
-  }
-
-  private async loadGraph(): Promise<KnowledgeGraph> {
-    try {
-      const data = await fs.readFile(this.memoryFilePath, "utf-8");
-      const lines = data.split("\n").filter(line => line.trim() !== "");
-      return lines.reduce((graph: KnowledgeGraph, line) => {
-        const item = JSON.parse(line);
-        if (item.type === "entity") {
-        // Add createdAt if missing for backward compatibility
-        if (!item.createdAt) item.createdAt = new Date().toISOString();
-        // Add lastModified if missing for backward compatibility
-        if (!item.lastModified) item.lastModified = item.createdAt;
-        // Phase 3: Backward compatibility for tags and importance
-        // These fields are optional and will be undefined if not present
-        graph.entities.push(item as Entity);
-      }
-        if (item.type === "relation") {
-        // Add createdAt if missing for backward compatibility
-        if (!item.createdAt) item.createdAt = new Date().toISOString();
-        // Add lastModified if missing for backward compatibility
-        if (!item.lastModified) item.lastModified = item.createdAt;
-        graph.relations.push(item as Relation);
-      }
-        return graph;
-      }, { entities: [], relations: [] });
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
-        return { entities: [], relations: [] };
-      }
-      throw error;
-    }
-  }
-
-  private async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    const lines = [
-      ...graph.entities.map(e => {
-        const entityData: any = {
-          type: "entity",
-          name: e.name,
-          entityType: e.entityType,
-          observations: e.observations,
-          createdAt: e.createdAt,
-          lastModified: e.lastModified
-        };
-        // Phase 3: Only include tags and importance if they exist
-        if (e.tags !== undefined) entityData.tags = e.tags;
-        if (e.importance !== undefined) entityData.importance = e.importance;
-        return JSON.stringify(entityData);
-      }),
-      ...graph.relations.map(r => JSON.stringify({
-        type: "relation",
-        from: r.from,
-        to: r.to,
-        relationType: r.relationType,
-        createdAt: r.createdAt,
-        lastModified: r.lastModified
-      })),
-    ];
-    await fs.writeFile(this.memoryFilePath, lines.join("\n"));
   }
 
   /**
