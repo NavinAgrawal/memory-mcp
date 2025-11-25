@@ -5,6 +5,29 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Modular Architecture Refactoring - Phase 2 (Task 4.1)** - Replace inline implementations
+
+  **Removed Duplicate levenshteinDistance Implementation**: Replaced 24-line inline implementation with import from utils module
+  - Removed private levenshteinDistance() method from Knowledge GraphManager
+  - Added import of levenshteinDistance from utils/levenshtein.js
+  - Updated all 4 call sites to use imported function instead of class method
+  - isFuzzyMatch() now uses imported levenshteinDistance function
+
+  **Impact**:
+  - Reduced index.ts from 4,107 lines to 4,079 lines (28 lines removed)
+  - Eliminated duplicate Levenshtein distance algorithm
+  - Single source of truth for string similarity calculations
+  - Improved code reuse and maintainability
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,188 lines to <200 lines
+  - Current: 4,079 lines (2.6% total reduction)
+  - Phase 1 + Phase 2: 115 lines removed
+  - Remaining: ~3,880 lines of implementation code to refactor
+
 ## [0.24.0] - 2025-11-25
 
 ### Changed

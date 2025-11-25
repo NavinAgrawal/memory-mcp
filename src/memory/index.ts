@@ -16,6 +16,7 @@ import {
   SEARCH_LIMITS,
   IMPORTANCE_RANGE
 } from './utils/constants.js';
+import { levenshteinDistance } from './utils/levenshtein.js';
 import type {
   Entity,
   Relation,
@@ -103,35 +104,6 @@ export class KnowledgeGraphManager {
 
   // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
   /**
-   * Calculate Levenshtein distance between two strings
-   * Returns the minimum number of single-character edits needed to change one word into another
-   */
-  private levenshteinDistance(str1: string, str2: string): number {
-    const m = str1.length;
-    const n = str2.length;
-    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (str1[i - 1] === str2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1];
-        } else {
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,    // deletion
-            dp[i][j - 1] + 1,    // insertion
-            dp[i - 1][j - 1] + 1 // substitution
-          );
-        }
-      }
-    }
-
-    return dp[m][n];
-  }
-
-  /**
    * Check if two strings are fuzzy matches based on similarity threshold
    * @param str1 - First string to compare
    * @param str2 - Second string to compare
@@ -149,7 +121,7 @@ export class KnowledgeGraphManager {
     if (s1.includes(s2) || s2.includes(s1)) return true;
 
     // Calculate similarity using Levenshtein distance
-    const distance = this.levenshteinDistance(s1, s2);
+    const distance = levenshteinDistance(s1, s2);
     const maxLength = Math.max(s1.length, s2.length);
     const similarity = 1 - (distance / maxLength);
 
@@ -1099,7 +1071,7 @@ export class KnowledgeGraphManager {
 
     // Check entity names
     for (const entity of graph.entities) {
-      const distance = this.levenshteinDistance(queryLower, entity.name.toLowerCase());
+      const distance = levenshteinDistance(queryLower, entity.name.toLowerCase());
       const maxLength = Math.max(queryLower.length, entity.name.length);
       const similarity = 1 - (distance / maxLength);
 
@@ -1111,7 +1083,7 @@ export class KnowledgeGraphManager {
     // Check entity types
     const uniqueTypes = [...new Set(graph.entities.map(e => e.entityType))];
     for (const type of uniqueTypes) {
-      const distance = this.levenshteinDistance(queryLower, type.toLowerCase());
+      const distance = levenshteinDistance(queryLower, type.toLowerCase());
       const maxLength = Math.max(queryLower.length, type.length);
       const similarity = 1 - (distance / maxLength);
 
@@ -1744,7 +1716,7 @@ export class KnowledgeGraphManager {
     let factors = 0;
 
     // Name similarity (Levenshtein-based)
-    const nameDistance = this.levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
+    const nameDistance = levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
     const maxNameLength = Math.max(e1.name.length, e2.name.length);
     const nameSimilarity = 1 - (nameDistance / maxNameLength);
     score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;
