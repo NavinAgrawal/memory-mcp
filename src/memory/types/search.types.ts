@@ -126,3 +126,64 @@ export type BooleanQueryNode =
   | { type: 'OR'; children: BooleanQueryNode[] }
   | { type: 'NOT'; child: BooleanQueryNode }
   | { type: 'TERM'; field?: string; value: string };
+
+/**
+ * Document vector for TF-IDF index.
+ *
+ * Stores pre-calculated term frequencies for a single entity document.
+ * Used to speed up ranked search by avoiding recalculation.
+ *
+ * @example
+ * ```typescript
+ * const vector: DocumentVector = {
+ *   entityName: "Alice",
+ *   terms: { "developer": 2, "python": 1, "senior": 1 },
+ *   documentText: "Alice is a senior developer who codes in Python"
+ * };
+ * ```
+ */
+export interface DocumentVector {
+  /** Entity name this vector represents */
+  entityName: string;
+
+  /** Map of term to frequency in this document */
+  terms: Record<string, number>;
+
+  /** Original document text (for cache invalidation) */
+  documentText: string;
+}
+
+/**
+ * Pre-calculated TF-IDF index for fast ranked search.
+ *
+ * Stores document vectors and inverse document frequencies
+ * to avoid recalculating TF-IDF scores on every search.
+ *
+ * @example
+ * ```typescript
+ * const index: TFIDFIndex = {
+ *   version: "1.0",
+ *   lastUpdated: "2024-01-15T00:00:00Z",
+ *   documents: new Map([
+ *     ["Alice", { entityName: "Alice", terms: {...}, documentText: "..." }]
+ *   ]),
+ *   idf: new Map([
+ *     ["developer", 0.693],
+ *     ["python", 1.386]
+ *   ])
+ * };
+ * ```
+ */
+export interface TFIDFIndex {
+  /** Index format version */
+  version: string;
+
+  /** ISO 8601 timestamp of last index update */
+  lastUpdated: string;
+
+  /** Document vectors for all entities */
+  documents: Map<string, DocumentVector>;
+
+  /** Inverse document frequency for all terms */
+  idf: Map<string, number>;
+}
