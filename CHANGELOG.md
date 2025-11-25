@@ -5,6 +5,40 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Performance Improvements** - Batch operations for efficient bulk updates
+
+  **EntityManager.batchUpdate() (Task 3.6)**: Bulk entity updates
+  - Update multiple entities in single atomic operation
+  - Single graph load/save vs multiple operations (performance optimization)
+  - All entities share same lastModified timestamp
+  - Atomic operation: all succeed or all fail
+  - Comprehensive validation before applying changes
+  - Returns array of all updated entities
+  - Files: `core/EntityManager.ts`
+
+  **Test Coverage**: +9 tests
+  - Multiple entity updates with different fields
+  - Timestamp consistency across batch
+  - Performance benefits (single I/O operation)
+  - Atomic rollback on error (EntityNotFoundError, ValidationError)
+  - Empty array and edge case handling
+  - Field preservation for unchanged properties
+
+### Performance
+- **Batch Operations**: Reduces I/O operations for bulk entity updates
+  - Use case: Mass importance adjustments, bulk tagging, category updates
+  - Before: N separate load/save operations for N entities
+  - After: 1 load/save operation for N entities
+  - Ideal for workflows updating 10+ entities simultaneously
+
+### Testing
+- **Test Count**: 148 tests (up from 139, +9 tests)
+- **All Tests Passing**: 148/148 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
 ## [0.12.0] - 2025-11-25
 
 ### Added
