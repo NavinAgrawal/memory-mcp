@@ -5,6 +5,96 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Architecture Documentation (Task 2.8)** - Comprehensive system architecture guide
+
+  **Architecture Documentation**: ARCHITECTURE.md (comprehensive system design)
+  - System Overview: Statistics, key features, architecture principles
+  - System Context: MCP client interaction, external actors, system boundaries
+  - Component Architecture: Detailed breakdown of all layers (MCP handler, managers, storage, utils)
+  - Data Model: Entity, Relation, KnowledgeGraph schemas with validation rules
+  - Key Design Decisions: Rationale for JSONL format, in-memory processing, modularity, bucketing, deferred integrity
+  - Data Flow Patterns: Step-by-step flows for create, batch update, search, compression operations
+  - Performance Considerations: Benchmarks table, optimization strategies, scalability limits
+  - Security Architecture: Input validation, path traversal protection, no code injection, error handling
+  - Testing Strategy: Test pyramid, test categories (396 tests), coverage metrics (98%+)
+  - Future Enhancements: Planned improvements and architectural evolution
+  - Files: `docs/ARCHITECTURE.md`
+
+### Documentation
+- **Architecture Guide**: Complete system architecture (10 sections, 500+ lines)
+- **Design Rationale**: Explained all major design decisions with trade-offs
+- **Performance Documentation**: Benchmarks table with 13 operations documented
+- **Security Model**: Comprehensive security architecture
+
+## [0.17.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Performance Tests (Task 2.7)** - Comprehensive performance benchmarks and budgets
+
+  **Performance Benchmark Tests**: +24 tests
+  - Entity Creation Performance (4 tests): 1 entity (<50ms), 100 entities (<200ms), 1000 entities (<1500ms), batch update 100 (<200ms)
+  - Relation Creation Performance (2 tests): 100 relations (<200ms), 1000 relations (<1500ms)
+  - Search Performance (6 tests): Basic search (<100ms), ranked search (<600ms), boolean search (<150ms), fuzzy search (<200ms), filtered search (<150ms), open 50 nodes (<100ms)
+  - Compression Performance (3 tests): Find duplicates in 100/500 entities (<300ms/<1500ms), compress graph (<400ms)
+  - Graph Loading/Saving (4 tests): Load 100/1000 entities (<100ms/<500ms), save 100/1000 entities (<150ms/<800ms)
+  - Complex Workflows (3 tests): Full CRUD (<300ms), bulk workflow (<500ms), complex query workflow (<400ms)
+  - Memory Efficiency (2 tests): 2000 entities, 5000 total elements (entities + relations)
+  - Files: `__tests__/performance/benchmarks.test.ts`
+
+### Testing
+- **Test Count**: 396 tests (up from 372, +24 performance tests, +6% increase)
+- **Performance Budgets**: All operations meet defined performance targets
+- **All Tests Passing**: 396/396 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
+## [0.16.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Edge Case Tests (Task 2.6)** - Comprehensive robustness testing
+
+  **Edge Case Tests**: +35 tests
+  - Unicode and Special Characters: Emoji, mixed scripts (Cyrillic, CJK, Arabic), RTL text, zero-width chars
+  - Extreme Values: 100 observations, 50 tags, 250-char names, boundary importance values (0, 10)
+  - Empty/Null-like Values: Empty strings, whitespace-only names, empty arrays
+  - Search Edge Cases: Long queries (100+ words), empty queries, nested parentheses, fuzzy thresholds (0, 1)
+  - Relation Edge Cases: Self-references, circular relations (A→B→C→A), long relation types (90 chars), multiple relations
+  - Concurrent Operations: Simultaneous entity creations, concurrent reads/writes
+  - Validation Edge Cases: Invalid importance (-1, 11, 5.5), whitespace handling
+  - Large Graph Operations: 100+ relations per entity, 500+ entities performance (<2s)
+  - Special Query Characters: Regex patterns, SQL injection patterns, XSS patterns
+  - Files: `__tests__/edge-cases/edge-cases.test.ts`
+
+### Testing
+- **Test Count**: 372 tests (up from 337, +35 edge case tests, +10% increase)
+- **Edge Case Coverage**: Unicode, extreme values, concurrent operations, large graphs
+- **All Tests Passing**: 372/372 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
+## [0.15.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Integration Tests (Task 2.5)** - End-to-end workflow testing
+
+  **Integration Workflow Tests**: +12 tests
+  - Entity Creation and Search Workflow: Complete CRUD with multi-method search validation
+  - Compression and Search Workflow: Duplicate merging with search consistency
+  - Batch Update Workflow: Atomic updates with timestamp consistency verification
+  - Complex Query Workflow: Boolean queries on large datasets, ranked search with filters
+  - Date Range and Tag Workflow: Temporal filtering combined with tag filters
+  - Error Handling Workflows: Deferred integrity, atomic rollback validation
+  - Real-World Scenario: Complete team knowledge base (15+ operations)
+  - Performance Testing: 100+ entities search efficiency (<1 second)
+  - Files: `__tests__/integration/workflows.test.ts`
+
+### Testing
+- **Test Count**: 337 tests (up from 325, +12 integration tests, +4% increase)
+- **Integration Coverage**: End-to-end workflows validated across all managers
+- **All Tests Passing**: 337/337 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+
 ## [0.14.0] - 2025-11-25
 
 ### Added
