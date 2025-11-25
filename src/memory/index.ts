@@ -9,6 +9,7 @@ import {
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from './utils/logger.js';
 
 // Define memory file path using environment variable with fallback
 export const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.jsonl');
@@ -35,9 +36,9 @@ export async function ensureMemoryFilePath(): Promise<string> {
       return newMemoryPath;
     } catch {
       // Old file exists, new file doesn't - migrate
-      console.log('[INFO] Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
+      logger.info('Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
       await fs.rename(oldMemoryPath, newMemoryPath);
-      console.log('[INFO] Successfully migrated memory.json to memory.jsonl');
+      logger.info('Successfully migrated memory.json to memory.jsonl');
       return newMemoryPath;
     }
   } catch {
@@ -2034,7 +2035,7 @@ export class KnowledgeGraphManager {
         result.entitiesMerged += group.length - 1;
       } catch (error) {
         // Skip groups that fail to merge
-        console.error(`Failed to merge group ${group}:`, error);
+        logger.error(`Failed to merge group ${group}:`, error);
       }
     }
 
@@ -4178,10 +4179,10 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.log('[INFO] Knowledge Graph MCP Server running on stdio');
+  logger.info('Knowledge Graph MCP Server running on stdio');
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  logger.error("Fatal error in main():", error);
   process.exit(1);
 });
