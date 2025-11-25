@@ -5,6 +5,44 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Import/Export Operations Delegation - Phase 10** - Delegate all import/export operations to dedicated managers
+
+  **Removed Duplicate Import/Export Implementations**: Refactored KnowledgeGraphManager to use ExportManager and ImportManager modules
+  - Added ExportManager and ImportManager imports and instances to KnowledgeGraphManager
+  - Replaced exportGraph() implementation (19 lines) with delegation to ExportManager
+  - Removed ALL private export helper methods (438 lines total):
+    * exportAsJson() (7 lines)
+    * exportAsCsv() (56 lines)
+    * exportAsGraphML() (89 lines)
+    * exportAsGEXF() (96 lines)
+    * exportAsDOT() (54 lines)
+    * exportAsMarkdown() (65 lines)
+    * exportAsMermaid() (71 lines)
+  - Replaced importGraph() implementation (31 lines) with delegation to ImportManager
+  - Removed ALL private import helper methods (314 lines total):
+    * parseJsonImport() (21 lines)
+    * parseCsvImport() (102 lines)
+    * parseGraphMLImport() (68 lines)
+    * mergeImportedGraph() (118 lines)
+
+  **Impact**:
+  - Reduced index.ts from 2,999 lines to 2,207 lines (792 lines removed, 26.4% reduction)
+  - Eliminated all import/export format handling code from index.ts
+  - Centralized format parsing in dedicated manager modules
+  - ExportManager supports 7 export formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)
+  - ImportManager supports 3 import formats (JSON, CSV, GraphML) with merge strategies
+  - Improved separation of concerns (format handling fully abstracted)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 2,207 lines (47.4% total reduction)
+  - Phases 1-10: 1,987 lines removed total
+  - Remaining: ~2,007 lines of implementation code to refactor
+
 ## [0.32.0] - 2025-11-25
 
 ### Changed
