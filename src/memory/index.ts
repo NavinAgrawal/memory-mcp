@@ -16,6 +16,21 @@ import {
   SEARCH_LIMITS,
   IMPORTANCE_RANGE
 } from './utils/constants.js';
+import type {
+  Entity,
+  Relation,
+  KnowledgeGraph,
+  GraphStats,
+  ValidationReport,
+  ValidationError,
+  ValidationWarning,
+  SavedSearch,
+  TagAlias,
+  SearchResult,
+  BooleanQueryNode,
+  ImportResult,
+  CompressionResult,
+} from './types/index.js';
 
 // Define memory file path using environment variable with fallback
 export const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.jsonl');
@@ -56,124 +71,22 @@ export async function ensureMemoryFilePath(): Promise<string> {
 // Initialize memory file path (will be set during startup)
 let MEMORY_FILE_PATH: string;
 
-// We are storing our memory using entities, relations, and observations in a graph structure
-export interface Entity {
-  name: string;
-  entityType: string;
-  observations: string[];
-  createdAt?: string;
-  lastModified?: string;
-  tags?: string[];
-  importance?: number;
-  parentId?: string;  // Phase 2: Hierarchical nesting - references parent entity name
-}
-
-export interface Relation {
-  from: string;
-  to: string;
-  relationType: string;
-  createdAt?: string;
-  lastModified?: string;
-}
-
-export interface KnowledgeGraph {
-  entities: Entity[];
-  relations: Relation[];
-}
-
-export interface GraphStats {
-  totalEntities: number;
-  totalRelations: number;
-  entityTypesCounts: Record<string, number>;
-  relationTypesCounts: Record<string, number>;
-  oldestEntity?: { name: string; date: string };
-  newestEntity?: { name: string; date: string };
-  oldestRelation?: { from: string; to: string; relationType: string; date: string };
-  newestRelation?: { from: string; to: string; relationType: string; date: string };
-  entityDateRange?: { earliest: string; latest: string };
-  relationDateRange?: { earliest: string; latest: string };
-}
-
-export interface ValidationReport {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
-  summary: {
-    totalErrors: number;
-    totalWarnings: number;
-    orphanedRelationsCount: number;
-    entitiesWithoutRelationsCount: number;
-  };
-}
-
-export interface ValidationError {
-  type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
-  message: string;
-  details?: Record<string, unknown>;
-}
-
-export interface ValidationWarning {
-  type: 'isolated_entity' | 'empty_observations' | 'missing_metadata';
-  message: string;
-  details?: Record<string, unknown>;
-}
-
-export interface SavedSearch {
-  name: string;
-  description?: string;
-  query: string;
-  tags?: string[];
-  minImportance?: number;
-  maxImportance?: number;
-  entityType?: string;
-  createdAt: string;
-  lastUsed?: string;
-  useCount: number;
-}
-
-export interface TagAlias {
-  alias: string;
-  canonical: string;
-  description?: string;
-  createdAt: string;
-}
-
-export interface SearchResult {
-  entity: Entity;
-  score: number;
-  matchedFields: {
-    name?: boolean;
-    entityType?: boolean;
-    observations?: string[];
-  };
-}
-
-// Boolean search query AST types
-export type BooleanQueryNode =
-  | { type: 'AND'; children: BooleanQueryNode[] }
-  | { type: 'OR'; children: BooleanQueryNode[] }
-  | { type: 'NOT'; child: BooleanQueryNode }
-  | { type: 'TERM'; field?: string; value: string };
-
-// Import result type
-export interface ImportResult {
-  entitiesAdded: number;
-  entitiesSkipped: number;
-  entitiesUpdated: number;
-  relationsAdded: number;
-  relationsSkipped: number;
-  errors: string[];
-}
-
-// Phase 3: Compression result type
-export interface CompressionResult {
-  duplicatesFound: number;
-  entitiesMerged: number;
-  observationsCompressed: number;
-  relationsConsolidated: number;
-  spaceFreed: number;  // Approximate character count saved
-  mergedEntities: Array<{ kept: string; merged: string[] }>;
-}
+// Re-export types for backward compatibility
+export type {
+  Entity,
+  Relation,
+  KnowledgeGraph,
+  GraphStats,
+  ValidationReport,
+  ValidationError,
+  ValidationWarning,
+  SavedSearch,
+  TagAlias,
+  SearchResult,
+  BooleanQueryNode,
+  ImportResult,
+  CompressionResult,
+};
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {

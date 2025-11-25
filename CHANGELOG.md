@@ -5,6 +5,30 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Modular Architecture Refactoring - Phase 1 (Task 4.1)** - Code cleanup and deduplication
+
+  **Removed Duplicate Type Definitions**: Cleaned up index.ts by removing 118 lines of duplicate type definitions
+  - Removed duplicate Entity, Relation, KnowledgeGraph interface definitions
+  - Removed duplicate GraphStats, ValidationReport, ValidationError, ValidationWarning definitions
+  - Removed duplicate SavedSearch, TagAlias, SearchResult interface definitions
+  - Removed duplicate BooleanQueryNode, ImportResult, CompressionResult type definitions
+  - Added imports from types/index.js module instead
+  - Re-exported types for backward compatibility
+
+  **Impact**:
+  - Reduced index.ts from 4,194 lines to 4,107 lines (87 lines removed)
+  - Eliminated type definition duplication between index.ts and types/ module
+  - Improved maintainability (single source of truth for types)
+  - All functionality preserved, fully backward compatible
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,188 lines to <200 lines
+  - Current: 4,107 lines (2% reduction)
+  - Remaining: ~3,900 lines of implementation code to refactor
+
 ## [0.23.0] - 2025-11-25
 
 ### Added
