@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 28.5% complete (1,195/3,994 lines removed)
+**Status:** 🚧 47.4% complete (1,987/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 2,999 lines
+**Current:** 2,207 lines
 
 ### Completed Phases
 
@@ -166,7 +166,28 @@
 
 **Total Phase 1-9 Progress:** 1,195 lines removed (28.5%)
 
-### Remaining Work (~2,799 lines to refactor)
+#### ✅ Phase 10: Import/Export Operations Delegation (v0.33.0) - COMPLETE
+- Replaced exportGraph() implementation (19 lines) → delegates to ExportManager
+- Removed ALL private export helper methods (438 lines total):
+  * exportAsJson() (7 lines)
+  * exportAsCsv() (56 lines)
+  * exportAsGraphML() (89 lines)
+  * exportAsGEXF() (96 lines)
+  * exportAsDOT() (54 lines)
+  * exportAsMarkdown() (65 lines)
+  * exportAsMermaid() (71 lines)
+- Replaced importGraph() implementation (31 lines) → delegates to ImportManager
+- Removed ALL private import helper methods (314 lines total):
+  * parseJsonImport() (21 lines)
+  * parseCsvImport() (102 lines)
+  * parseGraphMLImport() (68 lines)
+  * mergeImportedGraph() (118 lines)
+- Added ExportManager and ImportManager instances to KnowledgeGraphManager
+- **Progress**: 2,999 → 2,207 lines (792 lines removed, 26.4%)
+
+**Total Phase 1-10 Progress:** 1,987 lines removed (47.4%)
+
+### Remaining Work (~2,007 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
@@ -273,12 +294,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 28.5% complete (v0.24.0-v0.32.0)
+- **Sprint 4:** 🚧 47.4% complete (v0.24.0-v0.33.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.32.0
+- **Current Version:** v0.33.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 2,999 lines (target: <200)
+- **index.ts Size:** 2,207 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -335,5 +356,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.32.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (28.5%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.33.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (47.4%) | Sprint 5 ⏳ Planned
