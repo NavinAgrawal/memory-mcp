@@ -5,6 +5,58 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.7] - 2025-11-25
+
+### Changed
+- **Sprint 1: Code Quality & Quick Wins** - Systematic improvements from CODE_REVIEW.md analysis
+
+  **Logging & Dependencies (Tasks 1.1-1.2)**:
+  - Implemented proper logging utility with debug/info/warn/error levels (replaces inconsistent console.* usage)
+  - Added LOG_LEVEL environment variable for debug logging control
+  - Updated shx from 0.3.4 to 0.4.0 (removed deprecated inflight@1.0.6 memory leak, glob@7.2.3)
+  - Files: `utils/logger.ts`, `index.ts`, `package.json`
+
+  **Code Organization (Tasks 1.3, 1.6)**:
+  - Extracted magic numbers to centralized constants for maintainability:
+    - SIMILARITY_WEIGHTS (NAME: 0.4, TYPE: 0.2, OBSERVATION: 0.3, TAG: 0.1)
+    - DEFAULT_DUPLICATE_THRESHOLD (0.8)
+    - SEARCH_LIMITS (DEFAULT: 50, MAX: 200, MIN: 1)
+    - IMPORTANCE_RANGE (MIN: 0, MAX: 10)
+  - Replaced hardcoded values across index.ts, validationUtils.ts, schemas.ts, RankedSearch.ts
+  - Files: `utils/constants.ts`, `index.ts`, `utils/validationUtils.ts`, `utils/schemas.ts`, `search/RankedSearch.ts`
+
+  **Build Process (Task 1.4)**:
+  - Simplified build script from "tsc && shx chmod +x dist/*.js" to just "tsc"
+  - Shebang (#!/usr/bin/env node) automatically preserved by TypeScript compiler
+  - Improved cross-platform compatibility
+  - File: `package.json`
+
+  **Documentation (Task 1.5)**:
+  - Verified 100% JSDoc coverage across all public APIs (88 methods documented)
+  - All core, features, and search modules fully documented with examples
+  - Files: All `core/*.ts`, `features/*.ts`, `search/*.ts` modules
+
+### Security
+- **Path Validation Enhancement (Task 1.7)**: Protection against path traversal attacks
+  - Created validateFilePath() utility for comprehensive path validation
+  - Normalizes paths, converts relative to absolute, detects path traversal (..)
+  - Applied validation to MEMORY_FILE_PATH environment variable
+  - Prevents ../../../etc/passwd type attacks with clear FileOperationError messages
+  - File: `utils/pathUtils.ts`
+
+### Fixed
+- **Type Safety Improvements (Task 1.8)**: Replaced `any` types with proper TypeScript types
+  - Converted TransactionOperation to discriminated union (5 operation types with specific data)
+  - Added exhaustiveness checking in transaction operation switch statements
+  - Replaced `details?: any` with `details?: Record<string, unknown>` in ValidationError/ValidationWarning
+  - Full compile-time type safety with strict mode enabled
+  - Files: `core/TransactionManager.ts`, `types/analytics.types.ts`, `index.ts`
+
+### Testing
+- **All Tests Passing**: 83/83 tests ✅ | TypeScript strict typecheck ✅
+- **Zero Vulnerabilities**: npm audit clean ✅
+- **Zero Deprecated Warnings**: All dependencies current ✅
+
 ## [0.11.6] - 2025-11-25
 
 ### Documentation
