@@ -18,6 +18,8 @@ import {
 } from './utils/constants.js';
 import { levenshteinDistance } from './utils/levenshtein.js';
 import { GraphStorage } from './core/GraphStorage.js';
+import { EntityManager } from './core/EntityManager.js';
+import { RelationManager } from './core/RelationManager.js';
 import type {
   Entity,
   Relation,
@@ -95,6 +97,8 @@ export class KnowledgeGraphManager {
   private savedSearchesFilePath: string;
   private tagAliasesFilePath: string;
   private storage: GraphStorage;
+  private entityManager: EntityManager;
+  private relationManager: RelationManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -103,6 +107,8 @@ export class KnowledgeGraphManager {
     this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
     this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
     this.storage = new GraphStorage(memoryFilePath);
+    this.entityManager = new EntityManager(this.storage);
+    this.relationManager = new RelationManager(this.storage);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
@@ -145,33 +151,7 @@ export class KnowledgeGraphManager {
    * minimizing disk I/O. This is significantly more efficient than creating entities one at a time.
    */
   async createEntities(entities: Entity[]): Promise<Entity[]> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-    const newEntities = entities
-      .filter(e => !graph.entities.some(existingEntity => existingEntity.name === e.name))
-      .map(e => {
-        const entity: Entity = {
-          ...e,
-          createdAt: e.createdAt || timestamp,
-          lastModified: e.lastModified || timestamp
-        };
-        // Phase 3: Normalize tags to lowercase if provided
-        if (e.tags) {
-          entity.tags = e.tags.map(tag => tag.toLowerCase());
-        }
-        // Phase 3: Validate importance if provided
-        if (e.importance !== undefined) {
-          if (e.importance < IMPORTANCE_RANGE.MIN || e.importance > IMPORTANCE_RANGE.MAX) {
-            throw new Error(`Importance must be between ${IMPORTANCE_RANGE.MIN} and ${IMPORTANCE_RANGE.MAX}, got ${e.importance}`);
-          }
-          entity.importance = e.importance;
-        }
-        return entity;
-      });
-    graph.entities.push(...newEntities);
-    // Phase 4: Single save operation for all entities ensures batch efficiency
-    await this.saveGraph(graph);
-    return newEntities;
+    return this.entityManager.createEntities(entities);
   }
 
   /**
@@ -180,19 +160,7 @@ export class KnowledgeGraphManager {
    * minimizing disk I/O. This is significantly more efficient than creating relations one at a time.
    */
   async createRelations(relations: Relation[]): Promise<Relation[]> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-    const newRelations = relations
-      .filter(r => !graph.relations.some(existingRelation =>
-        existingRelation.from === r.from &&
-        existingRelation.to === r.to &&
-        existingRelation.relationType === r.relationType
-      ))
-      .map(r => ({ ...r, createdAt: r.createdAt || timestamp, lastModified: r.lastModified || timestamp }));
-    graph.relations.push(...newRelations);
-    // Phase 4: Single save operation for all relations ensures batch efficiency
-    await this.saveGraph(graph);
-    return newRelations;
+    return this.relationManager.createRelations(relations);
   }
 
   async addObservations(observations: { entityName: string; contents: string[] }[]): Promise<{ entityName: string; addedObservations: string[] }[]> {
@@ -216,10 +184,7 @@ export class KnowledgeGraphManager {
   }
 
   async deleteEntities(entityNames: string[]): Promise<void> {
-    const graph = await this.loadGraph();
-    graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
-    graph.relations = graph.relations.filter(r => !entityNames.includes(r.from) && !entityNames.includes(r.to));
-    await this.saveGraph(graph);
+    return this.entityManager.deleteEntities(entityNames);
   }
 
   async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
@@ -240,30 +205,7 @@ export class KnowledgeGraphManager {
   }
 
   async deleteRelations(relations: Relation[]): Promise<void> {
-    const graph = await this.loadGraph();
-    const timestamp = new Date().toISOString();
-
-    // Track which entities are affected by relation deletions
-    const affectedEntityNames = new Set<string>();
-    relations.forEach(rel => {
-      affectedEntityNames.add(rel.from);
-      affectedEntityNames.add(rel.to);
-    });
-
-    graph.relations = graph.relations.filter(r => !relations.some(delRelation =>
-      r.from === delRelation.from &&
-      r.to === delRelation.to &&
-      r.relationType === delRelation.relationType
-    ));
-
-    // Update lastModified for affected entities
-    graph.entities.forEach(entity => {
-      if (affectedEntityNames.has(entity.name)) {
-        entity.lastModified = timestamp;
-      }
-    });
-
-    await this.saveGraph(graph);
+    return this.relationManager.deleteRelations(relations);
   }
 
   async readGraph(): Promise<KnowledgeGraph> {
