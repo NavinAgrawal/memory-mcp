@@ -5,6 +5,30 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Architecture Documentation (Task 2.8)** - Comprehensive system architecture guide
+
+  **Architecture Documentation**: ARCHITECTURE.md (comprehensive system design)
+  - System Overview: Statistics, key features, architecture principles
+  - System Context: MCP client interaction, external actors, system boundaries
+  - Component Architecture: Detailed breakdown of all layers (MCP handler, managers, storage, utils)
+  - Data Model: Entity, Relation, KnowledgeGraph schemas with validation rules
+  - Key Design Decisions: Rationale for JSONL format, in-memory processing, modularity, bucketing, deferred integrity
+  - Data Flow Patterns: Step-by-step flows for create, batch update, search, compression operations
+  - Performance Considerations: Benchmarks table, optimization strategies, scalability limits
+  - Security Architecture: Input validation, path traversal protection, no code injection, error handling
+  - Testing Strategy: Test pyramid, test categories (396 tests), coverage metrics (98%+)
+  - Future Enhancements: Planned improvements and architectural evolution
+  - Files: `docs/ARCHITECTURE.md`
+
+### Documentation
+- **Architecture Guide**: Complete system architecture (10 sections, 500+ lines)
+- **Design Rationale**: Explained all major design decisions with trade-offs
+- **Performance Documentation**: Benchmarks table with 13 operations documented
+- **Security Model**: Comprehensive security architecture
+
 ## [0.17.0] - 2025-11-25
 
 ### Added

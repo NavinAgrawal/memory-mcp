@@ -534,3 +534,35 @@ All work has been systematically tested, documented, and committed to GitHub wit
 
 **Sprint 2 Status**: 7 of 9 tasks completed (Tasks 2.1-2.7 ✅)
 **Remaining**: Task 2.8 (Architecture Docs), Task 2.9 (API Reference)
+
+### Task 2.8: Architecture Documentation (v0.18.0) ✅
+- **Files**: `docs/ARCHITECTURE.md`
+- **Content**: Comprehensive system architecture (500+ lines, 10 sections)
+- **Sections**:
+  - System Overview (statistics, principles)
+  - System Context (MCP interaction diagram)
+  - Component Architecture (4 layers detailed)
+  - Data Model (Entity, Relation, KnowledgeGraph)
+  - Key Design Decisions (5 major decisions with rationale)
+  - Data Flow Patterns (4 complete workflows)
+  - Performance Considerations (benchmark table, optimization strategies)
+  - Security Architecture (validation, protection, error handling)
+  - Testing Strategy (test pyramid, 396 tests, 98%+ coverage)
+  - Future Enhancements (planned improvements)
+- **Documentation Quality**:
+  - Design rationale for all major decisions
+  - Trade-off analysis (pros/cons)
+  - Performance benchmarks documented
+  - Security model fully explained
+  - Diagrams and code examples
+
+### Updated Metrics (v0.18.0)
+- **Test Count**: 396 tests (unchanged from v0.17.0)
+- **Documentation**: Comprehensive architecture guide added
+- **TypeScript**: ✅ Strict mode clean
+- **Version**: v0.18.0
+
+---
+
+**Sprint 2 Status**: 8 of 9 tasks completed (Tasks 2.1-2.8 ✅)
+**Remaining**: Task 2.9 (API Reference Generation)
