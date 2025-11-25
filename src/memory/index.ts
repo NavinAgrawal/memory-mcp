@@ -20,6 +20,7 @@ import { levenshteinDistance } from './utils/levenshtein.js';
 import { GraphStorage } from './core/GraphStorage.js';
 import { EntityManager } from './core/EntityManager.js';
 import { RelationManager } from './core/RelationManager.js';
+import { SearchManager } from './search/SearchManager.js';
 import type {
   Entity,
   Relation,
@@ -99,6 +100,7 @@ export class KnowledgeGraphManager {
   private storage: GraphStorage;
   private entityManager: EntityManager;
   private relationManager: RelationManager;
+  private searchManager: SearchManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -109,6 +111,7 @@ export class KnowledgeGraphManager {
     this.storage = new GraphStorage(memoryFilePath);
     this.entityManager = new EntityManager(this.storage);
     this.relationManager = new RelationManager(this.storage);
+    this.searchManager = new SearchManager(this.storage, this.savedSearchesFilePath);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
@@ -117,32 +120,6 @@ export class KnowledgeGraphManager {
 
   private async saveGraph(graph: KnowledgeGraph): Promise<void> {
     return this.storage.saveGraph(graph);
-  }
-
-  // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
-  /**
-   * Check if two strings are fuzzy matches based on similarity threshold
-   * @param str1 - First string to compare
-   * @param str2 - Second string to compare
-   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
-   * @returns true if strings are similar enough
-   */
-  private isFuzzyMatch(str1: string, str2: string, threshold: number = 0.7): boolean {
-    const s1 = str1.toLowerCase();
-    const s2 = str2.toLowerCase();
-
-    // Exact match
-    if (s1 === s2) return true;
-
-    // One contains the other
-    if (s1.includes(s2) || s2.includes(s1)) return true;
-
-    // Calculate similarity using Levenshtein distance
-    const distance = levenshteinDistance(s1, s2);
-    const maxLength = Math.max(s1.length, s2.length);
-    const similarity = 1 - (distance / maxLength);
-
-    return similarity >= threshold;
   }
 
   /**
@@ -219,76 +196,11 @@ export class KnowledgeGraphManager {
     minImportance?: number,
     maxImportance?: number
   ): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
-    
-    // Normalize tags to lowercase for case-insensitive matching
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
-    
-    // Filter entities
-    const filteredEntities = graph.entities.filter(e => {
-      // Text search
-      const matchesQuery = 
-        e.name.toLowerCase().includes(query.toLowerCase()) ||
-        e.entityType.toLowerCase().includes(query.toLowerCase()) ||
-        e.observations.some(o => o.toLowerCase().includes(query.toLowerCase()));
-      
-      if (!matchesQuery) return false;
-      
-      // Phase 3: Tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-      
-      // Phase 3: Importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-      
-      return true;
-    });
-  
-    // Create a Set of filtered entity names for quick lookup
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
-  
-    // Filter relations to only include those between filtered entities
-    const filteredRelations = graph.relations.filter(r => 
-      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
-    );
-  
-    const filteredGraph: KnowledgeGraph = {
-      entities: filteredEntities,
-      relations: filteredRelations,
-    };
-  
-    return filteredGraph;
+    return this.searchManager.searchNodes(query, tags, minImportance, maxImportance);
   }
 
   async openNodes(names: string[]): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
-    
-    // Filter entities
-    const filteredEntities = graph.entities.filter(e => names.includes(e.name));
-  
-    // Create a Set of filtered entity names for quick lookup
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
-  
-    // Filter relations to only include those between filtered entities
-    const filteredRelations = graph.relations.filter(r => 
-      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
-    );
-  
-    const filteredGraph: KnowledgeGraph = {
-      entities: filteredEntities,
-      relations: filteredRelations,
-    };
-  
-    return filteredGraph;
+    return this.searchManager.openNodes(names);
   }
 
   // Phase 3: Enhanced searchByDateRange with tags filter
@@ -298,69 +210,7 @@ export class KnowledgeGraphManager {
     entityType?: string,
     tags?: string[]
   ): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
-
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-
-    // Normalize tags to lowercase for case-insensitive matching
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
-
-    // Filter entities by date range and optionally by entity type and tags
-    const filteredEntities = graph.entities.filter(e => {
-      // Check entity type filter
-      if (entityType && e.entityType !== entityType) {
-        return false;
-      }
-
-      // Phase 3: Tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
-      // Check date range using createdAt or lastModified
-      const entityDate = new Date(e.lastModified || e.createdAt || '');
-
-      if (start && entityDate < start) {
-        return false;
-      }
-      if (end && entityDate > end) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Create a Set of filtered entity names for quick lookup
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
-
-    // Filter relations by date range and only include those between filtered entities
-    const filteredRelations = graph.relations.filter(r => {
-      // Must be between filtered entities
-      if (!filteredEntityNames.has(r.from) || !filteredEntityNames.has(r.to)) {
-        return false;
-      }
-
-      // Check date range using createdAt or lastModified
-      const relationDate = new Date(r.lastModified || r.createdAt || '');
-
-      if (start && relationDate < start) {
-        return false;
-      }
-      if (end && relationDate > end) {
-        return false;
-      }
-
-      return true;
-    });
-
-    return {
-      entities: filteredEntities,
-      relations: filteredRelations,
-    };
+    return this.searchManager.searchByDateRange(startDate, endDate, entityType, tags);
   }
 
   async getGraphStats(): Promise<GraphStats> {
@@ -890,59 +740,7 @@ export class KnowledgeGraphManager {
     minImportance?: number,
     maxImportance?: number
   ): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
-
-    // Normalize tags to lowercase for case-insensitive matching
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
-
-    // Filter entities using fuzzy matching
-    const filteredEntities = graph.entities.filter(e => {
-      // Fuzzy text search
-      const matchesQuery =
-        this.isFuzzyMatch(e.name, query, threshold) ||
-        this.isFuzzyMatch(e.entityType, query, threshold) ||
-        e.observations.some(o =>
-          // For observations, split into words and check each word
-          o.toLowerCase().split(/\s+/).some(word =>
-            this.isFuzzyMatch(word, query, threshold)
-          ) ||
-          // Also check if the observation contains the query
-          this.isFuzzyMatch(o, query, threshold)
-        );
-
-      if (!matchesQuery) return false;
-
-      // Tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
-      // Importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Create a Set of filtered entity names for quick lookup
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
-
-    // Filter relations to only include those between filtered entities
-    const filteredRelations = graph.relations.filter(r =>
-      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
-    );
-
-    return {
-      entities: filteredEntities,
-      relations: filteredRelations,
-    };
+    return this.searchManager.fuzzySearch(query, threshold, tags, minImportance, maxImportance);
   }
 
   /**
@@ -952,96 +750,7 @@ export class KnowledgeGraphManager {
    * @returns Array of suggested entity/type names
    */
   async getSearchSuggestions(query: string, maxSuggestions: number = 5): Promise<string[]> {
-    const graph = await this.loadGraph();
-    const queryLower = query.toLowerCase();
-
-    interface Suggestion {
-      text: string;
-      similarity: number;
-    }
-
-    const suggestions: Suggestion[] = [];
-
-    // Check entity names
-    for (const entity of graph.entities) {
-      const distance = levenshteinDistance(queryLower, entity.name.toLowerCase());
-      const maxLength = Math.max(queryLower.length, entity.name.length);
-      const similarity = 1 - (distance / maxLength);
-
-      if (similarity > 0.5 && similarity < 1.0) { // Not exact match but similar
-        suggestions.push({ text: entity.name, similarity });
-      }
-    }
-
-    // Check entity types
-    const uniqueTypes = [...new Set(graph.entities.map(e => e.entityType))];
-    for (const type of uniqueTypes) {
-      const distance = levenshteinDistance(queryLower, type.toLowerCase());
-      const maxLength = Math.max(queryLower.length, type.length);
-      const similarity = 1 - (distance / maxLength);
-
-      if (similarity > 0.5 && similarity < 1.0) {
-        suggestions.push({ text: type, similarity });
-      }
-    }
-
-    // Sort by similarity and return top suggestions
-    return suggestions
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, maxSuggestions)
-      .map(s => s.text);
-  }
-
-  // Tier 0 C1: Full-text search with TF-IDF ranking
-  /**
-   * Tokenize text into lowercase words, removing punctuation
-   */
-  private tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
-      .filter(word => word.length > 0);
-  }
-
-  /**
-   * Calculate term frequency (TF) for a term in a document
-   * TF = (number of times term appears) / (total terms in document)
-   */
-  private calculateTF(term: string, document: string[]): number {
-    const termCount = document.filter(word => word === term).length;
-    return document.length > 0 ? termCount / document.length : 0;
-  }
-
-  /**
-   * Calculate inverse document frequency (IDF) for a term across all documents
-   * IDF = log(total documents / documents containing term)
-   */
-  private calculateIDF(term: string, documents: string[][]): number {
-    const docsWithTerm = documents.filter(doc => doc.includes(term)).length;
-    if (docsWithTerm === 0) return 0;
-    return Math.log(documents.length / docsWithTerm);
-  }
-
-  /**
-   * Calculate TF-IDF score for a term in a document
-   * TF-IDF = TF * IDF
-   */
-  private calculateTFIDF(term: string, document: string[], allDocuments: string[][]): number {
-    const tf = this.calculateTF(term, document);
-    const idf = this.calculateIDF(term, allDocuments);
-    return tf * idf;
-  }
-
-  /**
-   * Convert an entity to a searchable document (concatenated text)
-   */
-  private entityToDocument(entity: Entity): string {
-    return [
-      entity.name,
-      entity.entityType,
-      ...entity.observations
-    ].join(' ');
+    return this.searchManager.getSearchSuggestions(query, maxSuggestions);
   }
 
   /**
@@ -1060,287 +769,7 @@ export class KnowledgeGraphManager {
     maxImportance?: number,
     limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<SearchResult[]> {
-    const graph = await this.loadGraph();
-
-    // Normalize tags to lowercase for case-insensitive matching
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
-
-    // Tokenize query
-    const queryTerms = this.tokenize(query);
-
-    if (queryTerms.length === 0) {
-      return [];
-    }
-
-    // Convert all entities to tokenized documents
-    const allDocuments = graph.entities.map(e => this.tokenize(this.entityToDocument(e)));
-
-    // Calculate scores for each entity
-    const results: SearchResult[] = [];
-
-    for (let i = 0; i < graph.entities.length; i++) {
-      const entity = graph.entities[i];
-      const document = allDocuments[i];
-
-      // Apply tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!entity.tags || entity.tags.length === 0) continue;
-        const entityTags = entity.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) continue;
-      }
-
-      // Apply importance filter
-      if (minImportance !== undefined && (entity.importance === undefined || entity.importance < minImportance)) {
-        continue;
-      }
-      if (maxImportance !== undefined && (entity.importance === undefined || entity.importance > maxImportance)) {
-        continue;
-      }
-
-      // Calculate TF-IDF score for each query term
-      let totalScore = 0;
-      const matchedFields: SearchResult['matchedFields'] = {};
-
-      for (const term of queryTerms) {
-        const tfidf = this.calculateTFIDF(term, document, allDocuments);
-        totalScore += tfidf;
-
-        // Track which fields matched
-        const nameLower = entity.name.toLowerCase();
-        const typeLower = entity.entityType.toLowerCase();
-
-        if (nameLower.includes(term)) {
-          matchedFields.name = true;
-        }
-        if (typeLower.includes(term)) {
-          matchedFields.entityType = true;
-        }
-
-        const matchedObs = entity.observations.filter(obs =>
-          obs.toLowerCase().includes(term)
-        );
-        if (matchedObs.length > 0) {
-          if (!matchedFields.observations) {
-            matchedFields.observations = [];
-          }
-          matchedFields.observations.push(...matchedObs);
-        }
-      }
-
-      // Only include entities with non-zero scores
-      if (totalScore > 0) {
-        results.push({
-          entity,
-          score: totalScore,
-          matchedFields
-        });
-      }
-    }
-
-    // Sort by score (descending) and apply limit
-    return results
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-  }
-
-  // Tier 0 C3: Boolean search with query parser
-  /**
-   * Tokenize a boolean search query into tokens
-   */
-  private tokenizeBooleanQuery(query: string): string[] {
-    const tokens: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < query.length; i++) {
-      const char = query[i];
-
-      if (char === '"') {
-        if (inQuotes) {
-          // End of quoted string
-          tokens.push(current);
-          current = '';
-          inQuotes = false;
-        } else {
-          // Start of quoted string
-          if (current.trim()) {
-            tokens.push(current.trim());
-            current = '';
-          }
-          inQuotes = true;
-        }
-      } else if (!inQuotes && (char === '(' || char === ')')) {
-        // Parentheses are separate tokens
-        if (current.trim()) {
-          tokens.push(current.trim());
-          current = '';
-        }
-        tokens.push(char);
-      } else if (!inQuotes && /\s/.test(char)) {
-        // Whitespace outside quotes
-        if (current.trim()) {
-          tokens.push(current.trim());
-          current = '';
-        }
-      } else {
-        current += char;
-      }
-    }
-
-    if (current.trim()) {
-      tokens.push(current.trim());
-    }
-
-    return tokens;
-  }
-
-  /**
-   * Parse a boolean search query into an AST
-   * Supports: AND, OR, NOT, parentheses, field-specific queries (field:value)
-   */
-  private parseBooleanQuery(query: string): BooleanQueryNode {
-    const tokens = this.tokenizeBooleanQuery(query);
-    let position = 0;
-
-    const peek = (): string | undefined => tokens[position];
-    const consume = (): string | undefined => tokens[position++];
-
-    // Parse OR expressions (lowest precedence)
-    const parseOr = (): BooleanQueryNode => {
-      let left = parseAnd();
-
-      while (peek()?.toUpperCase() === 'OR') {
-        consume(); // consume 'OR'
-        const right = parseAnd();
-        left = { type: 'OR', children: [left, right] };
-      }
-
-      return left;
-    };
-
-    // Parse AND expressions
-    const parseAnd = (): BooleanQueryNode => {
-      let left = parseNot();
-
-      while (peek() && peek()?.toUpperCase() !== 'OR' && peek() !== ')') {
-        // Implicit AND if next token is not OR or )
-        if (peek()?.toUpperCase() === 'AND') {
-          consume(); // consume 'AND'
-        }
-        const right = parseNot();
-        left = { type: 'AND', children: [left, right] };
-      }
-
-      return left;
-    };
-
-    // Parse NOT expressions
-    const parseNot = (): BooleanQueryNode => {
-      if (peek()?.toUpperCase() === 'NOT') {
-        consume(); // consume 'NOT'
-        const child = parseNot();
-        return { type: 'NOT', child };
-      }
-      return parsePrimary();
-    };
-
-    // Parse primary expressions (terms, field queries, parentheses)
-    const parsePrimary = (): BooleanQueryNode => {
-      const token = peek();
-
-      if (!token) {
-        throw new Error('Unexpected end of query');
-      }
-
-      // Parentheses
-      if (token === '(') {
-        consume(); // consume '('
-        const node = parseOr();
-        if (consume() !== ')') {
-          throw new Error('Expected closing parenthesis');
-        }
-        return node;
-      }
-
-      // Field-specific query (field:value)
-      if (token.includes(':')) {
-        consume();
-        const [field, ...valueParts] = token.split(':');
-        const value = valueParts.join(':'); // Handle colons in value
-        return { type: 'TERM', field: field.toLowerCase(), value: value.toLowerCase() };
-      }
-
-      // Regular term
-      consume();
-      return { type: 'TERM', value: token.toLowerCase() };
-    };
-
-    const result = parseOr();
-
-    // Check for unconsumed tokens
-    if (position < tokens.length) {
-      throw new Error(`Unexpected token: ${tokens[position]}`);
-    }
-
-    return result;
-  }
-
-  /**
-   * Evaluate a boolean query AST against an entity
-   */
-  private evaluateBooleanQuery(node: BooleanQueryNode, entity: Entity): boolean {
-    switch (node.type) {
-      case 'AND':
-        return node.children.every(child => this.evaluateBooleanQuery(child, entity));
-
-      case 'OR':
-        return node.children.some(child => this.evaluateBooleanQuery(child, entity));
-
-      case 'NOT':
-        return !this.evaluateBooleanQuery(node.child, entity);
-
-      case 'TERM': {
-        const value = node.value;
-
-        // Field-specific search
-        if (node.field) {
-          switch (node.field) {
-            case 'name':
-              return entity.name.toLowerCase().includes(value);
-            case 'type':
-            case 'entitytype':
-              return entity.entityType.toLowerCase().includes(value);
-            case 'observation':
-            case 'observations':
-              return entity.observations.some(obs => obs.toLowerCase().includes(value));
-            case 'tag':
-            case 'tags':
-              return entity.tags ? entity.tags.some(tag => tag.toLowerCase().includes(value)) : false;
-            default:
-              // Unknown field, search all text fields
-              return this.entityMatchesTerm(entity, value);
-          }
-        }
-
-        // General search across all fields
-        return this.entityMatchesTerm(entity, value);
-      }
-    }
-  }
-
-  /**
-   * Check if entity matches a search term in any text field
-   */
-  private entityMatchesTerm(entity: Entity, term: string): boolean {
-    const termLower = term.toLowerCase();
-
-    return (
-      entity.name.toLowerCase().includes(termLower) ||
-      entity.entityType.toLowerCase().includes(termLower) ||
-      entity.observations.some(obs => obs.toLowerCase().includes(termLower)) ||
-      (entity.tags?.some(tag => tag.toLowerCase().includes(termLower)) || false)
-    );
+    return this.searchManager.searchNodesRanked(query, tags, minImportance, maxImportance, limit);
   }
 
   /**
@@ -1357,57 +786,7 @@ export class KnowledgeGraphManager {
     minImportance?: number,
     maxImportance?: number
   ): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
-
-    // Parse the query into an AST
-    let queryAst: BooleanQueryNode;
-    try {
-      queryAst = this.parseBooleanQuery(query);
-    } catch (error) {
-      throw new Error(`Failed to parse boolean query: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    // Normalize tags to lowercase for case-insensitive matching
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
-
-    // Filter entities
-    const filteredEntities = graph.entities.filter(e => {
-      // Evaluate boolean query
-      if (!this.evaluateBooleanQuery(queryAst, e)) {
-        return false;
-      }
-
-      // Apply tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
-      // Apply importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Create a Set of filtered entity names for quick lookup
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
-
-    // Filter relations to only include those between filtered entities
-    const filteredRelations = graph.relations.filter(r =>
-      filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
-    );
-
-    return {
-      entities: filteredEntities,
-      relations: filteredRelations,
-    };
+    return this.searchManager.booleanSearch(query, tags, minImportance, maxImportance);
   }
 
   // Phase 2: Hierarchical nesting - hierarchy navigation methods

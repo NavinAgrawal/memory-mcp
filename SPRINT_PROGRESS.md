@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 5.7% complete (240/3,994 lines removed)
+**Status:** 🚧 20.1% complete (843/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 3,954 lines
+**Current:** 3,351 lines
 
 ### Completed Phases
 
@@ -112,29 +112,30 @@
 
 **Total Sprint 4a Progress:** 76 lines removed (1.8%)
 
-### Remaining Work (~3,754 lines to refactor after 4a)
+#### ✅ Phase 6: Search Operations Delegation (v0.29.0) - COMPLETE
+- Removed searchNodes() implementation (48 lines) → delegates to SearchManager
+- Removed openNodes() implementation (17 lines) → delegates to SearchManager
+- Removed searchByDateRange() implementation (62 lines) → delegates to SearchManager
+- Removed fuzzySearch() implementation (52 lines) → delegates to SearchManager
+- Removed getSearchSuggestions() implementation (36 lines) → delegates to SearchManager
+- Removed searchNodesRanked() implementation (82 lines) → delegates to SearchManager
+- Removed booleanSearch() implementation (58 lines) → delegates to SearchManager
+- Removed all TF-IDF helper methods (50 lines)
+- Removed all boolean query parsing helpers (206 lines)
+- Removed isFuzzyMatch() helper (24 lines)
+- Added SearchManager instance coordinating 4 specialized search modules
+- **Progress**: 3,972 → 3,351 lines (621 lines removed, 15.6%)
 
-#### 🔄 Phase 6-12: Replace Remaining Duplicate Implementations
+**Total Phase 1-6 Progress:** 843 lines removed (20.1%)
+
+### Remaining Work (~3,151 lines to refactor)
+
+#### 🔄 Phase 7-12: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
 
 1. **Entity Update Operations** (~50 lines)
-   - `updateEntity()` → use EntityManager.updateEntity()
    - `addObservations()` → use EntityManager (needs implementation)
    - `deleteObservations()` → use EntityManager (needs implementation)
-
-2. **Relation Operations** (~150 lines)
-   - `createRelations()` → use RelationManager.createRelations()
-   - `deleteRelations()` → use RelationManager.deleteRelations()
-   - Relation validation logic
-
-3. **Search Operations** (~500 lines)
-   - Basic search implementations → use BasicSearch
-   - Ranked search implementations → use RankedSearch
-   - Boolean search implementations → use BooleanSearch
-   - Fuzzy search implementations → use FuzzySearch
-
-4. **TF-IDF Calculations** (~200 lines)
-   - Duplicate TF-IDF logic → use utils/tfidf.js
    - Term tokenization
 
 5. **Boolean Query Parsing** (~300 lines)
@@ -248,12 +249,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 5.7% complete (v0.24.0-v0.28.0)
+- **Sprint 4:** 🚧 20.1% complete (v0.24.0-v0.29.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.28.0
+- **Current Version:** v0.29.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 3,954 lines (target: <200)
+- **index.ts Size:** 3,351 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -310,5 +311,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.28.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (5.7%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.29.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (20.1%) | Sprint 5 ⏳ Planned
