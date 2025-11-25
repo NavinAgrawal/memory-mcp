@@ -9,6 +9,13 @@ import {
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from './utils/logger.js';
+import {
+  SIMILARITY_WEIGHTS,
+  DEFAULT_DUPLICATE_THRESHOLD,
+  SEARCH_LIMITS,
+  IMPORTANCE_RANGE
+} from './utils/constants.js';
 
 // Define memory file path using environment variable with fallback
 export const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.jsonl');
@@ -35,9 +42,9 @@ export async function ensureMemoryFilePath(): Promise<string> {
       return newMemoryPath;
     } catch {
       // Old file exists, new file doesn't - migrate
-      console.log('[INFO] Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
+      logger.info('Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
       await fs.rename(oldMemoryPath, newMemoryPath);
-      console.log('[INFO] Successfully migrated memory.json to memory.jsonl');
+      logger.info('Successfully migrated memory.json to memory.jsonl');
       return newMemoryPath;
     }
   } catch {
@@ -102,13 +109,13 @@ export interface ValidationReport {
 export interface ValidationError {
   type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ValidationWarning {
   type: 'isolated_entity' | 'empty_observations' | 'missing_metadata';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface SavedSearch {
@@ -318,8 +325,8 @@ export class KnowledgeGraphManager {
         }
         // Phase 3: Validate importance if provided
         if (e.importance !== undefined) {
-          if (e.importance < 0 || e.importance > 10) {
-            throw new Error(`Importance must be between 0 and 10, got ${e.importance}`);
+          if (e.importance < IMPORTANCE_RANGE.MIN || e.importance > IMPORTANCE_RANGE.MAX) {
+            throw new Error(`Importance must be between ${IMPORTANCE_RANGE.MIN} and ${IMPORTANCE_RANGE.MAX}, got ${e.importance}`);
           }
           entity.importance = e.importance;
         }
@@ -721,8 +728,8 @@ export class KnowledgeGraphManager {
     const timestamp = new Date().toISOString();
 
     // Validate importance range
-    if (importance < 0 || importance > 10) {
-      throw new Error(`Importance must be between 0 and 10, got ${importance}`);
+    if (importance < IMPORTANCE_RANGE.MIN || importance > IMPORTANCE_RANGE.MAX) {
+      throw new Error(`Importance must be between ${IMPORTANCE_RANGE.MIN} and ${IMPORTANCE_RANGE.MAX}, got ${importance}`);
     }
 
     const entity = graph.entities.find(e => e.name === entityName);
@@ -1273,7 +1280,7 @@ export class KnowledgeGraphManager {
     tags?: string[],
     minImportance?: number,
     maxImportance?: number,
-    limit: number = 50
+    limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<SearchResult[]> {
     const graph = await this.loadGraph();
 
@@ -1827,14 +1834,14 @@ export class KnowledgeGraphManager {
     const nameDistance = this.levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
     const maxNameLength = Math.max(e1.name.length, e2.name.length);
     const nameSimilarity = 1 - (nameDistance / maxNameLength);
-    score += nameSimilarity * 0.4;  // 40% weight
-    factors += 0.4;
+    score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;
+    factors += SIMILARITY_WEIGHTS.NAME;
 
     // Type similarity (exact match)
     if (e1.entityType.toLowerCase() === e2.entityType.toLowerCase()) {
-      score += 0.2;  // 20% weight
+      score += SIMILARITY_WEIGHTS.TYPE;
     }
-    factors += 0.2;
+    factors += SIMILARITY_WEIGHTS.TYPE;
 
     // Observation overlap
     const obs1Set = new Set(e1.observations.map(o => o.toLowerCase()));
@@ -1842,8 +1849,8 @@ export class KnowledgeGraphManager {
     const intersection = new Set([...obs1Set].filter(x => obs2Set.has(x)));
     const union = new Set([...obs1Set, ...obs2Set]);
     const observationSimilarity = union.size > 0 ? intersection.size / union.size : 0;
-    score += observationSimilarity * 0.3;  // 30% weight
-    factors += 0.3;
+    score += observationSimilarity * SIMILARITY_WEIGHTS.OBSERVATION;
+    factors += SIMILARITY_WEIGHTS.OBSERVATION;
 
     // Tag overlap
     if (e1.tags && e2.tags && (e1.tags.length > 0 || e2.tags.length > 0)) {
@@ -1852,8 +1859,8 @@ export class KnowledgeGraphManager {
       const tagIntersection = new Set([...tags1Set].filter(x => tags2Set.has(x)));
       const tagUnion = new Set([...tags1Set, ...tags2Set]);
       const tagSimilarity = tagUnion.size > 0 ? tagIntersection.size / tagUnion.size : 0;
-      score += tagSimilarity * 0.1;  // 10% weight
-      factors += 0.1;
+      score += tagSimilarity * SIMILARITY_WEIGHTS.TAG;
+      factors += SIMILARITY_WEIGHTS.TAG;
     }
 
     return factors > 0 ? score / factors : 0;
@@ -1864,7 +1871,7 @@ export class KnowledgeGraphManager {
    * @param threshold - Similarity threshold (0.0 to 1.0), default 0.8
    * @returns Array of duplicate groups (each group has similar entities)
    */
-  async findDuplicates(threshold: number = 0.8): Promise<string[][]> {
+  async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]> {
     const graph = await this.loadGraph();
     const duplicateGroups: string[][] = [];
     const processed = new Set<string>();
@@ -2034,7 +2041,7 @@ export class KnowledgeGraphManager {
         result.entitiesMerged += group.length - 1;
       } catch (error) {
         // Skip groups that fail to merge
-        console.error(`Failed to merge group ${group}:`, error);
+        logger.error(`Failed to merge group ${group}:`, error);
       }
     }
 
@@ -4178,10 +4185,10 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.log('[INFO] Knowledge Graph MCP Server running on stdio');
+  logger.info('Knowledge Graph MCP Server running on stdio');
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  logger.error("Fatal error in main():", error);
   process.exit(1);
 });

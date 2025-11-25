@@ -1,6 +1,6 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "0.11.6",
+  "version": "0.11.7",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, and 45 advanced tools",
   "license": "MIT",
   "author": "Daniel Simon Jr. (https://github.com/danielsimonjr)",
@@ -30,7 +30,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && shx chmod +x dist/*.js",
+    "build": "tsc",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "test": "vitest run --coverage",
@@ -43,7 +43,7 @@
   "devDependencies": {
     "@types/node": "^22",
     "@vitest/coverage-v8": "^4.0.13",
-    "shx": "^0.3.4",
+    "shx": "^0.4.0",
     "typescript": "^5.6.2",
     "vitest": "^4.0.13"
   }

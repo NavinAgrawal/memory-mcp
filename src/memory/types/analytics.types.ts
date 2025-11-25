@@ -110,7 +110,7 @@ export interface ValidationError {
   message: string;
 
   /** Additional details about the error */
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -124,5 +124,5 @@ export interface ValidationWarning {
   message: string;
 
   /** Additional details about the warning */
-  details?: any;
+  details?: Record<string, unknown>;
 }

@@ -61,3 +61,47 @@ export const LOG_PREFIXES = {
   /** Warning message prefix */
   WARN: '[WARN]',
 } as const;
+
+/**
+ * Similarity scoring weights for duplicate detection.
+ * These weights determine the relative importance of each factor
+ * when calculating entity similarity for duplicate detection.
+ */
+export const SIMILARITY_WEIGHTS = {
+  /** Name similarity weight (40%) - Uses Levenshtein distance */
+  NAME: 0.4,
+  /** Entity type match weight (20%) - Exact match required */
+  TYPE: 0.2,
+  /** Observation overlap weight (30%) - Uses Jaccard similarity */
+  OBSERVATION: 0.3,
+  /** Tag overlap weight (10%) - Uses Jaccard similarity */
+  TAG: 0.1,
+} as const;
+
+/**
+ * Default threshold for duplicate detection (80% similarity required).
+ */
+export const DEFAULT_DUPLICATE_THRESHOLD = 0.8;
+
+/**
+ * Search result limits to prevent resource exhaustion.
+ */
+export const SEARCH_LIMITS = {
+  /** Default number of results to return */
+  DEFAULT: 50,
+  /** Maximum number of results allowed */
+  MAX: 200,
+  /** Minimum number of results (must be at least 1) */
+  MIN: 1,
+} as const;
+
+/**
+ * Entity importance range validation constants.
+ * Importance is used to prioritize entities (0 = lowest, 10 = highest).
+ */
+export const IMPORTANCE_RANGE = {
+  /** Minimum importance value */
+  MIN: 0,
+  /** Maximum importance value */
+  MAX: 10,
+} as const;
