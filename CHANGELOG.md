@@ -5,6 +5,38 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2025-11-25
+
+### Added
+- **Sprint 2: Testing & Core Coverage** - Comprehensive unit tests for critical managers
+
+  **RelationManager Tests (Task 2.2)**: +24 tests
+  - createRelations(): 8 tests for creation, validation, duplicate filtering
+  - deleteRelations(): 6 tests for deletion, timestamp updates, cascading
+  - getRelations(): 7 tests for incoming/outgoing relation retrieval
+  - Graph integrity: 3 tests for referential integrity, circular relations
+  - Full CRUD coverage with error handling
+  - Files: `__tests__/unit/core/RelationManager.test.ts`
+
+  **CompressionManager Tests (Task 2.3)**: +32 tests
+  - findDuplicates(): 10 tests for similarity detection, bucketing optimization
+  - mergeEntities(): 11 tests for observation/tag combination, relation redirection
+  - compressGraph(): 5 tests for dry-run mode, statistics calculation
+  - Edge cases: 6 tests for empty observations, long names, unicode, special chars
+  - Validates sophisticated duplicate detection algorithm with type/prefix bucketing
+  - Tests all merge strategies (highest importance, earliest createdAt, union of observations/tags)
+  - Files: `__tests__/unit/features/CompressionManager.test.ts`
+
+### Testing
+- **Test Count**: 139 tests (up from 83, +67% increase)
+- **Test Files**: 7 test suites covering core managers and features
+- **New Coverage**:
+  - RelationManager: Comprehensive test coverage (was 0%)
+  - CompressionManager: Comprehensive test coverage (was 0%)
+- **All Tests Passing**: 139/139 ✅
+- **TypeScript Strict Mode**: ✅ All type checks passing
+- **Zero Vulnerabilities**: npm audit clean ✅
+
 ## [0.11.7] - 2025-11-25
 
 ### Changed
