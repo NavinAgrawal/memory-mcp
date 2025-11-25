@@ -1395,12 +1395,16 @@ interface Relation {
 
 ### Storage Files
 
-- **memory.jsonl**: Active knowledge graph (JSONL format)
-- **archive.jsonl**: Archived entities
-- **saved-searches.jsonl**: Saved search queries
-- **tag-aliases.jsonl**: Tag synonym mappings
+The server automatically creates and manages these files:
 
-**Custom path:** Set `MEMORY_FILE_PATH` environment variable
+- **`memory.jsonl`**: Main knowledge graph storage (entities and relations)
+- **`memory-saved-searches.jsonl`**: Saved search queries with metadata
+- **`memory-tag-aliases.jsonl`**: Tag synonym mappings (alias → canonical)
+- **`.backups/`**: Backup directory with timestamped snapshots
+
+All files use JSONL (JSON Lines) format where each line is a valid JSON object.
+
+**Custom path:** Set `MEMORY_FILE_PATH` environment variable (see [Configuration](#configuration))
 
 ## Usage Examples
 
@@ -1496,10 +1500,31 @@ Detailed documentation for advanced features:
 
 ### Environment Variables
 
-- `MEMORY_FILE_PATH`: Path to memory storage file (default: `memory.jsonl`)
+- **`MEMORY_FILE_PATH`**: Path to the main memory storage file
+  - **Default**: `memory.jsonl` in the current working directory
+  - **Format**: JSONL (JSON Lines) format
+  - Sets the location for the primary knowledge graph storage
+
+### Storage File Organization
+
+When you set `MEMORY_FILE_PATH`, the server automatically creates related files in the same directory:
+
+```
+/your/data/directory/
+├── memory.jsonl                    # Main knowledge graph (active entities & relations)
+├── memory-saved-searches.jsonl     # Saved search queries
+├── memory-tag-aliases.jsonl        # Tag synonym mappings
+└── .backups/                       # Timestamped backup directory
+    ├── backup_2025-11-24_10-30-00-123.jsonl
+    ├── backup_2025-11-24_10-30-00-123.jsonl.meta.json
+    └── ...
+```
+
+**Note**: All auxiliary files use the same base filename as `MEMORY_FILE_PATH` with descriptive suffixes.
 
 ### Example Configuration
 
+**Claude Desktop (`claude_desktop_config.json`):**
 ```json
 {
   "mcpServers": {
@@ -1507,12 +1532,25 @@ Detailed documentation for advanced features:
       "command": "node",
       "args": ["/path/to/memory-mcp/src/memory/dist/index.js"],
       "env": {
-        "MEMORY_FILE_PATH": "/path/to/memory.jsonl"
+        "MEMORY_FILE_PATH": "/path/to/data/memory.jsonl"
       }
     }
   }
 }
 ```
+
+**Default behavior (no environment variable):**
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": ["/path/to/memory-mcp/src/memory/dist/index.js"]
+    }
+  }
+}
+```
+Creates `memory.jsonl` in the current working directory.
 
 ## Development
 
