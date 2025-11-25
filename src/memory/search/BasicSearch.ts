@@ -1,7 +1,7 @@
 /**
  * Basic Search
  *
- * Simple text-based search with tag, importance, and date filters.
+ * Simple text-based search with tag, importance, and date filters with result caching.
  *
  * @module search/BasicSearch
  */
@@ -10,12 +10,16 @@ import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { isWithinDateRange } from '../utils/dateUtils.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
+import { searchCaches } from '../utils/searchCache.js';
 
 /**
- * Performs basic text search with optional filters.
+ * Performs basic text search with optional filters and caching.
  */
 export class BasicSearch {
-  constructor(private storage: GraphStorage) {}
+  constructor(
+    private storage: GraphStorage,
+    private enableCache: boolean = true
+  ) {}
 
   /**
    * Search nodes by text query with optional filters and pagination.
@@ -38,6 +42,15 @@ export class BasicSearch {
     offset: number = 0,
     limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
+    // Check cache first
+    if (this.enableCache) {
+      const cacheKey = { query, tags, minImportance, maxImportance, offset, limit };
+      const cached = searchCaches.basic.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const graph = await this.storage.loadGraph();
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
@@ -81,7 +94,15 @@ export class BasicSearch {
       r => filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
     );
 
-    return { entities: paginatedEntities, relations: filteredRelations };
+    const result = { entities: paginatedEntities, relations: filteredRelations };
+
+    // Cache the result
+    if (this.enableCache) {
+      const cacheKey = { query, tags, minImportance, maxImportance, offset, limit };
+      searchCaches.basic.set(cacheKey, result);
+    }
+
+    return result;
   }
 
   /**
@@ -121,6 +142,15 @@ export class BasicSearch {
     offset: number = 0,
     limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
+    // Check cache first
+    if (this.enableCache) {
+      const cacheKey = { method: 'dateRange', startDate, endDate, entityType, tags, offset, limit };
+      const cached = searchCaches.basic.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const graph = await this.storage.loadGraph();
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
@@ -164,6 +194,14 @@ export class BasicSearch {
       return inDateRange && involvesFilteredEntities;
     });
 
-    return { entities: paginatedEntities, relations: filteredRelations };
+    const result = { entities: paginatedEntities, relations: filteredRelations };
+
+    // Cache the result
+    if (this.enableCache) {
+      const cacheKey = { method: 'dateRange', startDate, endDate, entityType, tags, offset, limit };
+      searchCaches.basic.set(cacheKey, result);
+    }
+
+    return result;
   }
 }

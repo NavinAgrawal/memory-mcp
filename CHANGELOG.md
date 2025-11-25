@@ -5,6 +5,45 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Search Result Caching (Task 3.5)** - Faster repeated queries with LRU caching
+
+  **Search Result Caching**: Cache frequent queries to improve performance for repeated searches
+  - Added SearchCache class with LRU eviction and TTL expiration
+  - Integrated caching into BasicSearch for searchNodes() and searchByDateRange()
+  - Automatic cache invalidation when graph data changes
+  - No external dependencies (pure TypeScript implementation)
+  - Cache statistics tracking for monitoring
+
+  **Implementation Details**:
+  - SearchCache with configurable max size (default: 500 entries) and TTL (default: 5 minutes)
+  - Hash-based key generation from query parameters
+  - LRU eviction when cache reaches capacity
+  - TTL-based automatic expiration
+  - Global caches for different search types (basic, ranked, boolean, fuzzy)
+  - GraphStorage.saveGraph() automatically clears all caches on write
+
+  **Features**:
+  - Get/set operations with automatic cache key generation
+  - Cache statistics (hits, misses, size, hit rate)
+  - Periodic cleanup of expired entries
+  - Optional cache disable via constructor parameter (enableCache: boolean)
+  - clearAllSearchCaches() utility for manual invalidation
+  - getAllCacheStats() for monitoring all cache performance
+
+  **Performance Benefits**:
+  - Instant results for repeated identical queries
+  - Reduced CPU and I/O for frequent searches
+  - Expected 100x+ speedup for cached results
+  - Configurable trade-off between memory and performance
+
+### Changed
+- BasicSearch constructor now accepts optional `enableCache` parameter (default: true)
+- BasicSearch.searchNodes() and searchByDateRange() use result caching
+- GraphStorage.saveGraph() clears all search caches to maintain consistency
+
 ## [0.22.0] - 2025-11-25
 
 ### Added
