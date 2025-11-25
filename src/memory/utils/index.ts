@@ -57,3 +57,11 @@ export {
   type TagAlias,
   type ExportFormat,
 } from './schemas.js';
+export {
+  SearchCache,
+  searchCaches,
+  clearAllSearchCaches,
+  getAllCacheStats,
+  cleanupAllCaches,
+  type CacheStats,
+} from './searchCache.js';

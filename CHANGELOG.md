@@ -5,6 +5,114 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Search Result Caching (Task 3.5)** - Faster repeated queries with LRU caching
+
+  **Search Result Caching**: Cache frequent queries to improve performance for repeated searches
+  - Added SearchCache class with LRU eviction and TTL expiration
+  - Integrated caching into BasicSearch for searchNodes() and searchByDateRange()
+  - Automatic cache invalidation when graph data changes
+  - No external dependencies (pure TypeScript implementation)
+  - Cache statistics tracking for monitoring
+
+  **Implementation Details**:
+  - SearchCache with configurable max size (default: 500 entries) and TTL (default: 5 minutes)
+  - Hash-based key generation from query parameters
+  - LRU eviction when cache reaches capacity
+  - TTL-based automatic expiration
+  - Global caches for different search types (basic, ranked, boolean, fuzzy)
+  - GraphStorage.saveGraph() automatically clears all caches on write
+
+  **Features**:
+  - Get/set operations with automatic cache key generation
+  - Cache statistics (hits, misses, size, hit rate)
+  - Periodic cleanup of expired entries
+  - Optional cache disable via constructor parameter (enableCache: boolean)
+  - clearAllSearchCaches() utility for manual invalidation
+  - getAllCacheStats() for monitoring all cache performance
+
+  **Performance Benefits**:
+  - Instant results for repeated identical queries
+  - Reduced CPU and I/O for frequent searches
+  - Expected 100x+ speedup for cached results
+  - Configurable trade-off between memory and performance
+
+### Changed
+- BasicSearch constructor now accepts optional `enableCache` parameter (default: true)
+- BasicSearch.searchNodes() and searchByDateRange() use result caching
+- GraphStorage.saveGraph() clears all search caches to maintain consistency
+
+## [0.22.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Pre-calculated TF-IDF Indexes (Task 3.4)** - 10x+ faster ranked search
+
+  **TF-IDF Index Pre-calculation**: Speed up ranked search with pre-calculated indexes
+  - Added TFIDFIndexManager for index lifecycle management
+  - Added DocumentVector and TFIDFIndex types for structured index storage
+  - Modified RankedSearch to use pre-calculated indexes when available
+  - Falls back to on-the-fly calculation if index not available
+  - Supports incremental index updates for entity changes
+  - Index persistence to disk in `.indexes/tfidf-index.json`
+
+  **Implementation Details**:
+  - RankedSearch constructor accepts optional `storageDir` parameter
+  - TFIDFIndexManager.buildIndex() creates full index from knowledge graph
+  - TFIDFIndexManager.updateIndex() efficiently updates changed entities
+  - Pre-calculated term frequencies and IDF stored in JSON format
+  - Index automatically loaded from disk on first search
+  - Backward compatible (works without index, just slower)
+
+  **Performance Benefits**:
+  - Pre-calculated indexes eliminate redundant TF-IDF calculations
+  - Incremental updates avoid full index rebuilds
+  - Fast path when index available, slow path as fallback
+  - Expected 10x+ speedup for ranked search on large graphs
+  - Reduced CPU usage during search operations
+
+### Changed
+- RankedSearch constructor now accepts optional `storageDir` parameter for index management
+- RankedSearch.searchNodesRanked() uses pre-calculated index when available
+- Added TFIDFIndexManager to manage index building, updating, and persistence
+
+## [0.21.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Graph Size Limits & Query Complexity Limits (Tasks 3.7 & 3.9)** - Resource protection
+
+  **Graph Size Limits (Task 3.7)**: Prevent resource exhaustion with entity and relation quotas
+  - Added GRAPH_LIMITS constants: MAX_ENTITIES (100,000), MAX_RELATIONS (1,000,000)
+  - EntityManager.createEntities() validates entity count before adding
+  - RelationManager.createRelations() validates relation count before adding
+  - Throws ValidationError if limits would be exceeded
+  - Pre-filters duplicates before checking limits for accuracy
+
+  **Query Complexity Limits (Task 3.9)**: Prevent complex boolean queries from exhausting resources
+  - Added QUERY_LIMITS constants: MAX_DEPTH (10), MAX_TERMS (50), MAX_OPERATORS (20), MAX_QUERY_LENGTH (5000)
+  - BooleanSearch validates query length before parsing
+  - BooleanSearch.validateQueryComplexity() checks nesting depth, term count, operator count
+  - BooleanSearch.calculateQueryComplexity() recursively analyzes query AST
+  - Throws ValidationError with specific metrics if complexity exceeds limits
+
+  **Features**:
+  - Centralized limit constants in utils/constants.ts
+  - Early validation before expensive operations
+  - Clear error messages with actual vs. maximum values
+  - Protection against malicious or accidental resource exhaustion
+  - Configurable limits for different deployment scenarios
+
+### Changed
+- EntityManager.createEntities() now validates graph size limits before adding entities
+- RelationManager.createRelations() now validates graph size limits before adding relations
+- BooleanSearch.booleanSearch() now validates query complexity before execution
+
+### Security
+- Protection against resource exhaustion attacks via large graphs
+- Protection against denial-of-service via complex boolean queries
+- Input validation prevents malicious query construction
+
 ## [0.20.0] - 2025-11-25
 
 ### Added

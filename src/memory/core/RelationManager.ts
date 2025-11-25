@@ -10,6 +10,7 @@ import type { Relation } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
 import { ValidationError } from '../utils/errors.js';
 import { BatchCreateRelationsSchema, DeleteRelationsSchema } from '../utils/index.js';
+import { GRAPH_LIMITS } from '../utils/constants.js';
 
 /**
  * Manages relation operations with automatic timestamp handling.
@@ -68,12 +69,21 @@ export class RelationManager {
     const graph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 
-    const newRelations = relations
-      .filter(r => !graph.relations.some(existing =>
-        existing.from === r.from &&
-        existing.to === r.to &&
-        existing.relationType === r.relationType
-      ))
+    // Check graph size limits
+    const relationsToAdd = relations.filter(r => !graph.relations.some(existing =>
+      existing.from === r.from &&
+      existing.to === r.to &&
+      existing.relationType === r.relationType
+    ));
+
+    if (graph.relations.length + relationsToAdd.length > GRAPH_LIMITS.MAX_RELATIONS) {
+      throw new ValidationError(
+        'Graph size limit exceeded',
+        [`Adding ${relationsToAdd.length} relations would exceed maximum of ${GRAPH_LIMITS.MAX_RELATIONS} relations`]
+      );
+    }
+
+    const newRelations = relationsToAdd
       .map(r => ({
         ...r,
         createdAt: r.createdAt || timestamp,

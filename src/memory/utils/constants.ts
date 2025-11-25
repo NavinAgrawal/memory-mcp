@@ -105,3 +105,35 @@ export const IMPORTANCE_RANGE = {
   /** Maximum importance value */
   MAX: 10,
 } as const;
+
+/**
+ * Graph size limits to prevent resource exhaustion and ensure performance.
+ * These limits help maintain system stability and responsiveness.
+ */
+export const GRAPH_LIMITS = {
+  /** Maximum number of entities in the graph */
+  MAX_ENTITIES: 100000,
+  /** Maximum number of relations in the graph */
+  MAX_RELATIONS: 1000000,
+  /** Maximum graph file size in megabytes */
+  MAX_FILE_SIZE_MB: 500,
+  /** Maximum observations per entity */
+  MAX_OBSERVATIONS_PER_ENTITY: 1000,
+  /** Maximum tags per entity */
+  MAX_TAGS_PER_ENTITY: 100,
+} as const;
+
+/**
+ * Query complexity limits to prevent expensive query operations.
+ * These limits protect against denial-of-service through complex queries.
+ */
+export const QUERY_LIMITS = {
+  /** Maximum nesting depth for boolean queries */
+  MAX_DEPTH: 10,
+  /** Maximum number of terms in a single query */
+  MAX_TERMS: 50,
+  /** Maximum number of boolean operators (AND/OR/NOT) */
+  MAX_OPERATORS: 20,
+  /** Maximum query string length */
+  MAX_QUERY_LENGTH: 5000,
+} as const;

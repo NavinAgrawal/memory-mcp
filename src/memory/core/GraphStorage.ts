@@ -9,6 +9,7 @@
 
 import { promises as fs } from 'fs';
 import type { KnowledgeGraph, Entity, Relation } from '../types/index.js';
+import { clearAllSearchCaches } from '../utils/searchCache.js';
 
 /**
  * GraphStorage manages persistence of the knowledge graph to disk.
@@ -157,6 +158,9 @@ export class GraphStorage {
 
     // Invalidate cache to ensure next load reads fresh data
     this.cache = null;
+
+    // Clear all search caches since graph data has changed
+    clearAllSearchCaches();
   }
 
   /**

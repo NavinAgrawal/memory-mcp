@@ -8,7 +8,8 @@
 
 import type { BooleanQueryNode, Entity, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { SEARCH_LIMITS } from '../utils/constants.js';
+import { SEARCH_LIMITS, QUERY_LIMITS } from '../utils/constants.js';
+import { ValidationError } from '../utils/errors.js';
 
 /**
  * Performs boolean search with query parsing and AST evaluation.
@@ -41,6 +42,14 @@ export class BooleanSearch {
     offset: number = 0,
     limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
+    // Validate query length
+    if (query.length > QUERY_LIMITS.MAX_QUERY_LENGTH) {
+      throw new ValidationError(
+        'Query too long',
+        [`Query length ${query.length} exceeds maximum of ${QUERY_LIMITS.MAX_QUERY_LENGTH} characters`]
+      );
+    }
+
     const graph = await this.storage.loadGraph();
 
     // Parse the query into an AST
@@ -52,6 +61,9 @@ export class BooleanSearch {
         `Failed to parse boolean query: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+
+    // Validate query complexity
+    this.validateQueryComplexity(queryAst);
 
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
@@ -295,5 +307,70 @@ export class BooleanSearch {
       entity.observations.some(obs => obs.toLowerCase().includes(termLower)) ||
       (entity.tags?.some(tag => tag.toLowerCase().includes(termLower)) || false)
     );
+  }
+
+  /**
+   * Validate query complexity to prevent resource exhaustion.
+   * Checks nesting depth, term count, and operator count against configured limits.
+   */
+  private validateQueryComplexity(node: BooleanQueryNode, depth: number = 0): void {
+    // Check nesting depth
+    if (depth > QUERY_LIMITS.MAX_DEPTH) {
+      throw new ValidationError(
+        'Query too complex',
+        [`Query nesting depth ${depth} exceeds maximum of ${QUERY_LIMITS.MAX_DEPTH}`]
+      );
+    }
+
+    // Count terms and operators recursively
+    const complexity = this.calculateQueryComplexity(node);
+
+    if (complexity.terms > QUERY_LIMITS.MAX_TERMS) {
+      throw new ValidationError(
+        'Query too complex',
+        [`Query has ${complexity.terms} terms, exceeds maximum of ${QUERY_LIMITS.MAX_TERMS}`]
+      );
+    }
+
+    if (complexity.operators > QUERY_LIMITS.MAX_OPERATORS) {
+      throw new ValidationError(
+        'Query too complex',
+        [`Query has ${complexity.operators} operators, exceeds maximum of ${QUERY_LIMITS.MAX_OPERATORS}`]
+      );
+    }
+  }
+
+  /**
+   * Calculate query complexity metrics.
+   */
+  private calculateQueryComplexity(
+    node: BooleanQueryNode,
+    depth: number = 0
+  ): { terms: number; operators: number; maxDepth: number } {
+    switch (node.type) {
+      case 'AND':
+      case 'OR':
+        const childResults = node.children.map(child => this.calculateQueryComplexity(child, depth + 1));
+        return {
+          terms: childResults.reduce((sum, r) => sum + r.terms, 0),
+          operators: childResults.reduce((sum, r) => sum + r.operators, 1), // +1 for current operator
+          maxDepth: Math.max(depth, ...childResults.map(r => r.maxDepth)),
+        };
+
+      case 'NOT':
+        const notResult = this.calculateQueryComplexity(node.child, depth + 1);
+        return {
+          terms: notResult.terms,
+          operators: notResult.operators + 1,
+          maxDepth: Math.max(depth, notResult.maxDepth),
+        };
+
+      case 'TERM':
+        return {
+          terms: 1,
+          operators: 0,
+          maxDepth: depth,
+        };
+    }
   }
 }

@@ -22,6 +22,8 @@ export type {
   SearchResult,
   SavedSearch,
   BooleanQueryNode,
+  DocumentVector,
+  TFIDFIndex,
 } from './search.types.js';
 
 // Analytics types
