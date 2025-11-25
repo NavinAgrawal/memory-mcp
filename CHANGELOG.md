@@ -5,6 +5,40 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2025-11-25
+
+### Added
+- **Sprint 3: Pagination for Search Operations (Tasks 3.1-3.3)** - Efficient result pagination
+
+  **Pagination Implementation**: Added offset/limit parameters to 3 search methods
+  - BasicSearch.searchNodes() - Added offset (default: 0) and limit (default: 50, max: 200) parameters
+  - BasicSearch.searchByDateRange() - Added offset and limit parameters
+  - BooleanSearch.booleanSearch() - Added offset and limit parameters
+  - FuzzySearch.fuzzySearch() - Added offset and limit parameters
+
+  **Features**:
+  - Validated pagination parameters (offset >= 0, limit 1-200)
+  - Used centralized SEARCH_LIMITS constants
+  - Applied pagination after filtering for efficiency
+  - Relations filtered to match paginated entities only
+  - Backward compatible (new parameters are optional with defaults)
+
+  **Performance Benefits**:
+  - Reduced network payload for large result sets
+  - Improved client-side rendering performance
+  - Consistent behavior across all search methods
+  - Standard defaults (50 results) with configurable limits
+
+### Changed
+- BasicSearch.searchNodes() signature extended with optional offset and limit
+- BasicSearch.searchByDateRange() signature extended with optional offset and limit
+- BooleanSearch.booleanSearch() signature extended with optional offset and limit
+- FuzzySearch.fuzzySearch() signature extended with optional offset and limit
+
+### Documentation
+- Updated JSDoc comments with pagination parameter documentation
+- All changes backward compatible (optional parameters with defaults)
+
 ## [0.19.0] - 2025-11-25
 
 ### Added

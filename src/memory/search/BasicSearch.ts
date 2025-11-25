@@ -9,6 +9,7 @@
 import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { isWithinDateRange } from '../utils/dateUtils.js';
+import { SEARCH_LIMITS } from '../utils/constants.js';
 
 /**
  * Performs basic text search with optional filters.
@@ -17,7 +18,7 @@ export class BasicSearch {
   constructor(private storage: GraphStorage) {}
 
   /**
-   * Search nodes by text query with optional filters.
+   * Search nodes by text query with optional filters and pagination.
    *
    * Searches across entity names, types, and observations.
    *
@@ -25,16 +26,24 @@ export class BasicSearch {
    * @param tags - Optional tags to filter by
    * @param minImportance - Optional minimum importance (0-10)
    * @param maxImportance - Optional maximum importance (0-10)
-   * @returns Filtered knowledge graph
+   * @param offset - Number of results to skip (default: 0)
+   * @param limit - Maximum number of results (default: 50, max: 200)
+   * @returns Filtered knowledge graph with pagination applied
    */
   async searchNodes(
     query: string,
     tags?: string[],
     minImportance?: number,
-    maxImportance?: number
+    maxImportance?: number,
+    offset: number = 0,
+    limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
     const graph = await this.storage.loadGraph();
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Validate pagination parameters
+    const validatedOffset = Math.max(0, offset);
+    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
 
     const filteredEntities = graph.entities.filter(e => {
       // Text search
@@ -64,12 +73,15 @@ export class BasicSearch {
       return true;
     });
 
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+    // Apply pagination
+    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+
+    const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(
       r => filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
     );
 
-    return { entities: filteredEntities, relations: filteredRelations };
+    return { entities: paginatedEntities, relations: filteredRelations };
   }
 
   /**
@@ -91,22 +103,30 @@ export class BasicSearch {
   }
 
   /**
-   * Search by date range.
+   * Search by date range with optional filters and pagination.
    *
    * @param startDate - Optional start date (ISO 8601)
    * @param endDate - Optional end date (ISO 8601)
    * @param entityType - Optional entity type filter
    * @param tags - Optional tags filter
-   * @returns Filtered knowledge graph
+   * @param offset - Number of results to skip (default: 0)
+   * @param limit - Maximum number of results (default: 50, max: 200)
+   * @returns Filtered knowledge graph with pagination applied
    */
   async searchByDateRange(
     startDate?: string,
     endDate?: string,
     entityType?: string,
-    tags?: string[]
+    tags?: string[],
+    offset: number = 0,
+    limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
     const graph = await this.storage.loadGraph();
     const normalizedTags = tags?.map(tag => tag.toLowerCase());
+
+    // Validate pagination parameters
+    const validatedOffset = Math.max(0, offset);
+    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
 
     const filteredEntities = graph.entities.filter(e => {
       // Date filter (use createdAt or lastModified)
@@ -131,7 +151,10 @@ export class BasicSearch {
       return true;
     });
 
-    const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
+    // Apply pagination
+    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+
+    const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(r => {
       const dateToCheck = r.createdAt || r.lastModified;
       const inDateRange = !dateToCheck || isWithinDateRange(dateToCheck, startDate, endDate);
@@ -141,6 +164,6 @@ export class BasicSearch {
       return inDateRange && involvesFilteredEntities;
     });
 
-    return { entities: filteredEntities, relations: filteredRelations };
+    return { entities: paginatedEntities, relations: filteredRelations };
   }
 }
