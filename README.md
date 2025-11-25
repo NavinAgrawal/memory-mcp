@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.11.5-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-0.11.6-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)

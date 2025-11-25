@@ -5,6 +5,30 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.6] - 2025-11-25
+
+### Documentation
+- **Refactored README for GitHub Best Practices**: Removed status tracking, focused on features
+  - Removed "What's New" section (version-specific status updates now in CHANGELOG only)
+  - Removed version tags from Features section (e.g., "v0.9.0 Architecture Update")
+  - Removed progress indicators and statistics (e.g., "✅ All 83 tests passing")
+  - Added timeless "Key Features" section describing capabilities, not changes
+  - Updated Features section to focus on what the project IS and CAN DO
+  - Cleaned up Acknowledgments to remove version-specific stats
+  - README now serves as documentation, CHANGELOG serves as history
+
+- **Documented Storage File Organization**: Complete configuration documentation
+  - Added detailed `MEMORY_FILE_PATH` environment variable documentation
+  - Added "Storage File Organization" section showing complete file structure
+  - Documented backup directory location (`.backups/`)
+  - Documented auxiliary files: `saved-searches.jsonl`, `tag-aliases.jsonl`
+  - Added naming pattern explanation (all use same base filename with suffixes)
+  - Added configuration examples with and without environment variable
+  - Updated Data Model section with accurate storage file descriptions
+  - Removed reference to non-existent `archive.jsonl`
+
+- **All Tests Passing**: 83/83 tests ✅ | TypeScript typecheck ✅
+
 ## [0.11.5] - 2025-11-24
 
 ### Added
