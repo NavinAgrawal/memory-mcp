@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 25.7% complete (1,076/3,994 lines removed)
+**Status:** 🚧 28.5% complete (1,195/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 3,118 lines
+**Current:** 2,999 lines
 
 ### Completed Phases
 
@@ -150,7 +150,23 @@
 
 **Total Phase 1-8 Progress:** 1,076 lines removed (25.7%)
 
-### Remaining Work (~2,918 lines to refactor)
+#### ✅ Phase 9: Hierarchy Operations Delegation (v0.32.0) - COMPLETE
+- Removed setEntityParent() implementation (27 lines) → delegates to HierarchyManager
+- Removed wouldCreateCycle() helper method (19 lines) → encapsulated in HierarchyManager
+- Removed getChildren() implementation (10 lines) → delegates to HierarchyManager
+- Removed getParent() implementation (15 lines) → delegates to HierarchyManager
+- Removed getAncestors() implementation (18 lines) → delegates to HierarchyManager
+- Removed getDescendants() implementation (23 lines) → delegates to HierarchyManager
+- Removed getSubtree() implementation (22 lines) → delegates to HierarchyManager
+- Removed getRootEntities() implementation (4 lines) → delegates to HierarchyManager
+- Removed getEntityDepth() implementation (4 lines) → delegates to HierarchyManager
+- Removed moveEntity() implementation (3 lines) → delegates to HierarchyManager
+- Added HierarchyManager instance coordinating all hierarchy operations
+- **Progress**: 3,118 → 2,999 lines (119 lines removed, 3.8%)
+
+**Total Phase 1-9 Progress:** 1,195 lines removed (28.5%)
+
+### Remaining Work (~2,799 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
@@ -257,12 +273,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 25.7% complete (v0.24.0-v0.31.0)
+- **Sprint 4:** 🚧 28.5% complete (v0.24.0-v0.32.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.31.0
+- **Current Version:** v0.32.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 3,118 lines (target: <200)
+- **index.ts Size:** 2,999 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -319,5 +335,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.31.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (25.7%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.32.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (28.5%) | Sprint 5 ⏳ Planned

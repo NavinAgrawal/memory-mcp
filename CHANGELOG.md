@@ -5,6 +5,38 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Hierarchy Operations Delegation - Phase 9** - Delegate all hierarchy operations to HierarchyManager
+
+  **Removed Duplicate Hierarchy Implementations**: Refactored KnowledgeGraphManager to use HierarchyManager module
+  - Added HierarchyManager import and instance to KnowledgeGraphManager
+  - Removed setEntityParent() implementation (27 lines) → delegates to HierarchyManager
+  - Removed wouldCreateCycle() helper method (19 lines) → encapsulated in HierarchyManager
+  - Removed getChildren() implementation (10 lines) → delegates to HierarchyManager
+  - Removed getParent() implementation (15 lines) → delegates to HierarchyManager
+  - Removed getAncestors() implementation (18 lines) → delegates to HierarchyManager
+  - Removed getDescendants() implementation (23 lines) → delegates to HierarchyManager
+  - Removed getSubtree() implementation (22 lines) → delegates to HierarchyManager
+  - Removed getRootEntities() implementation (4 lines) → delegates to HierarchyManager
+  - Removed getEntityDepth() implementation (4 lines) → delegates to HierarchyManager
+  - Removed moveEntity() implementation (3 lines) → delegates to HierarchyManager
+
+  **Impact**:
+  - Reduced index.ts from 3,118 lines to 2,999 lines (119 lines removed, 3.8% reduction)
+  - Eliminated all hierarchy management logic from index.ts
+  - Centralized hierarchy operations in HierarchyManager
+  - Cycle detection logic now encapsulated in dedicated module
+  - Improved separation of concerns (hierarchy logic fully abstracted)
+  - All 9 hierarchy methods now use single source of truth
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 2,999 lines (28.5% total reduction)
+  - Phases 1-9: 1,195 lines removed total
+  - Remaining: ~2,799 lines of implementation code to refactor
+
 ## [0.31.0] - 2025-11-25
 
 ### Changed

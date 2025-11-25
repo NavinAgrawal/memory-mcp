@@ -20,6 +20,7 @@ import { EntityManager } from './core/EntityManager.js';
 import { RelationManager } from './core/RelationManager.js';
 import { SearchManager } from './search/SearchManager.js';
 import { CompressionManager } from './features/CompressionManager.js';
+import { HierarchyManager } from './features/HierarchyManager.js';
 import type {
   Entity,
   Relation,
@@ -101,6 +102,7 @@ export class KnowledgeGraphManager {
   private relationManager: RelationManager;
   private searchManager: SearchManager;
   private compressionManager: CompressionManager;
+  private hierarchyManager: HierarchyManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -113,6 +115,7 @@ export class KnowledgeGraphManager {
     this.relationManager = new RelationManager(this.storage);
     this.searchManager = new SearchManager(this.storage, this.savedSearchesFilePath);
     this.compressionManager = new CompressionManager(this.storage);
+    this.hierarchyManager = new HierarchyManager(this.storage);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
@@ -769,185 +772,63 @@ export class KnowledgeGraphManager {
    * @returns Updated entity
    */
   async setEntityParent(entityName: string, parentName: string | null): Promise<Entity> {
-    const graph = await this.loadGraph();
-    const entity = graph.entities.find(e => e.name === entityName);
-
-    if (!entity) {
-      throw new Error(`Entity "${entityName}" not found`);
-    }
-
-    // If setting a parent, validate it exists and doesn't create a cycle
-    if (parentName !== null) {
-      const parent = graph.entities.find(e => e.name === parentName);
-      if (!parent) {
-        throw new Error(`Parent entity "${parentName}" not found`);
-      }
-
-      // Check for cycles
-      if (this.wouldCreateCycle(graph, entityName, parentName)) {
-        throw new Error(`Setting parent "${parentName}" for entity "${entityName}" would create a cycle`);
-      }
-    }
-
-    entity.parentId = parentName || undefined;
-    entity.lastModified = new Date().toISOString();
-
-    await this.saveGraph(graph);
-    return entity;
-  }
-
-  /**
-   * Check if setting a parent would create a cycle in the hierarchy
-   */
-  private wouldCreateCycle(graph: KnowledgeGraph, entityName: string, parentName: string): boolean {
-    const visited = new Set<string>();
-    let current: string | undefined = parentName;
-
-    while (current) {
-      if (visited.has(current)) {
-        return true; // Cycle detected in existing hierarchy
-      }
-      if (current === entityName) {
-        return true; // Would create a cycle
-      }
-      visited.add(current);
-
-      const currentEntity = graph.entities.find(e => e.name === current);
-      current = currentEntity?.parentId;
-    }
-
-    return false;
+    return this.hierarchyManager.setEntityParent(entityName, parentName);
   }
 
   /**
    * Get the immediate children of an entity
    */
   async getChildren(entityName: string): Promise<Entity[]> {
-    const graph = await this.loadGraph();
-
-    // Verify entity exists
-    if (!graph.entities.find(e => e.name === entityName)) {
-      throw new Error(`Entity "${entityName}" not found`);
-    }
-
-    return graph.entities.filter(e => e.parentId === entityName);
+    return this.hierarchyManager.getChildren(entityName);
   }
 
   /**
    * Get the parent of an entity
    */
   async getParent(entityName: string): Promise<Entity | null> {
-    const graph = await this.loadGraph();
-    const entity = graph.entities.find(e => e.name === entityName);
-
-    if (!entity) {
-      throw new Error(`Entity "${entityName}" not found`);
-    }
-
-    if (!entity.parentId) {
-      return null;
-    }
-
-    const parent = graph.entities.find(e => e.name === entity.parentId);
-    return parent || null;
+    return this.hierarchyManager.getParent(entityName);
   }
 
   /**
    * Get all ancestors of an entity (parent, grandparent, etc.)
    */
   async getAncestors(entityName: string): Promise<Entity[]> {
-    const graph = await this.loadGraph();
-    const ancestors: Entity[] = [];
-
-    let current = graph.entities.find(e => e.name === entityName);
-    if (!current) {
-      throw new Error(`Entity "${entityName}" not found`);
-    }
-
-    while (current.parentId) {
-      const parent = graph.entities.find(e => e.name === current!.parentId);
-      if (!parent) break;
-      ancestors.push(parent);
-      current = parent;
-    }
-
-    return ancestors;
+    return this.hierarchyManager.getAncestors(entityName);
   }
 
   /**
    * Get all descendants of an entity (children, grandchildren, etc.)
    */
   async getDescendants(entityName: string): Promise<Entity[]> {
-    const graph = await this.loadGraph();
-
-    // Verify entity exists
-    if (!graph.entities.find(e => e.name === entityName)) {
-      throw new Error(`Entity "${entityName}" not found`);
-    }
-
-    const descendants: Entity[] = [];
-    const toProcess = [entityName];
-
-    while (toProcess.length > 0) {
-      const current = toProcess.shift()!;
-      const children = graph.entities.filter(e => e.parentId === current);
-
-      for (const child of children) {
-        descendants.push(child);
-        toProcess.push(child.name);
-      }
-    }
-
-    return descendants;
+    return this.hierarchyManager.getDescendants(entityName);
   }
 
   /**
    * Get the entire subtree rooted at an entity (entity + all descendants)
    */
   async getSubtree(entityName: string): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
-    const entity = graph.entities.find(e => e.name === entityName);
-
-    if (!entity) {
-      throw new Error(`Entity "${entityName}" not found`);
-    }
-
-    const descendants = await this.getDescendants(entityName);
-    const subtreeEntities = [entity, ...descendants];
-    const subtreeEntityNames = new Set(subtreeEntities.map(e => e.name));
-
-    // Include relations between entities in the subtree
-    const subtreeRelations = graph.relations.filter(r =>
-      subtreeEntityNames.has(r.from) && subtreeEntityNames.has(r.to)
-    );
-
-    return {
-      entities: subtreeEntities,
-      relations: subtreeRelations
-    };
+    return this.hierarchyManager.getSubtree(entityName);
   }
 
   /**
    * Get root entities (entities with no parent)
    */
   async getRootEntities(): Promise<Entity[]> {
-    const graph = await this.loadGraph();
-    return graph.entities.filter(e => !e.parentId);
+    return this.hierarchyManager.getRootEntities();
   }
 
   /**
    * Get the depth of an entity in the hierarchy (0 for root, 1 for child of root, etc.)
    */
   async getEntityDepth(entityName: string): Promise<number> {
-    const ancestors = await this.getAncestors(entityName);
-    return ancestors.length;
+    return this.hierarchyManager.getEntityDepth(entityName);
   }
 
   /**
    * Move an entity to a new parent (maintaining its descendants)
    */
   async moveEntity(entityName: string, newParentName: string | null): Promise<Entity> {
-    return await this.setEntityParent(entityName, newParentName);
+    return this.hierarchyManager.moveEntity(entityName, newParentName);
   }
 
   // Phase 3: Memory compression - duplicate detection and merging
