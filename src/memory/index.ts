@@ -16,6 +16,22 @@ import {
   SEARCH_LIMITS,
   IMPORTANCE_RANGE
 } from './utils/constants.js';
+import { levenshteinDistance } from './utils/levenshtein.js';
+import type {
+  Entity,
+  Relation,
+  KnowledgeGraph,
+  GraphStats,
+  ValidationReport,
+  ValidationError,
+  ValidationWarning,
+  SavedSearch,
+  TagAlias,
+  SearchResult,
+  BooleanQueryNode,
+  ImportResult,
+  CompressionResult,
+} from './types/index.js';
 
 // Define memory file path using environment variable with fallback
 export const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.jsonl');
@@ -56,124 +72,22 @@ export async function ensureMemoryFilePath(): Promise<string> {
 // Initialize memory file path (will be set during startup)
 let MEMORY_FILE_PATH: string;
 
-// We are storing our memory using entities, relations, and observations in a graph structure
-export interface Entity {
-  name: string;
-  entityType: string;
-  observations: string[];
-  createdAt?: string;
-  lastModified?: string;
-  tags?: string[];
-  importance?: number;
-  parentId?: string;  // Phase 2: Hierarchical nesting - references parent entity name
-}
-
-export interface Relation {
-  from: string;
-  to: string;
-  relationType: string;
-  createdAt?: string;
-  lastModified?: string;
-}
-
-export interface KnowledgeGraph {
-  entities: Entity[];
-  relations: Relation[];
-}
-
-export interface GraphStats {
-  totalEntities: number;
-  totalRelations: number;
-  entityTypesCounts: Record<string, number>;
-  relationTypesCounts: Record<string, number>;
-  oldestEntity?: { name: string; date: string };
-  newestEntity?: { name: string; date: string };
-  oldestRelation?: { from: string; to: string; relationType: string; date: string };
-  newestRelation?: { from: string; to: string; relationType: string; date: string };
-  entityDateRange?: { earliest: string; latest: string };
-  relationDateRange?: { earliest: string; latest: string };
-}
-
-export interface ValidationReport {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
-  summary: {
-    totalErrors: number;
-    totalWarnings: number;
-    orphanedRelationsCount: number;
-    entitiesWithoutRelationsCount: number;
-  };
-}
-
-export interface ValidationError {
-  type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
-  message: string;
-  details?: Record<string, unknown>;
-}
-
-export interface ValidationWarning {
-  type: 'isolated_entity' | 'empty_observations' | 'missing_metadata';
-  message: string;
-  details?: Record<string, unknown>;
-}
-
-export interface SavedSearch {
-  name: string;
-  description?: string;
-  query: string;
-  tags?: string[];
-  minImportance?: number;
-  maxImportance?: number;
-  entityType?: string;
-  createdAt: string;
-  lastUsed?: string;
-  useCount: number;
-}
-
-export interface TagAlias {
-  alias: string;
-  canonical: string;
-  description?: string;
-  createdAt: string;
-}
-
-export interface SearchResult {
-  entity: Entity;
-  score: number;
-  matchedFields: {
-    name?: boolean;
-    entityType?: boolean;
-    observations?: string[];
-  };
-}
-
-// Boolean search query AST types
-export type BooleanQueryNode =
-  | { type: 'AND'; children: BooleanQueryNode[] }
-  | { type: 'OR'; children: BooleanQueryNode[] }
-  | { type: 'NOT'; child: BooleanQueryNode }
-  | { type: 'TERM'; field?: string; value: string };
-
-// Import result type
-export interface ImportResult {
-  entitiesAdded: number;
-  entitiesSkipped: number;
-  entitiesUpdated: number;
-  relationsAdded: number;
-  relationsSkipped: number;
-  errors: string[];
-}
-
-// Phase 3: Compression result type
-export interface CompressionResult {
-  duplicatesFound: number;
-  entitiesMerged: number;
-  observationsCompressed: number;
-  relationsConsolidated: number;
-  spaceFreed: number;  // Approximate character count saved
-  mergedEntities: Array<{ kept: string; merged: string[] }>;
-}
+// Re-export types for backward compatibility
+export type {
+  Entity,
+  Relation,
+  KnowledgeGraph,
+  GraphStats,
+  ValidationReport,
+  ValidationError,
+  ValidationWarning,
+  SavedSearch,
+  TagAlias,
+  SearchResult,
+  BooleanQueryNode,
+  ImportResult,
+  CompressionResult,
+};
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
@@ -189,35 +103,6 @@ export class KnowledgeGraphManager {
   }
 
   // Tier 0 C2: Fuzzy search utilities using Levenshtein distance
-  /**
-   * Calculate Levenshtein distance between two strings
-   * Returns the minimum number of single-character edits needed to change one word into another
-   */
-  private levenshteinDistance(str1: string, str2: string): number {
-    const m = str1.length;
-    const n = str2.length;
-    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (str1[i - 1] === str2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1];
-        } else {
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,    // deletion
-            dp[i][j - 1] + 1,    // insertion
-            dp[i - 1][j - 1] + 1 // substitution
-          );
-        }
-      }
-    }
-
-    return dp[m][n];
-  }
-
   /**
    * Check if two strings are fuzzy matches based on similarity threshold
    * @param str1 - First string to compare
@@ -236,7 +121,7 @@ export class KnowledgeGraphManager {
     if (s1.includes(s2) || s2.includes(s1)) return true;
 
     // Calculate similarity using Levenshtein distance
-    const distance = this.levenshteinDistance(s1, s2);
+    const distance = levenshteinDistance(s1, s2);
     const maxLength = Math.max(s1.length, s2.length);
     const similarity = 1 - (distance / maxLength);
 
@@ -1186,7 +1071,7 @@ export class KnowledgeGraphManager {
 
     // Check entity names
     for (const entity of graph.entities) {
-      const distance = this.levenshteinDistance(queryLower, entity.name.toLowerCase());
+      const distance = levenshteinDistance(queryLower, entity.name.toLowerCase());
       const maxLength = Math.max(queryLower.length, entity.name.length);
       const similarity = 1 - (distance / maxLength);
 
@@ -1198,7 +1083,7 @@ export class KnowledgeGraphManager {
     // Check entity types
     const uniqueTypes = [...new Set(graph.entities.map(e => e.entityType))];
     for (const type of uniqueTypes) {
-      const distance = this.levenshteinDistance(queryLower, type.toLowerCase());
+      const distance = levenshteinDistance(queryLower, type.toLowerCase());
       const maxLength = Math.max(queryLower.length, type.length);
       const similarity = 1 - (distance / maxLength);
 
@@ -1831,7 +1716,7 @@ export class KnowledgeGraphManager {
     let factors = 0;
 
     // Name similarity (Levenshtein-based)
-    const nameDistance = this.levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
+    const nameDistance = levenshteinDistance(e1.name.toLowerCase(), e2.name.toLowerCase());
     const maxNameLength = Math.max(e1.name.length, e2.name.length);
     const nameSimilarity = 1 - (nameDistance / maxNameLength);
     score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;
