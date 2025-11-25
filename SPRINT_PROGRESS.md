@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 3.8% complete (164/3,994 lines removed)
+**Status:** 🚧 4.7% complete (199/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 4,030 lines
+**Current:** 3,995 lines
 
 ### Completed Phases
 
@@ -91,16 +91,34 @@
 
 **Total Phase 1-3 Progress:** 164 lines removed (3.8%)
 
-### Remaining Work (~3,830 lines to refactor)
+### Current Work: Sprint 4a - Entity and Relation Operations
 
-#### 🔄 Phase 4-10: Replace Remaining Duplicate Implementations
+**Goal**: Replace duplicate entity and relation operations with manager delegation
+**Estimated Impact**: ~76 lines to be removed
+
+#### ✅ Phase 4: Entity Operations Delegation (v0.27.0) - COMPLETE
+- Removed `createEntities()` implementation (29 lines) and replaced with EntityManager delegation
+- Removed `deleteEntities()` implementation (6 lines) and replaced with EntityManager delegation
+- Added EntityManager instance to KnowledgeGraphManager constructor
+- Fixed schema validation to allow empty arrays for batch operations
+- Updated unit tests for consistency
+- **Progress**: 4,030 → 3,995 lines (35 lines removed, 0.8%)
+
+#### 📋 Phase 5: Relation Operations Delegation (v0.28.0) - PLANNED
+- Replace `createRelations()` implementation (15 lines) with RelationManager delegation
+- Replace `deleteRelations()` implementation (26 lines) with RelationManager delegation
+- Add RelationManager instance to KnowledgeGraphManager constructor
+- **Progress**: Not started
+
+### Remaining Work (~3,754 lines to refactor after 4a)
+
+#### 🔄 Phase 6-12: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
 
-1. **Entity Operations** (~200 lines)
-   - `createEntities()` → use EntityManager.createEntities()
-   - `deleteEntities()` → use EntityManager.deleteEntities()
+1. **Entity Update Operations** (~50 lines)
    - `updateEntity()` → use EntityManager.updateEntity()
-   - Entity validation logic
+   - `addObservations()` → use EntityManager (needs implementation)
+   - `deleteObservations()` → use EntityManager (needs implementation)
 
 2. **Relation Operations** (~150 lines)
    - `createRelations()` → use RelationManager.createRelations()
@@ -228,12 +246,12 @@ main().catch(console.error);
 - **Sprint 1:** ✅ Complete (v0.11.7)
 - **Sprint 2:** ✅ Complete (v0.12.0-v0.19.0)
 - **Sprint 3:** ✅ Complete (v0.20.0-v0.23.0)
-- **Sprint 4:** 🚧 3.8% complete (v0.24.0-v0.26.0)
+- **Sprint 4:** 🚧 4.7% complete (v0.24.0-v0.27.0)
 - **Sprint 5:** ⏳ Not started
-- **Current Version:** v0.26.0
+- **Current Version:** v0.27.0
 
 ### Code Quality Metrics
-- **index.ts Size:** 4,030 lines (target: <200)
+- **index.ts Size:** 3,995 lines (target: <200)
 - **Test Coverage:** 26.79% overall
 - **TypeScript Strict:** ✅ Enabled and clean
 - **ESLint:** Not yet configured (Sprint 1 task deferred)
@@ -290,5 +308,5 @@ main().catch(console.error);
 ---
 
 **Last Updated:** 2025-11-25
-**Current Version:** v0.26.0
-**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (3.8%) | Sprint 5 ⏳ Planned
+**Current Version:** v0.27.0
+**Status:** Sprint 3 ✅ Complete | Sprint 4 🚧 In Progress (4.7%) | Sprint 5 ⏳ Planned

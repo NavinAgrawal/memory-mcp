@@ -180,18 +180,18 @@ export const ExportFormatSchema = z.enum(['json', 'graphml', 'csv']);
 
 /**
  * Batch entity creation validation.
- * Validates array of entities with minimum/maximum constraints.
+ * Validates array of entities with maximum constraints.
+ * Empty arrays are allowed (no-op).
  */
 export const BatchCreateEntitiesSchema = z.array(CreateEntitySchema)
-  .min(1, 'Must create at least one entity')
   .max(1000, 'Cannot create more than 1000 entities in a single batch');
 
 /**
  * Batch relation creation validation.
- * Validates array of relations with minimum/maximum constraints.
+ * Validates array of relations with maximum constraints.
+ * Empty arrays are allowed (no-op).
  */
 export const BatchCreateRelationsSchema = z.array(CreateRelationSchema)
-  .min(1, 'Must create at least one relation')
   .max(1000, 'Cannot create more than 1000 relations in a single batch');
 
 /**

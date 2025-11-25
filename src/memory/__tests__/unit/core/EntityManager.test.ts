@@ -116,10 +116,9 @@ describe('EntityManager', () => {
       ).rejects.toThrow(ValidationError);
     });
 
-    it('should throw ValidationError for empty array', async () => {
-      await expect(
-        manager.createEntities([])
-      ).rejects.toThrow(ValidationError);
+    it('should handle empty array (no-op)', async () => {
+      const result = await manager.createEntities([]);
+      expect(result).toEqual([]);
     });
 
     it('should preserve optional fields', async () => {
