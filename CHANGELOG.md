@@ -5,6 +5,40 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Search Operations Delegation - Phase 6** - Delegate all search operations to SearchManager
+
+  **Removed Duplicate Search Implementations**: Refactored KnowledgeGraphManager to use SearchManager facade
+  - Removed searchNodes() implementation (48 lines) → delegates to SearchManager
+  - Removed openNodes() implementation (17 lines) → delegates to SearchManager
+  - Removed searchByDateRange() implementation (62 lines) → delegates to SearchManager
+  - Removed fuzzySearch() implementation (52 lines) → delegates to SearchManager
+  - Removed getSearchSuggestions() implementation (36 lines) → delegates to SearchManager
+  - Removed searchNodesRanked() implementation (82 lines) → delegates to SearchManager
+  - Removed booleanSearch() implementation (58 lines) → delegates to SearchManager
+  - Removed all TF-IDF helper methods (50 lines): tokenize, calculateTF, calculateIDF, calculateTFIDF, entityToDocument
+  - Removed all boolean query parsing helpers (206 lines): tokenizeBooleanQuery, parseBooleanQuery, evaluateBooleanQuery, entityMatchesTerm
+  - Removed isFuzzyMatch() helper method (24 lines)
+  - Added SearchManager instance coordinating BasicSearch, RankedSearch, BooleanSearch, FuzzySearch modules
+
+  **Impact**:
+  - Reduced index.ts from 3,972 lines to 3,351 lines (621 lines removed, 15.6% reduction)
+  - Eliminated ~600 lines of duplicate search logic and helper methods
+  - Single source of truth for all search operations with caching and pagination
+  - Improved separation of concerns (search logic fully abstracted)
+  - SearchManager coordinates 4 specialized search modules with consistent interfaces
+  - All search methods benefit from caching (100x+ speedup), TF-IDF indexing (10x+ speedup), pagination
+  - Boolean query parser with full AST support now in dedicated module
+  - Search suggestions with Levenshtein distance in dedicated module
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 3,351 lines (20.1% total reduction)
+  - Phases 1-6: 843 lines removed total
+  - Remaining: ~3,151 lines of implementation code to refactor
+
 ## [0.28.0] - 2025-11-25
 
 ### Changed
