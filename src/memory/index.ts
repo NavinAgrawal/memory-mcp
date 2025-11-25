@@ -21,6 +21,8 @@ import { RelationManager } from './core/RelationManager.js';
 import { SearchManager } from './search/SearchManager.js';
 import { CompressionManager } from './features/CompressionManager.js';
 import { HierarchyManager } from './features/HierarchyManager.js';
+import { ExportManager } from './features/ExportManager.js';
+import { ImportManager } from './features/ImportManager.js';
 import type {
   Entity,
   Relation,
@@ -103,6 +105,8 @@ export class KnowledgeGraphManager {
   private searchManager: SearchManager;
   private compressionManager: CompressionManager;
   private hierarchyManager: HierarchyManager;
+  private exportManager: ExportManager;
+  private importManager: ImportManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -116,6 +120,8 @@ export class KnowledgeGraphManager {
     this.searchManager = new SearchManager(this.storage, this.savedSearchesFilePath);
     this.compressionManager = new CompressionManager(this.storage);
     this.hierarchyManager = new HierarchyManager(this.storage);
+    this.exportManager = new ExportManager();
+    this.importManager = new ImportManager(this.storage);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
