@@ -5,6 +5,31 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Modular Architecture Refactoring - Phase 3 (Task 4.1)** - Delegate to GraphStorage module
+
+  **Removed Duplicate Storage Implementations**: Refactored KnowledgeGraphManager to use GraphStorage module
+  - Removed 58-line duplicate loadGraph() implementation
+  - Removed 25-line duplicate saveGraph() implementation
+  - Added GraphStorage instance to KnowledgeGraphManager
+  - Replaced inline implementations with delegation to storage.loadGraph() and storage.saveGraph()
+  - Removed unused memoryFilePath private property
+
+  **Impact**:
+  - Reduced index.ts from 4,079 lines to 4,030 lines (49 lines removed)
+  - Eliminated duplicate file I/O and JSONL parsing logic
+  - Single source of truth for graph persistence
+  - Improved separation of concerns (storage layer abstracted)
+  - Automatic cache invalidation and search cache clearing now applies
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,188 lines to <200 lines
+  - Current: 4,030 lines (3.8% total reduction)
+  - Phases 1-3: 164 lines removed total
+  - Remaining: ~3,830 lines of implementation code to refactor
+
 ## [0.25.0] - 2025-11-25
 
 ### Changed
