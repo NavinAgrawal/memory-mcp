@@ -5,6 +5,36 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0] - 2025-11-26
+
+### Changed
+- **Sprint 4: MCP Server Extraction - Phase 17** - Extract all MCP server setup to server/MCPServer.ts
+
+  **New Server Module**: Created dedicated server module to encapsulate all MCP protocol handling
+  - Created `src/memory/server/MCPServer.ts` (906 lines)
+    * Encapsulates all MCP Server initialization logic
+    * Defines 45+ tool schemas (create_entities, search, analytics, etc.)
+    * Implements tool handler routing via switch statement
+    * Manages server lifecycle (initialization, transport, connection)
+  - Updated index.ts to use MCPServer class
+    * Removed Server, StdioServerTransport, and MCP schema imports
+    * Added MCPServer import and initialization
+    * Removed ~1,100 lines of MCP server setup code
+    * Simplified main() function to create manager and server
+  - Removed unused MEMORY_FILE_PATH global variable
+
+  **Impact**:
+  - Reduced index.ts from 1,675 lines to 576 lines (1,099 lines removed, 65.6% reduction!) 🚀
+  - Created clean separation between business logic and protocol handling
+  - Largest single-phase reduction in Sprint 4 refactoring
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 576 lines (86.3% total reduction) 🎯 **MAJOR MILESTONE!**
+  - Phases 1-17: 3,618 lines removed total
+  - Remaining: ~376 lines to reach <200 line target
+
 ## [0.39.0] - 2025-11-25
 
 ### Changed
