@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 60.0% complete (2,519/3,994 lines removed) 🎯 **60% MILESTONE!**
+**Status:** 🚧 86.3% complete (3,618/3,994 lines removed) 🎯 **MAJOR MILESTONE!**
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 1,675 lines
+**Current:** 576 lines
 
 ### Completed Phases
 
@@ -285,7 +285,24 @@
 
 **Total Phase 1-16 Progress:** 2,519 lines removed (60.0%) 🎯 **60% MILESTONE!**
 
-### Remaining Work (~1,475 lines to refactor)
+#### ✅ Phase 17: MCP Server Extraction (v0.40.0) - COMPLETE
+- Created `src/memory/server/MCPServer.ts` (906 lines)
+  * Encapsulates all MCP Server initialization logic
+  * Defines 45+ tool schemas (create_entities, search_nodes, get_graph_stats, etc.)
+  * Implements tool handler routing via switch statement
+  * Manages server lifecycle (initialization, transport, connection)
+- Updated index.ts to use MCPServer class
+  * Removed Server, StdioServerTransport, CallToolRequestSchema, ListToolsRequestSchema imports
+  * Added MCPServer import and initialization
+  * Removed ~1,100 lines of MCP server setup code (tool definitions and handlers)
+  * Simplified main() function to create manager and server
+- Removed unused MEMORY_FILE_PATH global variable
+- Created clean separation between business logic and protocol handling
+- **Progress**: 1,675 → 576 lines (1,099 lines removed, 65.6% reduction!) 🚀
+
+**Total Phase 1-17 Progress:** 3,618 lines removed (86.3%) 🎯 **MAJOR MILESTONE!**
+
+### Remaining Work (~376 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
