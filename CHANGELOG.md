@@ -5,6 +5,36 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.47.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Complete** - All major refactoring sprints finished
+
+  **Sprint 6 Status: Already Implemented**
+  - Task 6.1: Graph caching ✅ (GraphStorage has in-memory cache with write-through invalidation)
+  - Task 6.3: Lazy TF-IDF index ✅ (TFIDFIndexManager with ensureIndexLoaded())
+  - Task 6.4: Batch operations ✅ (TransactionManager handles batching)
+  - Tasks 6.2, 6.5, 6.6: Deferred (nice-to-have, not critical for context optimization)
+
+**Refactoring Summary**:
+| Sprint | Focus | Key Achievements |
+|--------|-------|------------------|
+| 1 | Core Utilities | responseFormatter, tagUtils, entityUtils, paginationUtils, filterUtils |
+| 2 | Search Consolidation | SearchFilterChain unifying filter logic across 4 search classes |
+| 3 | MCPServer | Extracted toolDefinitions.ts & toolHandlers.ts (907→67 lines, 92.6% reduction) |
+| 4 | Manager Optimization | Lazy initialization for 10 managers, SIMILARITY_WEIGHTS consolidation |
+| 5 | Type & Import | Package exports map for tree-shaking |
+| 6 | Caching | Already implemented (GraphStorage cache, TF-IDF lazy loading) |
+
+**Total Impact**:
+- MCPServer.ts: 907 → 67 lines (92.6% reduction)
+- 41 JSON.stringify patterns eliminated
+- ~65 lines duplicate filter logic unified
+- 10 managers now lazy-loaded
+- All 396 tests passing
+
+**REFACTORING COMPLETE** ✅
+
 ## [0.46.0] - 2025-11-26
 
 ### Changed
