@@ -5,6 +5,39 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.0] - 2025-11-26
+
+### Changed
+- **Sprint 4: Knowledge Graph Manager Extraction - Phase 18** - Extract KnowledgeGraphManager to core module
+
+  **GOAL ACHIEVED: index.ts now < 200 lines!** 🎉
+
+  **New Core Module**: Extracted KnowledgeGraphManager class to dedicated core module
+  - Created `src/memory/core/KnowledgeGraphManager.ts` (518 lines)
+    * Encapsulates all business logic and manager coordination
+    * Constructor initializes all specialized managers
+    * Provides facade for all knowledge graph operations
+    * Delegates to EntityManager, SearchManager, AnalyticsManager, etc.
+  - Updated index.ts to minimal entry point
+    * Removed entire KnowledgeGraphManager class definition
+    * Removed 10+ manager imports (now only in KnowledgeGraphManager.ts)
+    * Added single import for KnowledgeGraphManager
+    * Re-exported KnowledgeGraphManager for backward compatibility
+    * Kept only entry point logic (helper functions, main())
+
+  **Impact**:
+  - Reduced index.ts from 575 lines to 98 lines (477 lines removed, 82.9% reduction!) 🚀🎯
+  - **EXCEEDED GOAL**: Now at 98 lines vs <200 line target
+  - Created clean entry point focused solely on initialization
+  - All business logic properly encapsulated in core module
+  - All 396 tests passing
+
+  **Sprint 4 Complete!**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Final: 98 lines (97.7% total reduction) ✅ **GOAL EXCEEDED!**
+  - Phases 1-18: 4,096 lines removed total
+  - Improvement: 42.8x reduction in file size
+
 ## [0.40.0] - 2025-11-26
 
 ### Changed

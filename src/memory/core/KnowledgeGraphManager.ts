@@ -1,305 +1,518 @@
 /**
  * Knowledge Graph Manager
  *
- * Main orchestrator that coordinates all knowledge graph operations.
+ * Central manager coordinating all knowledge graph operations.
+ * Delegates to specialized managers for different concerns.
  *
  * @module core/KnowledgeGraphManager
  */
 
-import * as path from 'path';
+import path from 'path';
+import {
+  DEFAULT_DUPLICATE_THRESHOLD,
+  SEARCH_LIMITS
+} from '../utils/constants.js';
 import { GraphStorage } from './GraphStorage.js';
 import { EntityManager } from './EntityManager.js';
 import { RelationManager } from './RelationManager.js';
-import { ObservationManager } from './ObservationManager.js';
 import { SearchManager } from '../search/SearchManager.js';
-import { BasicSearch } from '../search/BasicSearch.js';
-import { TagManager } from '../features/TagManager.js';
-import { HierarchyManager } from '../features/HierarchyManager.js';
-import { AnalyticsManager } from '../features/AnalyticsManager.js';
 import { CompressionManager } from '../features/CompressionManager.js';
-import { ArchiveManager } from '../features/ArchiveManager.js';
+import { HierarchyManager } from '../features/HierarchyManager.js';
 import { ExportManager } from '../features/ExportManager.js';
 import { ImportManager } from '../features/ImportManager.js';
-import { ImportExportManager } from '../features/ImportExportManager.js';
+import { AnalyticsManager } from '../features/AnalyticsManager.js';
+import { TagManager } from '../features/TagManager.js';
+import { ArchiveManager } from '../features/ArchiveManager.js';
+import type {
+  Entity,
+  Relation,
+  KnowledgeGraph,
+  GraphStats,
+  ValidationReport,
+  SavedSearch,
+  TagAlias,
+  SearchResult,
+  ImportResult,
+  CompressionResult,
+} from '../types/index.js';
 
 /**
- * Main orchestrator for all knowledge graph operations.
+ * Central manager coordinating all knowledge graph operations.
  *
- * Coordinates between core managers, search, features, and import/export.
+ * This class serves as the main facade for interacting with the knowledge graph,
+ * delegating to specialized managers for different concerns:
+ * - EntityManager: Entity CRUD operations
+ * - RelationManager: Relation CRUD operations
+ * - SearchManager: All search operations (basic, ranked, boolean, fuzzy)
+ * - CompressionManager: Duplicate detection and merging
+ * - HierarchyManager: Parent-child relationships and tree operations
+ * - ExportManager: Export to various formats
+ * - ImportManager: Import from various formats
+ * - AnalyticsManager: Statistics and validation
+ * - TagManager: Tag alias management
+ * - ArchiveManager: Entity archiving
  */
 export class KnowledgeGraphManager {
-  // Core storage and managers
+  private savedSearchesFilePath: string;
+  private tagAliasesFilePath: string;
   private storage: GraphStorage;
   private entityManager: EntityManager;
   private relationManager: RelationManager;
-  private observationManager: ObservationManager;
-
-  // Search
   private searchManager: SearchManager;
-
-  // Features
-  private tagManager: TagManager;
-  private hierarchyManager: HierarchyManager;
-  private analyticsManager: AnalyticsManager;
   private compressionManager: CompressionManager;
+  private hierarchyManager: HierarchyManager;
+  private exportManager: ExportManager;
+  private importManager: ImportManager;
+  private analyticsManager: AnalyticsManager;
+  private tagManager: TagManager;
   private archiveManager: ArchiveManager;
 
-  // Import/Export
-  private importExportManager: ImportExportManager;
-
   constructor(memoryFilePath: string) {
-    // Initialize storage
-    this.storage = new GraphStorage(memoryFilePath);
-
-    // Initialize core managers
-    this.entityManager = new EntityManager(this.storage);
-    this.relationManager = new RelationManager(this.storage);
-    this.observationManager = new ObservationManager(this.storage);
-
-    // Initialize search with saved searches file
+    // Saved searches file is stored alongside the memory file
     const dir = path.dirname(memoryFilePath);
     const basename = path.basename(memoryFilePath, path.extname(memoryFilePath));
-    const savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
-    this.searchManager = new SearchManager(this.storage, savedSearchesFilePath);
-
-    // Initialize feature managers
-    const tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
-    this.tagManager = new TagManager(tagAliasesFilePath);
-    this.hierarchyManager = new HierarchyManager(this.storage);
-    this.analyticsManager = new AnalyticsManager(this.storage);
+    this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
+    this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
+    this.storage = new GraphStorage(memoryFilePath);
+    this.entityManager = new EntityManager(this.storage);
+    this.relationManager = new RelationManager(this.storage);
+    this.searchManager = new SearchManager(this.storage, this.savedSearchesFilePath);
     this.compressionManager = new CompressionManager(this.storage);
+    this.hierarchyManager = new HierarchyManager(this.storage);
+    this.exportManager = new ExportManager();
+    this.importManager = new ImportManager(this.storage);
+    this.analyticsManager = new AnalyticsManager(this.storage);
+    this.tagManager = new TagManager(this.tagAliasesFilePath);
     this.archiveManager = new ArchiveManager(this.storage);
-
-    // Initialize import/export
-    const exportManager = new ExportManager();
-    const importManager = new ImportManager(this.storage);
-    // Create BasicSearch instance for import/export filtering
-    const basicSearch = new BasicSearch(this.storage);
-    this.importExportManager = new ImportExportManager(
-      exportManager,
-      importManager,
-      basicSearch
-    );
   }
 
-  // ==================== Entity Operations ====================
-
-  /**
-   * Access entity management operations.
-   *
-   * Provides CRUD operations for entities including:
-   * - createEntities(entities): Create new entities
-   * - getEntity(name): Retrieve entity by name
-   * - updateEntity(name, updates): Update entity fields
-   * - deleteEntities(names): Delete entities
-   *
-   * @returns EntityManager instance
-   * @example
-   * ```typescript
-   * const entity = await manager.entities.getEntity('Alice');
-   * await manager.entities.updateEntity('Alice', { importance: 8 });
-   * ```
-   */
-  get entities() {
-    return this.entityManager;
+  private async loadGraph(): Promise<KnowledgeGraph> {
+    return this.storage.loadGraph();
   }
 
-  // ==================== Relation Operations ====================
-
   /**
-   * Access relation management operations.
-   *
-   * Provides CRUD operations for relations including:
-   * - createRelations(relations): Create new relations
-   * - getRelation(from, to, type): Retrieve specific relation
-   * - deleteRelations(relations): Delete relations
-   * - getRelationsForEntity(name): Get all relations for an entity
-   *
-   * @returns RelationManager instance
-   * @example
-   * ```typescript
-   * await manager.relations.createRelations([
-   *   { from: 'Alice', to: 'Bob', relationType: 'knows' }
-   * ]);
-   * ```
+   * Phase 4: Create multiple entities in a single batch operation.
+   * Batch optimization: All entities are processed and saved in a single saveGraph() call,
+   * minimizing disk I/O. This is significantly more efficient than creating entities one at a time.
    */
-  get relations() {
-    return this.relationManager;
+  async createEntities(entities: Entity[]): Promise<Entity[]> {
+    return this.entityManager.createEntities(entities);
   }
 
-  // ==================== Observation Operations ====================
-
   /**
-   * Access observation management operations.
-   *
-   * Provides operations for managing observations on entities:
-   * - addObservations(observations): Add observations to entities
-   * - deleteObservations(deletions): Remove observations from entities
-   *
-   * @returns ObservationManager instance
-   * @example
-   * ```typescript
-   * await manager.observations.addObservations([
-   *   { entityName: 'Alice', contents: ['likes programming', 'works at startup'] }
-   * ]);
-   * ```
+   * Phase 4: Create multiple relations in a single batch operation.
+   * Batch optimization: All relations are processed and saved in a single saveGraph() call,
+   * minimizing disk I/O. This is significantly more efficient than creating relations one at a time.
    */
-  get observations() {
-    return this.observationManager;
+  async createRelations(relations: Relation[]): Promise<Relation[]> {
+    return this.relationManager.createRelations(relations);
   }
 
-  // ==================== Search Operations ====================
-
-  /**
-   * Access all search operations.
-   *
-   * Provides multiple search types:
-   * - searchNodes(query): Basic text search
-   * - searchNodesRanked(query): TF-IDF ranked search
-   * - booleanSearch(query): Boolean search with AND/OR/NOT
-   * - fuzzySearch(query): Fuzzy search with typo tolerance
-   * - searchByDateRange(start, end): Search by date range
-   * - getSearchSuggestions(query): Get search suggestions
-   *
-   * @returns SearchManager instance
-   * @example
-   * ```typescript
-   * const results = await manager.search.searchNodesRanked('programming', undefined, undefined, undefined, 10);
-   * ```
-   */
-  get search() {
-    return this.searchManager;
+  async addObservations(observations: { entityName: string; contents: string[] }[]): Promise<{ entityName: string; addedObservations: string[] }[]> {
+    return this.entityManager.addObservations(observations);
   }
 
-  // ==================== Tag Operations ====================
-
-  /**
-   * Access tag management operations.
-   *
-   * Provides tag operations including:
-   * - addTags(entityName, tags): Add tags to entity
-   * - removeTags(entityName, tags): Remove tags from entity
-   * - replaceTag(old, new): Replace tag across all entities
-   * - mergeTags(tag1, tag2, target): Merge two tags
-   * - addTagAlias(alias, canonical): Create tag alias
-   * - resolveTag(tag): Resolve tag alias to canonical
-   *
-   * @returns TagManager instance
-   * @example
-   * ```typescript
-   * await manager.tags.addTags('Alice', ['developer', 'javascript']);
-   * const canonical = await manager.tags.resolveTag('js'); // returns 'javascript'
-   * ```
-   */
-  get tags() {
-    return this.tagManager;
+  async deleteEntities(entityNames: string[]): Promise<void> {
+    return this.entityManager.deleteEntities(entityNames);
   }
 
-  // ==================== Hierarchy Operations ====================
-
-  /**
-   * Access hierarchical relationship operations.
-   *
-   * Provides parent-child hierarchy management:
-   * - setEntityParent(entity, parent): Set parent for entity
-   * - getChildren(entity): Get immediate children
-   * - getParent(entity): Get parent entity
-   * - getAncestors(entity): Get all ancestors
-   * - getDescendants(entity): Get all descendants
-   * - getSubtree(entity): Get entire subtree
-   * - getRootEntities(): Get all root entities
-   *
-   * @returns HierarchyManager instance
-   * @example
-   * ```typescript
-   * await manager.hierarchy.setEntityParent('task-1', 'project-alpha');
-   * const children = await manager.hierarchy.getChildren('project-alpha');
-   * ```
-   */
-  get hierarchy() {
-    return this.hierarchyManager;
+  async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
+    return this.entityManager.deleteObservations(deletions);
   }
 
-  // ==================== Analytics Operations ====================
-
-  /**
-   * Access graph analytics and statistics operations.
-   *
-   * Provides analytics including:
-   * - getGraphStats(): Get comprehensive graph statistics
-   * - validateGraph(): Validate graph integrity
-   *
-   * @returns AnalyticsManager instance
-   * @example
-   * ```typescript
-   * const stats = await manager.analytics.getGraphStats();
-   * console.log(`Total entities: ${stats.totalEntities}`);
-   * const validation = await manager.analytics.validateGraph();
-   * ```
-   */
-  get analytics() {
-    return this.analyticsManager;
+  async deleteRelations(relations: Relation[]): Promise<void> {
+    return this.relationManager.deleteRelations(relations);
   }
 
-  // ==================== Compression Operations ====================
-
-  /**
-   * Access graph compression operations.
-   *
-   * Provides duplicate detection and merging:
-   * - findDuplicates(threshold): Find similar entities
-   * - mergeEntities(names, target): Merge entities into one
-   * - compressGraph(threshold, dryRun): Auto-compress duplicates
-   *
-   * @returns CompressionManager instance
-   * @example
-   * ```typescript
-   * const duplicates = await manager.compression.findDuplicates(0.8);
-   * const result = await manager.compression.compressGraph(0.8, true); // dry run
-   * ```
-   */
-  get compression() {
-    return this.compressionManager;
+  async readGraph(): Promise<KnowledgeGraph> {
+    return this.loadGraph();
   }
 
-  // ==================== Archive Operations ====================
-
-  /**
-   * Access entity archiving operations.
-   *
-   * Provides archiving based on age, importance, or tags:
-   * - archiveEntities(criteria, dryRun): Archive entities matching criteria
-   *
-   * @returns ArchiveManager instance
-   * @example
-   * ```typescript
-   * const archived = await manager.archive.archiveEntities({
-   *   olderThan: '2023-01-01',
-   *   importanceLessThan: 3
-   * }, true); // dry run
-   * ```
-   */
-  get archive() {
-    return this.archiveManager;
+  // Phase 3: Enhanced search function with tags and importance filters
+  async searchNodes(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    return this.searchManager.searchNodes(query, tags, minImportance, maxImportance);
   }
 
-  // ==================== Import/Export Operations ====================
+  async openNodes(names: string[]): Promise<KnowledgeGraph> {
+    return this.searchManager.openNodes(names);
+  }
+
+  // Phase 3: Enhanced searchByDateRange with tags filter
+  async searchByDateRange(
+    startDate?: string,
+    endDate?: string,
+    entityType?: string,
+    tags?: string[]
+  ): Promise<KnowledgeGraph> {
+    return this.searchManager.searchByDateRange(startDate, endDate, entityType, tags);
+  }
+
+  async getGraphStats(): Promise<GraphStats> {
+    return this.analyticsManager.getGraphStats();
+  }
+  // Phase 3: Add tags to an entity
+  async addTags(entityName: string, tags: string[]): Promise<{ entityName: string; addedTags: string[] }> {
+    return this.entityManager.addTags(entityName, tags);
+  }
+
+  // Phase 3: Remove tags from an entity
+  async removeTags(entityName: string, tags: string[]): Promise<{ entityName: string; removedTags: string[] }> {
+    return this.entityManager.removeTags(entityName, tags);
+  }
+
+  // Phase 3: Set importance level for an entity
+  async setImportance(entityName: string, importance: number): Promise<{ entityName: string; importance: number }> {
+    return this.entityManager.setImportance(entityName, importance);
+  }
+
+  // Tier 0 B5: Bulk tag operations for efficient tag management
+  /**
+   * Add tags to multiple entities in a single operation
+   */
+  async addTagsToMultipleEntities(entityNames: string[], tags: string[]): Promise<{ entityName: string; addedTags: string[] }[]> {
+    return this.entityManager.addTagsToMultipleEntities(entityNames, tags);
+  }
 
   /**
-   * Access graph import and export operations.
-   *
-   * Provides import/export in multiple formats:
-   * - exportGraph(format, filter): Export to JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid
-   * - importGraph(format, data, strategy, dryRun): Import from JSON, CSV, GraphML
-   *
-   * @returns ImportExportManager instance
-   * @example
-   * ```typescript
-   * const graphml = await manager.importExport.exportGraph('graphml');
-   * const result = await manager.importExport.importGraph('json', data, 'merge', true);
-   * ```
+   * Replace a tag with a new tag across all entities (rename tag)
    */
-  get importExport() {
-    return this.importExportManager;
+  async replaceTag(oldTag: string, newTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    return this.entityManager.replaceTag(oldTag, newTag);
+  }
+
+  /**
+   * Merge two tags into one (combine tag1 and tag2 into targetTag)
+   */
+  async mergeTags(tag1: string, tag2: string, targetTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    return this.entityManager.mergeTags(tag1, tag2, targetTag);
+  }
+
+  // Tier 0 A1: Graph validation for data integrity
+  /**
+   * Validate the knowledge graph for integrity issues and provide a detailed report
+   */
+  async validateGraph(): Promise<ValidationReport> {
+    return this.analyticsManager.validateGraph();
+  }
+
+  // Tier 0 C4: Saved searches for efficient query management
+  /**
+   * Save a search query for later reuse
+   */
+  async saveSearch(search: Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>): Promise<SavedSearch> {
+    return this.searchManager.saveSearch(search);
+  }
+
+  /**
+   * List all saved searches
+   */
+  async listSavedSearches(): Promise<SavedSearch[]> {
+    return this.searchManager.listSavedSearches();
+  }
+
+  /**
+   * Get a specific saved search by name
+   */
+  async getSavedSearch(name: string): Promise<SavedSearch | null> {
+    return this.searchManager.getSavedSearch(name);
+  }
+
+  /**
+   * Execute a saved search by name
+   */
+  async executeSavedSearch(name: string): Promise<KnowledgeGraph> {
+    return this.searchManager.executeSavedSearch(name);
+  }
+
+  /**
+   * Delete a saved search
+   */
+  async deleteSavedSearch(name: string): Promise<boolean> {
+    return this.searchManager.deleteSavedSearch(name);
+  }
+
+  /**
+   * Update a saved search
+   */
+  async updateSavedSearch(name: string, updates: Partial<Omit<SavedSearch, 'name' | 'createdAt' | 'useCount' | 'lastUsed'>>): Promise<SavedSearch> {
+    return this.searchManager.updateSavedSearch(name, updates);
+  }
+
+  /**
+   * Fuzzy search for entities with typo tolerance
+   * @param query - Search query
+   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.7
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @returns Filtered knowledge graph with fuzzy matches
+   */
+  async fuzzySearch(
+    query: string,
+    threshold: number = 0.7,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    return this.searchManager.fuzzySearch(query, threshold, tags, minImportance, maxImportance);
+  }
+
+  /**
+   * Get "did you mean?" suggestions for a query
+   * @param query - The search query
+   * @param maxSuggestions - Maximum number of suggestions to return
+   * @returns Array of suggested entity/type names
+   */
+  async getSearchSuggestions(query: string, maxSuggestions: number = 5): Promise<string[]> {
+    return this.searchManager.getSearchSuggestions(query, maxSuggestions);
+  }
+
+  /**
+   * Search nodes with TF-IDF ranking for relevance scoring
+   * @param query - Search query
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @param limit - Optional maximum number of results (default 50)
+   * @returns Array of search results with scores, sorted by relevance
+   */
+  async searchNodesRanked(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number,
+    limit: number = SEARCH_LIMITS.DEFAULT
+  ): Promise<SearchResult[]> {
+    return this.searchManager.searchNodesRanked(query, tags, minImportance, maxImportance, limit);
+  }
+
+  /**
+   * Boolean search with support for AND, OR, NOT operators and field-specific queries
+   * @param query - Boolean query string (e.g., "name:Alice AND (type:person OR observation:programming)")
+   * @param tags - Optional tags filter
+   * @param minImportance - Optional minimum importance
+   * @param maxImportance - Optional maximum importance
+   * @returns Filtered knowledge graph matching the boolean query
+   */
+  async booleanSearch(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number
+  ): Promise<KnowledgeGraph> {
+    return this.searchManager.booleanSearch(query, tags, minImportance, maxImportance);
+  }
+
+  // Phase 2: Hierarchical nesting - hierarchy navigation methods
+  /**
+   * Set the parent of an entity (creates hierarchy relationship)
+   * @param entityName - Name of the entity to set parent for
+   * @param parentName - Name of the parent entity (or null to remove parent)
+   * @returns Updated entity
+   */
+  async setEntityParent(entityName: string, parentName: string | null): Promise<Entity> {
+    return this.hierarchyManager.setEntityParent(entityName, parentName);
+  }
+
+  /**
+   * Get the immediate children of an entity
+   */
+  async getChildren(entityName: string): Promise<Entity[]> {
+    return this.hierarchyManager.getChildren(entityName);
+  }
+
+  /**
+   * Get the parent of an entity
+   */
+  async getParent(entityName: string): Promise<Entity | null> {
+    return this.hierarchyManager.getParent(entityName);
+  }
+
+  /**
+   * Get all ancestors of an entity (parent, grandparent, etc.)
+   */
+  async getAncestors(entityName: string): Promise<Entity[]> {
+    return this.hierarchyManager.getAncestors(entityName);
+  }
+
+  /**
+   * Get all descendants of an entity (children, grandchildren, etc.)
+   */
+  async getDescendants(entityName: string): Promise<Entity[]> {
+    return this.hierarchyManager.getDescendants(entityName);
+  }
+
+  /**
+   * Get the entire subtree rooted at an entity (entity + all descendants)
+   */
+  async getSubtree(entityName: string): Promise<KnowledgeGraph> {
+    return this.hierarchyManager.getSubtree(entityName);
+  }
+
+  /**
+   * Get root entities (entities with no parent)
+   */
+  async getRootEntities(): Promise<Entity[]> {
+    return this.hierarchyManager.getRootEntities();
+  }
+
+  /**
+   * Get the depth of an entity in the hierarchy (0 for root, 1 for child of root, etc.)
+   */
+  async getEntityDepth(entityName: string): Promise<number> {
+    return this.hierarchyManager.getEntityDepth(entityName);
+  }
+
+  /**
+   * Move an entity to a new parent (maintaining its descendants)
+   */
+  async moveEntity(entityName: string, newParentName: string | null): Promise<Entity> {
+    return this.hierarchyManager.moveEntity(entityName, newParentName);
+  }
+
+  // Phase 3: Memory compression - duplicate detection and merging
+  /**
+   * Find duplicate entities in the graph based on similarity threshold
+   * @param threshold - Similarity threshold (0.0 to 1.0), default 0.8
+   * @returns Array of duplicate groups (each group has similar entities)
+   */
+  async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]> {
+    return this.compressionManager.findDuplicates(threshold);
+  }
+
+  /**
+   * Merge a group of entities into a single entity
+   * @param entityNames - Names of entities to merge (first one is kept)
+   * @param targetName - Optional new name for merged entity (default: first entity name)
+   * @returns The merged entity
+   */
+  async mergeEntities(entityNames: string[], targetName?: string): Promise<Entity> {
+    return this.compressionManager.mergeEntities(entityNames, targetName);
+  }
+
+  /**
+   * Compress the knowledge graph by finding and merging duplicates
+   * @param threshold - Similarity threshold for duplicate detection (0.0 to 1.0)
+   * @param dryRun - If true, only report what would be compressed without applying changes
+   * @returns Compression result with statistics
+   */
+  async compressGraph(threshold: number = 0.8, dryRun: boolean = false): Promise<CompressionResult> {
+    return this.compressionManager.compressGraph(threshold, dryRun);
+  }
+
+  // Phase 4: Memory archiving system
+  /**
+   * Archive old or low-importance entities to a separate storage
+   * @param criteria - Criteria for archiving (age, importance, tags)
+   * @param dryRun - If true, preview what would be archived
+   * @returns Number of entities archived
+   */
+  async archiveEntities(
+    criteria: {
+      olderThan?: string;  // ISO date
+      importanceLessThan?: number;
+      tags?: string[];
+    },
+    dryRun: boolean = false
+  ): Promise<{ archived: number; entityNames: string[] }> {
+    return this.archiveManager.archiveEntities(criteria, dryRun);
+  }
+
+  // Tier 0 B2: Tag aliases for synonym management
+  /**
+   * Resolve a tag through aliases to get its canonical form
+   * @param tag - Tag to resolve (can be alias or canonical)
+   * @returns Canonical tag name
+   */
+  async resolveTag(tag: string): Promise<string> {
+    return this.tagManager.resolveTag(tag);
+  }
+
+  /**
+   * Add a tag alias (synonym mapping)
+   * @param alias - The alias/synonym
+   * @param canonical - The canonical (main) tag name
+   * @param description - Optional description of the alias
+   */
+  async addTagAlias(alias: string, canonical: string, description?: string): Promise<TagAlias> {
+    return this.tagManager.addTagAlias(alias, canonical, description);
+  }
+
+  /**
+   * List all tag aliases
+   */
+  async listTagAliases(): Promise<TagAlias[]> {
+    return this.tagManager.listTagAliases();
+  }
+
+  /**
+   * Remove a tag alias
+   */
+  async removeTagAlias(alias: string): Promise<boolean> {
+    return this.tagManager.removeTagAlias(alias);
+  }
+
+  /**
+   * Get all aliases for a canonical tag
+   */
+  async getAliasesForTag(canonicalTag: string): Promise<string[]> {
+    return this.tagManager.getAliasesForTag(canonicalTag);
+  }
+
+  // Phase 4 & Tier 0 D1: Export graph in various formats
+  /**
+   * Export the knowledge graph in the specified format with optional filtering.
+   * Supports JSON, CSV, GraphML, GEXF, DOT, Markdown, and Mermaid formats.
+   *
+   * @param format - Export format: 'json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid'
+   * @param filter - Optional filter object with same structure as searchByDateRange
+   * @returns Exported graph data as a formatted string
+   */
+  async exportGraph(
+    format: 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid',
+    filter?: {
+      startDate?: string;
+      endDate?: string;
+      entityType?: string;
+      tags?: string[];
+    }
+  ): Promise<string> {
+    // Get filtered or full graph based on filter parameter
+    let graph: KnowledgeGraph;
+    if (filter) {
+      graph = await this.searchByDateRange(
+        filter.startDate,
+        filter.endDate,
+        filter.entityType,
+        filter.tags
+      );
+    } else {
+      graph = await this.loadGraph();
+    }
+
+    return this.exportManager.exportGraph(graph, format);
+  }
+
+  // Tier 0 D2: Import capabilities with merge strategies
+  /**
+   * Import knowledge graph from various formats
+   * @param format - Import format: 'json', 'csv', or 'graphml'
+   * @param data - The import data as a string
+   * @param mergeStrategy - How to handle conflicts: 'replace', 'skip', 'merge', 'fail'
+   * @param dryRun - If true, preview changes without applying them
+   * @returns Import result with statistics
+   */
+  async importGraph(
+    format: 'json' | 'csv' | 'graphml',
+    data: string,
+    mergeStrategy: 'replace' | 'skip' | 'merge' | 'fail' = 'skip',
+    dryRun: boolean = false
+  ): Promise<ImportResult> {
+    return this.importManager.importGraph(format, data, mergeStrategy, dryRun);
   }
 }
