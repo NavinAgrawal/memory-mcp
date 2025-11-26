@@ -34,9 +34,26 @@ In-depth technical architecture documentation covering:
 - System design and component structure
 - Modular server design (MCPServer, toolDefinitions, toolHandlers)
 - Lazy initialization patterns
-- Data flow and processing pipelines
 - Performance optimization strategies
 - Context optimization improvements (v0.47.0)
+
+### [Component Reference](./COMPONENTS.md)
+Detailed documentation for all system components:
+- Server components (MCPServer, toolDefinitions, toolHandlers)
+- Core components (KnowledgeGraphManager, EntityManager, GraphStorage)
+- Search components (SearchManager, BasicSearch, RankedSearch, BooleanSearch, FuzzySearch)
+- Feature components (HierarchyManager, CompressionManager, ExportManager, etc.)
+- Utility components and type definitions
+- Component dependencies diagram
+
+### [Data Flow](./DATAFLOW.md)
+Comprehensive data flow documentation covering:
+- Request processing pipeline
+- Entity and relation operation flows
+- Search operation flows (basic, ranked, boolean, fuzzy)
+- Hierarchy and compression operation flows
+- Import/export operation flows
+- Caching strategy and error handling
 
 ### [Workflow](./WORKFLOW.md)
 Development workflow and operational procedures for working with the memory server.
