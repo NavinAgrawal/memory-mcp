@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 49.7% complete (2,111/3,994 lines removed)
+**Status:** 🚧 58.1% complete (2,436/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 2,083 lines
+**Current:** 1,758 lines
 
 ### Completed Phases
 
@@ -203,7 +203,63 @@
 
 **Total Phase 1-11 Progress:** 2,111 lines removed (49.7%)
 
-### Remaining Work (~1,883 lines to refactor)
+#### ✅ Phase 12: Analytics/Stats Operations Delegation (v0.35.0) - COMPLETE
+- Added getGraphStats() method to AnalyticsManager (82 lines of implementation)
+  * Calculates entity type counts and relation type counts
+  * Finds oldest and newest entities with date tracking
+  * Finds oldest and newest relations with date tracking
+  * Provides comprehensive date range statistics
+- Removed getGraphStats() implementation (69 lines) → delegates to AnalyticsManager
+- Removed validateGraph() implementation (127 lines) → delegates to AnalyticsManager
+- Added AnalyticsManager instance coordinating all analytics and validation operations
+- AnalyticsManager provides:
+  * Comprehensive graph statistics (entities, relations, type distributions, date ranges)
+  * Validation with detailed error and warning reporting
+  * Orphaned relation detection
+  * Duplicate entity detection
+  * Invalid data detection
+  * Isolated entity warnings
+  * Missing metadata warnings
+- **Progress**: 2,083 → 1,894 lines (189 lines removed, 9.1%)
+
+**Total Phase 1-12 Progress:** 2,300 lines removed (54.8%)
+
+#### ✅ Phase 13: Saved Search Operations Delegation (v0.36.0) - COMPLETE
+- Removed loadSavedSearches() private helper (11 lines) - delegated to SavedSearchManager
+- Removed saveSavedSearches() private helper (3 lines) - delegated to SavedSearchManager
+- Replaced saveSearch() implementation (18 lines) → delegates to searchManager
+- Replaced listSavedSearches() implementation (2 lines) → delegates to searchManager
+- Replaced getSavedSearch() implementation (3 lines) → delegates to searchManager
+- Replaced executeSavedSearch() implementation (19 lines) → delegates to searchManager
+- Replaced deleteSavedSearch() implementation (11 lines) → delegates to searchManager
+- Replaced updateSavedSearch() implementation (12 lines) → delegates to searchManager
+- SearchManager coordinates all saved search operations through SavedSearchManager
+- Automatic usage tracking (useCount, lastUsed) handled by SavedSearchManager
+- JSONL file persistence (one search per line)
+- **Progress**: 1,894 → 1,821 lines (73 lines removed, 3.9%)
+
+**Total Phase 1-13 Progress:** 2,373 lines removed (56.6%)
+
+#### ✅ Phase 14: Tag Alias Operations Delegation (v0.37.0) - COMPLETE
+- Removed loadTagAliases() private helper (11 lines) - delegated to TagManager
+- Removed saveTagAliases() private helper (3 lines) - delegated to TagManager
+- Replaced resolveTag() implementation (12 lines) → delegates to tagManager
+- Replaced addTagAlias() implementation (26 lines) → delegates to tagManager
+- Replaced listTagAliases() implementation (2 lines) → delegates to tagManager
+- Replaced removeTagAlias() implementation (12 lines) → delegates to tagManager
+- Replaced getAliasesForTag() implementation (6 lines) → delegates to tagManager
+- Added TagManager import and instance to KnowledgeGraphManager
+- TagManager provides:
+  * Tag alias resolution (synonym to canonical mapping)
+  * Alias creation with validation (prevents duplicates and chained aliases)
+  * Alias listing and removal
+  * Canonical tag lookup (find all synonyms for a tag)
+  * JSONL file persistence (one alias per line)
+- **Progress**: 1,821 → 1,758 lines (63 lines removed, 3.5%)
+
+**Total Phase 1-14 Progress:** 2,436 lines removed (58.1%)
+
+### Remaining Work (~1,558 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:

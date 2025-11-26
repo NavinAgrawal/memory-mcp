@@ -5,6 +5,101 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Tag Alias Operations Delegation - Phase 14** - Delegate all tag alias operations to TagManager
+
+  **Delegated Tag Alias Operations**: Replaced inline implementations with TagManager delegations
+  - Removed loadTagAliases() private helper (11 lines) - now handled by TagManager
+  - Removed saveTagAliases() private helper (3 lines) - now handled by TagManager
+  - Replaced resolveTag() implementation (12 lines) with delegation to tagManager
+  - Replaced addTagAlias() implementation (26 lines) with delegation to tagManager
+  - Replaced listTagAliases() implementation (2 lines) with delegation to tagManager
+  - Replaced removeTagAlias() implementation (12 lines) with delegation to tagManager
+  - Replaced getAliasesForTag() implementation (6 lines) with delegation to tagManager
+  - Added TagManager import and instance to KnowledgeGraphManager
+
+  **Impact**:
+  - Reduced index.ts from 1,821 lines to 1,758 lines (63 lines removed, 3.5% reduction)
+  - Centralized all tag alias management in TagManager
+  - TagManager provides:
+    * Tag alias resolution (synonym to canonical mapping)
+    * Alias creation with validation (prevents duplicates and chained aliases)
+    * Alias listing and removal
+    * Canonical tag lookup (find all synonyms for a tag)
+    * JSONL file persistence (one alias per line)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,758 lines (58.1% total reduction)
+  - Phases 1-14: 2,436 lines removed total
+  - Remaining: ~1,558 lines of implementation code to refactor
+
+## [0.36.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Saved Search Operations Delegation - Phase 13** - Delegate all saved search operations to SearchManager
+
+  **Delegated Saved Search Operations**: Replaced inline implementations with SearchManager delegations
+  - Removed loadSavedSearches() private helper (11 lines) - now handled by SavedSearchManager
+  - Removed saveSavedSearches() private helper (3 lines) - now handled by SavedSearchManager
+  - Replaced saveSearch() implementation (18 lines) with delegation to searchManager
+  - Replaced listSavedSearches() implementation (2 lines) with delegation to searchManager
+  - Replaced getSavedSearch() implementation (3 lines) with delegation to searchManager
+  - Replaced executeSavedSearch() implementation (19 lines) with delegation to searchManager
+  - Replaced deleteSavedSearch() implementation (11 lines) with delegation to searchManager
+  - Replaced updateSavedSearch() implementation (12 lines) with delegation to searchManager
+
+  **Impact**:
+  - Reduced index.ts from 1,894 lines to 1,821 lines (73 lines removed, 3.9% reduction)
+  - Centralized all saved search management in SearchManager/SavedSearchManager
+  - SearchManager coordinates search execution through SavedSearchManager
+  - Automatic usage statistics tracking (useCount, lastUsed) handled in SavedSearchManager
+  - File persistence to JSONL format (one search per line)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,821 lines (56.6% total reduction)
+  - Phases 1-13: 2,373 lines removed total
+  - Remaining: ~1,621 lines of implementation code to refactor
+
+## [0.35.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Analytics/Stats Operations Delegation - Phase 12** - Delegate graph analytics and validation to AnalyticsManager
+
+  **Enhanced AnalyticsManager**: Added getGraphStats() method to AnalyticsManager, completing the analytics delegation
+  - Added getGraphStats() method to AnalyticsManager (82 lines of implementation)
+    * Calculates entity type counts and relation type counts
+    * Finds oldest and newest entities with date tracking
+    * Finds oldest and newest relations with date tracking
+    * Provides comprehensive date range statistics
+  - Added AnalyticsManager import and instance to KnowledgeGraphManager
+  - Replaced getGraphStats() implementation in index.ts (69 lines) with delegation to AnalyticsManager
+  - Replaced validateGraph() implementation in index.ts (127 lines) with delegation to AnalyticsManager
+
+  **Impact**:
+  - Reduced index.ts from 2,083 lines to 1,894 lines (189 lines removed, 9.1% reduction)
+  - Centralized all graph analytics and validation in AnalyticsManager
+  - AnalyticsManager now provides:
+    * Comprehensive graph statistics (entities, relations, type distributions, date ranges)
+    * Validation with detailed error and warning reporting
+    * Orphaned relation detection
+    * Duplicate entity detection
+    * Invalid data detection
+    * Isolated entity warnings
+    * Missing metadata warnings
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,894 lines (54.8% total reduction)
+  - Phases 1-12: 2,300 lines removed total
+  - Remaining: ~1,694 lines of implementation code to refactor
+
 ## [0.34.0] - 2025-11-25
 
 ### Changed
