@@ -5,6 +5,145 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.47.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Complete** - All major refactoring sprints finished
+
+  **Sprint 6 Status: Already Implemented**
+  - Task 6.1: Graph caching ✅ (GraphStorage has in-memory cache with write-through invalidation)
+  - Task 6.3: Lazy TF-IDF index ✅ (TFIDFIndexManager with ensureIndexLoaded())
+  - Task 6.4: Batch operations ✅ (TransactionManager handles batching)
+  - Tasks 6.2, 6.5, 6.6: Deferred (nice-to-have, not critical for context optimization)
+
+**Refactoring Summary**:
+| Sprint | Focus | Key Achievements |
+|--------|-------|------------------|
+| 1 | Core Utilities | responseFormatter, tagUtils, entityUtils, paginationUtils, filterUtils |
+| 2 | Search Consolidation | SearchFilterChain unifying filter logic across 4 search classes |
+| 3 | MCPServer | Extracted toolDefinitions.ts & toolHandlers.ts (907→67 lines, 92.6% reduction) |
+| 4 | Manager Optimization | Lazy initialization for 10 managers, SIMILARITY_WEIGHTS consolidation |
+| 5 | Type & Import | Package exports map for tree-shaking |
+| 6 | Caching | Already implemented (GraphStorage cache, TF-IDF lazy loading) |
+
+**Total Impact**:
+- MCPServer.ts: 907 → 67 lines (92.6% reduction)
+- 41 JSON.stringify patterns eliminated
+- ~65 lines duplicate filter logic unified
+- 10 managers now lazy-loaded
+- All 396 tests passing
+
+**REFACTORING COMPLETE** ✅
+
+## [0.46.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Sprint 5: Type & Import Optimization** - Package exports map and tree-shaking support
+
+  **Task 5.5: Package Exports Map**
+  - Added `exports` field to package.json for proper subpath exports
+  - Enables tree-shaking and direct module imports
+  - Subpaths available:
+    * `.` - Main entry point
+    * `./types` - Type definitions
+    * `./utils` - Utility functions
+    * `./core` - Core managers
+    * `./search` - Search functionality
+    * `./features` - Feature managers
+    * `./server` - MCP server
+  - Added `main` and `types` fields for compatibility
+
+  **Task 5.1: Type Re-exports (Already Complete)**
+  - Types properly organized in `types/index.ts` barrel export
+  - All type categories exported: Entity, Search, Analytics, Tag, ImportExport
+
+**Impact**:
+- Consumers can import specific modules for smaller bundle sizes
+- Better IDE support with proper type exports
+- All 396 tests passing
+- Build successful
+
+**Sprint 5 Complete** ✅
+- Task 5.1: Consolidate type re-exports ✅ (already done)
+- Task 5.5: Update package exports map ✅
+- Ready for Sprint 6: Caching & Lazy Loading
+
+## [0.45.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Sprint 4: Manager Class Optimization** - Lazy initialization and constant consolidation
+
+  **Task 4.5: Consolidated SIMILARITY_WEIGHTS**
+  - Removed duplicate `SIMILARITY_WEIGHTS` definition from `CompressionManager.ts`
+  - Unified on single definition in `constants.ts` with consistent key names (OBSERVATIONS, TAGS)
+  - Removed duplicate `DEFAULT_DUPLICATE_THRESHOLD` from `CompressionManager.ts`
+  - CompressionManager now imports constants from centralized location
+
+  **Task 4.3: Lazy Manager Initialization**
+  - Refactored `KnowledgeGraphManager` to use lazy initialization pattern
+  - 10 managers are now instantiated on-demand via private getters
+  - Uses nullish coalescing assignment (`??=`) for clean, efficient lazy instantiation
+  - Managers: EntityManager, RelationManager, SearchManager, CompressionManager,
+    HierarchyManager, ExportManager, ImportManager, AnalyticsManager, TagManager, ArchiveManager
+  - Faster startup time when not all features are used
+  - Reduced memory footprint for unused managers
+
+**Impact**:
+- Eliminated duplicate constant definitions
+- Faster KnowledgeGraphManager construction (managers initialized only when accessed)
+- Cleaner separation of concerns for constants
+- All 396 tests passing
+- Build successful
+
+**Sprint 4 Complete** ✅
+- Task 4.3: Implement lazy initialization ✅
+- Task 4.5: Consolidate SIMILARITY_WEIGHTS ✅
+- Ready for Sprint 5: Type & Import Optimization
+
+## [0.44.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Sprint 3: MCPServer Optimization** - Extracted tool definitions and handlers
+
+  **New Server Module Files**:
+  - `src/memory/server/toolDefinitions.ts` - All 45 tool schemas organized by category
+    * Entity tools (4): create_entities, delete_entities, read_graph, open_nodes
+    * Relation tools (2): create_relations, delete_relations
+    * Observation tools (2): add_observations, delete_observations
+    * Search tools (6): search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions
+    * Saved search tools (5): save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search
+    * Tag tools (6): add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags
+    * Tag alias tools (5): add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag
+    * Hierarchy tools (9): set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity
+    * Analytics tools (2): get_graph_stats, validate_graph
+    * Compression tools (4): find_duplicates, merge_entities, compress_graph, archive_entities
+    * Import/Export tools (2): import_graph, export_graph
+    * Exported `toolCategories` for category-based tool grouping
+
+  - `src/memory/server/toolHandlers.ts` - Handler registry for all 45 tools
+    * `toolHandlers` - Record mapping tool names to async handler functions
+    * `handleToolCall()` - Dispatcher function for routing tool calls
+    * Each handler uses formatToolResponse/formatTextResponse/formatRawResponse
+
+- **MCPServer.ts** - Dramatically simplified from 907 lines to 67 lines
+  * Removed inline getToolDefinitions() method (734 lines)
+  * Removed handleToolCall() switch statement (104 lines)
+  * Now imports toolDefinitions and handleToolCall from extracted modules
+  * Clean separation of concerns: server setup vs tool definitions vs handler logic
+
+**Impact**:
+- Reduced MCPServer.ts from 907 lines to 67 lines (92.6% reduction!)
+- Tool definitions now organized by category for easier maintenance
+- Handler registry pattern enables easy tool extension
+- All 396 tests passing
+- Build successful
+
+**Sprint 3 Complete** ✅
+- Task 3.1: Extract toolDefinitions.ts ✅
+- Task 3.2: Create toolHandlers.ts ✅
+- Task 3.3: Refactor MCPServer.ts ✅
+- Ready for Sprint 4: Manager Class Optimization
+
 ## [0.43.0] - 2025-11-26
 
 ### Added

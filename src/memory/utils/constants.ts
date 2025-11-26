@@ -66,6 +66,7 @@ export const LOG_PREFIXES = {
  * Similarity scoring weights for duplicate detection.
  * These weights determine the relative importance of each factor
  * when calculating entity similarity for duplicate detection.
+ * Total weights must sum to 1.0 (100%).
  */
 export const SIMILARITY_WEIGHTS = {
   /** Name similarity weight (40%) - Uses Levenshtein distance */
@@ -73,9 +74,9 @@ export const SIMILARITY_WEIGHTS = {
   /** Entity type match weight (20%) - Exact match required */
   TYPE: 0.2,
   /** Observation overlap weight (30%) - Uses Jaccard similarity */
-  OBSERVATION: 0.3,
+  OBSERVATIONS: 0.3,
   /** Tag overlap weight (10%) - Uses Jaccard similarity */
-  TAG: 0.1,
+  TAGS: 0.1,
 } as const;
 
 /**
