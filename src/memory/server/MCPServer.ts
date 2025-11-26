@@ -13,6 +13,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from '../utils/logger.js';
+import { formatToolResponse, formatTextResponse, formatRawResponse } from '../utils/responseFormatter.js';
 import type { KnowledgeGraphManager } from '../index.js';
 import type { SavedSearch } from '../types/index.js';
 
@@ -795,104 +796,104 @@ export class MCPServer {
   private async handleToolCall(name: string, args: Record<string, unknown>) {
     switch (name) {
       case "create_entities":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.createEntities(args.entities as any[]), null, 2) }] };
+        return formatToolResponse(await this.manager.createEntities(args.entities as any[]));
       case "create_relations":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.createRelations(args.relations as any[]), null, 2) }] };
+        return formatToolResponse(await this.manager.createRelations(args.relations as any[]));
       case "add_observations":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.addObservations(args.observations as any[]), null, 2) }] };
+        return formatToolResponse(await this.manager.addObservations(args.observations as any[]));
       case "delete_entities":
         await this.manager.deleteEntities(args.entityNames as string[]);
-        return { content: [{ type: "text", text: `Deleted ${(args.entityNames as string[]).length} entities` }] };
+        return formatTextResponse(`Deleted ${(args.entityNames as string[]).length} entities`);
       case "delete_observations":
         await this.manager.deleteObservations(args.deletions as any[]);
-        return { content: [{ type: "text", text: "Observations deleted successfully" }] };
+        return formatTextResponse("Observations deleted successfully");
       case "delete_relations":
         await this.manager.deleteRelations(args.relations as any[]);
-        return { content: [{ type: "text", text: `Deleted ${(args.relations as any[]).length} relations` }] };
+        return formatTextResponse(`Deleted ${(args.relations as any[]).length} relations`);
       case "read_graph":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.readGraph(), null, 2) }] };
+        return formatToolResponse(await this.manager.readGraph());
       case "search_nodes":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.searchNodes(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.searchNodes(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined));
       case "open_nodes":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.openNodes(args.names as string[]), null, 2) }] };
+        return formatToolResponse(await this.manager.openNodes(args.names as string[]));
       case "search_nodes_ranked":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.searchNodesRanked(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined, args.limit as number | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.searchNodesRanked(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined, args.limit as number | undefined));
       case "list_saved_searches":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.listSavedSearches(), null, 2) }] };
+        return formatToolResponse(await this.manager.listSavedSearches());
       case "search_by_date_range":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.searchByDateRange(args.startDate as string | undefined, args.endDate as string | undefined, args.entityType as string | undefined, args.tags as string[] | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.searchByDateRange(args.startDate as string | undefined, args.endDate as string | undefined, args.entityType as string | undefined, args.tags as string[] | undefined));
       case "add_tags":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.addTags(args.entityName as string, args.tags as string[]), null, 2) }] };
+        return formatToolResponse(await this.manager.addTags(args.entityName as string, args.tags as string[]));
       case "remove_tags":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.removeTags(args.entityName as string, args.tags as string[]), null, 2) }] };
+        return formatToolResponse(await this.manager.removeTags(args.entityName as string, args.tags as string[]));
       case "set_importance":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.setImportance(args.entityName as string, args.importance as number), null, 2) }] };
+        return formatToolResponse(await this.manager.setImportance(args.entityName as string, args.importance as number));
       case "add_tags_to_multiple_entities":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.addTagsToMultipleEntities(args.entityNames as string[], args.tags as string[]), null, 2) }] };
+        return formatToolResponse(await this.manager.addTagsToMultipleEntities(args.entityNames as string[], args.tags as string[]));
       case "replace_tag":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.replaceTag(args.oldTag as string, args.newTag as string), null, 2) }] };
+        return formatToolResponse(await this.manager.replaceTag(args.oldTag as string, args.newTag as string));
       case "merge_tags":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.mergeTags(args.tag1 as string, args.tag2 as string, args.targetTag as string), null, 2) }] };
+        return formatToolResponse(await this.manager.mergeTags(args.tag1 as string, args.tag2 as string, args.targetTag as string));
       case "save_search":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.saveSearch(args as Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>), null, 2) }] };
+        return formatToolResponse(await this.manager.saveSearch(args as Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>));
       case "execute_saved_search":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.executeSavedSearch(args.name as string), null, 2) }] };
+        return formatToolResponse(await this.manager.executeSavedSearch(args.name as string));
       case "delete_saved_search":
         const deleted = await this.manager.deleteSavedSearch(args.name as string);
-        return { content: [{ type: "text", text: deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found` }] };
+        return formatTextResponse(deleted ? `Saved search "${args.name}" deleted successfully` : `Saved search "${args.name}" not found`);
       case "update_saved_search":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.updateSavedSearch(args.name as string, args.updates as any), null, 2) }] };
+        return formatToolResponse(await this.manager.updateSavedSearch(args.name as string, args.updates as any));
       case "boolean_search":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.booleanSearch(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.booleanSearch(args.query as string, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined));
       case "fuzzy_search":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.fuzzySearch(args.query as string, args.threshold as number | undefined, args.tags as string[] | undefined, args.minImportance as number | undefined, args.maxImportance as number | undefined));
       case "get_search_suggestions":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getSearchSuggestions(args.query as string, args.maxSuggestions as number | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.getSearchSuggestions(args.query as string, args.maxSuggestions as number | undefined));
       case "add_tag_alias":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.addTagAlias(args.alias as string, args.canonical as string, args.description as string | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.addTagAlias(args.alias as string, args.canonical as string, args.description as string | undefined));
       case "list_tag_aliases":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.listTagAliases(), null, 2) }] };
+        return formatToolResponse(await this.manager.listTagAliases());
       case "remove_tag_alias":
         const removed = await this.manager.removeTagAlias(args.alias as string);
-        return { content: [{ type: "text", text: removed ? `Tag alias "${args.alias}" removed successfully` : `Tag alias "${args.alias}" not found` }] };
+        return formatTextResponse(removed ? `Tag alias "${args.alias}" removed successfully` : `Tag alias "${args.alias}" not found`);
       case "get_aliases_for_tag":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getAliasesForTag(args.canonicalTag as string), null, 2) }] };
+        return formatToolResponse(await this.manager.getAliasesForTag(args.canonicalTag as string));
       case "resolve_tag":
-        return { content: [{ type: "text", text: JSON.stringify({ tag: args.tag, resolved: await this.manager.resolveTag(args.tag as string) }, null, 2) }] };
+        return formatToolResponse({ tag: args.tag, resolved: await this.manager.resolveTag(args.tag as string) });
       case "set_entity_parent":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.setEntityParent(args.entityName as string, args.parentName as string | null), null, 2) }] };
+        return formatToolResponse(await this.manager.setEntityParent(args.entityName as string, args.parentName as string | null));
       case "get_children":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getChildren(args.entityName as string), null, 2) }] };
+        return formatToolResponse(await this.manager.getChildren(args.entityName as string));
       case "get_parent":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getParent(args.entityName as string), null, 2) }] };
+        return formatToolResponse(await this.manager.getParent(args.entityName as string));
       case "get_ancestors":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getAncestors(args.entityName as string), null, 2) }] };
+        return formatToolResponse(await this.manager.getAncestors(args.entityName as string));
       case "get_descendants":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getDescendants(args.entityName as string), null, 2) }] };
+        return formatToolResponse(await this.manager.getDescendants(args.entityName as string));
       case "get_subtree":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getSubtree(args.entityName as string), null, 2) }] };
+        return formatToolResponse(await this.manager.getSubtree(args.entityName as string));
       case "get_root_entities":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getRootEntities(), null, 2) }] };
+        return formatToolResponse(await this.manager.getRootEntities());
       case "get_entity_depth":
-        return { content: [{ type: "text", text: JSON.stringify({ entityName: args.entityName, depth: await this.manager.getEntityDepth(args.entityName as string) }, null, 2) }] };
+        return formatToolResponse({ entityName: args.entityName, depth: await this.manager.getEntityDepth(args.entityName as string) });
       case "move_entity":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.moveEntity(args.entityName as string, args.newParentName as string | null), null, 2) }] };
+        return formatToolResponse(await this.manager.moveEntity(args.entityName as string, args.newParentName as string | null));
       case "get_graph_stats":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.getGraphStats(), null, 2) }] };
+        return formatToolResponse(await this.manager.getGraphStats());
       case "validate_graph":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.validateGraph(), null, 2) }] };
+        return formatToolResponse(await this.manager.validateGraph());
       case "find_duplicates":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.findDuplicates(args.threshold as number | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.findDuplicates(args.threshold as number | undefined));
       case "merge_entities":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.mergeEntities(args.entityNames as string[], args.targetName as string | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.mergeEntities(args.entityNames as string[], args.targetName as string | undefined));
       case "compress_graph":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.compressGraph(args.threshold as number | undefined, args.dryRun as boolean | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.compressGraph(args.threshold as number | undefined, args.dryRun as boolean | undefined));
       case "archive_entities":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.archiveEntities({ olderThan: args.olderThan as string | undefined, importanceLessThan: args.importanceLessThan as number | undefined, tags: args.tags as string[] | undefined }, args.dryRun as boolean | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.archiveEntities({ olderThan: args.olderThan as string | undefined, importanceLessThan: args.importanceLessThan as number | undefined, tags: args.tags as string[] | undefined }, args.dryRun as boolean | undefined));
       case "import_graph":
-        return { content: [{ type: "text", text: JSON.stringify(await this.manager.importGraph(args.format as 'json' | 'csv' | 'graphml', args.data as string, args.mergeStrategy as 'replace' | 'skip' | 'merge' | 'fail' | undefined, args.dryRun as boolean | undefined), null, 2) }] };
+        return formatToolResponse(await this.manager.importGraph(args.format as 'json' | 'csv' | 'graphml', args.data as string, args.mergeStrategy as 'replace' | 'skip' | 'merge' | 'fail' | undefined, args.dryRun as boolean | undefined));
       case "export_graph":
-        return { content: [{ type: "text", text: await this.manager.exportGraph(args.format as 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined) }] };
+        return formatRawResponse(await this.manager.exportGraph(args.format as 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid', args.filter as { startDate?: string; endDate?: string; entityType?: string; tags?: string[] } | undefined));
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
