@@ -5,6 +5,49 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0] - 2025-11-26
+
+### Added
+- **Context/Token Optimization - Sprint 2: Search Module Consolidation** - Created unified search filter logic
+
+  **New Utility Files**:
+  - `src/memory/search/SearchFilterChain.ts` - Centralized search filtering
+    * `SearchFilterChain.applyFilters()` - Apply tag, importance, date filters
+    * `SearchFilterChain.entityPassesFilters()` - Check single entity
+    * `SearchFilterChain.validatePagination()` - Validate pagination params
+    * `SearchFilterChain.paginate()` - Apply pagination to results
+    * `SearchFilterChain.filterAndPaginate()` - Combined convenience method
+
+### Changed
+- **BasicSearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~20 lines)
+  * Now uses `SearchFilterChain.applyFilters()` for tag/importance
+  * Now uses `SearchFilterChain.validatePagination()` for pagination
+
+- **BooleanSearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~15 lines)
+  * Separated boolean query evaluation from filter application
+
+- **FuzzySearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~15 lines)
+  * Separated fuzzy matching from filter application
+
+- **RankedSearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~15 lines)
+  * Streamlined filter application before TF-IDF scoring
+
+- **search/index.ts** - Added SearchFilterChain export
+
+**Impact**:
+- Eliminated ~65 lines of duplicate filter logic across 4 search files
+- Unified tag normalization, importance filtering, and pagination
+- All 396 tests passing (37 BasicSearch, 52 BooleanSearch, 53 FuzzySearch, 35 RankedSearch)
+- Build successful
+
+**Sprint 2 Complete** ✅
+- Tasks 2.1-2.6: All search files refactored
+- Ready for Sprint 3: MCPServer Optimization
+
 ## [0.42.0] - 2025-11-26
 
 ### Added

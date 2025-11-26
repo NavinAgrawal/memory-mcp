@@ -11,6 +11,7 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { isWithinDateRange } from '../utils/dateUtils.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { searchCaches } from '../utils/searchCache.js';
+import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 
 /**
  * Performs basic text search with optional filters and caching.
@@ -52,42 +53,24 @@ export class BasicSearch {
     }
 
     const graph = await this.storage.loadGraph();
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+    const queryLower = query.toLowerCase();
 
-    // Validate pagination parameters
-    const validatedOffset = Math.max(0, offset);
-    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
-
-    const filteredEntities = graph.entities.filter(e => {
-      // Text search
-      const matchesQuery =
-        e.name.toLowerCase().includes(query.toLowerCase()) ||
-        e.entityType.toLowerCase().includes(query.toLowerCase()) ||
-        e.observations.some(o => o.toLowerCase().includes(query.toLowerCase()));
-
-      if (!matchesQuery) return false;
-
-      // Tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
-      // Importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-
-      return true;
+    // First filter by text match (search-specific)
+    const textMatched = graph.entities.filter(e => {
+      return (
+        e.name.toLowerCase().includes(queryLower) ||
+        e.entityType.toLowerCase().includes(queryLower) ||
+        e.observations.some(o => o.toLowerCase().includes(queryLower))
+      );
     });
 
-    // Apply pagination
-    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+    // Apply tag and importance filters using SearchFilterChain
+    const filters: SearchFilters = { tags, minImportance, maxImportance };
+    const filteredEntities = SearchFilterChain.applyFilters(textMatched, filters);
+
+    // Apply pagination using SearchFilterChain
+    const pagination = SearchFilterChain.validatePagination(offset, limit);
+    const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
 
     const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(
@@ -152,37 +135,23 @@ export class BasicSearch {
     }
 
     const graph = await this.storage.loadGraph();
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
-    // Validate pagination parameters
-    const validatedOffset = Math.max(0, offset);
-    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
-
-    const filteredEntities = graph.entities.filter(e => {
-      // Date filter (use createdAt or lastModified)
+    // First filter by date range (search-specific - uses createdAt OR lastModified)
+    const dateFiltered = graph.entities.filter(e => {
       const dateToCheck = e.createdAt || e.lastModified;
       if (dateToCheck && !isWithinDateRange(dateToCheck, startDate, endDate)) {
         return false;
       }
-
-      // Entity type filter
-      if (entityType && e.entityType !== entityType) {
-        return false;
-      }
-
-      // Tags filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
       return true;
     });
 
-    // Apply pagination
-    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+    // Apply entity type and tag filters using SearchFilterChain
+    const filters: SearchFilters = { tags, entityType };
+    const filteredEntities = SearchFilterChain.applyFilters(dateFiltered, filters);
+
+    // Apply pagination using SearchFilterChain
+    const pagination = SearchFilterChain.validatePagination(offset, limit);
+    const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
 
     const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(r => {
