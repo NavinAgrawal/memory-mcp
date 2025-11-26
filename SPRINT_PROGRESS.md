@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 58.1% complete (2,436/3,994 lines removed)
+**Status:** 🚧 60.0% complete (2,519/3,994 lines removed) 🎯 **60% MILESTONE!**
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 1,758 lines
+**Current:** 1,675 lines
 
 ### Completed Phases
 
@@ -259,7 +259,33 @@
 
 **Total Phase 1-14 Progress:** 2,436 lines removed (58.1%)
 
-### Remaining Work (~1,558 lines to refactor)
+#### ✅ Phase 15: Merge Tags Operation Delegation (v0.38.0) - COMPLETE
+- Added mergeTags() method to EntityManager (46 lines of implementation)
+  * Combines two tags into a target tag across all entities
+  * Normalizes all tags to lowercase for consistency
+  * Updates entity timestamps on modification
+  * Returns affected entity names and count
+- Replaced mergeTags() implementation in index.ts (34 lines) → delegates to EntityManager
+- EntityManager now provides complete tag lifecycle management (CRUD + merge + replace)
+- **Progress**: 1,758 → 1,726 lines (32 lines removed, 1.9%)
+
+**Total Phase 1-15 Progress:** 2,468 lines removed (58.9%)
+
+#### ✅ Phase 16: Archive Operations Delegation (v0.39.0) - COMPLETE
+- Added ArchiveManager import and instance to KnowledgeGraphManager
+- Replaced archiveEntities() implementation (59 lines) → delegates to ArchiveManager
+- Removed unused saveGraph() private helper method (4 lines)
+- ArchiveManager handles:
+  * Age-based archiving (entities older than specified date)
+  * Importance-based archiving (entities below importance threshold)
+  * Tag-based archiving (entities with specific tags)
+  * Dry-run mode for preview before actual archiving
+  * Automatic cleanup of relations connected to archived entities
+- **Progress**: 1,726 → 1,675 lines (51 lines removed, 3.0%)
+
+**Total Phase 1-16 Progress:** 2,519 lines removed (60.0%) 🎯 **60% MILESTONE!**
+
+### Remaining Work (~1,475 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:
