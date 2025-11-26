@@ -20,7 +20,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - [API Reference](#api-reference)
 - [Data Model](#data-model)
 - [Usage Examples](#usage-examples)
-- [Comprehensive Guides](#comprehensive-guides)
+- [Documentation](#documentation)
 - [Configuration](#configuration)
 - [Development](#development)
 - [Contributing](#contributing)
@@ -1488,16 +1488,27 @@ All files use JSONL (JSON Lines) format where each line is a valid JSON object.
 { "sourceTag": "ml", "targetTag": "machine-learning" }  // merge_tags
 ```
 
-## Comprehensive Guides
+## Documentation
 
-Detailed documentation for advanced features:
+### 📚 **[Complete Documentation](docs/README.md)**
 
-- **[HIERARCHY_GUIDE.md](HIERARCHY_GUIDE.md)** - Complete guide to parent-child relationships (8 tools)
-- **[COMPRESSION_GUIDE.md](COMPRESSION_GUIDE.md)** - Intelligent duplicate detection and merging (3 tools)
-- **[ARCHIVING_GUIDE.md](ARCHIVING_GUIDE.md)** - Memory lifecycle and long-term storage (1 tool)
-- **[QUERY_LANGUAGE.md](QUERY_LANGUAGE.md)** - Boolean search syntax reference
-- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Upgrade guide from v0.7.0 to v0.8.0
-- **[CHANGELOG.md](CHANGELOG.md)** - Complete version history and release notes
+Comprehensive documentation organized by category:
+
+**Core Documentation**
+- **[API Reference](docs/API.md)** - Complete API documentation for all 45+ tools
+- **[Architecture](docs/ARCHITECTURE.md)** - Technical architecture and system design
+- **[Workflow](docs/WORKFLOW.md)** - Development workflow and procedures
+
+**User Guides**
+- **[Hierarchy Guide](docs/guides/HIERARCHY.md)** - Parent-child relationships (8 tools)
+- **[Compression Guide](docs/guides/COMPRESSION.md)** - Duplicate detection and merging (3 tools)
+- **[Archiving Guide](docs/guides/ARCHIVING.md)** - Memory lifecycle and archiving (1 tool)
+- **[Query Language](docs/guides/QUERY_LANGUAGE.md)** - Boolean search syntax reference
+- **[Migration Guide](docs/guides/MIGRATION.md)** - Version upgrade guide
+
+**Project Information**
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+- **[Sprint Progress](docs/reports/SPRINT_PROGRESS.md)** - Development progress tracking
 
 ## Configuration
 
