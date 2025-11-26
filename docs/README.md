@@ -11,6 +11,15 @@ Welcome to the Enhanced Memory MCP documentation! This directory contains compre
 
 ## Core Documentation
 
+### [Project Overview](./OVERVIEW.md)
+High-level introduction to Memory MCP covering:
+- Key capabilities and features
+- Quick architecture diagram
+- Data model (Entity, Relation)
+- Directory structure
+- Tool categories (45 total)
+- Performance characteristics
+
 ### [API Reference](./API.md)
 Complete API documentation for all 45+ tools provided by the Enhanced Memory MCP server, including:
 - Entity and relation operations
@@ -20,12 +29,14 @@ Complete API documentation for all 45+ tools provided by the Enhanced Memory MCP
 - Import/export capabilities
 - Analytics and validation
 
-### [Architecture Overview](./ARCHITECTURE.md)
-Technical architecture documentation covering:
+### [Architecture Details](./ARCHITECTURE.md)
+In-depth technical architecture documentation covering:
 - System design and component structure
+- Modular server design (MCPServer, toolDefinitions, toolHandlers)
+- Lazy initialization patterns
 - Data flow and processing pipelines
-- Module organization and responsibilities
 - Performance optimization strategies
+- Context optimization improvements (v0.47.0)
 
 ### [Workflow](./WORKFLOW.md)
 Development workflow and operational procedures for working with the memory server.
