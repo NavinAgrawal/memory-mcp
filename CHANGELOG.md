@@ -5,6 +5,39 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.46.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Sprint 5: Type & Import Optimization** - Package exports map and tree-shaking support
+
+  **Task 5.5: Package Exports Map**
+  - Added `exports` field to package.json for proper subpath exports
+  - Enables tree-shaking and direct module imports
+  - Subpaths available:
+    * `.` - Main entry point
+    * `./types` - Type definitions
+    * `./utils` - Utility functions
+    * `./core` - Core managers
+    * `./search` - Search functionality
+    * `./features` - Feature managers
+    * `./server` - MCP server
+  - Added `main` and `types` fields for compatibility
+
+  **Task 5.1: Type Re-exports (Already Complete)**
+  - Types properly organized in `types/index.ts` barrel export
+  - All type categories exported: Entity, Search, Analytics, Tag, ImportExport
+
+**Impact**:
+- Consumers can import specific modules for smaller bundle sizes
+- Better IDE support with proper type exports
+- All 396 tests passing
+- Build successful
+
+**Sprint 5 Complete** ✅
+- Task 5.1: Consolidate type re-exports ✅ (already done)
+- Task 5.5: Update package exports map ✅
+- Ready for Sprint 6: Caching & Lazy Loading
+
 ## [0.45.0] - 2025-11-26
 
 ### Changed

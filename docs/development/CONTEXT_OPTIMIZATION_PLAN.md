@@ -1724,12 +1724,12 @@ Document all caching strategies, lazy loading patterns, and batch operation usag
 - [ ] Task 4.6: Create format-specific exporters (optional - deferred)
 - [ ] Task 4.7: Refactor ExportManager (optional - deferred)
 
-### Sprint 5: Type & Import Optimization
-- [ ] Task 5.1: Consolidate type re-exports
-- [ ] Task 5.2: Create common imports file
-- [ ] Task 5.3: Reduce import verbosity
-- [ ] Task 5.4: Add JSDoc documentation
-- [ ] Task 5.5: Update package exports map
+### Sprint 5: Type & Import Optimization ✅ COMPLETE (Core Tasks)
+- [x] Task 5.1: Consolidate type re-exports (already done)
+- [ ] Task 5.2: Create common imports file (optional - deferred)
+- [ ] Task 5.3: Reduce import verbosity (optional - deferred)
+- [ ] Task 5.4: Add JSDoc documentation (optional - deferred)
+- [x] Task 5.5: Update package exports map (enables tree-shaking)
 
 ### Sprint 6: Caching & Lazy Loading
 - [ ] Task 6.1: Implement graph cache
