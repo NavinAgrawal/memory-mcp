@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 56.6% complete (2,373/3,994 lines removed)
+**Status:** 🚧 58.1% complete (2,436/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 1,821 lines
+**Current:** 1,758 lines
 
 ### Completed Phases
 
@@ -240,7 +240,26 @@
 
 **Total Phase 1-13 Progress:** 2,373 lines removed (56.6%)
 
-### Remaining Work (~1,621 lines to refactor)
+#### ✅ Phase 14: Tag Alias Operations Delegation (v0.37.0) - COMPLETE
+- Removed loadTagAliases() private helper (11 lines) - delegated to TagManager
+- Removed saveTagAliases() private helper (3 lines) - delegated to TagManager
+- Replaced resolveTag() implementation (12 lines) → delegates to tagManager
+- Replaced addTagAlias() implementation (26 lines) → delegates to tagManager
+- Replaced listTagAliases() implementation (2 lines) → delegates to tagManager
+- Replaced removeTagAlias() implementation (12 lines) → delegates to tagManager
+- Replaced getAliasesForTag() implementation (6 lines) → delegates to tagManager
+- Added TagManager import and instance to KnowledgeGraphManager
+- TagManager provides:
+  * Tag alias resolution (synonym to canonical mapping)
+  * Alias creation with validation (prevents duplicates and chained aliases)
+  * Alias listing and removal
+  * Canonical tag lookup (find all synonyms for a tag)
+  * JSONL file persistence (one alias per line)
+- **Progress**: 1,821 → 1,758 lines (63 lines removed, 3.5%)
+
+**Total Phase 1-14 Progress:** 2,436 lines removed (58.1%)
+
+### Remaining Work (~1,558 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:

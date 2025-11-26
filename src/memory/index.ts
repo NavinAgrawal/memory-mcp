@@ -23,6 +23,7 @@ import { HierarchyManager } from './features/HierarchyManager.js';
 import { ExportManager } from './features/ExportManager.js';
 import { ImportManager } from './features/ImportManager.js';
 import { AnalyticsManager } from './features/AnalyticsManager.js';
+import { TagManager } from './features/TagManager.js';
 import type {
   Entity,
   Relation,
@@ -108,6 +109,7 @@ export class KnowledgeGraphManager {
   private exportManager: ExportManager;
   private importManager: ImportManager;
   private analyticsManager: AnalyticsManager;
+  private tagManager: TagManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -124,6 +126,7 @@ export class KnowledgeGraphManager {
     this.exportManager = new ExportManager();
     this.importManager = new ImportManager(this.storage);
     this.analyticsManager = new AnalyticsManager(this.storage);
+    this.tagManager = new TagManager(this.tagAliasesFilePath);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
@@ -550,41 +553,13 @@ export class KnowledgeGraphManager {
   }
 
   // Tier 0 B2: Tag aliases for synonym management
-  private async loadTagAliases(): Promise<TagAlias[]> {
-    try {
-      const data = await fs.readFile(this.tagAliasesFilePath, "utf-8");
-      const lines = data.split("\n").filter(line => line.trim() !== "");
-      return lines.map(line => JSON.parse(line) as TagAlias);
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
-        return [];
-      }
-      throw error;
-    }
-  }
-
-  private async saveTagAliases(aliases: TagAlias[]): Promise<void> {
-    const lines = aliases.map(a => JSON.stringify(a));
-    await fs.writeFile(this.tagAliasesFilePath, lines.join("\n"));
-  }
-
   /**
    * Resolve a tag through aliases to get its canonical form
    * @param tag - Tag to resolve (can be alias or canonical)
    * @returns Canonical tag name
    */
   async resolveTag(tag: string): Promise<string> {
-    const aliases = await this.loadTagAliases();
-    const normalized = tag.toLowerCase();
-
-    // Check if this tag is an alias
-    const alias = aliases.find(a => a.alias === normalized);
-    if (alias) {
-      return alias.canonical;
-    }
-
-    // Return as-is (might be canonical or unaliased tag)
-    return normalized;
+    return this.tagManager.resolveTag(tag);
   }
 
   /**
@@ -594,66 +569,28 @@ export class KnowledgeGraphManager {
    * @param description - Optional description of the alias
    */
   async addTagAlias(alias: string, canonical: string, description?: string): Promise<TagAlias> {
-    const aliases = await this.loadTagAliases();
-    const normalizedAlias = alias.toLowerCase();
-    const normalizedCanonical = canonical.toLowerCase();
-
-    // Check if alias already exists
-    if (aliases.some(a => a.alias === normalizedAlias)) {
-      throw new Error(`Tag alias "${alias}" already exists`);
-    }
-
-    // Prevent aliasing to another alias (aliases should point to canonical tags)
-    if (aliases.some(a => a.canonical === normalizedAlias)) {
-      throw new Error(`Cannot create alias to "${alias}" because it is a canonical tag with existing aliases`);
-    }
-
-    const newAlias: TagAlias = {
-      alias: normalizedAlias,
-      canonical: normalizedCanonical,
-      description,
-      createdAt: new Date().toISOString()
-    };
-
-    aliases.push(newAlias);
-    await this.saveTagAliases(aliases);
-
-    return newAlias;
+    return this.tagManager.addTagAlias(alias, canonical, description);
   }
 
   /**
    * List all tag aliases
    */
   async listTagAliases(): Promise<TagAlias[]> {
-    return await this.loadTagAliases();
+    return this.tagManager.listTagAliases();
   }
 
   /**
    * Remove a tag alias
    */
   async removeTagAlias(alias: string): Promise<boolean> {
-    const aliases = await this.loadTagAliases();
-    const normalizedAlias = alias.toLowerCase();
-    const initialLength = aliases.length;
-    const filtered = aliases.filter(a => a.alias !== normalizedAlias);
-
-    if (filtered.length === initialLength) {
-      return false; // Alias not found
-    }
-
-    await this.saveTagAliases(filtered);
-    return true;
+    return this.tagManager.removeTagAlias(alias);
   }
 
   /**
    * Get all aliases for a canonical tag
    */
   async getAliasesForTag(canonicalTag: string): Promise<string[]> {
-    const aliases = await this.loadTagAliases();
-    const normalized = canonicalTag.toLowerCase();
-    return aliases
-      .filter(a => a.canonical === normalized)
-      .map(a => a.alias);
+    return this.tagManager.getAliasesForTag(canonicalTag);
   }
 
   // Phase 4 & Tier 0 D1: Export graph in various formats

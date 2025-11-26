@@ -5,6 +5,38 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Tag Alias Operations Delegation - Phase 14** - Delegate all tag alias operations to TagManager
+
+  **Delegated Tag Alias Operations**: Replaced inline implementations with TagManager delegations
+  - Removed loadTagAliases() private helper (11 lines) - now handled by TagManager
+  - Removed saveTagAliases() private helper (3 lines) - now handled by TagManager
+  - Replaced resolveTag() implementation (12 lines) with delegation to tagManager
+  - Replaced addTagAlias() implementation (26 lines) with delegation to tagManager
+  - Replaced listTagAliases() implementation (2 lines) with delegation to tagManager
+  - Replaced removeTagAlias() implementation (12 lines) with delegation to tagManager
+  - Replaced getAliasesForTag() implementation (6 lines) with delegation to tagManager
+  - Added TagManager import and instance to KnowledgeGraphManager
+
+  **Impact**:
+  - Reduced index.ts from 1,821 lines to 1,758 lines (63 lines removed, 3.5% reduction)
+  - Centralized all tag alias management in TagManager
+  - TagManager provides:
+    * Tag alias resolution (synonym to canonical mapping)
+    * Alias creation with validation (prevents duplicates and chained aliases)
+    * Alias listing and removal
+    * Canonical tag lookup (find all synonyms for a tag)
+    * JSONL file persistence (one alias per line)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,758 lines (58.1% total reduction)
+  - Phases 1-14: 2,436 lines removed total
+  - Remaining: ~1,558 lines of implementation code to refactor
+
 ## [0.36.0] - 2025-11-25
 
 ### Changed
