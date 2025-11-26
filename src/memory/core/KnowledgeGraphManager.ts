@@ -53,19 +53,21 @@ import type {
  * - ArchiveManager: Entity archiving
  */
 export class KnowledgeGraphManager {
-  private savedSearchesFilePath: string;
-  private tagAliasesFilePath: string;
-  private storage: GraphStorage;
-  private entityManager: EntityManager;
-  private relationManager: RelationManager;
-  private searchManager: SearchManager;
-  private compressionManager: CompressionManager;
-  private hierarchyManager: HierarchyManager;
-  private exportManager: ExportManager;
-  private importManager: ImportManager;
-  private analyticsManager: AnalyticsManager;
-  private tagManager: TagManager;
-  private archiveManager: ArchiveManager;
+  private readonly savedSearchesFilePath: string;
+  private readonly tagAliasesFilePath: string;
+  private readonly storage: GraphStorage;
+
+  // Lazy-initialized managers for improved startup performance
+  private _entityManager?: EntityManager;
+  private _relationManager?: RelationManager;
+  private _searchManager?: SearchManager;
+  private _compressionManager?: CompressionManager;
+  private _hierarchyManager?: HierarchyManager;
+  private _exportManager?: ExportManager;
+  private _importManager?: ImportManager;
+  private _analyticsManager?: AnalyticsManager;
+  private _tagManager?: TagManager;
+  private _archiveManager?: ArchiveManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -74,16 +76,48 @@ export class KnowledgeGraphManager {
     this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
     this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
     this.storage = new GraphStorage(memoryFilePath);
-    this.entityManager = new EntityManager(this.storage);
-    this.relationManager = new RelationManager(this.storage);
-    this.searchManager = new SearchManager(this.storage, this.savedSearchesFilePath);
-    this.compressionManager = new CompressionManager(this.storage);
-    this.hierarchyManager = new HierarchyManager(this.storage);
-    this.exportManager = new ExportManager();
-    this.importManager = new ImportManager(this.storage);
-    this.analyticsManager = new AnalyticsManager(this.storage);
-    this.tagManager = new TagManager(this.tagAliasesFilePath);
-    this.archiveManager = new ArchiveManager(this.storage);
+    // Managers are now initialized lazily via getters
+  }
+
+  // Lazy getters for managers - instantiated on first access
+  private get entityManager(): EntityManager {
+    return (this._entityManager ??= new EntityManager(this.storage));
+  }
+
+  private get relationManager(): RelationManager {
+    return (this._relationManager ??= new RelationManager(this.storage));
+  }
+
+  private get searchManager(): SearchManager {
+    return (this._searchManager ??= new SearchManager(this.storage, this.savedSearchesFilePath));
+  }
+
+  private get compressionManager(): CompressionManager {
+    return (this._compressionManager ??= new CompressionManager(this.storage));
+  }
+
+  private get hierarchyManager(): HierarchyManager {
+    return (this._hierarchyManager ??= new HierarchyManager(this.storage));
+  }
+
+  private get exportManager(): ExportManager {
+    return (this._exportManager ??= new ExportManager());
+  }
+
+  private get importManager(): ImportManager {
+    return (this._importManager ??= new ImportManager(this.storage));
+  }
+
+  private get analyticsManager(): AnalyticsManager {
+    return (this._analyticsManager ??= new AnalyticsManager(this.storage));
+  }
+
+  private get tagManager(): TagManager {
+    return (this._tagManager ??= new TagManager(this.tagAliasesFilePath));
+  }
+
+  private get archiveManager(): ArchiveManager {
+    return (this._archiveManager ??= new ArchiveManager(this.storage));
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {

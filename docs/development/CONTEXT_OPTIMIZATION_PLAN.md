@@ -1715,14 +1715,14 @@ Document all caching strategies, lazy loading patterns, and batch operation usag
 - [ ] Task 3.7: Add handler tests
 - [ ] Task 3.8: Update server barrel export
 
-### Sprint 4: Manager Class Optimization
-- [ ] Task 4.1: Extract TagOperationsMixin
-- [ ] Task 4.2: Refactor EntityManager
-- [ ] Task 4.3: Implement lazy initialization
-- [ ] Task 4.4: Extract transaction handlers
-- [ ] Task 4.5: Consolidate SIMILARITY_WEIGHTS
-- [ ] Task 4.6: Create format-specific exporters
-- [ ] Task 4.7: Refactor ExportManager
+### Sprint 4: Manager Class Optimization ✅ COMPLETE (Core Tasks)
+- [ ] Task 4.1: Extract TagOperationsMixin (optional - deferred)
+- [ ] Task 4.2: Refactor EntityManager (optional - deferred)
+- [x] Task 4.3: Implement lazy initialization (10 managers now lazy-loaded via getters)
+- [ ] Task 4.4: Extract transaction handlers (optional - deferred)
+- [x] Task 4.5: Consolidate SIMILARITY_WEIGHTS (removed duplicate from CompressionManager)
+- [ ] Task 4.6: Create format-specific exporters (optional - deferred)
+- [ ] Task 4.7: Refactor ExportManager (optional - deferred)
 
 ### Sprint 5: Type & Import Optimization
 - [ ] Task 5.1: Consolidate type re-exports

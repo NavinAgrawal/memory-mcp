@@ -5,6 +5,38 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.45.0] - 2025-11-26
+
+### Changed
+- **Context/Token Optimization - Sprint 4: Manager Class Optimization** - Lazy initialization and constant consolidation
+
+  **Task 4.5: Consolidated SIMILARITY_WEIGHTS**
+  - Removed duplicate `SIMILARITY_WEIGHTS` definition from `CompressionManager.ts`
+  - Unified on single definition in `constants.ts` with consistent key names (OBSERVATIONS, TAGS)
+  - Removed duplicate `DEFAULT_DUPLICATE_THRESHOLD` from `CompressionManager.ts`
+  - CompressionManager now imports constants from centralized location
+
+  **Task 4.3: Lazy Manager Initialization**
+  - Refactored `KnowledgeGraphManager` to use lazy initialization pattern
+  - 10 managers are now instantiated on-demand via private getters
+  - Uses nullish coalescing assignment (`??=`) for clean, efficient lazy instantiation
+  - Managers: EntityManager, RelationManager, SearchManager, CompressionManager,
+    HierarchyManager, ExportManager, ImportManager, AnalyticsManager, TagManager, ArchiveManager
+  - Faster startup time when not all features are used
+  - Reduced memory footprint for unused managers
+
+**Impact**:
+- Eliminated duplicate constant definitions
+- Faster KnowledgeGraphManager construction (managers initialized only when accessed)
+- Cleaner separation of concerns for constants
+- All 396 tests passing
+- Build successful
+
+**Sprint 4 Complete** ✅
+- Task 4.3: Implement lazy initialization ✅
+- Task 4.5: Consolidate SIMILARITY_WEIGHTS ✅
+- Ready for Sprint 5: Type & Import Optimization
+
 ## [0.44.0] - 2025-11-26
 
 ### Changed

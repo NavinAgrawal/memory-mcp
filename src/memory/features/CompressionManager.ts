@@ -10,28 +10,7 @@ import type { Entity, Relation, CompressionResult } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
-
-/**
- * Default threshold for duplicate detection (80% similarity).
- */
-export const DEFAULT_DUPLICATE_THRESHOLD = 0.8;
-
-/**
- * Similarity scoring weights for entity comparison.
- * These values determine the relative importance of each factor when calculating
- * entity similarity. Higher weights give more importance to that factor.
- * Total weights must sum to 1.0 (100%).
- */
-export const SIMILARITY_WEIGHTS = {
-  /** Weight for name similarity using Levenshtein distance (40%) */
-  NAME: 0.4,
-  /** Weight for exact entity type match (20%) */
-  TYPE: 0.2,
-  /** Weight for observation overlap using Jaccard similarity (30%) */
-  OBSERVATIONS: 0.3,
-  /** Weight for tag overlap using Jaccard similarity (10%) */
-  TAGS: 0.1,
-} as const;
+import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
 
 /**
  * Manages graph compression through duplicate detection and merging.
