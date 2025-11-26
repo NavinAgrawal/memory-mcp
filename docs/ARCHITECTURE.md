@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
-**Version**: 0.17.0
-**Last Updated**: 2025-11-25
+**Version**: 0.47.0
+**Last Updated**: 2025-11-26
 
 ---
 
@@ -32,12 +32,14 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 - **Timestamps**: Automatic tracking of creation and modification times
 - **Batch Operations**: Efficient bulk updates
 
-### Key Statistics (v0.17.0)
+### Key Statistics (v0.47.0)
 
-- **396 Tests**: 100% passing (unit, integration, edge cases, performance)
+- **396+ Tests**: 100% passing (unit, integration, edge cases, performance)
 - **Test Coverage**: 98%+ across core managers
 - **Performance**: Handles 2000+ entities, 5000+ total elements efficiently
 - **TypeScript**: Strict mode, full type safety
+- **Modular Server**: MCPServer split into 3 files (67 lines main, ~400 lines definitions, ~200 lines handlers)
+- **Lazy Initialization**: 10 managers instantiated on-demand
 
 ---
 
@@ -74,44 +76,49 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                                                               │
-│                     MCP Client (Claude)                       │
-│                                                               │
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-                            │ MCP Protocol
-                            │ (JSON-RPC)
-                            │
-┌───────────────────────────┴─────────────────────────────────┐
-│                                                               │
-│                   Memory MCP Server                           │
-│                                                               │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                  MCP Handler Layer                   │    │
-│  │            (index.ts - Request Router)               │    │
-│  └───────────────────────┬─────────────────────────────┘    │
-│                          │                                    │
-│  ┌───────────────────────┴─────────────────────────────┐    │
-│  │              Core Managers Layer                     │    │
-│  │  • EntityManager   • RelationManager                 │    │
-│  │  • SearchManager   • CompressionManager              │    │
-│  │  • TagManager      • ExportManager                   │    │
-│  └───────────────────────┬─────────────────────────────┘    │
-│                          │                                    │
-│  ┌───────────────────────┴─────────────────────────────┐    │
-│  │              Storage Layer                           │    │
-│  │              GraphStorage                            │    │
-│  └───────────────────────┬─────────────────────────────┘    │
-│                          │                                    │
-└──────────────────────────┼────────────────────────────────────┘
-                           │
-                           │ File System I/O
-                           │
-                    ┌──────┴──────┐
-                    │   JSONL     │
-                    │   Storage   │
-                    │   File      │
-                    └─────────────┘
+│                     MCP Client (Claude)                      │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ MCP Protocol (JSON-RPC)
+┌───────────────────────────┴──────────────────────────────────┐
+│                   Memory MCP Server                          │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  Layer 1: MCP Protocol Layer (server/)                 │ │
+│  │  ┌──────────────┬─────────────────┬─────────────────┐  │ │
+│  │  │ MCPServer.ts │ toolDefinitions │  toolHandlers   │  │ │
+│  │  │   (67 LOC)   │   (45 schemas)  │ (handler reg.)  │  │ │
+│  │  └──────────────┴─────────────────┴─────────────────┘  │ │
+│  └────────────────────────────┬───────────────────────────┘ │
+│                               │                              │
+│  ┌────────────────────────────┴───────────────────────────┐ │
+│  │  Layer 2: Manager Layer (Facade Pattern)               │ │
+│  │  KnowledgeGraphManager (lazy initialization)           │ │
+│  │  ┌──────────────┬────────────────┬──────────────────┐  │ │
+│  │  │ core/        │ search/        │ features/        │  │ │
+│  │  │ EntityMgr    │ SearchMgr      │ HierarchyMgr     │  │ │
+│  │  │ RelationMgr  │ BasicSearch    │ CompressionMgr   │  │ │
+│  │  │ ObservMgr    │ RankedSearch   │ ExportMgr        │  │ │
+│  │  │ TransactMgr  │ BooleanSearch  │ ImportMgr        │  │ │
+│  │  │              │ FuzzySearch    │ AnalyticsMgr     │  │ │
+│  │  │              │ FilterChain    │ TagMgr           │  │ │
+│  │  │              │                │ ArchiveMgr       │  │ │
+│  │  └──────────────┴────────────────┴──────────────────┘  │ │
+│  └────────────────────────────┬───────────────────────────┘ │
+│                               │                              │
+│  ┌────────────────────────────┴───────────────────────────┐ │
+│  │  Layer 3: Storage Layer                                │ │
+│  │  GraphStorage (JSONL, in-memory cache)                 │ │
+│  └────────────────────────────┬───────────────────────────┘ │
+└───────────────────────────────┼──────────────────────────────┘
+                                │ File System I/O
+                    ┌───────────┴───────────┐
+                    │    JSONL Storage      │
+                    │ ┌───────────────────┐ │
+                    │ │ memory.jsonl      │ │
+                    │ │ *-saved-searches  │ │
+                    │ │ *-tag-aliases     │ │
+                    │ └───────────────────┘ │
+                    └───────────────────────┘
 ```
 
 ### External Actors
@@ -124,25 +131,121 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 
 ## Component Architecture
 
-### Layer 1: MCP Handler (index.ts)
+### Layer 1: MCP Protocol Layer (server/)
 
 **Responsibility**: Request routing and MCP protocol handling
 
+The MCP protocol layer is split into three focused modules:
+
+#### MCPServer.ts (67 lines)
 ```typescript
-// 45 Tool Handlers
-createEntities, getEntity, updateEntity, deleteEntities,
-createRelations, getRelations, deleteRelations,
-searchNodes, searchNodesRanked, booleanSearch, fuzzySearch,
-findDuplicates, mergeEntities, compressGraph,
-// ... and 31 more
+export class MCPServer {
+  private server: Server;
+  private manager: KnowledgeGraphManager;
+
+  constructor(manager: KnowledgeGraphManager) {
+    this.manager = manager;
+    this.server = new Server(
+      { name: "memory-server", version: "0.8.0" },
+      { capabilities: { tools: {} } }
+    );
+    this.registerToolHandlers();
+  }
+
+  private registerToolHandlers() {
+    // Delegate to toolDefinitions and toolHandlers
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: toolDefinitions
+    }));
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      return handleToolCall(name, args || {}, this.manager);
+    });
+  }
+}
 ```
 
-**Design Pattern**: Facade Pattern
-- Provides simple interface to complex subsystems
-- Routes requests to appropriate managers
-- Handles error responses and logging
+#### toolDefinitions.ts (~400 lines)
+Contains all 45 tool schemas organized by category:
+- Entity Tools (4): create_entities, delete_entities, read_graph, open_nodes
+- Relation Tools (2): create_relations, delete_relations
+- Observation Tools (2): add_observations, delete_observations
+- Search Tools (5): search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search
+- Hierarchy Tools (8): set_entity_parent, get_children, get_parent, etc.
+- Compression Tools (3): find_duplicates, merge_entities, compress_graph
+- Tag Tools (8): add_tags, remove_tags, set_importance, etc.
+- Saved Search Tools (6): save_search, list_saved_searches, etc.
+- Import/Export Tools (2): export_graph, import_graph
+- Analytics Tools (3): get_graph_stats, validate_graph, archive_entities
 
-### Layer 2: Core Managers
+#### toolHandlers.ts (~200 lines)
+```typescript
+export const toolHandlers: Record<string, ToolHandler> = {
+  create_entities: async (manager, args) =>
+    formatToolResponse(await manager.createEntities(args.entities as any[])),
+  // ... 45 handlers total
+};
+
+export async function handleToolCall(
+  name: string,
+  args: Record<string, unknown>,
+  manager: KnowledgeGraphManager
+): Promise<ToolResponse> {
+  const handler = toolHandlers[name];
+  if (!handler) throw new Error(`Unknown tool: ${name}`);
+  return handler(manager, args);
+}
+```
+
+**Design Patterns**:
+- **Facade Pattern**: Simple interface to complex subsystems
+- **Registry Pattern**: Handler lookup by tool name
+- **Separation of Concerns**: Definitions, handlers, and server logic isolated
+
+### Layer 2: Manager Layer
+
+#### KnowledgeGraphManager (core/KnowledgeGraphManager.ts)
+
+**Responsibility**: Central facade coordinating all operations
+
+```typescript
+export class KnowledgeGraphManager {
+  private readonly storage: GraphStorage;
+
+  // Lazy-initialized managers (instantiated on first access)
+  private _entityManager?: EntityManager;
+  private _relationManager?: RelationManager;
+  private _searchManager?: SearchManager;
+  private _compressionManager?: CompressionManager;
+  private _hierarchyManager?: HierarchyManager;
+  private _exportManager?: ExportManager;
+  private _importManager?: ImportManager;
+  private _analyticsManager?: AnalyticsManager;
+  private _tagManager?: TagManager;
+  private _archiveManager?: ArchiveManager;
+
+  constructor(memoryFilePath: string) {
+    this.storage = new GraphStorage(memoryFilePath);
+    // Managers initialized lazily via getters
+  }
+
+  // Lazy getter example
+  private get entityManager(): EntityManager {
+    return (this._entityManager ??= new EntityManager(this.storage));
+  }
+}
+```
+
+**Key Features**:
+- **Facade Pattern**: Single entry point for all graph operations
+- **Lazy Initialization**: Managers created on-demand using `??=` (nullish coalescing assignment)
+- **Dependency Injection**: GraphStorage injected into all managers
+- **10 Specialized Managers**: Each handling a specific domain
+
+**Lazy Initialization Benefits**:
+- Faster startup (no upfront manager creation)
+- Reduced memory for unused features
+- Cleaner separation of concerns
 
 #### EntityManager (core/EntityManager.ts)
 
@@ -230,6 +333,29 @@ class FuzzySearch {
 - Combined filtering (tags, importance, dates)
 
 **Test Coverage**: 98%+ (118 tests across all search implementations)
+
+#### SearchFilterChain (search/SearchFilterChain.ts)
+
+**Responsibility**: Unified filter logic for all search implementations
+
+```typescript
+export class SearchFilterChain {
+  // Apply all filters (tags, importance, dates, entityType)
+  static applyFilters(entities: Entity[], filters: SearchFilters): Entity[]
+
+  // Check if entity passes all filters (short-circuits on first failure)
+  static entityPassesFilters(entity: Entity, filters: SearchFilters): boolean
+
+  // Validate and apply pagination
+  static filterAndPaginate(entities: Entity[], filters: SearchFilters, offset?: number, limit?: number): Entity[]
+}
+```
+
+**Benefits**:
+- Eliminates ~65 lines of duplicate filter code across 4 search implementations
+- Consistent filtering behavior across all search types
+- Short-circuit evaluation for performance
+- Pre-normalizes tags once for efficiency
 
 #### CompressionManager (features/CompressionManager.ts)
 
@@ -576,7 +702,7 @@ MCP Response to Client
 
 ## Performance Considerations
 
-### Benchmarks (v0.17.0)
+### Benchmarks (v0.47.0)
 
 | Operation | Scale | Budget | Actual |
 |-----------|-------|--------|--------|
@@ -592,13 +718,27 @@ MCP Response to Client
 | Find duplicates | 500 | <1500ms | ~1100ms |
 | Compress graph | 100 | <400ms | ~300ms |
 
-### Optimization Strategies
+### Optimization Strategies (v0.47.0)
 
 1. **Batch Operations**: Single I/O cycle for multiple operations
-2. **In-Memory Processing**: Avoid repeated file reads
+2. **In-Memory Caching**: Graph cached with write-through invalidation
 3. **Efficient Algorithms**: TF-IDF, Levenshtein with early termination
-4. **Bucketing**: Reduce O(n²) to O(n²/k) for similarity
-5. **Lazy Loading**: Only load graph when needed (future optimization)
+4. **Bucketing**: Reduce O(n²) to O(n²/k) for similarity (50x faster)
+5. **Lazy Manager Initialization**: 10 managers created on-demand using `??=`
+6. **Unified Filter Logic**: SearchFilterChain eliminates duplicate code
+7. **Modular Server**: 92.6% reduction in MCPServer.ts (907→67 lines)
+
+### Context Optimization (v0.42.0 - v0.47.0)
+
+Recent refactoring reduced token/context usage:
+
+| Component | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| MCPServer.ts | 907 lines | 67 lines | 92.6% |
+| JSON.stringify patterns | 41 duplicates | centralized | ~41 patterns |
+| Filter logic | ~65 lines x 4 | SearchFilterChain | ~260 lines |
+| Manager initialization | Eager (10 managers) | Lazy on-demand | Faster startup |
+| Constants | Duplicated | Unified in constants.ts | Single source |
 
 ### Scalability Limits
 
@@ -732,17 +872,25 @@ npm test -- --coverage
 
 ## Future Enhancements
 
+### Recently Implemented (v0.42.0 - v0.47.0)
+
+- ✅ **Caching**: In-memory graph caching with write-through invalidation
+- ✅ **Lazy Initialization**: Managers created on-demand
+- ✅ **Modular Server**: MCPServer split for maintainability
+- ✅ **Unified Filtering**: SearchFilterChain consolidation
+- ✅ **Package Exports**: Tree-shaking support via exports map
+
 ### Planned Improvements
 
-1. **Pagination**: Limit results for large queries
-2. **Caching**: LRU cache for search results
-3. **Indexing**: Pre-calculated TF-IDF indices
-4. **Streaming**: Support for very large graphs
-5. **Async Validation**: Non-blocking integrity checks
+1. **Pagination**: Cursor-based pagination for large result sets
+2. **TF-IDF Indexing**: Pre-calculated indices for faster ranked search
+3. **Streaming**: Support for very large graphs (>10k entities)
+4. **Async Validation**: Non-blocking integrity checks
+5. **Transaction Batching**: Combine multiple operations into atomic transactions
 
 ### Architectural Evolution
 
-**Current**: Single-file JSONL, in-memory processing
+**Current**: Single-file JSONL, in-memory processing with caching
 **Future**: Pluggable storage backends (JSONL, SQLite, PostgreSQL)
 
 ```typescript
@@ -765,11 +913,12 @@ The Memory MCP architecture prioritizes:
 - ✅ **Testability**: 98%+ test coverage
 - ✅ **Security**: Input validation, path protection
 - ✅ **Extensibility**: Modular design, clear interfaces
+- ✅ **Context Efficiency**: Optimized for AI assistant token usage (v0.47.0)
 
 This architecture serves the current use case well and provides a solid foundation for future enhancements.
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-25
+**Document Version**: 2.0
+**Last Updated**: 2025-11-26
 **Maintained By**: Daniel Simon Jr.
