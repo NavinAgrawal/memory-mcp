@@ -5,6 +5,34 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Archive Operations Delegation - Phase 16** - Delegate archiveEntities to ArchiveManager
+
+  **Delegated Archive Operations**: Replaced archiveEntities implementation with ArchiveManager delegation
+  - Added ArchiveManager import and instance to KnowledgeGraphManager
+  - Replaced archiveEntities() implementation (59 lines) with delegation to ArchiveManager
+  - Removed unused saveGraph() private helper method (4 lines)
+  - ArchiveManager handles:
+    * Age-based archiving (entities older than specified date)
+    * Importance-based archiving (entities below importance threshold)
+    * Tag-based archiving (entities with specific tags)
+    * Dry-run mode for preview before actual archiving
+    * Automatic cleanup of relations connected to archived entities
+
+  **Impact**:
+  - Reduced index.ts from 1,726 lines to 1,675 lines (51 lines removed, 3.0% reduction)
+  - Centralized entity archiving logic in ArchiveManager
+  - Removed last unused private helper method (saveGraph)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,675 lines (60.0% total reduction) 🎯 **60% MILESTONE!**
+  - Phases 1-16: 2,519 lines removed total
+  - Remaining: ~1,475 lines of implementation code to refactor
+
 ## [0.38.0] - 2025-11-25
 
 ### Changed

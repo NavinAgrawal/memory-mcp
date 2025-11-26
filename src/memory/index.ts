@@ -24,6 +24,7 @@ import { ExportManager } from './features/ExportManager.js';
 import { ImportManager } from './features/ImportManager.js';
 import { AnalyticsManager } from './features/AnalyticsManager.js';
 import { TagManager } from './features/TagManager.js';
+import { ArchiveManager } from './features/ArchiveManager.js';
 import type {
   Entity,
   Relation,
@@ -110,6 +111,7 @@ export class KnowledgeGraphManager {
   private importManager: ImportManager;
   private analyticsManager: AnalyticsManager;
   private tagManager: TagManager;
+  private archiveManager: ArchiveManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -127,14 +129,11 @@ export class KnowledgeGraphManager {
     this.importManager = new ImportManager(this.storage);
     this.analyticsManager = new AnalyticsManager(this.storage);
     this.tagManager = new TagManager(this.tagAliasesFilePath);
+    this.archiveManager = new ArchiveManager(this.storage);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
     return this.storage.loadGraph();
-  }
-
-  private async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    return this.storage.saveGraph(graph);
   }
 
   /**
@@ -467,57 +466,7 @@ export class KnowledgeGraphManager {
     },
     dryRun: boolean = false
   ): Promise<{ archived: number; entityNames: string[] }> {
-    const graph = await this.loadGraph();
-    const toArchive: Entity[] = [];
-
-    for (const entity of graph.entities) {
-      let shouldArchive = false;
-
-      // Check age criteria
-      if (criteria.olderThan && entity.lastModified) {
-        const entityDate = new Date(entity.lastModified);
-        const cutoffDate = new Date(criteria.olderThan);
-        if (entityDate < cutoffDate) {
-          shouldArchive = true;
-        }
-      }
-
-      // Check importance criteria
-      if (criteria.importanceLessThan !== undefined) {
-        if (entity.importance === undefined || entity.importance < criteria.importanceLessThan) {
-          shouldArchive = true;
-        }
-      }
-
-      // Check tag criteria (must have at least one matching tag)
-      if (criteria.tags && criteria.tags.length > 0) {
-        const normalizedCriteriaTags = criteria.tags.map(t => t.toLowerCase());
-        const entityTags = (entity.tags || []).map(t => t.toLowerCase());
-        const hasMatchingTag = normalizedCriteriaTags.some(tag => entityTags.includes(tag));
-        if (hasMatchingTag) {
-          shouldArchive = true;
-        }
-      }
-
-      if (shouldArchive) {
-        toArchive.push(entity);
-      }
-    }
-
-    if (!dryRun && toArchive.length > 0) {
-      // Remove archived entities from main graph
-      const archiveNames = new Set(toArchive.map(e => e.name));
-      graph.entities = graph.entities.filter(e => !archiveNames.has(e.name));
-      graph.relations = graph.relations.filter(r =>
-        !archiveNames.has(r.from) && !archiveNames.has(r.to)
-      );
-      await this.saveGraph(graph);
-    }
-
-    return {
-      archived: toArchive.length,
-      entityNames: toArchive.map(e => e.name)
-    };
+    return this.archiveManager.archiveEntities(criteria, dryRun);
   }
 
   // Tier 0 B2: Tag aliases for synonym management
