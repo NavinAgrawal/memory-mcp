@@ -5,6 +5,107 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0] - 2025-11-26
+
+### Added
+- **Context/Token Optimization - Sprint 2: Search Module Consolidation** - Created unified search filter logic
+
+  **New Utility Files**:
+  - `src/memory/search/SearchFilterChain.ts` - Centralized search filtering
+    * `SearchFilterChain.applyFilters()` - Apply tag, importance, date filters
+    * `SearchFilterChain.entityPassesFilters()` - Check single entity
+    * `SearchFilterChain.validatePagination()` - Validate pagination params
+    * `SearchFilterChain.paginate()` - Apply pagination to results
+    * `SearchFilterChain.filterAndPaginate()` - Combined convenience method
+
+### Changed
+- **BasicSearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~20 lines)
+  * Now uses `SearchFilterChain.applyFilters()` for tag/importance
+  * Now uses `SearchFilterChain.validatePagination()` for pagination
+
+- **BooleanSearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~15 lines)
+  * Separated boolean query evaluation from filter application
+
+- **FuzzySearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~15 lines)
+  * Separated fuzzy matching from filter application
+
+- **RankedSearch.ts** - Refactored to use SearchFilterChain
+  * Removed inline tag/importance filter logic (~15 lines)
+  * Streamlined filter application before TF-IDF scoring
+
+- **search/index.ts** - Added SearchFilterChain export
+
+**Impact**:
+- Eliminated ~65 lines of duplicate filter logic across 4 search files
+- Unified tag normalization, importance filtering, and pagination
+- All 396 tests passing (37 BasicSearch, 52 BooleanSearch, 53 FuzzySearch, 35 RankedSearch)
+- Build successful
+
+**Sprint 2 Complete** ✅
+- Tasks 2.1-2.6: All search files refactored
+- Ready for Sprint 3: MCPServer Optimization
+
+## [0.42.0] - 2025-11-26
+
+### Added
+- **Context/Token Optimization - Sprint 1: Core Utility Extraction** - Created new utility modules to eliminate code duplication
+
+  **New Utility Files Created**:
+  - `src/memory/utils/responseFormatter.ts` - MCP tool response formatting
+    * `formatToolResponse()` - JSON-stringify responses
+    * `formatTextResponse()` - Plain text responses
+    * `formatRawResponse()` - Pre-formatted content (markdown, CSV)
+    * `formatErrorResponse()` - Error responses with isError flag
+
+  - `src/memory/utils/tagUtils.ts` - Tag normalization and matching
+    * `normalizeTags()`, `normalizeTag()` - Lowercase normalization
+    * `hasMatchingTag()`, `hasAllTags()` - Tag matching utilities
+    * `filterByTags()`, `addUniqueTags()`, `removeTags()` - Tag operations
+
+  - `src/memory/utils/entityUtils.ts` - Entity lookup helpers
+    * `findEntityByName()` - Type-safe entity lookup with overloads
+    * `findEntitiesByNames()`, `entityExists()` - Bulk operations
+    * `getEntityIndex()`, `removeEntityByName()` - Mutation helpers
+    * `getEntityNameSet()`, `groupEntitiesByType()` - Aggregation utilities
+
+  - `src/memory/utils/validationHelper.ts` - Zod schema validation
+    * `validateWithSchema()` - Throws ValidationError on failure
+    * `validateSafe()` - Returns result object without throwing
+    * `formatZodErrors()`, `validateArrayWithSchema()` - Helpers
+
+  - `src/memory/utils/paginationUtils.ts` - Pagination logic
+    * `validatePagination()` - Normalizes offset/limit within bounds
+    * `applyPagination()`, `paginateArray()` - Apply to result arrays
+    * `getPaginationMeta()` - Pagination metadata generation
+
+  - `src/memory/utils/filterUtils.ts` - Entity filtering
+    * `isWithinImportanceRange()`, `filterByImportance()` - Importance filters
+    * `filterByCreatedDate()`, `filterByModifiedDate()` - Date filters
+    * `filterByEntityType()`, `entityPassesFilters()` - Combined filtering
+
+### Changed
+- **MCPServer.ts** - Updated all 41 tool handlers to use response formatters
+  * Replaced inline `JSON.stringify(..., null, 2)` patterns with `formatToolResponse()`
+  * Replaced text responses with `formatTextResponse()`
+  * Replaced export_graph raw content with `formatRawResponse()`
+
+- **utils/index.ts** - Updated barrel export with all new utilities
+
+**Impact**:
+- Eliminated 41 duplicate JSON.stringify patterns in MCPServer.ts
+- Created foundation for eliminating 27 entity lookup duplications
+- Created foundation for eliminating 14 tag normalization duplications
+- All 396 tests passing
+- Build successful
+
+**Sprint 1 Complete** ✅
+- Tasks 1.1-1.7: All utility files created
+- MCPServer refactored to use formatters
+- Ready for Sprint 2: Search Module Consolidation
+
 ## [0.41.0] - 2025-11-26
 
 ### Changed

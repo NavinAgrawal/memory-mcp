@@ -10,6 +10,7 @@ import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
+import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 
 /**
  * Default fuzzy search similarity threshold (70% match required).
@@ -49,16 +50,10 @@ export class FuzzySearch {
     limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
     const graph = await this.storage.loadGraph();
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
-    // Validate pagination parameters
-    const validatedOffset = Math.max(0, offset);
-    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
-
-    // Filter entities using fuzzy matching
-    const filteredEntities = graph.entities.filter(e => {
-      // Fuzzy text search
-      const matchesQuery =
+    // First filter by fuzzy text match (search-specific)
+    const fuzzyMatched = graph.entities.filter(e => {
+      return (
         this.isFuzzyMatch(e.name, query, threshold) ||
         this.isFuzzyMatch(e.entityType, query, threshold) ||
         e.observations.some(
@@ -70,31 +65,17 @@ export class FuzzySearch {
               .some(word => this.isFuzzyMatch(word, query, threshold)) ||
             // Also check if the observation contains the query
             this.isFuzzyMatch(o, query, threshold)
-        );
-
-      if (!matchesQuery) return false;
-
-      // Tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
-      // Importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-
-      return true;
+        )
+      );
     });
 
-    // Apply pagination
-    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+    // Apply tag and importance filters using SearchFilterChain
+    const filters: SearchFilters = { tags, minImportance, maxImportance };
+    const filteredEntities = SearchFilterChain.applyFilters(fuzzyMatched, filters);
+
+    // Apply pagination using SearchFilterChain
+    const pagination = SearchFilterChain.validatePagination(offset, limit);
+    const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
 
     const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(

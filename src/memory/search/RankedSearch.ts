@@ -11,6 +11,7 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { TFIDFIndexManager } from './TFIDFIndexManager.js';
+import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 
 /**
  * Performs TF-IDF ranked search with optional pre-calculated indexes.
@@ -98,27 +99,10 @@ export class RankedSearch {
     // Enforce maximum search limit
     const effectiveLimit = Math.min(limit, SEARCH_LIMITS.MAX);
     const graph = await this.storage.loadGraph();
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
 
-    // Filter entities by tags and importance
-    const filteredEntities = graph.entities.filter(e => {
-      // Tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        if (!normalizedTags.some(tag => entityTags.includes(tag))) return false;
-      }
-
-      // Importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-
-      return true;
-    });
+    // Apply tag and importance filters using SearchFilterChain
+    const filters: SearchFilters = { tags, minImportance, maxImportance };
+    const filteredEntities = SearchFilterChain.applyFilters(graph.entities, filters);
 
     // Try to use pre-calculated index
     const index = await this.ensureIndexLoaded();

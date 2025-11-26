@@ -10,6 +10,7 @@ import type { BooleanQueryNode, Entity, KnowledgeGraph } from '../types/index.js
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { SEARCH_LIMITS, QUERY_LIMITS } from '../utils/constants.js';
 import { ValidationError } from '../utils/errors.js';
+import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 
 /**
  * Performs boolean search with query parsing and AST evaluation.
@@ -65,40 +66,18 @@ export class BooleanSearch {
     // Validate query complexity
     this.validateQueryComplexity(queryAst);
 
-    const normalizedTags = tags?.map(tag => tag.toLowerCase());
+    // First filter by boolean query evaluation (search-specific)
+    const booleanMatched = graph.entities.filter(e =>
+      this.evaluateBooleanQuery(queryAst, e)
+    );
 
-    // Validate pagination parameters
-    const validatedOffset = Math.max(0, offset);
-    const validatedLimit = Math.min(Math.max(SEARCH_LIMITS.MIN, limit), SEARCH_LIMITS.MAX);
+    // Apply tag and importance filters using SearchFilterChain
+    const filters: SearchFilters = { tags, minImportance, maxImportance };
+    const filteredEntities = SearchFilterChain.applyFilters(booleanMatched, filters);
 
-    // Filter entities
-    const filteredEntities = graph.entities.filter(e => {
-      // Evaluate boolean query
-      if (!this.evaluateBooleanQuery(queryAst, e)) {
-        return false;
-      }
-
-      // Apply tag filter
-      if (normalizedTags && normalizedTags.length > 0) {
-        if (!e.tags || e.tags.length === 0) return false;
-        const entityTags = e.tags.map(tag => tag.toLowerCase());
-        const hasMatchingTag = normalizedTags.some(tag => entityTags.includes(tag));
-        if (!hasMatchingTag) return false;
-      }
-
-      // Apply importance filter
-      if (minImportance !== undefined && (e.importance === undefined || e.importance < minImportance)) {
-        return false;
-      }
-      if (maxImportance !== undefined && (e.importance === undefined || e.importance > maxImportance)) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Apply pagination
-    const paginatedEntities = filteredEntities.slice(validatedOffset, validatedOffset + validatedLimit);
+    // Apply pagination using SearchFilterChain
+    const pagination = SearchFilterChain.validatePagination(offset, limit);
+    const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
 
     const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(
