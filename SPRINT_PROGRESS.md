@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 54.8% complete (2,300/3,994 lines removed)
+**Status:** 🚧 56.6% complete (2,373/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 1,894 lines
+**Current:** 1,821 lines
 
 ### Completed Phases
 
@@ -224,7 +224,23 @@
 
 **Total Phase 1-12 Progress:** 2,300 lines removed (54.8%)
 
-### Remaining Work (~1,694 lines to refactor)
+#### ✅ Phase 13: Saved Search Operations Delegation (v0.36.0) - COMPLETE
+- Removed loadSavedSearches() private helper (11 lines) - delegated to SavedSearchManager
+- Removed saveSavedSearches() private helper (3 lines) - delegated to SavedSearchManager
+- Replaced saveSearch() implementation (18 lines) → delegates to searchManager
+- Replaced listSavedSearches() implementation (2 lines) → delegates to searchManager
+- Replaced getSavedSearch() implementation (3 lines) → delegates to searchManager
+- Replaced executeSavedSearch() implementation (19 lines) → delegates to searchManager
+- Replaced deleteSavedSearch() implementation (11 lines) → delegates to searchManager
+- Replaced updateSavedSearch() implementation (12 lines) → delegates to searchManager
+- SearchManager coordinates all saved search operations through SavedSearchManager
+- Automatic usage tracking (useCount, lastUsed) handled by SavedSearchManager
+- JSONL file persistence (one search per line)
+- **Progress**: 1,894 → 1,821 lines (73 lines removed, 3.9%)
+
+**Total Phase 1-13 Progress:** 2,373 lines removed (56.6%)
+
+### Remaining Work (~1,621 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:

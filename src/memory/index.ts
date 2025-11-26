@@ -277,119 +277,46 @@ export class KnowledgeGraphManager {
   }
 
   // Tier 0 C4: Saved searches for efficient query management
-  private async loadSavedSearches(): Promise<SavedSearch[]> {
-    try {
-      const data = await fs.readFile(this.savedSearchesFilePath, "utf-8");
-      const lines = data.split("\n").filter(line => line.trim() !== "");
-      return lines.map(line => JSON.parse(line) as SavedSearch);
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
-        return [];
-      }
-      throw error;
-    }
-  }
-
-  private async saveSavedSearches(searches: SavedSearch[]): Promise<void> {
-    const lines = searches.map(s => JSON.stringify(s));
-    await fs.writeFile(this.savedSearchesFilePath, lines.join("\n"));
-  }
-
   /**
    * Save a search query for later reuse
    */
   async saveSearch(search: Omit<SavedSearch, 'createdAt' | 'useCount' | 'lastUsed'>): Promise<SavedSearch> {
-    const searches = await this.loadSavedSearches();
-
-    // Check if name already exists
-    if (searches.some(s => s.name === search.name)) {
-      throw new Error(`Saved search with name "${search.name}" already exists`);
-    }
-
-    const newSearch: SavedSearch = {
-      ...search,
-      createdAt: new Date().toISOString(),
-      useCount: 0
-    };
-
-    searches.push(newSearch);
-    await this.saveSavedSearches(searches);
-
-    return newSearch;
+    return this.searchManager.saveSearch(search);
   }
 
   /**
    * List all saved searches
    */
   async listSavedSearches(): Promise<SavedSearch[]> {
-    return await this.loadSavedSearches();
+    return this.searchManager.listSavedSearches();
   }
 
   /**
    * Get a specific saved search by name
    */
   async getSavedSearch(name: string): Promise<SavedSearch | null> {
-    const searches = await this.loadSavedSearches();
-    return searches.find(s => s.name === name) || null;
+    return this.searchManager.getSavedSearch(name);
   }
 
   /**
    * Execute a saved search by name
    */
   async executeSavedSearch(name: string): Promise<KnowledgeGraph> {
-    const searches = await this.loadSavedSearches();
-    const search = searches.find(s => s.name === name);
-
-    if (!search) {
-      throw new Error(`Saved search "${name}" not found`);
-    }
-
-    // Update usage statistics
-    search.lastUsed = new Date().toISOString();
-    search.useCount++;
-    await this.saveSavedSearches(searches);
-
-    // Execute the search
-    return await this.searchNodes(
-      search.query,
-      search.tags,
-      search.minImportance,
-      search.maxImportance
-    );
+    return this.searchManager.executeSavedSearch(name);
   }
 
   /**
    * Delete a saved search
    */
   async deleteSavedSearch(name: string): Promise<boolean> {
-    const searches = await this.loadSavedSearches();
-    const initialLength = searches.length;
-    const filtered = searches.filter(s => s.name !== name);
-
-    if (filtered.length === initialLength) {
-      return false; // Search not found
-    }
-
-    await this.saveSavedSearches(filtered);
-    return true;
+    return this.searchManager.deleteSavedSearch(name);
   }
 
   /**
    * Update a saved search
    */
   async updateSavedSearch(name: string, updates: Partial<Omit<SavedSearch, 'name' | 'createdAt' | 'useCount' | 'lastUsed'>>): Promise<SavedSearch> {
-    const searches = await this.loadSavedSearches();
-    const search = searches.find(s => s.name === name);
-
-    if (!search) {
-      throw new Error(`Saved search "${name}" not found`);
-    }
-
-    // Apply updates
-    Object.assign(search, updates);
-
-    await this.saveSavedSearches(searches);
-    return search;
+    return this.searchManager.updateSavedSearch(name, updates);
   }
 
   /**

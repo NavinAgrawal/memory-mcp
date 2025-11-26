@@ -5,6 +5,35 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Saved Search Operations Delegation - Phase 13** - Delegate all saved search operations to SearchManager
+
+  **Delegated Saved Search Operations**: Replaced inline implementations with SearchManager delegations
+  - Removed loadSavedSearches() private helper (11 lines) - now handled by SavedSearchManager
+  - Removed saveSavedSearches() private helper (3 lines) - now handled by SavedSearchManager
+  - Replaced saveSearch() implementation (18 lines) with delegation to searchManager
+  - Replaced listSavedSearches() implementation (2 lines) with delegation to searchManager
+  - Replaced getSavedSearch() implementation (3 lines) with delegation to searchManager
+  - Replaced executeSavedSearch() implementation (19 lines) with delegation to searchManager
+  - Replaced deleteSavedSearch() implementation (11 lines) with delegation to searchManager
+  - Replaced updateSavedSearch() implementation (12 lines) with delegation to searchManager
+
+  **Impact**:
+  - Reduced index.ts from 1,894 lines to 1,821 lines (73 lines removed, 3.9% reduction)
+  - Centralized all saved search management in SearchManager/SavedSearchManager
+  - SearchManager coordinates search execution through SavedSearchManager
+  - Automatic usage statistics tracking (useCount, lastUsed) handled in SavedSearchManager
+  - File persistence to JSONL format (one search per line)
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,821 lines (56.6% total reduction)
+  - Phases 1-13: 2,373 lines removed total
+  - Remaining: ~1,621 lines of implementation code to refactor
+
 ## [0.35.0] - 2025-11-25
 
 ### Changed
