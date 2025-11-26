@@ -63,10 +63,10 @@
 
 ## Sprint 4: Architecture Refactoring 🚧 **IN PROGRESS**
 
-**Status:** 🚧 58.1% complete (2,436/3,994 lines removed)
+**Status:** 🚧 58.9% complete (2,468/3,994 lines removed)
 **Duration:** In progress (estimated 280-440 hours total)
 **Goal:** Reduce index.ts from 4,194 lines to <200 lines
-**Current:** 1,758 lines
+**Current:** 1,726 lines
 
 ### Completed Phases
 
@@ -259,7 +259,19 @@
 
 **Total Phase 1-14 Progress:** 2,436 lines removed (58.1%)
 
-### Remaining Work (~1,558 lines to refactor)
+#### ✅ Phase 15: Merge Tags Operation Delegation (v0.38.0) - COMPLETE
+- Added mergeTags() method to EntityManager (46 lines of implementation)
+  * Combines two tags into a target tag across all entities
+  * Normalizes all tags to lowercase for consistency
+  * Updates entity timestamps on modification
+  * Returns affected entity names and count
+- Replaced mergeTags() implementation in index.ts (34 lines) → delegates to EntityManager
+- EntityManager now provides complete tag lifecycle management (CRUD + merge + replace)
+- **Progress**: 1,758 → 1,726 lines (32 lines removed, 1.9%)
+
+**Total Phase 1-15 Progress:** 2,468 lines removed (58.9%)
+
+### Remaining Work (~1,526 lines to refactor)
 
 #### 🔄 Phase 9-15: Replace Remaining Duplicate Implementations
 The following implementations in index.ts duplicate functionality already available in modular components:

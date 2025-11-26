@@ -597,4 +597,51 @@ export class EntityManager {
     await this.storage.saveGraph(graph);
     return { affectedEntities, count: affectedEntities.length };
   }
+
+  /**
+   * Merge two tags into one target tag across all entities.
+   *
+   * Combines tag1 and tag2 into targetTag. Any entity with either tag1 or tag2
+   * will have both removed and targetTag added (if not already present).
+   *
+   * @param tag1 - First tag to merge
+   * @param tag2 - Second tag to merge
+   * @param targetTag - Target tag to merge into
+   * @returns Object with affected entity names and count
+   */
+  async mergeTags(tag1: string, tag2: string, targetTag: string): Promise<{ affectedEntities: string[]; count: number }> {
+    const graph = await this.storage.loadGraph();
+    const timestamp = new Date().toISOString();
+    const normalizedTag1 = tag1.toLowerCase();
+    const normalizedTag2 = tag2.toLowerCase();
+    const normalizedTargetTag = targetTag.toLowerCase();
+    const affectedEntities: string[] = [];
+
+    for (const entity of graph.entities) {
+      if (!entity.tags) {
+        continue;
+      }
+
+      const hasTag1 = entity.tags.includes(normalizedTag1);
+      const hasTag2 = entity.tags.includes(normalizedTag2);
+
+      if (!hasTag1 && !hasTag2) {
+        continue;
+      }
+
+      // Remove both tags
+      entity.tags = entity.tags.filter(tag => tag !== normalizedTag1 && tag !== normalizedTag2);
+
+      // Add target tag if not already present
+      if (!entity.tags.includes(normalizedTargetTag)) {
+        entity.tags.push(normalizedTargetTag);
+      }
+
+      entity.lastModified = timestamp;
+      affectedEntities.push(entity.name);
+    }
+
+    await this.storage.saveGraph(graph);
+    return { affectedEntities, count: affectedEntities.length };
+  }
 }

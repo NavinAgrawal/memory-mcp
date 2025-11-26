@@ -5,6 +5,31 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0] - 2025-11-25
+
+### Changed
+- **Sprint 4: Merge Tags Operation Delegation - Phase 15** - Delegate mergeTags to EntityManager
+
+  **Enhanced EntityManager**: Added mergeTags() method to EntityManager and delegated from index.ts
+  - Added mergeTags() method to EntityManager (46 lines of implementation)
+    * Combines two tags into a target tag across all entities
+    * Normalizes all tags to lowercase for consistency
+    * Updates entity timestamps on modification
+    * Returns affected entity names and count
+  - Replaced mergeTags() implementation in index.ts (34 lines) with delegation to EntityManager
+
+  **Impact**:
+  - Reduced index.ts from 1,758 lines to 1,726 lines (32 lines removed, 1.9% reduction)
+  - EntityManager now provides complete tag lifecycle management (CRUD + merge + replace)
+  - Consistent tag normalization and timestamp updates
+  - All 396 tests passing
+
+  **Progress Toward Goal**:
+  - Target: Reduce index.ts from 4,194 lines to <200 lines
+  - Current: 1,726 lines (58.9% total reduction)
+  - Phases 1-15: 2,468 lines removed total
+  - Remaining: ~1,526 lines of implementation code to refactor
+
 ## [0.37.0] - 2025-11-25
 
 ### Changed
