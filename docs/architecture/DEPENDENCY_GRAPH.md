@@ -1,8 +1,8 @@
 # Dependency Graph
 
-> **Version**: 0.47.0
-> **Generated**: 2024-12-01
-> **Total Files Analyzed**: 37 source files
+> **Version**: 0.11.5
+> **Generated**: 2025-12-01
+> **Total Files Analyzed**: 55 source files
 
 This document provides a comprehensive dependency graph for the Memory MCP Server codebase, tracing all imports, exports, function calls, and variable dependencies across all modules.
 
@@ -71,12 +71,12 @@ This document provides a comprehensive dependency graph for the Memory MCP Serve
 
 | Category | Files | Purpose |
 |----------|-------|---------|
-| **core/** | 6 | Core graph operations (entities, relations, observations, storage) |
-| **features/** | 9 | Advanced features (hierarchy, tags, compression, import/export) |
-| **search/** | 8 | Search algorithms (basic, ranked, boolean, fuzzy, saved) |
+| **core/** | 7 | Core graph operations (entities, relations, observations, storage) |
+| **features/** | 10 | Advanced features (hierarchy, tags, compression, import/export) |
+| **search/** | 10 | Search algorithms (basic, ranked, boolean, fuzzy, saved) |
 | **server/** | 3 | MCP protocol layer (tool definitions, handlers) |
-| **types/** | 4 | TypeScript type definitions |
-| **utils/** | 11 | Utility functions (algorithms, helpers, constants) |
+| **types/** | 6 | TypeScript type definitions |
+| **utils/** | 17 | Utility functions (algorithms, helpers, constants) |
 
 ---
 
@@ -86,16 +86,11 @@ This document provides a comprehensive dependency graph for the Memory MCP Serve
 
 | Source Module | Imports From |
 |---------------|--------------|
-| `index.ts` | core/index, features/index, search/index, server/index, types/index |
-| `core/KnowledgeGraphManager.ts` | types/index, core/GraphStorage, core/EntityManager, core/RelationManager, core/ObservationManager, core/TransactionManager, features/*, search/SearchManager |
-| `core/EntityManager.ts` | types/index, core/GraphStorage |
-| `core/RelationManager.ts` | types/index, core/GraphStorage |
-| `core/ObservationManager.ts` | types/index, core/GraphStorage |
-| `core/GraphStorage.ts` | types/index, fs/promises, path |
-| `core/TransactionManager.ts` | types/index, core/GraphStorage |
-| `server/MCPServer.ts` | @modelcontextprotocol/sdk, utils/logger, server/toolDefinitions, server/toolHandlers, index (KnowledgeGraphManager type) |
-| `server/toolHandlers.ts` | utils/responseFormatter, index (KnowledgeGraphManager type), types/index |
-| `search/SearchManager.ts` | types/index, core/GraphStorage, search/BasicSearch, search/RankedSearch, search/BooleanSearch, search/FuzzySearch, search/SearchSuggestions, search/SavedSearchManager |
+| `KnowledgeGraphManager.ts` | ../utils/constants (DEFAULT_DUPLICATE_THRESHOLD, SEARCH_LIMITS), ./GraphStorage (GraphStorage), ./EntityManager (EntityManager), ./RelationManager (RelationManager), ../search/SearchManager (SearchManager) |
+| `index.ts` | ./utils/logger (logger), ./core/KnowledgeGraphManager (KnowledgeGraphManager), ./server/MCPServer (MCPServer), ./types/index (Entity, Relation, KnowledgeGraph, ...) |
+| `SavedSearchManager.ts` | ../types/index (SavedSearch, KnowledgeGraph), ./BasicSearch (BasicSearch) |
+| `SearchManager.ts` | ../types/index (KnowledgeGraph, SearchResult, SavedSearch), ../core/GraphStorage (GraphStorage), ./BasicSearch (BasicSearch), ./RankedSearch (RankedSearch), ./BooleanSearch (BooleanSearch) |
+| `MCPServer.ts` | ../utils/logger (logger), ./toolDefinitions (toolDefinitions), ./toolHandlers (handleToolCall), ../index (KnowledgeGraphManager) |
 
 ---
 
@@ -146,179 +141,274 @@ index.ts
 
 ## 4. Core Module Dependencies
 
-### 4.1 KnowledgeGraphManager.ts
-
-**Role**: Central facade that orchestrates all manager classes
-
-**File**: `src/memory/core/KnowledgeGraphManager.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { KnowledgeGraph, Entity, Relation, ... } from '../types/index.js';
-import { GraphStorage } from './GraphStorage.js';
-import { EntityManager } from './EntityManager.js';
-import { RelationManager } from './RelationManager.js';
-import { ObservationManager } from './ObservationManager.js';
-import { TransactionManager } from './TransactionManager.js';
-import { HierarchyManager } from '../features/HierarchyManager.js';
-import { TagManager } from '../features/TagManager.js';
-import { CompressionManager } from '../features/CompressionManager.js';
-import { ArchiveManager } from '../features/ArchiveManager.js';
-import { AnalyticsManager } from '../features/AnalyticsManager.js';
-import { ExportManager } from '../features/ExportManager.js';
-import { ImportManager } from '../features/ImportManager.js';
-import { ImportExportManager } from '../features/ImportExportManager.js';
-import { BackupManager } from '../features/BackupManager.js';
-import { SearchManager } from '../search/SearchManager.js';
-```
-
-#### Dependency Graph
-
-```
-KnowledgeGraphManager
-├── GraphStorage (injected, shared with all managers)
-├── Core Managers
-│   ├── EntityManager ───────► GraphStorage
-│   ├── RelationManager ─────► GraphStorage
-│   ├── ObservationManager ──► GraphStorage
-│   └── TransactionManager ──► GraphStorage
-├── Feature Managers
-│   ├── HierarchyManager ────► GraphStorage
-│   ├── TagManager ──────────► GraphStorage
-│   ├── CompressionManager ──► GraphStorage, EntityManager
-│   ├── ArchiveManager ──────► GraphStorage
-│   ├── AnalyticsManager ────► GraphStorage
-│   ├── ExportManager ───────► (stateless)
-│   ├── ImportManager ───────► GraphStorage
-│   ├── ImportExportManager ─► ExportManager, ImportManager, BasicSearch
-│   └── BackupManager ───────► GraphStorage
-└── Search Manager
-    └── SearchManager ───────► GraphStorage
-```
-
-#### Public Methods (delegated to managers)
-
-| Method | Delegates To | Called From |
-|--------|-------------|-------------|
-| `createEntities()` | EntityManager | toolHandlers.ts |
-| `deleteEntities()` | EntityManager | toolHandlers.ts |
-| `readGraph()` | GraphStorage | toolHandlers.ts |
-| `createRelations()` | RelationManager | toolHandlers.ts |
-| `deleteRelations()` | RelationManager | toolHandlers.ts |
-| `addObservations()` | ObservationManager | toolHandlers.ts |
-| `deleteObservations()` | ObservationManager | toolHandlers.ts |
-| `searchNodes()` | SearchManager | toolHandlers.ts |
-| `setEntityParent()` | HierarchyManager | toolHandlers.ts |
-| `addTags()` | TagManager | toolHandlers.ts |
-| `findDuplicates()` | CompressionManager | toolHandlers.ts |
-| `exportGraph()` | ImportExportManager | toolHandlers.ts |
-
-### 4.2 GraphStorage.ts
-
-**Role**: JSONL file I/O with in-memory caching
-
-**File**: `src/memory/core/GraphStorage.ts`
-
-#### Import Dependencies
-
-```typescript
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import type { Entity, Relation, KnowledgeGraph } from '../types/index.js';
-```
-
-#### Exported Functions/Methods
-
-| Export | Type | Used By |
-|--------|------|---------|
-| `GraphStorage` | class | KnowledgeGraphManager, all managers |
-| `loadGraph()` | method | All managers that read data |
-| `saveGraph()` | method | EntityManager, RelationManager, etc. |
-| `invalidateCache()` | method | After write operations |
-
-#### Usage Pattern
-
-```
-┌─────────────────────┐
-│ KnowledgeGraphManager│
-└──────────┬──────────┘
-           │ creates
-           ▼
-┌─────────────────────┐
-│    GraphStorage     │◄────── Shared instance
-└──────────┬──────────┘
-           │ passed to
-    ┌──────┴──────┬──────────┬───────────┐
-    ▼             ▼          ▼           ▼
-EntityManager  RelationManager  SearchManager  HierarchyManager
-```
-
-### 4.3 EntityManager.ts
+### EntityManager
 
 **File**: `src/memory/core/EntityManager.ts`
 
 #### Import Dependencies
 
 ```typescript
-import type { Entity, KnowledgeGraph, CreateEntityInput } from '../types/index.js';
+import type { Entity } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
+import { EntityNotFoundError, InvalidImportanceError, ValidationError } from '../utils/errors.js';
+import { BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema } from '../utils/index.js';
+import { GRAPH_LIMITS } from '../utils/constants.js';
 ```
 
-#### Methods and Dependencies
+#### Methods
 
-| Method | Internal Calls | External Calls |
-|--------|----------------|----------------|
-| `createEntities()` | validateEntities | GraphStorage.loadGraph, GraphStorage.saveGraph |
-| `deleteEntities()` | - | GraphStorage.loadGraph, GraphStorage.saveGraph |
-| `updateEntity()` | - | GraphStorage.loadGraph, GraphStorage.saveGraph |
-| `getEntity()` | - | GraphStorage.loadGraph |
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `createEntities()` | - | BatchCreateEntitiesSchema.safeParse, issues.map, path.join |
+| `deleteEntities()` | - | EntityNamesSchema.safeParse, issues.map, path.join |
+| `getEntity()` | - | storage.loadGraph, entities.find |
+| `updateEntity()` | - | UpdateEntitySchema.safeParse, issues.map, path.join |
+| `batchUpdate()` | - | UpdateEntitySchema.safeParse, issues.map, path.join |
+| `addObservations()` | - | storage.loadGraph, observations.map, entities.find |
+| `deleteObservations()` | - | storage.loadGraph, deletions.forEach, entities.find |
+| `addTags()` | - | storage.loadGraph, entities.find, tags.map |
+| `removeTags()` | - | storage.loadGraph, entities.find, tags.map |
+| `setImportance()` | - | storage.loadGraph, entities.find, storage.saveGraph |
 
-### 4.4 RelationManager.ts
+### GraphStorage
 
-**File**: `src/memory/core/RelationManager.ts`
+**File**: `src/memory/core/GraphStorage.ts`
 
 #### Import Dependencies
 
 ```typescript
-import type { Relation, KnowledgeGraph, CreateRelationInput } from '../types/index.js';
-import type { GraphStorage } from './GraphStorage.js';
+import { fs } from 'fs';
+import type { KnowledgeGraph, Entity, Relation } from '../types/index.js';
+import { clearAllSearchCaches } from '../utils/searchCache.js';
 ```
 
-#### Methods and Dependencies
+#### Methods
 
-| Method | Internal Calls | External Calls |
-|--------|----------------|----------------|
-| `createRelations()` | validateRelations | GraphStorage.loadGraph, GraphStorage.saveGraph |
-| `deleteRelations()` | - | GraphStorage.loadGraph, GraphStorage.saveGraph |
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `loadGraph()` | - | entities.map, relations.map, fs.readFile |
+| `saveGraph()` | - | entities.map, JSON.stringify, relations.map |
+| `clearCache()` | - | - |
+| `getFilePath()` | - | - |
 
-### 4.5 ObservationManager.ts
+### KnowledgeGraphManager
+
+**File**: `src/memory/core/KnowledgeGraphManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import { path } from 'path';
+import { DEFAULT_DUPLICATE_THRESHOLD, SEARCH_LIMITS } from '../utils/constants.js';
+import { GraphStorage } from './GraphStorage.js';
+import { EntityManager } from './EntityManager.js';
+import { RelationManager } from './RelationManager.js';
+import { SearchManager } from '../search/SearchManager.js';
+import { CompressionManager } from '../features/CompressionManager.js';
+import { HierarchyManager } from '../features/HierarchyManager.js';
+import { ExportManager } from '../features/ExportManager.js';
+import { ImportManager } from '../features/ImportManager.js';
+import { AnalyticsManager } from '../features/AnalyticsManager.js';
+import { TagManager } from '../features/TagManager.js';
+import { ArchiveManager } from '../features/ArchiveManager.js';
+import type { Entity, Relation, KnowledgeGraph, GraphStats, ValidationReport, SavedSearch, TagAlias, SearchResult, ImportResult, CompressionResult } from '../types/index.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `loadGraph()` | StorageManager | storage.loadGraph |
+| `createEntities()` | EntityManager | entityManager.createEntities |
+| `createRelations()` | RelationManager | relationManager.createRelations |
+| `addObservations()` | EntityManager | entityManager.addObservations |
+| `deleteEntities()` | EntityManager | entityManager.deleteEntities |
+| `deleteObservations()` | EntityManager | entityManager.deleteObservations |
+| `deleteRelations()` | RelationManager | relationManager.deleteRelations |
+| `readGraph()` | - | - |
+| `searchNodes()` | SearchManager | searchManager.searchNodes |
+| `openNodes()` | SearchManager | searchManager.openNodes |
+
+### ObservationManager
 
 **File**: `src/memory/core/ObservationManager.ts`
 
 #### Import Dependencies
 
 ```typescript
-import type { Entity, AddObservationInput, DeleteObservationInput } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
+import { EntityNotFoundError } from '../utils/errors.js';
 ```
 
-### 4.6 TransactionManager.ts
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `addObservations()` | - | storage.loadGraph, observations.map, entities.find |
+| `deleteObservations()` | - | storage.loadGraph, deletions.forEach, entities.find |
+
+### RelationManager
+
+**File**: `src/memory/core/RelationManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { Relation } from '../types/index.js';
+import type { GraphStorage } from './GraphStorage.js';
+import { ValidationError } from '../utils/errors.js';
+import { BatchCreateRelationsSchema, DeleteRelationsSchema } from '../utils/index.js';
+import { GRAPH_LIMITS } from '../utils/constants.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `createRelations()` | - | BatchCreateRelationsSchema.safeParse, issues.map, path.join |
+| `deleteRelations()` | - | DeleteRelationsSchema.safeParse, issues.map, path.join |
+| `getRelations()` | RelationsManager | storage.loadGraph, relations.filter |
+
+### TransactionManager
 
 **File**: `src/memory/core/TransactionManager.ts`
 
 #### Import Dependencies
 
 ```typescript
-import type { KnowledgeGraph } from '../types/index.js';
+import type { Entity, Relation, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
+import { BackupManager } from '../features/BackupManager.js';
+import { KnowledgeGraphError } from '../utils/errors.js';
 ```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `begin()` | - | - |
+| `createEntity()` | - | operations.push |
+| `updateEntity()` | - | operations.push |
+| `deleteEntity()` | - | operations.push |
+| `createRelation()` | - | operations.push |
+| `deleteRelation()` | - | operations.push |
+| `commit()` | - | backupManager.createBackup, storage.loadGraph, storage.saveGraph |
+| `rollback()` | - | backupManager.restoreFromBackup, backupManager.deleteBackup |
+| `isInTransaction()` | - | - |
+| `getOperationCount()` | - | - |
 
 ---
 
 ## 5. Feature Module Dependencies
 
-### 5.1 HierarchyManager.ts
+### AnalyticsManager
+
+**File**: `src/memory/features/AnalyticsManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { ValidationReport, ValidationError, ValidationWarning, GraphStats } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `validateGraph()` | - | storage.loadGraph, entities.map, entityNames.has |
+| `getGraphStats()` | - | storage.loadGraph, entities.forEach, relations.forEach |
+
+### ArchiveManager
+
+**File**: `src/memory/features/ArchiveManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { Entity } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `archiveEntities()` | - | storage.loadGraph, tags.map, t.toLowerCase |
+
+### BackupManager
+
+**File**: `src/memory/features/BackupManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import { fs } from 'fs';
+import { dirname, join } from 'path';
+import type { GraphStorage } from '../core/GraphStorage.js';
+import { FileOperationError } from '../utils/errors.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `ensureBackupDir()` | - | fs.mkdir |
+| `generateBackupFileName()` | - | now.toISOString |
+| `createBackup()` | - | storage.loadGraph, join, storage.getFilePath |
+| `listBackups()` | - | fs.access, fs.readdir, files.filter |
+| `restoreFromBackup()` | - | fs.access, fs.readFile, storage.getFilePath |
+| `deleteBackup()` | - | fs.unlink |
+| `cleanOldBackups()` | - | backups.slice |
+| `getBackupDir()` | - | - |
+
+### CompressionManager
+
+**File**: `src/memory/features/CompressionManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { Entity, Relation, CompressionResult } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+import { levenshteinDistance } from '../utils/levenshtein.js';
+import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
+import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `calculateEntitySimilarity()` | - | levenshteinDistance, name.toLowerCase, Math.max |
+| `findDuplicates()` | - | storage.loadGraph, entityType.toLowerCase, typeMap.has |
+| `mergeEntities()` | - | storage.loadGraph, entityNames.map, entities.find |
+| `compressGraph()` | - | storage.loadGraph, JSON.stringify, duplicateGroups.reduce |
+
+### ExportManager
+
+**File**: `src/memory/features/ExportManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { KnowledgeGraph } from '../types/index.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `exportGraph()` | - | - |
+| `exportAsJson()` | - | JSON.stringify |
+| `exportAsCsv()` | - | String, str.includes, str.replace |
+| `exportAsGraphML()` | - | String, lines.push, escapeXml |
+| `exportAsGEXF()` | - | String, lines.push, escapeXml |
+| `exportAsDOT()` | - | str.replace, lines.push, escapeDot |
+| `exportAsMarkdown()` | - | lines.push, tags.map, lines.join |
+| `exportAsMermaid()` | - | str.replace, lines.push, nodeIds.set |
+
+### HierarchyManager
 
 **File**: `src/memory/features/HierarchyManager.ts`
 
@@ -327,111 +417,25 @@ import type { GraphStorage } from './GraphStorage.js';
 ```typescript
 import type { Entity, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { CycleDetectedError, EntityNotFoundError } from '../utils/errors.js';
+import { EntityNotFoundError, CycleDetectedError } from '../utils/errors.js';
 ```
 
 #### Methods
 
-| Method | Returns | Modifies Graph |
-|--------|---------|----------------|
-| `setEntityParent()` | Entity | Yes |
-| `getChildren()` | Entity[] | No |
-| `getParent()` | Entity \| null | No |
-| `getAncestors()` | Entity[] | No |
-| `getDescendants()` | Entity[] | No |
-| `getSubtree()` | KnowledgeGraph | No |
-| `getRootEntities()` | Entity[] | No |
-| `getEntityDepth()` | number | No |
-| `moveEntity()` | Entity | Yes |
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `setEntityParent()` | - | storage.loadGraph, entities.find, storage.saveGraph |
+| `wouldCreateCycle()` | - | visited.has, visited.add, entities.find |
+| `getChildren()` | EntitiesManager | storage.loadGraph, entities.find, entities.filter |
+| `getParent()` | - | storage.loadGraph, entities.find |
+| `getAncestors()` | - | storage.loadGraph, entities.find, ancestors.push |
+| `getDescendants()` | - | storage.loadGraph, entities.find, toProcess.shift |
+| `getSubtree()` | - | storage.loadGraph, entities.find, subtreeEntities.map |
+| `getRootEntities()` | EntitiesManager | storage.loadGraph, entities.filter |
+| `getEntityDepth()` | - | - |
+| `moveEntity()` | - | - |
 
-### 5.2 TagManager.ts
-
-**File**: `src/memory/features/TagManager.ts`
-
-#### Import Dependencies
-
-```typescript
-import * as fs from 'fs/promises';
-import type { Entity, TagAlias } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-import { EntityNotFoundError, InvalidImportanceError } from '../utils/errors.js';
-import { IMPORTANCE_RANGE } from '../utils/constants.js';
-import { addUniqueTags, removeTags as removeTagsFromArray } from '../utils/tagUtils.js';
-```
-
-#### Methods
-
-| Method | Calls Utils |
-|--------|-------------|
-| `addTags()` | `addUniqueTags()` from tagUtils |
-| `removeTags()` | `removeTagsFromArray()` from tagUtils |
-| `setImportance()` | Validates against `IMPORTANCE_RANGE` |
-| `resolveTag()` | - |
-| `addTagAlias()` | - |
-
-### 5.3 CompressionManager.ts
-
-**File**: `src/memory/features/CompressionManager.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { Entity, Relation, KnowledgeGraph, DuplicateGroup, MergeResult, CompressionResult } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-import type { EntityManager } from '../core/EntityManager.js';
-import { levenshteinDistance } from '../utils/levenshtein.js';
-import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
-```
-
-#### Methods and Algorithm Usage
-
-| Method | Uses Algorithm |
-|--------|----------------|
-| `findDuplicates()` | `levenshteinDistance()` for name similarity |
-| `calculateSimilarity()` | Jaccard similarity for observations/tags |
-| `mergeEntities()` | - |
-| `compressGraph()` | `findDuplicates()` + `mergeEntities()` |
-
-### 5.4 AnalyticsManager.ts
-
-**File**: `src/memory/features/AnalyticsManager.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { KnowledgeGraph, GraphStats, ValidationResult } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-```
-
-### 5.5 ExportManager.ts
-
-**File**: `src/memory/features/ExportManager.ts`
-
-#### Export Formats
-
-| Format | Method |
-|--------|--------|
-| JSON | `exportToJSON()` |
-| CSV | `exportToCSV()` |
-| GraphML | `exportToGraphML()` |
-| GEXF | `exportToGEXF()` |
-| DOT | `exportToDOT()` |
-| Markdown | `exportToMarkdown()` |
-| Mermaid | `exportToMermaid()` |
-
-### 5.6 ImportManager.ts
-
-**File**: `src/memory/features/ImportManager.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { KnowledgeGraph, Entity, Relation, ImportResult } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-import { ImportError } from '../utils/errors.js';
-```
-
-### 5.7 ImportExportManager.ts
+### ImportExportManager
 
 **File**: `src/memory/features/ImportExportManager.ts`
 
@@ -440,49 +444,213 @@ import { ImportError } from '../utils/errors.js';
 ```typescript
 import type { KnowledgeGraph, ImportResult } from '../types/index.js';
 import type { BasicSearch } from '../search/BasicSearch.js';
-import { ExportManager, type ExportFormat } from './ExportManager.js';
-import { ImportManager, type ImportFormat, type MergeStrategy } from './ImportManager.js';
+import type { ExportManager, ExportFormat } from './ExportManager.js';
+import type { ImportManager, ImportFormat, MergeStrategy } from './ImportManager.js';
 ```
 
-#### Cross-Module Dependencies
+#### Methods
 
-```
-ImportExportManager
-├── ExportManager (injected)
-├── ImportManager (injected)
-└── BasicSearch (injected) ──► Used for filtered exports
-```
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `exportGraph()` | ExportManager | basicSearch.searchByDateRange, storage.loadGraph, exportManager.exportGraph |
+| `importGraph()` | ImportManager | importManager.importGraph |
 
-### 5.8 ArchiveManager.ts
+### ImportManager
 
-**File**: `src/memory/features/ArchiveManager.ts`
+**File**: `src/memory/features/ImportManager.ts`
 
 #### Import Dependencies
 
 ```typescript
-import type { Entity, Relation, KnowledgeGraph, ArchiveResult, ArchiveCriteria } from '../types/index.js';
+import type { Entity, Relation, KnowledgeGraph, ImportResult } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 ```
 
-### 5.9 BackupManager.ts
+#### Methods
 
-**File**: `src/memory/features/BackupManager.ts`
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `importGraph()` | - | String |
+| `parseJsonImport()` | - | JSON.parse, Array.isArray |
+| `parseCsvImport()` | - | data.split, line.trim, fields.push |
+| `parseGraphMLImport()` | - | nodeRegex.exec, dataRegex.exec, getDataValue |
+| `mergeImportedGraph()` | - | storage.loadGraph, existingEntitiesMap.set, existingRelationsSet.add |
+
+### TagManager
+
+**File**: `src/memory/features/TagManager.ts`
 
 #### Import Dependencies
 
 ```typescript
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import type { GraphStorage } from '../core/GraphStorage.js';
+import { * as fs } from 'fs/promises';
+import type { TagAlias } from '../types/index.js';
 ```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `loadTagAliases()` | - | fs.readFile, data.split, line.trim |
+| `saveTagAliases()` | - | aliases.map, JSON.stringify, fs.writeFile |
+| `resolveTag()` | - | tag.toLowerCase, aliases.find |
+| `addTagAlias()` | - | alias.toLowerCase, canonical.toLowerCase, aliases.some |
+| `listTagAliases()` | - | - |
+| `removeTagAlias()` | - | alias.toLowerCase, aliases.filter |
+| `getAliasesForTag()` | - | canonicalTag.toLowerCase, aliases.filter |
 
 ---
 
 ## 6. Search Module Dependencies
 
-### 6.1 SearchManager.ts
+### BasicSearch
 
-**Role**: Orchestrates all search types
+**File**: `src/memory/search/BasicSearch.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { KnowledgeGraph } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+import { isWithinDateRange } from '../utils/dateUtils.js';
+import { SEARCH_LIMITS } from '../utils/constants.js';
+import { searchCaches } from '../utils/searchCache.js';
+import type { SearchFilterChain, SearchFilters } from './SearchFilterChain.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `searchNodes()` | - | basic.get, storage.loadGraph, query.toLowerCase |
+| `openNodes()` | - | storage.loadGraph, entities.filter, names.includes |
+| `searchByDateRange()` | - | basic.get, storage.loadGraph, entities.filter |
+
+### BooleanSearch
+
+**File**: `src/memory/search/BooleanSearch.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { BooleanQueryNode, Entity, KnowledgeGraph } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+import { SEARCH_LIMITS, QUERY_LIMITS } from '../utils/constants.js';
+import { ValidationError } from '../utils/errors.js';
+import type { SearchFilterChain, SearchFilters } from './SearchFilterChain.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `booleanSearch()` | - | storage.loadGraph, String, entities.filter |
+| `tokenizeBooleanQuery()` | - | tokens.push, current.trim |
+| `parseBooleanQuery()` | - | parseAnd, peek, consume |
+| `evaluateBooleanQuery()` | ObservationsManager | children.every, children.some, name.toLowerCase |
+| `entityMatchesTerm()` | - | term.toLowerCase, name.toLowerCase, entityType.toLowerCase |
+| `validateQueryComplexity()` | - | - |
+| `calculateQueryComplexity()` | - | children.map, childResults.reduce, Math.max |
+
+### FuzzySearch
+
+**File**: `src/memory/search/FuzzySearch.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { KnowledgeGraph } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+import { levenshteinDistance } from '../utils/levenshtein.js';
+import { SEARCH_LIMITS } from '../utils/constants.js';
+import type { SearchFilterChain, SearchFilters } from './SearchFilterChain.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `fuzzySearch()` | - | storage.loadGraph, entities.filter, observations.some |
+| `isFuzzyMatch()` | - | str1.toLowerCase, str2.toLowerCase, s1.includes |
+
+### RankedSearch
+
+**File**: `src/memory/search/RankedSearch.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { SearchResult, TFIDFIndex } from '../types/index.js';
+import type { GraphStorage } from '../core/GraphStorage.js';
+import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
+import { SEARCH_LIMITS } from '../utils/constants.js';
+import { TFIDFIndexManager } from './TFIDFIndexManager.js';
+import type { SearchFilterChain, SearchFilters } from './SearchFilterChain.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `buildIndex()` | - | storage.loadGraph, indexManager.buildIndex, indexManager.saveIndex |
+| `updateIndex()` | - | storage.loadGraph, indexManager.updateIndex, indexManager.saveIndex |
+| `ensureIndexLoaded()` | - | indexManager.getIndex, indexManager.loadIndex |
+| `searchNodesRanked()` | - | Math.min, storage.loadGraph, SearchFilterChain.applyFilters |
+| `searchWithIndex()` | - | documents.get, Object.values, idf.get |
+| `searchWithoutIndex()` | - | entities.map, calculateTFIDF, name.toLowerCase |
+
+### SavedSearchManager
+
+**File**: `src/memory/search/SavedSearchManager.ts`
+
+#### Import Dependencies
+
+```typescript
+import { * as fs } from 'fs/promises';
+import type { SavedSearch, KnowledgeGraph } from '../types/index.js';
+import type { BasicSearch } from './BasicSearch.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `loadSavedSearches()` | - | fs.readFile, data.split, line.trim |
+| `saveSavedSearches()` | - | searches.map, JSON.stringify, fs.writeFile |
+| `saveSearch()` | - | searches.some, searches.push |
+| `listSavedSearches()` | - | - |
+| `getSavedSearch()` | - | searches.find |
+| `executeSavedSearch()` | - | searches.find, basicSearch.searchNodes |
+| `deleteSavedSearch()` | - | searches.filter |
+| `updateSavedSearch()` | - | searches.find, Object.assign |
+
+### SearchFilterChain
+
+**File**: `src/memory/search/SearchFilterChain.ts`
+
+#### Import Dependencies
+
+```typescript
+import type { Entity } from '../types/entity.types.js';
+import { normalizeTags, hasMatchingTag } from '../utils/tagUtils.js';
+import { isWithinImportanceRange } from '../utils/filterUtils.js';
+import type { validatePagination, applyPagination, ValidatedPagination } from '../utils/paginationUtils.js';
+```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `applyFilters()` | - | normalizeTags, entities.filter |
+| `entityPassesFilters()` | - | normalizeTags, normalizedSearchTags.some, entityTags.includes |
+| `hasActiveFilters()` | - | - |
+| `validatePagination()` | - | validatePagination |
+| `paginate()` | - | applyPagination |
+| `filterAndPaginate()` | - | - |
+| `filterByTags()` | - | normalizeTags, entities.filter, hasMatchingTag |
+| `filterByImportance()` | - | entities.filter, isWithinImportanceRange |
+
+### SearchManager
 
 **File**: `src/memory/search/SearchManager.ts`
 
@@ -499,268 +667,95 @@ import { SearchSuggestions } from './SearchSuggestions.js';
 import { SavedSearchManager } from './SavedSearchManager.js';
 ```
 
-#### Internal Dependency Graph
+#### Methods
 
-```
-SearchManager
-├── BasicSearch ─────────► GraphStorage
-│                        ► SearchFilterChain
-│                        ► utils/dateUtils
-│                        ► utils/searchCache
-├── RankedSearch ────────► GraphStorage
-│                        ► TFIDFIndexManager
-│                        ► SearchFilterChain
-│                        ► utils/tfidf
-├── BooleanSearch ───────► GraphStorage
-│                        ► SearchFilterChain
-│                        ► utils/errors
-├── FuzzySearch ─────────► GraphStorage
-│                        ► SearchFilterChain
-│                        ► utils/levenshtein
-├── SearchSuggestions ───► GraphStorage
-│                        ► utils/levenshtein
-└── SavedSearchManager ──► BasicSearch
-                         ► fs/promises
-```
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `searchNodes()` | BasicSearch | basicSearch.searchNodes |
+| `openNodes()` | BasicSearch | basicSearch.openNodes |
+| `searchByDateRange()` | BasicSearch | basicSearch.searchByDateRange |
+| `searchNodesRanked()` | RankedSearch | rankedSearch.searchNodesRanked |
+| `booleanSearch()` | BooleanSearcherManager | booleanSearcher.booleanSearch |
+| `fuzzySearch()` | FuzzySearcherManager | fuzzySearcher.fuzzySearch |
+| `getSearchSuggestions()` | SearchSuggestionsManager | searchSuggestions.getSearchSuggestions |
+| `saveSearch()` | SavedSearchManager | savedSearchManager.saveSearch |
+| `listSavedSearches()` | SavedSearchManager | savedSearchManager.listSavedSearches |
+| `getSavedSearch()` | SavedSearchManager | savedSearchManager.getSavedSearch |
 
-### 6.2 BasicSearch.ts
+### SearchSuggestions
 
-**File**: `src/memory/search/BasicSearch.ts`
+**File**: `src/memory/search/SearchSuggestions.ts`
 
 #### Import Dependencies
 
 ```typescript
-import type { KnowledgeGraph } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-import { isWithinDateRange } from '../utils/dateUtils.js';
-import { SEARCH_LIMITS } from '../utils/constants.js';
-import { searchCaches } from '../utils/searchCache.js';
-import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
-```
-
-#### Cache Integration
-
-```
-BasicSearch.searchNodes()
-├── Check searchCaches.basic.get(cacheKey)
-├── If miss: Execute search
-│   ├── Load graph from GraphStorage
-│   ├── Filter by text match
-│   ├── Apply SearchFilterChain.applyFilters()
-│   └── Apply SearchFilterChain.paginate()
-└── Cache result via searchCaches.basic.set()
-```
-
-### 6.3 RankedSearch.ts
-
-**File**: `src/memory/search/RankedSearch.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { SearchResult, TFIDFIndex } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
-import { SEARCH_LIMITS } from '../utils/constants.js';
-import { TFIDFIndexManager } from './TFIDFIndexManager.js';
-import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
-```
-
-#### Algorithm Flow
-
-```
-RankedSearch.searchNodesRanked()
-├── Apply SearchFilterChain.applyFilters()
-├── Load/Build TF-IDF index
-│   ├── If TFIDFIndexManager has index ──► Fast path
-│   └── Else ──► Calculate on-the-fly
-├── For each entity:
-│   ├── tokenize(query)
-│   ├── Calculate TF-IDF score
-│   └── Track matched fields
-├── Sort by score descending
-└── Apply limit
-```
-
-### 6.4 BooleanSearch.ts
-
-**File**: `src/memory/search/BooleanSearch.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { BooleanQueryNode, Entity, KnowledgeGraph } from '../types/index.js';
-import type { GraphStorage } from '../core/GraphStorage.js';
-import { SEARCH_LIMITS, QUERY_LIMITS } from '../utils/constants.js';
-import { ValidationError } from '../utils/errors.js';
-import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
-```
-
-#### Query Parsing Flow
-
-```
-BooleanSearch.booleanSearch()
-├── Validate query length (QUERY_LIMITS.MAX_QUERY_LENGTH)
-├── parseBooleanQuery() ──► Returns BooleanQueryNode AST
-│   ├── tokenizeBooleanQuery()
-│   ├── parseOr() (lowest precedence)
-│   │   └── parseAnd()
-│   │       └── parseNot()
-│   │           └── parsePrimary()
-│   └── Returns AST: { type: 'AND'|'OR'|'NOT'|'TERM', ... }
-├── validateQueryComplexity() ──► Checks depth, terms, operators
-├── evaluateBooleanQuery() ──► Recursive AST evaluation
-├── Apply SearchFilterChain.applyFilters()
-└── Apply SearchFilterChain.paginate()
-```
-
-### 6.5 FuzzySearch.ts
-
-**File**: `src/memory/search/FuzzySearch.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/levenshtein.js';
-import { SEARCH_LIMITS } from '../utils/constants.js';
-import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 ```
 
-#### Algorithm
+#### Methods
 
-```
-FuzzySearch.fuzzySearch()
-├── For each entity:
-│   └── isFuzzyMatch(entityField, query, threshold)
-│       ├── Exact match check
-│       ├── Contains check
-│       └── levenshteinDistance() ──► Calculate similarity
-├── Apply SearchFilterChain.applyFilters()
-└── Apply SearchFilterChain.paginate()
-```
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `getSearchSuggestions()` | - | storage.loadGraph, query.toLowerCase, levenshteinDistance |
 
-### 6.6 SavedSearchManager.ts
-
-**File**: `src/memory/search/SavedSearchManager.ts`
-
-#### Import Dependencies
-
-```typescript
-import * as fs from 'fs/promises';
-import type { SavedSearch, KnowledgeGraph } from '../types/index.js';
-import type { BasicSearch } from './BasicSearch.js';
-```
-
-#### Cross-Reference
-
-```
-SavedSearchManager
-├── saveSearch() ──► Stores in JSONL file
-├── executeSavedSearch()
-│   ├── Load search from file
-│   ├── Update usage stats
-│   └── BasicSearch.searchNodes() ──► Execute
-└── deleteSavedSearch()
-```
-
-### 6.7 SearchFilterChain.ts
-
-**Role**: Centralized filter logic for all search types
-
-**File**: `src/memory/search/SearchFilterChain.ts`
-
-#### Import Dependencies
-
-```typescript
-import type { Entity } from '../types/entity.types.js';
-import { normalizeTags, hasMatchingTag } from '../utils/tagUtils.js';
-import { isWithinImportanceRange } from '../utils/filterUtils.js';
-import { validatePagination, applyPagination, type ValidatedPagination } from '../utils/paginationUtils.js';
-```
-
-#### Static Methods
-
-| Method | Called By |
-|--------|-----------|
-| `applyFilters()` | BasicSearch, BooleanSearch, FuzzySearch, RankedSearch |
-| `validatePagination()` | BasicSearch, BooleanSearch, FuzzySearch |
-| `paginate()` | BasicSearch, BooleanSearch, FuzzySearch |
-| `filterAndPaginate()` | (convenience method) |
-
-### 6.8 TFIDFIndexManager.ts
+### TFIDFIndexManager
 
 **File**: `src/memory/search/TFIDFIndexManager.ts`
 
 #### Import Dependencies
 
 ```typescript
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { * as fs } from 'fs/promises';
+import { * as path } from 'path';
 import type { TFIDFIndex, DocumentVector, KnowledgeGraph } from '../types/index.js';
 import { calculateIDF, tokenize } from '../utils/tfidf.js';
 ```
+
+#### Methods
+
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `buildIndex()` | - | allDocumentTexts.push, tokenize, allTokens.push |
+| `updateIndex()` | - | entities.find, updatedDocuments.delete, allDocumentTexts.push |
+| `loadIndex()` | - | fs.readFile, JSON.parse |
+| `saveIndex()` | - | path.dirname, fs.mkdir, Array.from |
+| `getIndex()` | - | - |
+| `clearIndex()` | - | fs.unlink |
+| `needsRebuild()` | - | documents.has |
 
 ---
 
 ## 7. Server Module Dependencies
 
-### 7.1 MCPServer.ts
+### MCPServer
 
 **File**: `src/memory/server/MCPServer.ts`
 
 #### Import Dependencies
 
 ```typescript
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { logger } from '../utils/logger.js';
 import { toolDefinitions } from './toolDefinitions.js';
 import { handleToolCall } from './toolHandlers.js';
 import type { KnowledgeGraphManager } from '../index.js';
 ```
 
-#### External Dependencies
+#### Methods
 
-```
-MCPServer
-└── @modelcontextprotocol/sdk
-    ├── Server (class)
-    ├── StdioServerTransport (class)
-    ├── CallToolRequestSchema (schema)
-    └── ListToolsRequestSchema (schema)
-```
+| Method | Delegates To | Calls |
+|--------|-------------|-------|
+| `registerToolHandlers()` | - | server.setRequestHandler, handleToolCall |
+| `start()` | - | server.connect, logger.info |
 
-### 7.2 toolDefinitions.ts
+### toolDefinitions
 
 **File**: `src/memory/server/toolDefinitions.ts`
 
-#### Exports
-
-- `toolDefinitions`: Array of 45 tool schemas
-- `toolCategories`: Categorized tool names
-
-#### Tool Categories
-
-```typescript
-{
-  entity: ['create_entities', 'delete_entities', 'read_graph', 'open_nodes'],
-  relation: ['create_relations', 'delete_relations'],
-  observation: ['add_observations', 'delete_observations'],
-  search: ['search_nodes', 'search_by_date_range', 'search_nodes_ranked', 'boolean_search', 'fuzzy_search', 'get_search_suggestions'],
-  savedSearch: ['save_search', 'execute_saved_search', 'list_saved_searches', 'delete_saved_search', 'update_saved_search'],
-  tag: ['add_tags', 'remove_tags', 'set_importance', 'add_tags_to_multiple_entities', 'replace_tag', 'merge_tags'],
-  tagAlias: ['add_tag_alias', 'list_tag_aliases', 'remove_tag_alias', 'get_aliases_for_tag', 'resolve_tag'],
-  hierarchy: ['set_entity_parent', 'get_children', 'get_parent', 'get_ancestors', 'get_descendants', 'get_subtree', 'get_root_entities', 'get_entity_depth', 'move_entity'],
-  analytics: ['get_graph_stats', 'validate_graph'],
-  compression: ['find_duplicates', 'merge_entities', 'compress_graph', 'archive_entities'],
-  importExport: ['import_graph', 'export_graph']
-}
-```
-
-### 7.3 toolHandlers.ts
+### toolHandlers
 
 **File**: `src/memory/server/toolHandlers.ts`
 
@@ -772,20 +767,24 @@ import type { KnowledgeGraphManager } from '../index.js';
 import type { SavedSearch } from '../types/index.js';
 ```
 
-#### Handler Mapping
-
-```
-handleToolCall(name, args, manager)
-├── toolHandlers[name] ──► Lookup handler function
-└── handler(manager, args) ──► Execute
-    └── manager.methodName() ──► Delegate to KnowledgeGraphManager
-```
-
 ---
 
 ## 8. Types Module Dependencies
 
-### 8.1 entity.types.ts
+### analytics.types
+
+**File**: `src/memory/types/analytics.types.ts`
+
+#### Exports
+
+```typescript
+export interface GraphStats { ... }
+export interface ValidationReport { ... }
+export interface ValidationError { ... }
+export interface ValidationWarning { ... }
+```
+
+### entity.types
 
 **File**: `src/memory/types/entity.types.ts`
 
@@ -797,49 +796,34 @@ export interface Relation { ... }
 export interface KnowledgeGraph { ... }
 ```
 
-#### Used By
+### import-export.types
 
-All modules that work with graph data import from this file.
+**File**: `src/memory/types/import-export.types.ts`
 
-### 8.2 search.types.ts
+#### Exports
+
+```typescript
+export interface ImportResult { ... }
+export interface CompressionResult { ... }
+```
+
+### search.types
 
 **File**: `src/memory/types/search.types.ts`
 
-#### Import Dependencies
-
-```typescript
-import type { Entity } from './entity.types.js';
-```
-
 #### Exports
 
 ```typescript
-export interface SearchResult { entity: Entity; score: number; matchedFields: {...} }
+export interface SearchResult { ... }
 export interface SavedSearch { ... }
-export type BooleanQueryNode = ...
 export interface DocumentVector { ... }
 export interface TFIDFIndex { ... }
+export type BooleanQueryNode = ...
 ```
 
-### 8.3 analytics.types.ts
+### tag.types
 
-**File**: `src/memory/types/analytics.types.ts`
-
-#### Exports
-
-```typescript
-export interface GraphStats { ... }
-export interface ValidationResult { ... }
-export interface DuplicateGroup { ... }
-export interface MergeResult { ... }
-export interface CompressionResult { ... }
-export interface ArchiveResult { ... }
-export interface ImportResult { ... }
-```
-
-### 8.4 tags.types.ts
-
-**File**: `src/memory/types/tags.types.ts`
+**File**: `src/memory/types/tag.types.ts`
 
 #### Exports
 
@@ -847,122 +831,129 @@ export interface ImportResult { ... }
 export interface TagAlias { ... }
 ```
 
-### 8.5 Type Dependency Graph
-
-```
-entity.types.ts
-├── Entity ◄─────────── search.types.ts (SearchResult.entity)
-├── Relation
-└── KnowledgeGraph ◄─── analytics.types.ts, search.types.ts
-
-search.types.ts
-├── SearchResult
-├── SavedSearch
-├── BooleanQueryNode
-├── DocumentVector
-└── TFIDFIndex
-
-analytics.types.ts
-├── GraphStats
-├── ValidationResult
-├── DuplicateGroup
-├── MergeResult
-├── CompressionResult
-├── ArchiveResult
-└── ImportResult
-
-tags.types.ts
-└── TagAlias
-```
-
 ---
 
 ## 9. Utils Module Dependencies
 
-### 9.1 Dependency Graph
+### Dependency Graph
 
 ```
 utils/
-├── constants.ts ◄───────── Used by most modules
-│   ├── SEARCH_LIMITS ──────► BasicSearch, BooleanSearch, FuzzySearch, RankedSearch
-│   ├── QUERY_LIMITS ───────► BooleanSearch
-│   ├── IMPORTANCE_RANGE ───► TagManager, filterUtils
-│   ├── SIMILARITY_WEIGHTS ─► CompressionManager
-│   └── DEFAULT_DUPLICATE_THRESHOLD ► CompressionManager
+├── constants.ts ◄─── Used by: EntityManager.ts, KnowledgeGraphManager.ts, RelationManager.ts, ...
+│   └── FILE_EXTENSIONS()
+│   └── FILE_SUFFIXES()
+│   └── DEFAULT_FILE_NAMES()
+│   └── ENV_VARS()
+│   └── DEFAULT_BASE_DIR()
 │
-├── errors.ts ◄──────────── Custom error classes
-│   ├── KnowledgeGraphError (base)
-│   ├── EntityNotFoundError ► HierarchyManager, TagManager
-│   ├── ValidationError ────► BooleanSearch
-│   ├── CycleDetectedError ─► HierarchyManager
-│   ├── InvalidImportanceError ► TagManager
-│   └── ImportError ────────► ImportManager
-│
-├── tfidf.ts ◄───────────── TF-IDF algorithm
-│   ├── calculateTF() ──────► (internal)
-│   ├── calculateIDF() ─────► TFIDFIndexManager
-│   ├── calculateTFIDF() ───► RankedSearch
-│   └── tokenize() ─────────► RankedSearch, TFIDFIndexManager
-│
-├── levenshtein.ts ◄──────── String distance algorithm
-│   └── levenshteinDistance() ► FuzzySearch, SearchSuggestions, CompressionManager
-│
-├── dateUtils.ts ◄────────── Date handling
-│   ├── isWithinDateRange() ► BasicSearch
-│   ├── parseDateRange()
-│   ├── isValidISODate()
+├── dateUtils.ts ◄─── Used by: BasicSearch.ts
+│   └── isWithinDateRange()
+│   └── parseDateRange()
+│   └── isValidISODate()
 │   └── getCurrentTimestamp()
 │
-├── tagUtils.ts ◄─────────── Tag operations
-│   ├── normalizeTag() ─────► (internal)
-│   ├── normalizeTags() ────► SearchFilterChain
-│   ├── hasMatchingTag() ───► SearchFilterChain
-│   ├── addUniqueTags() ────► TagManager
-│   └── removeTags() ───────► TagManager
+├── entityUtils.ts
+│   └── findEntityByName()
+│   └── findEntityByName()
+│   └── findEntityByName()
+│   └── findEntityByName()
+│   └── findEntitiesByNames()
 │
-├── filterUtils.ts ◄──────── Entity filtering
-│   ├── isWithinImportanceRange() ► SearchFilterChain
-│   ├── filterByImportance()
-│   ├── isWithinDateRange()
-│   └── entityPassesFilters()
+├── errors.ts ◄─── Used by: EntityManager.ts, ObservationManager.ts, RelationManager.ts, ...
+│   └── KnowledgeGraphError
+│   └── EntityNotFoundError
+│   └── RelationNotFoundError
+│   └── DuplicateEntityError
+│   └── ValidationError
 │
-├── paginationUtils.ts ◄──── Pagination
-│   ├── validatePagination() ► SearchFilterChain
-│   ├── applyPagination() ──► SearchFilterChain
+├── filterUtils.ts ◄─── Used by: SearchFilterChain.ts
+│   └── isWithinImportanceRange()
+│   └── filterByImportance()
+│   └── isWithinDateRange()
+│   └── filterByCreatedDate()
+│   └── filterByModifiedDate()
+│
+├── levenshtein.ts ◄─── Used by: CompressionManager.ts, FuzzySearch.ts, SearchSuggestions.ts
+│   └── levenshteinDistance()
+│
+├── logger.ts ◄─── Used by: index.ts, MCPServer.ts
+│   └── logger()
+│
+├── paginationUtils.ts ◄─── Used by: SearchFilterChain.ts
+│   └── ValidatedPagination
+│   └── validatePagination()
+│   └── applyPagination()
 │   └── paginateArray()
+│   └── getPaginationMeta()
 │
-├── searchCache.ts ◄──────── LRU cache
-│   ├── SearchCache (class)
-│   ├── searchCaches.basic ─► BasicSearch
-│   ├── searchCaches.ranked
-│   ├── searchCaches.boolean
-│   ├── searchCaches.fuzzy
-│   └── clearAllSearchCaches()
+├── pathUtils.ts
+│   └── validateFilePath()
+│   └── defaultMemoryPath()
+│   └── ensureMemoryFilePath()
 │
-├── responseFormatter.ts ◄── MCP response formatting
-│   ├── formatToolResponse() ► toolHandlers
-│   ├── formatTextResponse() ► toolHandlers
-│   ├── formatRawResponse() ─► toolHandlers
+├── responseFormatter.ts ◄─── Used by: toolHandlers.ts
+│   └── ToolResponse
+│   └── formatToolResponse()
+│   └── formatTextResponse()
+│   └── formatRawResponse()
 │   └── formatErrorResponse()
 │
-└── logger.ts ◄───────────── Logging
-    └── logger { debug, info, warn, error } ► MCPServer
+├── schemas.ts
+│   └── EntitySchema()
+│   └── CreateEntitySchema()
+│   └── UpdateEntitySchema()
+│   └── RelationSchema()
+│   └── CreateRelationSchema()
+│
+├── searchCache.ts ◄─── Used by: GraphStorage.ts, BasicSearch.ts
+│   └── CacheStats
+│   └── SearchCache
+│   └── searchCaches()
+│   └── clearAllSearchCaches()
+│   └── getAllCacheStats()
+│
+├── tagUtils.ts ◄─── Used by: SearchFilterChain.ts
+│   └── normalizeTag()
+│   └── normalizeTags()
+│   └── hasMatchingTag()
+│   └── hasAllTags()
+│   └── filterByTags()
+│
+├── tfidf.ts ◄─── Used by: RankedSearch.ts, TFIDFIndexManager.ts
+│   └── calculateTF()
+│   └── calculateIDF()
+│   └── calculateTFIDF()
+│   └── tokenize()
+│   └── calculateMultiTermTFIDF()
+│
+├── validationHelper.ts
+│   └── formatZodErrors()
+│   └── validateWithSchema()
+│   └── validateSafe()
+│   └── validateArrayWithSchema()
+│
+├── validationUtils.ts
+│   └── ValidationResult
+│   └── validateEntity()
+│   └── validateRelation()
+│   └── validateImportance()
+│   └── validateTags()
+│
 ```
 
-### 9.2 Algorithm Usage Matrix
+### Algorithm Usage Matrix
 
 | Algorithm | File | Used By |
 |-----------|------|---------|
-| Levenshtein Distance | levenshtein.ts | FuzzySearch, SearchSuggestions, CompressionManager |
-| TF-IDF | tfidf.ts | RankedSearch, TFIDFIndexManager |
-| LRU Cache | searchCache.ts | BasicSearch |
-| Jaccard Similarity | CompressionManager.ts (inline) | CompressionManager |
+| levenshtein | src/memory/utils/levenshtein.ts | CompressionManager.ts, FuzzySearch.ts, SearchSuggestions.ts |
+| lruCache | src/memory/utils/searchCache.ts | GraphStorage.ts, BasicSearch.ts |
+| tfidf | src/memory/utils/tfidf.ts | RankedSearch.ts, TFIDFIndexManager.ts |
 
 ---
 
 ## 10. Cross-Module Function Calls
 
-### 10.1 Tool Handler → Manager Flow
+### Tool Handler → Manager Flow
 
 ```
 MCPServer.handleToolCall()
@@ -990,32 +981,11 @@ toolHandlers[toolName](manager, args)
         └── import_graph ─────► manager.importGraph() ────► ImportExportManager ──► ImportManager
 ```
 
-### 10.2 Search Filter Chain Flow
-
-```
-search_nodes tool call
-    │
-    ▼
-SearchManager.searchNodes(query, tags, minImportance, maxImportance)
-    │
-    ▼
-BasicSearch.searchNodes()
-    ├── GraphStorage.loadGraph()
-    ├── Text match filter
-    ├── SearchFilterChain.applyFilters(entities, filters)
-    │   ├── normalizeTags() ◄─── utils/tagUtils
-    │   └── isWithinImportanceRange() ◄─── utils/filterUtils
-    ├── SearchFilterChain.validatePagination()
-    │   └── validatePagination() ◄─── utils/paginationUtils
-    └── SearchFilterChain.paginate()
-        └── applyPagination() ◄─── utils/paginationUtils
-```
-
 ---
 
 ## 11. Shared Variable Dependencies
 
-### 11.1 Constants Usage
+### Constants Usage
 
 | Constant | Defined In | Used By |
 |----------|-----------|---------|
@@ -1026,9 +996,8 @@ BasicSearch.searchNodes()
 | `IMPORTANCE_RANGE.MIN/MAX` | constants.ts | TagManager |
 | `SIMILARITY_WEIGHTS.*` | constants.ts | CompressionManager |
 | `DEFAULT_DUPLICATE_THRESHOLD` | constants.ts | CompressionManager |
-| `DEFAULT_FUZZY_THRESHOLD` | FuzzySearch.ts | FuzzySearch |
 
-### 11.2 Singleton Instances
+### Singleton Instances
 
 | Instance | Defined In | Scope |
 |----------|-----------|-------|
@@ -1038,7 +1007,7 @@ BasicSearch.searchNodes()
 | `searchCaches.fuzzy` | searchCache.ts | Process-wide |
 | `logger` | logger.ts | Process-wide |
 
-### 11.3 Shared GraphStorage Pattern
+### Shared GraphStorage Pattern
 
 ```typescript
 // In KnowledgeGraphManager constructor:
@@ -1056,7 +1025,7 @@ this.searchManager = new SearchManager(storage, savedSearchesPath);
 
 ## 12. Dependency Visualization
 
-### 12.1 Full Dependency Graph (Mermaid)
+### Full Dependency Graph (Mermaid)
 
 ```mermaid
 flowchart TB
@@ -1225,7 +1194,7 @@ flowchart TB
 
 ## 13. Circular Dependency Analysis
 
-### 13.1 Potential Circular Dependencies
+### Potential Circular Dependencies
 
 The codebase is designed to avoid circular dependencies through:
 
@@ -1233,7 +1202,7 @@ The codebase is designed to avoid circular dependencies through:
 2. **Type-Only Imports**: Using `import type` for cross-layer references
 3. **Dependency Injection**: GraphStorage passed to managers rather than imported
 
-### 13.2 Verified No Circular Dependencies
+### Verified Circular Dependencies Found
 
 ```
 ✓ index.ts → core/index → (no back-reference)
@@ -1244,12 +1213,35 @@ The codebase is designed to avoid circular dependencies through:
 ✓ SearchManager → Search classes → GraphStorage → types (clean chain)
 ```
 
-### 13.3 Type-Only Back-References
+### Type-Only Back-References
 
 | From | To | Import Type |
 |------|-----|-------------|
-| `server/MCPServer.ts` | `index.ts` | `import type { KnowledgeGraphManager }` |
-| `server/toolHandlers.ts` | `index.ts` | `import type { KnowledgeGraphManager }` |
+| `src/memory/core/EntityManager.ts` | `../types/index.js` | Type-only import of Entity |
+| `src/memory/core/GraphStorage.ts` | `../types/index.js` | Type-only import of KnowledgeGraph, Entity, Relation |
+| `src/memory/core/KnowledgeGraphManager.ts` | `../types/index.js` | Type-only import of Entity, Relation, KnowledgeGraph, GraphStats, ValidationReport, SavedSearch, TagAlias, SearchResult, ImportResult, CompressionResult |
+| `src/memory/core/RelationManager.ts` | `../types/index.js` | Type-only import of Relation |
+| `src/memory/core/TransactionManager.ts` | `../types/index.js` | Type-only import of Entity, Relation, KnowledgeGraph |
+| `src/memory/features/AnalyticsManager.ts` | `../types/index.js` | Type-only import of ValidationReport, ValidationError, ValidationWarning, GraphStats |
+| `src/memory/features/ArchiveManager.ts` | `../types/index.js` | Type-only import of Entity |
+| `src/memory/features/CompressionManager.ts` | `../types/index.js` | Type-only import of Entity, Relation, CompressionResult |
+| `src/memory/features/ExportManager.ts` | `../types/index.js` | Type-only import of KnowledgeGraph |
+| `src/memory/features/HierarchyManager.ts` | `../types/index.js` | Type-only import of Entity, KnowledgeGraph |
+| `src/memory/features/ImportExportManager.ts` | `../types/index.js` | Type-only import of KnowledgeGraph, ImportResult |
+| `src/memory/features/ImportManager.ts` | `../types/index.js` | Type-only import of Entity, Relation, KnowledgeGraph, ImportResult |
+| `src/memory/features/TagManager.ts` | `../types/index.js` | Type-only import of TagAlias |
+| `src/memory/index.ts` | `./types/index.js` | Type-only import of Entity, Relation, KnowledgeGraph, GraphStats, ValidationReport, ValidationError, ValidationWarning, SavedSearch, TagAlias, SearchResult, BooleanQueryNode, ImportResult, CompressionResult |
+| `src/memory/search/BasicSearch.ts` | `../types/index.js` | Type-only import of KnowledgeGraph |
+| `src/memory/search/BooleanSearch.ts` | `../types/index.js` | Type-only import of BooleanQueryNode, Entity, KnowledgeGraph |
+| `src/memory/search/FuzzySearch.ts` | `../types/index.js` | Type-only import of KnowledgeGraph |
+| `src/memory/search/RankedSearch.ts` | `../types/index.js` | Type-only import of SearchResult, TFIDFIndex |
+| `src/memory/search/SavedSearchManager.ts` | `../types/index.js` | Type-only import of SavedSearch, KnowledgeGraph |
+| `src/memory/search/SearchManager.ts` | `../types/index.js` | Type-only import of KnowledgeGraph, SearchResult, SavedSearch |
+| `src/memory/search/TFIDFIndexManager.ts` | `../types/index.js` | Type-only import of TFIDFIndex, DocumentVector, KnowledgeGraph |
+| `src/memory/server/MCPServer.ts` | `../index.js` | Type-only import of KnowledgeGraphManager |
+| `src/memory/server/toolHandlers.ts` | `../index.js` | Type-only import of KnowledgeGraphManager |
+| `src/memory/server/toolHandlers.ts` | `../types/index.js` | Type-only import of SavedSearch |
+| `src/memory/utils/searchCache.ts` | `../types/index.js` | Type-only import of SearchResult, KnowledgeGraph |
 
 These use `import type` which is erased at compile time, preventing runtime circular dependencies.
 
@@ -1259,11 +1251,11 @@ These use `import type` which is erased at compile time, preventing runtime circ
 
 This dependency graph documents:
 
-- **37 source files** across 6 modules
-- **15 manager classes** with clear responsibilities
-- **45 MCP tools** mapped to handler functions
-- **11 utility modules** with algorithm implementations
-- **Zero circular dependencies** verified
+- **55 source files** across 7 modules
+- **37 classes** with clear responsibilities
+- **3 algorithm implementations**
+- **112 dependency edges** tracked
+- **Circular dependencies detected** verified
 
 The architecture follows clean layering principles with:
 - Facade pattern (KnowledgeGraphManager)
