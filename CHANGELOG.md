@@ -5,6 +5,36 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.48.0] - 2025-12-01
+
+### Added
+- **Dependency Graph Tool** - New tool to scan codebase and generate dependency documentation
+
+  **Location**: `tools/create-dependency-graph/`
+
+  **Features**:
+  - Uses TypeScript Compiler API for accurate parsing
+  - Extracts imports, exports, classes, functions, interfaces, types, constants
+  - Builds dependency graph with edges and layer classification
+  - Detects design patterns (Facade, Orchestrator, Dependency Injection)
+  - Tracks algorithms (TF-IDF, Levenshtein, LRU Cache)
+  - Analyzes circular dependencies
+  - Generates Mermaid visualization diagram
+
+  **Output Files**:
+  - `docs/architecture/DEPENDENCY_GRAPH.md` - Human-readable documentation
+  - `docs/architecture/DEPENDENCY_GRAPH.json` - Machine-readable data
+
+  **Usage**:
+  ```bash
+  npx tsx tools/create-dependency-graph/src/index.ts
+  ```
+
+  **Results**:
+  - Scans 55 TypeScript files across 7 modules
+  - Creates 112 dependency edges
+  - Tracks 3 algorithms and 4 design patterns
+
 ## [0.47.0] - 2025-11-26
 
 ### Changed
