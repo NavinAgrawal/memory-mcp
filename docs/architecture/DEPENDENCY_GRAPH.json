@@ -1,0 +1,944 @@
+{
+  "metadata": {
+    "version": "0.47.0",
+    "generated": "2024-12-01",
+    "totalFiles": 37,
+    "description": "Comprehensive dependency graph for Memory MCP Server"
+  },
+  "modules": {
+    "core": {
+      "path": "src/memory/core",
+      "files": [
+        "index.ts",
+        "KnowledgeGraphManager.ts",
+        "GraphStorage.ts",
+        "EntityManager.ts",
+        "RelationManager.ts",
+        "ObservationManager.ts",
+        "TransactionManager.ts"
+      ],
+      "purpose": "Core graph operations (entities, relations, observations, storage)"
+    },
+    "features": {
+      "path": "src/memory/features",
+      "files": [
+        "index.ts",
+        "HierarchyManager.ts",
+        "TagManager.ts",
+        "CompressionManager.ts",
+        "ArchiveManager.ts",
+        "AnalyticsManager.ts",
+        "ExportManager.ts",
+        "ImportManager.ts",
+        "ImportExportManager.ts",
+        "BackupManager.ts"
+      ],
+      "purpose": "Advanced features (hierarchy, tags, compression, import/export)"
+    },
+    "search": {
+      "path": "src/memory/search",
+      "files": [
+        "index.ts",
+        "SearchManager.ts",
+        "BasicSearch.ts",
+        "RankedSearch.ts",
+        "BooleanSearch.ts",
+        "FuzzySearch.ts",
+        "SavedSearchManager.ts",
+        "SearchSuggestions.ts",
+        "TFIDFIndexManager.ts",
+        "SearchFilterChain.ts"
+      ],
+      "purpose": "Search algorithms (basic, ranked, boolean, fuzzy, saved)"
+    },
+    "server": {
+      "path": "src/memory/server",
+      "files": [
+        "index.ts",
+        "MCPServer.ts",
+        "toolDefinitions.ts",
+        "toolHandlers.ts"
+      ],
+      "purpose": "MCP protocol layer (tool definitions, handlers)"
+    },
+    "types": {
+      "path": "src/memory/types",
+      "files": [
+        "index.ts",
+        "entity.types.ts",
+        "search.types.ts",
+        "analytics.types.ts",
+        "tags.types.ts"
+      ],
+      "purpose": "TypeScript type definitions"
+    },
+    "utils": {
+      "path": "src/memory/utils",
+      "files": [
+        "index.ts",
+        "constants.ts",
+        "errors.ts",
+        "tfidf.ts",
+        "levenshtein.ts",
+        "dateUtils.ts",
+        "tagUtils.ts",
+        "filterUtils.ts",
+        "paginationUtils.ts",
+        "searchCache.ts",
+        "responseFormatter.ts",
+        "logger.ts"
+      ],
+      "purpose": "Utility functions (algorithms, helpers, constants)"
+    }
+  },
+  "files": {
+    "src/memory/index.ts": {
+      "type": "entry",
+      "exports": [
+        { "name": "*", "from": "./core/index.js" },
+        { "name": "*", "from": "./features/index.js" },
+        { "name": "*", "from": "./search/index.js" },
+        { "name": "*", "from": "./server/index.js" },
+        { "name": "*", "from": "./types/index.js" }
+      ],
+      "imports": [
+        { "module": "./core/index.js", "items": ["KnowledgeGraphManager", "GraphStorage"] },
+        { "module": "./server/index.js", "items": ["MCPServer"] }
+      ]
+    },
+    "src/memory/core/KnowledgeGraphManager.ts": {
+      "type": "class",
+      "class": "KnowledgeGraphManager",
+      "pattern": "Facade",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph", "Entity", "Relation", "SearchResult", "SavedSearch", "GraphStats", "ValidationResult", "DuplicateGroup", "MergeResult", "CompressionResult", "ArchiveResult", "ArchiveCriteria", "ImportResult"] },
+        { "module": "./GraphStorage.js", "items": ["GraphStorage"] },
+        { "module": "./EntityManager.js", "items": ["EntityManager"] },
+        { "module": "./RelationManager.js", "items": ["RelationManager"] },
+        { "module": "./ObservationManager.js", "items": ["ObservationManager"] },
+        { "module": "./TransactionManager.js", "items": ["TransactionManager"] },
+        { "module": "../features/HierarchyManager.js", "items": ["HierarchyManager"] },
+        { "module": "../features/TagManager.js", "items": ["TagManager"] },
+        { "module": "../features/CompressionManager.js", "items": ["CompressionManager"] },
+        { "module": "../features/ArchiveManager.js", "items": ["ArchiveManager"] },
+        { "module": "../features/AnalyticsManager.js", "items": ["AnalyticsManager"] },
+        { "module": "../features/ExportManager.js", "items": ["ExportManager"] },
+        { "module": "../features/ImportManager.js", "items": ["ImportManager"] },
+        { "module": "../features/ImportExportManager.js", "items": ["ImportExportManager"] },
+        { "module": "../features/BackupManager.js", "items": ["BackupManager"] },
+        { "module": "../search/SearchManager.js", "items": ["SearchManager"] }
+      ],
+      "creates": [
+        "GraphStorage",
+        "EntityManager",
+        "RelationManager",
+        "ObservationManager",
+        "TransactionManager",
+        "HierarchyManager",
+        "TagManager",
+        "CompressionManager",
+        "ArchiveManager",
+        "AnalyticsManager",
+        "ExportManager",
+        "ImportManager",
+        "ImportExportManager",
+        "BackupManager",
+        "SearchManager"
+      ],
+      "methods": [
+        { "name": "createEntities", "delegatesTo": "EntityManager" },
+        { "name": "deleteEntities", "delegatesTo": "EntityManager" },
+        { "name": "readGraph", "delegatesTo": "GraphStorage" },
+        { "name": "openNodes", "delegatesTo": "SearchManager" },
+        { "name": "createRelations", "delegatesTo": "RelationManager" },
+        { "name": "deleteRelations", "delegatesTo": "RelationManager" },
+        { "name": "addObservations", "delegatesTo": "ObservationManager" },
+        { "name": "deleteObservations", "delegatesTo": "ObservationManager" },
+        { "name": "searchNodes", "delegatesTo": "SearchManager" },
+        { "name": "searchByDateRange", "delegatesTo": "SearchManager" },
+        { "name": "searchNodesRanked", "delegatesTo": "SearchManager" },
+        { "name": "booleanSearch", "delegatesTo": "SearchManager" },
+        { "name": "fuzzySearch", "delegatesTo": "SearchManager" },
+        { "name": "getSearchSuggestions", "delegatesTo": "SearchManager" },
+        { "name": "saveSearch", "delegatesTo": "SearchManager" },
+        { "name": "listSavedSearches", "delegatesTo": "SearchManager" },
+        { "name": "getSavedSearch", "delegatesTo": "SearchManager" },
+        { "name": "executeSavedSearch", "delegatesTo": "SearchManager" },
+        { "name": "deleteSavedSearch", "delegatesTo": "SearchManager" },
+        { "name": "updateSavedSearch", "delegatesTo": "SearchManager" },
+        { "name": "setEntityParent", "delegatesTo": "HierarchyManager" },
+        { "name": "getChildren", "delegatesTo": "HierarchyManager" },
+        { "name": "getParent", "delegatesTo": "HierarchyManager" },
+        { "name": "getAncestors", "delegatesTo": "HierarchyManager" },
+        { "name": "getDescendants", "delegatesTo": "HierarchyManager" },
+        { "name": "getSubtree", "delegatesTo": "HierarchyManager" },
+        { "name": "getRootEntities", "delegatesTo": "HierarchyManager" },
+        { "name": "getEntityDepth", "delegatesTo": "HierarchyManager" },
+        { "name": "moveEntity", "delegatesTo": "HierarchyManager" },
+        { "name": "addTags", "delegatesTo": "TagManager" },
+        { "name": "removeTags", "delegatesTo": "TagManager" },
+        { "name": "setImportance", "delegatesTo": "TagManager" },
+        { "name": "addTagsToMultipleEntities", "delegatesTo": "TagManager" },
+        { "name": "replaceTag", "delegatesTo": "TagManager" },
+        { "name": "mergeTags", "delegatesTo": "TagManager" },
+        { "name": "addTagAlias", "delegatesTo": "TagManager" },
+        { "name": "listTagAliases", "delegatesTo": "TagManager" },
+        { "name": "removeTagAlias", "delegatesTo": "TagManager" },
+        { "name": "getAliasesForTag", "delegatesTo": "TagManager" },
+        { "name": "resolveTag", "delegatesTo": "TagManager" },
+        { "name": "getGraphStats", "delegatesTo": "AnalyticsManager" },
+        { "name": "validateGraph", "delegatesTo": "AnalyticsManager" },
+        { "name": "findDuplicates", "delegatesTo": "CompressionManager" },
+        { "name": "mergeEntities", "delegatesTo": "CompressionManager" },
+        { "name": "compressGraph", "delegatesTo": "CompressionManager" },
+        { "name": "archiveEntities", "delegatesTo": "ArchiveManager" },
+        { "name": "exportGraph", "delegatesTo": "ImportExportManager" },
+        { "name": "importGraph", "delegatesTo": "ImportExportManager" }
+      ]
+    },
+    "src/memory/core/GraphStorage.ts": {
+      "type": "class",
+      "class": "GraphStorage",
+      "imports": [
+        { "module": "fs/promises", "items": ["*"] },
+        { "module": "path", "items": ["*"] },
+        { "module": "../types/index.js", "items": ["Entity", "Relation", "KnowledgeGraph"] }
+      ],
+      "methods": [
+        { "name": "loadGraph", "returns": "KnowledgeGraph" },
+        { "name": "saveGraph", "params": ["KnowledgeGraph"] },
+        { "name": "invalidateCache" }
+      ],
+      "usedBy": [
+        "EntityManager",
+        "RelationManager",
+        "ObservationManager",
+        "TransactionManager",
+        "HierarchyManager",
+        "TagManager",
+        "CompressionManager",
+        "ArchiveManager",
+        "AnalyticsManager",
+        "ImportManager",
+        "BackupManager",
+        "BasicSearch",
+        "RankedSearch",
+        "BooleanSearch",
+        "FuzzySearch",
+        "SearchSuggestions"
+      ]
+    },
+    "src/memory/core/EntityManager.ts": {
+      "type": "class",
+      "class": "EntityManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["Entity", "KnowledgeGraph", "CreateEntityInput"] },
+        { "module": "./GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"],
+      "methods": [
+        { "name": "createEntities", "calls": ["GraphStorage.loadGraph", "GraphStorage.saveGraph"] },
+        { "name": "deleteEntities", "calls": ["GraphStorage.loadGraph", "GraphStorage.saveGraph"] },
+        { "name": "updateEntity", "calls": ["GraphStorage.loadGraph", "GraphStorage.saveGraph"] },
+        { "name": "getEntity", "calls": ["GraphStorage.loadGraph"] }
+      ]
+    },
+    "src/memory/core/RelationManager.ts": {
+      "type": "class",
+      "class": "RelationManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["Relation", "KnowledgeGraph", "CreateRelationInput"] },
+        { "module": "./GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"],
+      "methods": [
+        { "name": "createRelations", "calls": ["GraphStorage.loadGraph", "GraphStorage.saveGraph"] },
+        { "name": "deleteRelations", "calls": ["GraphStorage.loadGraph", "GraphStorage.saveGraph"] }
+      ]
+    },
+    "src/memory/core/ObservationManager.ts": {
+      "type": "class",
+      "class": "ObservationManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["Entity", "AddObservationInput", "DeleteObservationInput"] },
+        { "module": "./GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"]
+    },
+    "src/memory/core/TransactionManager.ts": {
+      "type": "class",
+      "class": "TransactionManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph"] },
+        { "module": "./GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"]
+    },
+    "src/memory/features/HierarchyManager.ts": {
+      "type": "class",
+      "class": "HierarchyManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["Entity", "KnowledgeGraph"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/errors.js", "items": ["CycleDetectedError", "EntityNotFoundError"] }
+      ],
+      "dependencies": ["GraphStorage"],
+      "methods": [
+        { "name": "setEntityParent", "modifiesGraph": true },
+        { "name": "getChildren", "modifiesGraph": false },
+        { "name": "getParent", "modifiesGraph": false },
+        { "name": "getAncestors", "modifiesGraph": false },
+        { "name": "getDescendants", "modifiesGraph": false },
+        { "name": "getSubtree", "modifiesGraph": false },
+        { "name": "getRootEntities", "modifiesGraph": false },
+        { "name": "getEntityDepth", "modifiesGraph": false },
+        { "name": "moveEntity", "modifiesGraph": true }
+      ]
+    },
+    "src/memory/features/TagManager.ts": {
+      "type": "class",
+      "class": "TagManager",
+      "imports": [
+        { "module": "fs/promises", "items": ["*"] },
+        { "module": "../types/index.js", "items": ["Entity", "TagAlias"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/errors.js", "items": ["EntityNotFoundError", "InvalidImportanceError"] },
+        { "module": "../utils/constants.js", "items": ["IMPORTANCE_RANGE"] },
+        { "module": "../utils/tagUtils.js", "items": ["addUniqueTags", "removeTags"] }
+      ],
+      "dependencies": ["GraphStorage"]
+    },
+    "src/memory/features/CompressionManager.ts": {
+      "type": "class",
+      "class": "CompressionManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["Entity", "Relation", "KnowledgeGraph", "DuplicateGroup", "MergeResult", "CompressionResult"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../core/EntityManager.js", "items": ["EntityManager"], "typeOnly": true },
+        { "module": "../utils/levenshtein.js", "items": ["levenshteinDistance"] },
+        { "module": "../utils/constants.js", "items": ["SIMILARITY_WEIGHTS", "DEFAULT_DUPLICATE_THRESHOLD"] }
+      ],
+      "dependencies": ["GraphStorage", "EntityManager"],
+      "algorithms": ["levenshteinDistance", "jaccardSimilarity"]
+    },
+    "src/memory/features/ArchiveManager.ts": {
+      "type": "class",
+      "class": "ArchiveManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["Entity", "Relation", "KnowledgeGraph", "ArchiveResult", "ArchiveCriteria"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"]
+    },
+    "src/memory/features/AnalyticsManager.ts": {
+      "type": "class",
+      "class": "AnalyticsManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph", "GraphStats", "ValidationResult"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"]
+    },
+    "src/memory/features/ExportManager.ts": {
+      "type": "class",
+      "class": "ExportManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph", "Entity", "Relation"] }
+      ],
+      "dependencies": [],
+      "exportFormats": ["json", "csv", "graphml", "gexf", "dot", "markdown", "mermaid"]
+    },
+    "src/memory/features/ImportManager.ts": {
+      "type": "class",
+      "class": "ImportManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph", "Entity", "Relation", "ImportResult"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/errors.js", "items": ["ImportError"] }
+      ],
+      "dependencies": ["GraphStorage"],
+      "importFormats": ["json", "csv", "graphml"]
+    },
+    "src/memory/features/ImportExportManager.ts": {
+      "type": "class",
+      "class": "ImportExportManager",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph", "ImportResult"] },
+        { "module": "../search/BasicSearch.js", "items": ["BasicSearch"], "typeOnly": true },
+        { "module": "./ExportManager.js", "items": ["ExportManager", "ExportFormat"] },
+        { "module": "./ImportManager.js", "items": ["ImportManager", "ImportFormat", "MergeStrategy"] }
+      ],
+      "dependencies": ["ExportManager", "ImportManager", "BasicSearch"]
+    },
+    "src/memory/features/BackupManager.ts": {
+      "type": "class",
+      "class": "BackupManager",
+      "imports": [
+        { "module": "fs/promises", "items": ["*"] },
+        { "module": "path", "items": ["*"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true }
+      ],
+      "dependencies": ["GraphStorage"]
+    },
+    "src/memory/search/SearchManager.ts": {
+      "type": "class",
+      "class": "SearchManager",
+      "pattern": "Orchestrator",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph", "SearchResult", "SavedSearch"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "./BasicSearch.js", "items": ["BasicSearch"] },
+        { "module": "./RankedSearch.js", "items": ["RankedSearch"] },
+        { "module": "./BooleanSearch.js", "items": ["BooleanSearch"] },
+        { "module": "./FuzzySearch.js", "items": ["FuzzySearch"] },
+        { "module": "./SearchSuggestions.js", "items": ["SearchSuggestions"] },
+        { "module": "./SavedSearchManager.js", "items": ["SavedSearchManager"] }
+      ],
+      "creates": [
+        "BasicSearch",
+        "RankedSearch",
+        "BooleanSearch",
+        "FuzzySearch",
+        "SearchSuggestions",
+        "SavedSearchManager"
+      ],
+      "methods": [
+        { "name": "searchNodes", "delegatesTo": "BasicSearch" },
+        { "name": "openNodes", "delegatesTo": "BasicSearch" },
+        { "name": "searchByDateRange", "delegatesTo": "BasicSearch" },
+        { "name": "searchNodesRanked", "delegatesTo": "RankedSearch" },
+        { "name": "booleanSearch", "delegatesTo": "BooleanSearch" },
+        { "name": "fuzzySearch", "delegatesTo": "FuzzySearch" },
+        { "name": "getSearchSuggestions", "delegatesTo": "SearchSuggestions" },
+        { "name": "saveSearch", "delegatesTo": "SavedSearchManager" },
+        { "name": "listSavedSearches", "delegatesTo": "SavedSearchManager" },
+        { "name": "getSavedSearch", "delegatesTo": "SavedSearchManager" },
+        { "name": "executeSavedSearch", "delegatesTo": "SavedSearchManager" },
+        { "name": "deleteSavedSearch", "delegatesTo": "SavedSearchManager" },
+        { "name": "updateSavedSearch", "delegatesTo": "SavedSearchManager" }
+      ]
+    },
+    "src/memory/search/BasicSearch.ts": {
+      "type": "class",
+      "class": "BasicSearch",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/dateUtils.js", "items": ["isWithinDateRange"] },
+        { "module": "../utils/constants.js", "items": ["SEARCH_LIMITS"] },
+        { "module": "../utils/searchCache.js", "items": ["searchCaches"] },
+        { "module": "./SearchFilterChain.js", "items": ["SearchFilterChain", "SearchFilters"] }
+      ],
+      "dependencies": ["GraphStorage", "SearchFilterChain"],
+      "usesCache": true
+    },
+    "src/memory/search/RankedSearch.ts": {
+      "type": "class",
+      "class": "RankedSearch",
+      "imports": [
+        { "module": "../types/index.js", "items": ["SearchResult", "TFIDFIndex"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/tfidf.js", "items": ["calculateTFIDF", "tokenize"] },
+        { "module": "../utils/constants.js", "items": ["SEARCH_LIMITS"] },
+        { "module": "./TFIDFIndexManager.js", "items": ["TFIDFIndexManager"] },
+        { "module": "./SearchFilterChain.js", "items": ["SearchFilterChain", "SearchFilters"] }
+      ],
+      "dependencies": ["GraphStorage", "TFIDFIndexManager", "SearchFilterChain"],
+      "algorithms": ["TF-IDF"]
+    },
+    "src/memory/search/BooleanSearch.ts": {
+      "type": "class",
+      "class": "BooleanSearch",
+      "imports": [
+        { "module": "../types/index.js", "items": ["BooleanQueryNode", "Entity", "KnowledgeGraph"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/constants.js", "items": ["SEARCH_LIMITS", "QUERY_LIMITS"] },
+        { "module": "../utils/errors.js", "items": ["ValidationError"] },
+        { "module": "./SearchFilterChain.js", "items": ["SearchFilterChain", "SearchFilters"] }
+      ],
+      "dependencies": ["GraphStorage", "SearchFilterChain"],
+      "algorithms": ["Boolean Query Parsing", "AST Evaluation"]
+    },
+    "src/memory/search/FuzzySearch.ts": {
+      "type": "class",
+      "class": "FuzzySearch",
+      "imports": [
+        { "module": "../types/index.js", "items": ["KnowledgeGraph"] },
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/levenshtein.js", "items": ["levenshteinDistance"] },
+        { "module": "../utils/constants.js", "items": ["SEARCH_LIMITS"] },
+        { "module": "./SearchFilterChain.js", "items": ["SearchFilterChain", "SearchFilters"] }
+      ],
+      "dependencies": ["GraphStorage", "SearchFilterChain"],
+      "algorithms": ["Levenshtein Distance"]
+    },
+    "src/memory/search/SavedSearchManager.ts": {
+      "type": "class",
+      "class": "SavedSearchManager",
+      "imports": [
+        { "module": "fs/promises", "items": ["*"] },
+        { "module": "../types/index.js", "items": ["SavedSearch", "KnowledgeGraph"] },
+        { "module": "./BasicSearch.js", "items": ["BasicSearch"], "typeOnly": true }
+      ],
+      "dependencies": ["BasicSearch"]
+    },
+    "src/memory/search/SearchSuggestions.ts": {
+      "type": "class",
+      "class": "SearchSuggestions",
+      "imports": [
+        { "module": "../core/GraphStorage.js", "items": ["GraphStorage"], "typeOnly": true },
+        { "module": "../utils/levenshtein.js", "items": ["levenshteinDistance"] }
+      ],
+      "dependencies": ["GraphStorage"],
+      "algorithms": ["Levenshtein Distance"]
+    },
+    "src/memory/search/TFIDFIndexManager.ts": {
+      "type": "class",
+      "class": "TFIDFIndexManager",
+      "imports": [
+        { "module": "fs/promises", "items": ["*"] },
+        { "module": "path", "items": ["*"] },
+        { "module": "../types/index.js", "items": ["TFIDFIndex", "DocumentVector", "KnowledgeGraph"] },
+        { "module": "../utils/tfidf.js", "items": ["calculateIDF", "tokenize"] }
+      ],
+      "algorithms": ["TF-IDF Index Building"]
+    },
+    "src/memory/search/SearchFilterChain.ts": {
+      "type": "class",
+      "class": "SearchFilterChain",
+      "imports": [
+        { "module": "../types/entity.types.js", "items": ["Entity"] },
+        { "module": "../utils/tagUtils.js", "items": ["normalizeTags", "hasMatchingTag"] },
+        { "module": "../utils/filterUtils.js", "items": ["isWithinImportanceRange"] },
+        { "module": "../utils/paginationUtils.js", "items": ["validatePagination", "applyPagination", "ValidatedPagination"] }
+      ],
+      "usedBy": ["BasicSearch", "RankedSearch", "BooleanSearch", "FuzzySearch"],
+      "staticMethods": [
+        "applyFilters",
+        "entityPassesFilters",
+        "hasActiveFilters",
+        "validatePagination",
+        "paginate",
+        "filterAndPaginate",
+        "filterByTags",
+        "filterByImportance"
+      ]
+    },
+    "src/memory/server/MCPServer.ts": {
+      "type": "class",
+      "class": "MCPServer",
+      "imports": [
+        { "module": "@modelcontextprotocol/sdk/server/index.js", "items": ["Server"] },
+        { "module": "@modelcontextprotocol/sdk/server/stdio.js", "items": ["StdioServerTransport"] },
+        { "module": "@modelcontextprotocol/sdk/types.js", "items": ["CallToolRequestSchema", "ListToolsRequestSchema"] },
+        { "module": "../utils/logger.js", "items": ["logger"] },
+        { "module": "./toolDefinitions.js", "items": ["toolDefinitions"] },
+        { "module": "./toolHandlers.js", "items": ["handleToolCall"] },
+        { "module": "../index.js", "items": ["KnowledgeGraphManager"], "typeOnly": true }
+      ],
+      "externalDependencies": ["@modelcontextprotocol/sdk"]
+    },
+    "src/memory/server/toolDefinitions.ts": {
+      "type": "constant",
+      "exports": ["toolDefinitions", "toolCategories", "ToolDefinition"],
+      "toolCount": 45,
+      "categories": {
+        "entity": ["create_entities", "delete_entities", "read_graph", "open_nodes"],
+        "relation": ["create_relations", "delete_relations"],
+        "observation": ["add_observations", "delete_observations"],
+        "search": ["search_nodes", "search_by_date_range", "search_nodes_ranked", "boolean_search", "fuzzy_search", "get_search_suggestions"],
+        "savedSearch": ["save_search", "execute_saved_search", "list_saved_searches", "delete_saved_search", "update_saved_search"],
+        "tag": ["add_tags", "remove_tags", "set_importance", "add_tags_to_multiple_entities", "replace_tag", "merge_tags"],
+        "tagAlias": ["add_tag_alias", "list_tag_aliases", "remove_tag_alias", "get_aliases_for_tag", "resolve_tag"],
+        "hierarchy": ["set_entity_parent", "get_children", "get_parent", "get_ancestors", "get_descendants", "get_subtree", "get_root_entities", "get_entity_depth", "move_entity"],
+        "analytics": ["get_graph_stats", "validate_graph"],
+        "compression": ["find_duplicates", "merge_entities", "compress_graph", "archive_entities"],
+        "importExport": ["import_graph", "export_graph"]
+      }
+    },
+    "src/memory/server/toolHandlers.ts": {
+      "type": "module",
+      "exports": ["toolHandlers", "handleToolCall", "ToolResponse", "ToolHandler"],
+      "imports": [
+        { "module": "../utils/responseFormatter.js", "items": ["formatToolResponse", "formatTextResponse", "formatRawResponse"] },
+        { "module": "../index.js", "items": ["KnowledgeGraphManager"], "typeOnly": true },
+        { "module": "../types/index.js", "items": ["SavedSearch"], "typeOnly": true }
+      ]
+    },
+    "src/memory/types/entity.types.ts": {
+      "type": "types",
+      "exports": ["Entity", "Relation", "KnowledgeGraph"],
+      "usedBy": ["All modules"]
+    },
+    "src/memory/types/search.types.ts": {
+      "type": "types",
+      "imports": [
+        { "module": "./entity.types.js", "items": ["Entity"], "typeOnly": true }
+      ],
+      "exports": ["SearchResult", "SavedSearch", "BooleanQueryNode", "DocumentVector", "TFIDFIndex"]
+    },
+    "src/memory/types/analytics.types.ts": {
+      "type": "types",
+      "exports": ["GraphStats", "ValidationResult", "DuplicateGroup", "MergeResult", "CompressionResult", "ArchiveResult", "ArchiveCriteria", "ImportResult"]
+    },
+    "src/memory/types/tags.types.ts": {
+      "type": "types",
+      "exports": ["TagAlias"]
+    },
+    "src/memory/utils/constants.ts": {
+      "type": "constants",
+      "exports": [
+        { "name": "FILE_EXTENSIONS", "usedBy": ["GraphStorage"] },
+        { "name": "FILE_SUFFIXES", "usedBy": ["KnowledgeGraphManager"] },
+        { "name": "DEFAULT_FILE_NAMES", "usedBy": ["GraphStorage"] },
+        { "name": "ENV_VARS", "usedBy": ["KnowledgeGraphManager"] },
+        { "name": "SIMILARITY_WEIGHTS", "usedBy": ["CompressionManager"] },
+        { "name": "DEFAULT_DUPLICATE_THRESHOLD", "usedBy": ["CompressionManager"] },
+        { "name": "SEARCH_LIMITS", "usedBy": ["BasicSearch", "BooleanSearch", "FuzzySearch", "RankedSearch", "paginationUtils"] },
+        { "name": "IMPORTANCE_RANGE", "usedBy": ["TagManager"] },
+        { "name": "GRAPH_LIMITS", "usedBy": ["AnalyticsManager"] },
+        { "name": "QUERY_LIMITS", "usedBy": ["BooleanSearch"] }
+      ]
+    },
+    "src/memory/utils/errors.ts": {
+      "type": "errors",
+      "exports": [
+        { "name": "KnowledgeGraphError", "base": true },
+        { "name": "EntityNotFoundError", "usedBy": ["HierarchyManager", "TagManager"] },
+        { "name": "RelationNotFoundError", "usedBy": ["RelationManager"] },
+        { "name": "DuplicateEntityError", "usedBy": ["EntityManager"] },
+        { "name": "ValidationError", "usedBy": ["BooleanSearch"] },
+        { "name": "CycleDetectedError", "usedBy": ["HierarchyManager"] },
+        { "name": "InvalidImportanceError", "usedBy": ["TagManager"] },
+        { "name": "FileOperationError", "usedBy": ["GraphStorage", "BackupManager"] },
+        { "name": "ImportError", "usedBy": ["ImportManager"] },
+        { "name": "ExportError", "usedBy": ["ExportManager"] },
+        { "name": "InsufficientEntitiesError", "usedBy": ["CompressionManager"] }
+      ]
+    },
+    "src/memory/utils/tfidf.ts": {
+      "type": "algorithm",
+      "exports": [
+        { "name": "calculateTF", "usedBy": ["calculateTFIDF"] },
+        { "name": "calculateIDF", "usedBy": ["TFIDFIndexManager", "calculateTFIDF"] },
+        { "name": "calculateTFIDF", "usedBy": ["RankedSearch"] },
+        { "name": "tokenize", "usedBy": ["RankedSearch", "TFIDFIndexManager", "calculateTF", "calculateIDF"] },
+        { "name": "calculateMultiTermTFIDF", "usedBy": [] }
+      ]
+    },
+    "src/memory/utils/levenshtein.ts": {
+      "type": "algorithm",
+      "exports": [
+        { "name": "levenshteinDistance", "usedBy": ["FuzzySearch", "SearchSuggestions", "CompressionManager"] }
+      ],
+      "complexity": "O(m*n)"
+    },
+    "src/memory/utils/dateUtils.ts": {
+      "type": "utility",
+      "exports": [
+        { "name": "isWithinDateRange", "usedBy": ["BasicSearch"] },
+        { "name": "parseDateRange", "usedBy": [] },
+        { "name": "isValidISODate", "usedBy": [] },
+        { "name": "getCurrentTimestamp", "usedBy": [] }
+      ]
+    },
+    "src/memory/utils/tagUtils.ts": {
+      "type": "utility",
+      "exports": [
+        { "name": "normalizeTag", "usedBy": [] },
+        { "name": "normalizeTags", "usedBy": ["SearchFilterChain"] },
+        { "name": "hasMatchingTag", "usedBy": ["SearchFilterChain"] },
+        { "name": "hasAllTags", "usedBy": [] },
+        { "name": "filterByTags", "usedBy": [] },
+        { "name": "addUniqueTags", "usedBy": ["TagManager"] },
+        { "name": "removeTags", "usedBy": ["TagManager"] }
+      ]
+    },
+    "src/memory/utils/filterUtils.ts": {
+      "type": "utility",
+      "imports": [
+        { "module": "../types/entity.types.js", "items": ["Entity"], "typeOnly": true }
+      ],
+      "exports": [
+        { "name": "isWithinImportanceRange", "usedBy": ["SearchFilterChain"] },
+        { "name": "filterByImportance", "usedBy": [] },
+        { "name": "isWithinDateRange", "usedBy": [] },
+        { "name": "filterByCreatedDate", "usedBy": [] },
+        { "name": "filterByModifiedDate", "usedBy": [] },
+        { "name": "filterByEntityType", "usedBy": [] },
+        { "name": "entityPassesFilters", "usedBy": [] }
+      ]
+    },
+    "src/memory/utils/paginationUtils.ts": {
+      "type": "utility",
+      "imports": [
+        { "module": "./constants.js", "items": ["SEARCH_LIMITS"] }
+      ],
+      "exports": [
+        { "name": "ValidatedPagination", "type": "interface" },
+        { "name": "validatePagination", "usedBy": ["SearchFilterChain"] },
+        { "name": "applyPagination", "usedBy": ["SearchFilterChain"] },
+        { "name": "paginateArray", "usedBy": [] },
+        { "name": "getPaginationMeta", "usedBy": [] }
+      ]
+    },
+    "src/memory/utils/searchCache.ts": {
+      "type": "cache",
+      "imports": [
+        { "module": "../types/index.js", "items": ["SearchResult", "KnowledgeGraph"], "typeOnly": true }
+      ],
+      "exports": [
+        { "name": "SearchCache", "type": "class" },
+        { "name": "CacheStats", "type": "interface" },
+        { "name": "searchCaches", "type": "object", "instances": ["basic", "ranked", "boolean", "fuzzy"] },
+        { "name": "clearAllSearchCaches", "usedBy": [] },
+        { "name": "getAllCacheStats", "usedBy": [] },
+        { "name": "cleanupAllCaches", "usedBy": [] }
+      ]
+    },
+    "src/memory/utils/responseFormatter.ts": {
+      "type": "utility",
+      "exports": [
+        { "name": "ToolResponse", "type": "type" },
+        { "name": "formatToolResponse", "usedBy": ["toolHandlers"] },
+        { "name": "formatTextResponse", "usedBy": ["toolHandlers"] },
+        { "name": "formatRawResponse", "usedBy": ["toolHandlers"] },
+        { "name": "formatErrorResponse", "usedBy": [] }
+      ]
+    },
+    "src/memory/utils/logger.ts": {
+      "type": "utility",
+      "exports": [
+        { "name": "logger", "methods": ["debug", "info", "warn", "error"], "usedBy": ["MCPServer"] }
+      ]
+    }
+  },
+  "dependencyGraph": {
+    "layers": [
+      {
+        "name": "Entry Points",
+        "level": 0,
+        "files": ["src/memory/index.ts"]
+      },
+      {
+        "name": "Server Layer",
+        "level": 1,
+        "files": ["src/memory/server/MCPServer.ts", "src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"]
+      },
+      {
+        "name": "Facade Layer",
+        "level": 2,
+        "files": ["src/memory/core/KnowledgeGraphManager.ts"]
+      },
+      {
+        "name": "Manager Layer",
+        "level": 3,
+        "files": [
+          "src/memory/core/EntityManager.ts",
+          "src/memory/core/RelationManager.ts",
+          "src/memory/core/ObservationManager.ts",
+          "src/memory/core/TransactionManager.ts",
+          "src/memory/features/HierarchyManager.ts",
+          "src/memory/features/TagManager.ts",
+          "src/memory/features/CompressionManager.ts",
+          "src/memory/features/ArchiveManager.ts",
+          "src/memory/features/AnalyticsManager.ts",
+          "src/memory/features/ExportManager.ts",
+          "src/memory/features/ImportManager.ts",
+          "src/memory/features/ImportExportManager.ts",
+          "src/memory/features/BackupManager.ts",
+          "src/memory/search/SearchManager.ts"
+        ]
+      },
+      {
+        "name": "Search Engine Layer",
+        "level": 4,
+        "files": [
+          "src/memory/search/BasicSearch.ts",
+          "src/memory/search/RankedSearch.ts",
+          "src/memory/search/BooleanSearch.ts",
+          "src/memory/search/FuzzySearch.ts",
+          "src/memory/search/SavedSearchManager.ts",
+          "src/memory/search/SearchSuggestions.ts",
+          "src/memory/search/TFIDFIndexManager.ts",
+          "src/memory/search/SearchFilterChain.ts"
+        ]
+      },
+      {
+        "name": "Storage Layer",
+        "level": 5,
+        "files": ["src/memory/core/GraphStorage.ts"]
+      },
+      {
+        "name": "Foundation Layer",
+        "level": 6,
+        "files": [
+          "src/memory/types/entity.types.ts",
+          "src/memory/types/search.types.ts",
+          "src/memory/types/analytics.types.ts",
+          "src/memory/types/tags.types.ts",
+          "src/memory/utils/constants.ts",
+          "src/memory/utils/errors.ts",
+          "src/memory/utils/tfidf.ts",
+          "src/memory/utils/levenshtein.ts",
+          "src/memory/utils/dateUtils.ts",
+          "src/memory/utils/tagUtils.ts",
+          "src/memory/utils/filterUtils.ts",
+          "src/memory/utils/paginationUtils.ts",
+          "src/memory/utils/searchCache.ts",
+          "src/memory/utils/responseFormatter.ts",
+          "src/memory/utils/logger.ts"
+        ]
+      }
+    ],
+    "edges": [
+      { "from": "index.ts", "to": "MCPServer.ts", "type": "creates" },
+      { "from": "index.ts", "to": "KnowledgeGraphManager.ts", "type": "creates" },
+      { "from": "MCPServer.ts", "to": "toolDefinitions.ts", "type": "imports" },
+      { "from": "MCPServer.ts", "to": "toolHandlers.ts", "type": "imports" },
+      { "from": "MCPServer.ts", "to": "logger.ts", "type": "imports" },
+      { "from": "toolHandlers.ts", "to": "responseFormatter.ts", "type": "imports" },
+      { "from": "toolHandlers.ts", "to": "KnowledgeGraphManager.ts", "type": "calls" },
+      { "from": "KnowledgeGraphManager.ts", "to": "GraphStorage.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "EntityManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "RelationManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "ObservationManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "TransactionManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "HierarchyManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "TagManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "CompressionManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "ArchiveManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "AnalyticsManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "ExportManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "ImportManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "ImportExportManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "BackupManager.ts", "type": "creates" },
+      { "from": "KnowledgeGraphManager.ts", "to": "SearchManager.ts", "type": "creates" },
+      { "from": "EntityManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "RelationManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "ObservationManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "TransactionManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "HierarchyManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "HierarchyManager.ts", "to": "errors.ts", "type": "imports" },
+      { "from": "TagManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "TagManager.ts", "to": "errors.ts", "type": "imports" },
+      { "from": "TagManager.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "TagManager.ts", "to": "tagUtils.ts", "type": "imports" },
+      { "from": "CompressionManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "CompressionManager.ts", "to": "EntityManager.ts", "type": "uses" },
+      { "from": "CompressionManager.ts", "to": "levenshtein.ts", "type": "imports" },
+      { "from": "CompressionManager.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "ArchiveManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "AnalyticsManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "ImportManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "ImportManager.ts", "to": "errors.ts", "type": "imports" },
+      { "from": "ImportExportManager.ts", "to": "ExportManager.ts", "type": "uses" },
+      { "from": "ImportExportManager.ts", "to": "ImportManager.ts", "type": "uses" },
+      { "from": "ImportExportManager.ts", "to": "BasicSearch.ts", "type": "uses" },
+      { "from": "BackupManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "SearchManager.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "SearchManager.ts", "to": "BasicSearch.ts", "type": "creates" },
+      { "from": "SearchManager.ts", "to": "RankedSearch.ts", "type": "creates" },
+      { "from": "SearchManager.ts", "to": "BooleanSearch.ts", "type": "creates" },
+      { "from": "SearchManager.ts", "to": "FuzzySearch.ts", "type": "creates" },
+      { "from": "SearchManager.ts", "to": "SearchSuggestions.ts", "type": "creates" },
+      { "from": "SearchManager.ts", "to": "SavedSearchManager.ts", "type": "creates" },
+      { "from": "BasicSearch.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "BasicSearch.ts", "to": "SearchFilterChain.ts", "type": "imports" },
+      { "from": "BasicSearch.ts", "to": "dateUtils.ts", "type": "imports" },
+      { "from": "BasicSearch.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "BasicSearch.ts", "to": "searchCache.ts", "type": "imports" },
+      { "from": "RankedSearch.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "RankedSearch.ts", "to": "SearchFilterChain.ts", "type": "imports" },
+      { "from": "RankedSearch.ts", "to": "TFIDFIndexManager.ts", "type": "uses" },
+      { "from": "RankedSearch.ts", "to": "tfidf.ts", "type": "imports" },
+      { "from": "RankedSearch.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "BooleanSearch.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "BooleanSearch.ts", "to": "SearchFilterChain.ts", "type": "imports" },
+      { "from": "BooleanSearch.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "BooleanSearch.ts", "to": "errors.ts", "type": "imports" },
+      { "from": "FuzzySearch.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "FuzzySearch.ts", "to": "SearchFilterChain.ts", "type": "imports" },
+      { "from": "FuzzySearch.ts", "to": "levenshtein.ts", "type": "imports" },
+      { "from": "FuzzySearch.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "SavedSearchManager.ts", "to": "BasicSearch.ts", "type": "uses" },
+      { "from": "SearchSuggestions.ts", "to": "GraphStorage.ts", "type": "uses" },
+      { "from": "SearchSuggestions.ts", "to": "levenshtein.ts", "type": "imports" },
+      { "from": "TFIDFIndexManager.ts", "to": "tfidf.ts", "type": "imports" },
+      { "from": "SearchFilterChain.ts", "to": "tagUtils.ts", "type": "imports" },
+      { "from": "SearchFilterChain.ts", "to": "filterUtils.ts", "type": "imports" },
+      { "from": "SearchFilterChain.ts", "to": "paginationUtils.ts", "type": "imports" },
+      { "from": "paginationUtils.ts", "to": "constants.ts", "type": "imports" },
+      { "from": "filterUtils.ts", "to": "entity.types.ts", "type": "imports" },
+      { "from": "search.types.ts", "to": "entity.types.ts", "type": "imports" }
+    ]
+  },
+  "algorithms": {
+    "tfidf": {
+      "file": "src/memory/utils/tfidf.ts",
+      "functions": ["calculateTF", "calculateIDF", "calculateTFIDF", "tokenize"],
+      "usedBy": ["RankedSearch", "TFIDFIndexManager"],
+      "purpose": "Term frequency-inverse document frequency for relevance ranking"
+    },
+    "levenshtein": {
+      "file": "src/memory/utils/levenshtein.ts",
+      "functions": ["levenshteinDistance"],
+      "usedBy": ["FuzzySearch", "SearchSuggestions", "CompressionManager"],
+      "purpose": "String edit distance for fuzzy matching and similarity detection",
+      "complexity": "O(m*n)"
+    },
+    "lruCache": {
+      "file": "src/memory/utils/searchCache.ts",
+      "class": "SearchCache",
+      "usedBy": ["BasicSearch"],
+      "purpose": "LRU cache with TTL for search result caching"
+    }
+  },
+  "patterns": {
+    "facade": {
+      "class": "KnowledgeGraphManager",
+      "file": "src/memory/core/KnowledgeGraphManager.ts",
+      "description": "Provides unified API to all subsystem managers"
+    },
+    "orchestrator": {
+      "class": "SearchManager",
+      "file": "src/memory/search/SearchManager.ts",
+      "description": "Orchestrates all search engine implementations"
+    },
+    "dependencyInjection": {
+      "instance": "GraphStorage",
+      "description": "Single GraphStorage instance injected into all managers"
+    },
+    "barrelExports": {
+      "files": ["core/index.ts", "features/index.ts", "search/index.ts", "server/index.ts", "types/index.ts", "utils/index.ts"],
+      "description": "Each module uses barrel exports for clean imports"
+    }
+  },
+  "circularDependencies": {
+    "detected": false,
+    "typeOnlyBackReferences": [
+      {
+        "from": "src/memory/server/MCPServer.ts",
+        "to": "src/memory/index.ts",
+        "reason": "Type-only import of KnowledgeGraphManager"
+      },
+      {
+        "from": "src/memory/server/toolHandlers.ts",
+        "to": "src/memory/index.ts",
+        "reason": "Type-only import of KnowledgeGraphManager"
+      }
+    ]
+  },
+  "externalDependencies": {
+    "@modelcontextprotocol/sdk": {
+      "usedBy": ["MCPServer.ts"],
+      "imports": ["Server", "StdioServerTransport", "CallToolRequestSchema", "ListToolsRequestSchema"]
+    },
+    "fs/promises": {
+      "usedBy": ["GraphStorage.ts", "TagManager.ts", "BackupManager.ts", "SavedSearchManager.ts", "TFIDFIndexManager.ts"]
+    },
+    "path": {
+      "usedBy": ["GraphStorage.ts", "BackupManager.ts", "TFIDFIndexManager.ts"]
+    }
+  }
+}
