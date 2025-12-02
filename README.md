@@ -754,8 +754,8 @@ Find similar entities using multi-factor similarity scoring.
 
 **Algorithm:**
 - Name similarity: 40% (Levenshtein distance)
-- Type match: 20% (exact match)
-- Observation overlap: 30% (Jaccard similarity)
+- Type match: 30% (exact match)
+- Observation overlap: 20% (Jaccard similarity)
 - Tag overlap: 10% (Jaccard similarity)
 
 **Example:**
@@ -981,21 +981,6 @@ List all saved searches.
 </details>
 
 <details>
-<summary><b>Saved Search: get_saved_search</b></summary>
-
-Get details of a saved search.
-
-**Input:**
-```typescript
-{
-  name: string;
-}
-```
-
-**Returns:** Saved search object
-</details>
-
-<details>
 <summary><b>Saved Search: execute_saved_search</b></summary>
 
 Execute a saved search (updates usage count).
@@ -1094,7 +1079,7 @@ Remove tags from an entity.
 </details>
 
 <details>
-<summary><b>Tags: add_tags_to_multiple</b></summary>
+<summary><b>Tags: add_tags_to_multiple_entities</b></summary>
 
 Add tags to multiple entities at once (bulk operation).
 
@@ -1242,33 +1227,6 @@ Get comprehensive graph statistics.
 </details>
 
 <details>
-<summary><b>Analytics: search_by_date_range</b></summary>
-
-Filter entities and relations by date range.
-
-**Input:**
-```typescript
-{
-  startDate?: string;   // ISO 8601
-  endDate?: string;     // ISO 8601
-  entityType?: string;
-  tags?: string[];
-}
-```
-
-**Returns:** Filtered knowledge graph
-
-**Example:**
-```json
-{
-  "startDate": "2025-01-01T00:00:00.000Z",
-  "endDate": "2025-01-31T23:59:59.999Z",
-  "tags": ["project"]
-}
-```
-</details>
-
-<details>
 <summary><b>Analytics: validate_graph</b></summary>
 
 Validate graph integrity and detect issues.
@@ -1290,29 +1248,6 @@ Validate graph integrity and detect issues.
 - Invalid data
 - Isolated entities (warning)
 - Empty observations (warning)
-</details>
-
-<details>
-<summary><b>Analytics: set_importance</b></summary>
-
-Set importance level for an entity (0-10).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-  importance: number;  // 0-10
-}
-```
-
-**Returns:** Updated entity
-
-**Scale:**
-- 9-10: Critical
-- 7-8: High
-- 5-6: Medium
-- 3-4: Low
-- 0-2: Minimal
 </details>
 
 ---
@@ -1518,10 +1453,10 @@ All files use JSONL (JSON Lines) format where each line is a valid JSON object.
 Comprehensive documentation organized by category:
 
 **Core Documentation**
-- **[API Reference](docs/API.md)** - Complete API documentation for all 47 tools
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical architecture and system design
+- **[API Reference](docs/architecture/API.md)** - Complete API documentation for all 47 tools
+- **[Architecture](docs/architecture/ARCHITECTURE.md)** - Technical architecture and system design
 - **[Dependency Graph](docs/architecture/DEPENDENCY_GRAPH.md)** - Module dependencies and structure
-- **[Workflow](docs/WORKFLOW.md)** - Development workflow and procedures
+- **[Workflow](docs/development/WORKFLOW.md)** - Development workflow and procedures
 
 **User Guides**
 - **[Hierarchy Guide](docs/guides/HIERARCHY.md)** - Parent-child relationships (9 tools)
