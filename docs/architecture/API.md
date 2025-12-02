@@ -1,31 +1,31 @@
 # Memory MCP - API Reference
 
-**Version**: 0.18.0
-**Last Updated**: 2025-11-25
+**Version**: 0.47.1
+**Last Updated**: 2025-12-02
 
-Complete reference for all 45 MCP tools provided by the Memory MCP server.
+Complete reference for all 47 MCP tools provided by the Memory MCP server.
 
 ---
 
 ## Table of Contents
 
-1. [Entity Management](#entity-management) (7 tools)
-2. [Relation Management](#relation-management) (5 tools)
-3. [Search Operations](#search-operations) (7 tools)
-4. [Compression & Deduplication](#compression--deduplication) (3 tools)
-5. [Tag Management](#tag-management) (5 tools)
-6. [Hierarchies](#hierarchies) (3 tools)
-7. [Statistics](#statistics) (3 tools)
-8. [Export Operations](#export-operations) (3 tools)
-9. [Import Operations](#import-operations) (1 tool)
-10. [Graph Operations](#graph-operations) (2 tools)
-11. [Utility Operations](#utility-operations) (6 tools)
+1. [Entity Operations](#entity-operations) (4 tools)
+2. [Relation Operations](#relation-operations) (2 tools)
+3. [Observation Management](#observation-management) (2 tools)
+4. [Search Operations](#search-operations) (6 tools)
+5. [Saved Searches](#saved-searches) (5 tools)
+6. [Tag Management](#tag-management) (6 tools)
+7. [Tag Aliases](#tag-aliases) (5 tools)
+8. [Hierarchy Operations](#hierarchy-operations) (9 tools)
+9. [Analytics](#analytics) (2 tools)
+10. [Compression & Deduplication](#compression--deduplication) (4 tools)
+11. [Import/Export Operations](#importexport-operations) (2 tools)
 
 ---
 
-## Entity Management
+## Entity Operations
 
-### createEntities
+### create_entities
 
 Create one or more entities in the knowledge graph.
 
@@ -74,84 +74,14 @@ Create one or more entities in the knowledge graph.
 
 ---
 
-### getEntity
-
-Retrieve a single entity by name.
-
-**Parameters:**
-```typescript
-{
-  name: string;  // Entity name to retrieve
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity | null;  // Entity if found, null otherwise
-}
-```
-
-**Example:**
-```json
-{
-  "name": "Alice"
-}
-```
-
----
-
-### updateEntity
-
-Update an existing entity's properties.
-
-**Parameters:**
-```typescript
-{
-  name: string;                  // Entity to update
-  updates: {
-    entityType?: string;         // New type
-    observations?: string[];     // Replace observations
-    tags?: string[];             // Replace tags
-    importance?: number;         // New importance
-    parentId?: string;           // New parent
-  }
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity;  // Updated entity
-}
-```
-
-**Notes:**
-- Cannot update entity name (it's the unique identifier)
-- `lastModified` timestamp automatically updated
-- Updates are partial (only specified fields changed)
-
-**Example:**
-```json
-{
-  "name": "Alice",
-  "updates": {
-    "importance": 9,
-    "tags": ["team", "engineering", "lead"]
-  }
-}
-```
-
----
-
-### deleteEntities
+### delete_entities
 
 Delete one or more entities from the knowledge graph.
 
 **Parameters:**
 ```typescript
 {
-  names: string[];  // Array of entity names to delete
+  entityNames: string[];  // Array of entity names to delete
 }
 ```
 
@@ -164,72 +94,47 @@ Delete one or more entities from the knowledge graph.
 
 **Notes:**
 - Maximum 1000 entities per batch
-- Related entities' `lastModified` timestamps updated
 - Relations involving deleted entities are also removed
+- Child entities remain but lose their parent reference
 
 **Example:**
 ```json
 {
-  "names": ["Alice", "Bob"]
+  "entityNames": ["Alice", "Bob"]
 }
 ```
 
 ---
 
-### batchUpdateEntities
+### read_graph
 
-Update multiple entities in a single atomic operation.
+Read the entire knowledge graph.
 
-**Parameters:**
-```typescript
-{
-  updates: Array<{
-    name: string;
-    updates: {
-      entityType?: string;
-      observations?: string[];
-      tags?: string[];
-      importance?: number;
-      parentId?: string;
-    }
-  }>
-}
-```
+**Parameters:** None
 
 **Returns:**
 ```typescript
 {
-  entities: Entity[];  // Array of updated entities
+  entities: Entity[];
+  relations: Relation[];
 }
 ```
 
-**Performance:**
-- Single I/O operation
-- ~200ms for 100 entities
-
-**Example:**
-```json
-{
-  "updates": [
-    { "name": "Alice", "updates": { "importance": 9 } },
-    { "name": "Bob", "updates": { "importance": 8 } }
-  ]
-}
-```
+**Notes:**
+- Returns complete graph data
+- Use with caution on large graphs
+- Consider using search operations for filtered access
 
 ---
 
-### listEntities
+### open_nodes
 
-List all entities with optional filtering.
+Retrieve specific entities by name with their relations.
 
 **Parameters:**
 ```typescript
 {
-  entityType?: string;    // Filter by type
-  tags?: string[];        // Filter by tags (AND logic)
-  minImportance?: number; // Minimum importance
-  maxImportance?: number; // Maximum importance
+  names: string[];  // Entity names to retrieve
 }
 ```
 
@@ -237,58 +142,27 @@ List all entities with optional filtering.
 ```typescript
 {
   entities: Entity[];
-  count: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityType": "person",
-  "tags": ["engineering"],
-  "minImportance": 7
-}
-```
-
----
-
-### observeEntity
-
-Add observations to an existing entity without replacing existing ones.
-
-**Parameters:**
-```typescript
-{
-  name: string;
-  observations: string[];  // New observations to add
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity;  // Updated entity
+  relations: Relation[];  // Relations between opened entities
 }
 ```
 
 **Notes:**
-- Observations are appended, not replaced
-- Duplicates are allowed
-- `lastModified` automatically updated
+- Only returns relations where BOTH from and to are in the list
+- Useful for graph visualization
+- Guaranteed to return results for existing entities
 
 **Example:**
 ```json
 {
-  "name": "Alice",
-  "observations": ["Led project Alpha", "Promoted to senior engineer"]
+  "names": ["Alice", "Bob", "Project_X"]
 }
 ```
 
 ---
 
-## Relation Management
+## Relation Operations
 
-### createRelations
+### create_relations
 
 Create one or more relations between entities.
 
@@ -328,39 +202,7 @@ Create one or more relations between entities.
 
 ---
 
-### getRelations
-
-Get all relations for a specific entity.
-
-**Parameters:**
-```typescript
-{
-  entityName: string;  // Entity to get relations for
-}
-```
-
-**Returns:**
-```typescript
-{
-  incoming: Relation[];  // Relations where entity is 'to'
-  outgoing: Relation[];  // Relations where entity is 'from'
-}
-```
-
-**Notes:**
-- May return `null` if entity has no relations
-- Use `openNodes` for guaranteed results
-
-**Example:**
-```json
-{
-  "entityName": "Alice"
-}
-```
-
----
-
-### deleteRelations
+### delete_relations
 
 Delete one or more relations from the knowledge graph.
 
@@ -384,7 +226,6 @@ Delete one or more relations from the knowledge graph.
 
 **Notes:**
 - Maximum 1000 relations per batch
-- Related entities' `lastModified` updated
 - Non-existent relations silently ignored
 
 **Example:**
@@ -398,58 +239,84 @@ Delete one or more relations from the knowledge graph.
 
 ---
 
-### listRelations
+## Observation Management
 
-List all relations with optional filtering.
+### add_observations
+
+Add observations to existing entities.
 
 **Parameters:**
 ```typescript
 {
-  relationType?: string;  // Filter by relation type
+  observations: Array<{
+    entityName: string;
+    contents: string[];  // New observations to add
+  }>
 }
 ```
 
 **Returns:**
 ```typescript
 {
-  relations: Relation[];
-  count: number;
+  results: Array<{
+    entityName: string;
+    addedObservations: string[];
+  }>
+}
+```
+
+**Notes:**
+- Observations are appended, not replaced
+- Duplicate observations within the same request are filtered
+- `lastModified` automatically updated
+
+**Example:**
+```json
+{
+  "observations": [
+    {
+      "entityName": "Alice",
+      "contents": ["Led project Alpha", "Promoted to senior engineer"]
+    }
+  ]
+}
+```
+
+---
+
+### delete_observations
+
+Remove specific observations from entities.
+
+**Parameters:**
+```typescript
+{
+  deletions: Array<{
+    entityName: string;
+    observations: string[];  // Observations to remove (exact match)
+  }>
+}
+```
+
+**Returns:**
+```typescript
+{
+  results: Array<{
+    entityName: string;
+    deletedObservations: string[];
+  }>
 }
 ```
 
 **Example:**
 ```json
 {
-  "relationType": "works_on"
-}
-```
-
----
-
-### getRelationTypes
-
-Get all unique relation types in the knowledge graph.
-
-**Parameters:** None
-
-**Returns:**
-```typescript
-{
-  relationTypes: string[];
-  count: number;
-}
-```
-
-**Example Usage:**
-```json
-{}
-```
-
-**Example Response:**
-```json
-{
-  "relationTypes": ["works_on", "mentors", "reports_to", "collaborates_with"],
-  "count": 4
+  "deletions": [
+    {
+      "entityName": "Alice",
+      "observations": ["Old observation to remove"]
+    }
+  ]
 }
 ```
 
@@ -457,7 +324,7 @@ Get all unique relation types in the knowledge graph.
 
 ## Search Operations
 
-### searchNodes
+### search_nodes
 
 Basic text search with optional filters.
 
@@ -497,7 +364,44 @@ Basic text search with optional filters.
 
 ---
 
-### searchNodesRanked
+### search_by_date_range
+
+Search entities by creation/modification date.
+
+**Parameters:**
+```typescript
+{
+  startDate?: string;         // ISO 8601 format
+  endDate?: string;           // ISO 8601 format
+  entityType?: string;
+  tags?: string[];
+}
+```
+
+**Returns:**
+```typescript
+{
+  entities: Entity[];
+  relations: Relation[];
+}
+```
+
+**Notes:**
+- Uses `createdAt` if available, otherwise `lastModified`
+- Both dates optional (omit for open-ended ranges)
+
+**Example:**
+```json
+{
+  "startDate": "2025-01-01T00:00:00Z",
+  "endDate": "2025-12-31T23:59:59Z",
+  "entityType": "person"
+}
+```
+
+---
+
+### search_nodes_ranked
 
 TF-IDF ranked search with relevance scoring.
 
@@ -541,14 +445,17 @@ TF-IDF ranked search with relevance scoring.
 
 ---
 
-### booleanSearch
+### boolean_search
 
 Boolean query search with AND/OR/NOT operators.
 
 **Parameters:**
 ```typescript
 {
-  query: string;  // Boolean expression
+  query: string;              // Boolean expression
+  tags?: string[];
+  minImportance?: number;
+  maxImportance?: number;
 }
 ```
 
@@ -580,15 +487,10 @@ Boolean query search with AND/OR/NOT operators.
   "query": "type:person AND NOT contractor"
 }
 ```
-```json
-{
-  "query": "(senior OR lead) AND engineering"
-}
-```
 
 ---
 
-### fuzzySearch
+### fuzzy_search
 
 Typo-tolerant search using Levenshtein distance.
 
@@ -615,103 +517,96 @@ Typo-tolerant search using Levenshtein distance.
 - 0.9-1.0: Very strict (minor typos)
 - 0.7-0.9: Moderate (recommended)
 - 0.5-0.7: Lenient (major differences)
-- 0.0-0.5: Very lenient (not recommended)
 
 **Performance:** <200ms for 500 entities
 
 **Example:**
 ```json
 {
-  "query": "enginer",  // Typo for "engineer"
+  "query": "enginer",
   "threshold": 0.8
 }
 ```
 
 ---
 
-### openNodes
+### get_search_suggestions
 
-Retrieve specific entities by name with their relations.
+Get search query suggestions based on existing content.
 
 **Parameters:**
 ```typescript
 {
-  names: string[];  // Entity names to retrieve
+  query: string;              // Partial query
+  maxSuggestions?: number;    // Max suggestions (default: 10)
 }
 ```
 
 **Returns:**
 ```typescript
 {
-  entities: Entity[];
-  relations: Relation[];  // Relations between opened entities
+  suggestions: string[];
 }
 ```
-
-**Notes:**
-- Only returns relations where BOTH from and to are in the list
-- Guaranteed to return results (unlike `getRelations`)
-- Useful for graph visualization
-
-**Performance:** <100ms for 50 nodes
 
 **Example:**
 ```json
 {
-  "names": ["Alice", "Bob", "Project_X"]
+  "query": "eng",
+  "maxSuggestions": 5
 }
 ```
 
 ---
 
-### searchByDateRange
+## Saved Searches
 
-Search entities by creation/modification date.
+### save_search
+
+Save a search query for later reuse.
 
 **Parameters:**
 ```typescript
 {
-  startDate?: string;         // ISO 8601 format
-  endDate?: string;           // ISO 8601 format
-  entityType?: string;
-  tags?: string[];
+  name: string;               // Unique search name
+  query: string;              // Search query
+  searchType: 'basic' | 'ranked' | 'boolean' | 'fuzzy';
+  filters?: {
+    tags?: string[];
+    minImportance?: number;
+    maxImportance?: number;
+  };
+  description?: string;
 }
 ```
 
 **Returns:**
 ```typescript
 {
-  entities: Entity[];
-  relations: Relation[];
+  savedSearch: SavedSearch;
 }
 ```
-
-**Notes:**
-- Uses `createdAt` if available, otherwise `lastModified`
-- Both dates optional (omit for open-ended ranges)
 
 **Example:**
 ```json
 {
-  "startDate": "2025-01-01T00:00:00Z",
-  "endDate": "2025-12-31T23:59:59Z",
-  "entityType": "person"
+  "name": "active-engineers",
+  "query": "engineer",
+  "searchType": "basic",
+  "filters": { "tags": ["active"], "minImportance": 5 }
 }
 ```
 
 ---
 
-### searchByTags
+### execute_saved_search
 
-Search entities by tags with optional text query.
+Execute a previously saved search.
 
 **Parameters:**
 ```typescript
 {
-  tags: string[];             // Required tags (AND logic)
-  query?: string;             // Optional text search
-  minImportance?: number;
-  maxImportance?: number;
+  name: string;  // Saved search name
 }
 ```
 
@@ -726,16 +621,624 @@ Search entities by tags with optional text query.
 **Example:**
 ```json
 {
-  "tags": ["engineering", "senior"],
-  "query": "python"
+  "name": "active-engineers"
 }
 ```
+
+---
+
+### list_saved_searches
+
+List all saved searches.
+
+**Parameters:** None
+
+**Returns:**
+```typescript
+{
+  savedSearches: SavedSearch[];
+}
+```
+
+---
+
+### delete_saved_search
+
+Delete a saved search.
+
+**Parameters:**
+```typescript
+{
+  name: string;  // Saved search name to delete
+}
+```
+
+**Returns:**
+```typescript
+{
+  deleted: boolean;
+}
+```
+
+---
+
+### update_saved_search
+
+Update an existing saved search.
+
+**Parameters:**
+```typescript
+{
+  name: string;               // Existing search name
+  query?: string;             // New query
+  searchType?: 'basic' | 'ranked' | 'boolean' | 'fuzzy';
+  filters?: {
+    tags?: string[];
+    minImportance?: number;
+    maxImportance?: number;
+  };
+  description?: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  savedSearch: SavedSearch;
+}
+```
+
+---
+
+## Tag Management
+
+### add_tags
+
+Add tags to a single entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+  tags: string[];  // Tags to add (normalized to lowercase)
+}
+```
+
+**Returns:**
+```typescript
+{
+  entity: Entity;
+}
+```
+
+**Example:**
+```json
+{
+  "entityName": "Alice",
+  "tags": ["senior", "lead"]
+}
+```
+
+---
+
+### remove_tags
+
+Remove tags from a single entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+  tags: string[];
+}
+```
+
+**Returns:**
+```typescript
+{
+  entity: Entity;
+}
+```
+
+---
+
+### set_importance
+
+Set the importance score for an entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+  importance: number;  // 0-10
+}
+```
+
+**Returns:**
+```typescript
+{
+  entity: Entity;
+}
+```
+
+**Example:**
+```json
+{
+  "entityName": "Alice",
+  "importance": 9
+}
+```
+
+---
+
+### add_tags_to_multiple_entities
+
+Add tags to multiple entities at once.
+
+**Parameters:**
+```typescript
+{
+  entityNames: string[];
+  tags: string[];
+}
+```
+
+**Returns:**
+```typescript
+{
+  entities: Entity[];
+}
+```
+
+**Example:**
+```json
+{
+  "entityNames": ["Alice", "Bob", "Charlie"],
+  "tags": ["team-alpha"]
+}
+```
+
+---
+
+### replace_tag
+
+Replace a tag across all entities.
+
+**Parameters:**
+```typescript
+{
+  oldTag: string;
+  newTag: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  entitiesUpdated: number;
+}
+```
+
+**Example:**
+```json
+{
+  "oldTag": "dev",
+  "newTag": "developer"
+}
+```
+
+---
+
+### merge_tags
+
+Merge two tags into one target tag.
+
+**Parameters:**
+```typescript
+{
+  sourceTags: string[];  // Tags to merge
+  targetTag: string;     // Resulting tag
+}
+```
+
+**Returns:**
+```typescript
+{
+  entitiesUpdated: number;
+}
+```
+
+**Example:**
+```json
+{
+  "sourceTags": ["dev", "developer"],
+  "targetTag": "engineering"
+}
+```
+
+---
+
+## Tag Aliases
+
+### add_tag_alias
+
+Create a tag alias for normalization.
+
+**Parameters:**
+```typescript
+{
+  alias: string;        // Alternate form
+  canonical: string;    // Canonical tag
+  description?: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  tagAlias: TagAlias;
+}
+```
+
+**Example:**
+```json
+{
+  "alias": "js",
+  "canonical": "javascript",
+  "description": "JavaScript abbreviation"
+}
+```
+
+---
+
+### list_tag_aliases
+
+List all tag aliases.
+
+**Parameters:** None
+
+**Returns:**
+```typescript
+{
+  aliases: TagAlias[];
+}
+```
+
+---
+
+### remove_tag_alias
+
+Remove a tag alias.
+
+**Parameters:**
+```typescript
+{
+  alias: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  removed: boolean;
+}
+```
+
+---
+
+### get_aliases_for_tag
+
+Get all aliases that map to a canonical tag.
+
+**Parameters:**
+```typescript
+{
+  canonicalTag: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  aliases: string[];
+}
+```
+
+---
+
+### resolve_tag
+
+Resolve a tag alias to its canonical form.
+
+**Parameters:**
+```typescript
+{
+  tag: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  resolvedTag: string;
+  wasAlias: boolean;
+}
+```
+
+**Example:**
+```json
+{
+  "tag": "js"
+}
+// Returns: { "resolvedTag": "javascript", "wasAlias": true }
+```
+
+---
+
+## Hierarchy Operations
+
+### set_entity_parent
+
+Set the parent entity for hierarchical organization.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+  parentName: string | null;  // null to remove parent
+}
+```
+
+**Returns:**
+```typescript
+{
+  entity: Entity;
+}
+```
+
+**Notes:**
+- Cycle detection prevents invalid parent assignments
+- Setting null removes the parent relationship
+
+**Example:**
+```json
+{
+  "entityName": "Engineering_Team",
+  "parentName": "Company"
+}
+```
+
+---
+
+### get_children
+
+Get all direct children of an entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  children: Entity[];
+}
+```
+
+---
+
+### get_parent
+
+Get the parent of an entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  parent: Entity | null;
+}
+```
+
+---
+
+### get_ancestors
+
+Get all ancestors of an entity (parent, grandparent, etc.).
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  ancestors: Entity[];  // Ordered from immediate parent to root
+}
+```
+
+---
+
+### get_descendants
+
+Get all descendants of an entity (children, grandchildren, etc.).
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  descendants: Entity[];
+}
+```
+
+---
+
+### get_subtree
+
+Get an entity and all its descendants as a subgraph.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  entities: Entity[];
+  relations: Relation[];
+}
+```
+
+---
+
+### get_root_entities
+
+Get all entities with no parent (root level).
+
+**Parameters:** None
+
+**Returns:**
+```typescript
+{
+  roots: Entity[];
+}
+```
+
+---
+
+### get_entity_depth
+
+Get the depth of an entity in the hierarchy.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  depth: number;  // 0 for root entities
+}
+```
+
+---
+
+### move_entity
+
+Move an entity to a new parent.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+  newParentName: string | null;
+}
+```
+
+**Returns:**
+```typescript
+{
+  entity: Entity;
+}
+```
+
+**Notes:**
+- Validates that the move doesn't create a cycle
+- Updates lastModified timestamp
+
+---
+
+## Analytics
+
+### get_graph_stats
+
+Get comprehensive knowledge graph statistics.
+
+**Parameters:** None
+
+**Returns:**
+```typescript
+{
+  entityCount: number;
+  relationCount: number;
+  entityTypes: { [type: string]: number };
+  relationTypes: { [type: string]: number };
+  tagCounts: { [tag: string]: number };
+  avgObservationsPerEntity: number;
+  importanceDistribution: { [importance: number]: number };
+}
+```
+
+**Example Response:**
+```json
+{
+  "entityCount": 150,
+  "relationCount": 320,
+  "entityTypes": { "person": 50, "project": 30, "document": 70 },
+  "avgObservationsPerEntity": 3.2
+}
+```
+
+---
+
+### validate_graph
+
+Validate graph integrity and return issues.
+
+**Parameters:** None
+
+**Returns:**
+```typescript
+{
+  valid: boolean;
+  errors: Array<{
+    type: string;
+    message: string;
+    entities?: string[];
+  }>;
+  warnings: Array<{
+    type: string;
+    message: string;
+    entities?: string[];
+  }>;
+}
+```
+
+**Checks:**
+- Dangling relations (references non-existent entities)
+- Missing parents (parentId references don't exist)
+- Circular hierarchies (entity is its own ancestor)
+- Duplicate entity names
+- Invalid importance values
 
 ---
 
 ## Compression & Deduplication
 
-### findDuplicates
+### find_duplicates
 
 Find potential duplicate entities using similarity scoring.
 
@@ -754,18 +1257,11 @@ Find potential duplicate entities using similarity scoring.
 ```
 
 **Similarity Algorithm:**
-- Weighted scoring: name (40%), type (20%), observations (30%), tags (10%)
+- Weighted scoring: name (40%), type (30%), observations (20%), tags (10%)
 - Two-level bucketing by entityType for performance
 - Levenshtein distance for string comparison
 
 **Performance:** <1500ms for 500 entities
-
-**Example:**
-```json
-{
-  "threshold": 0.85
-}
-```
 
 **Example Response:**
 ```json
@@ -779,14 +1275,14 @@ Find potential duplicate entities using similarity scoring.
 
 ---
 
-### mergeEntities
+### merge_entities
 
 Merge multiple entities into one, combining observations and relations.
 
 **Parameters:**
 ```typescript
 {
-  entityNames: string[];       // Entities to merge
+  entityNames: string[];       // Entities to merge (min 2)
   targetName?: string;         // Name for merged entity (default: first name)
 }
 ```
@@ -817,7 +1313,7 @@ Merge multiple entities into one, combining observations and relations.
 
 ---
 
-### compressGraph
+### compress_graph
 
 Find and merge all duplicates in one operation.
 
@@ -851,345 +1347,58 @@ Find and merge all duplicates in one operation.
 
 ---
 
-## Tag Management
+### archive_entities
 
-### addTagsToEntities
-
-Add tags to multiple entities.
+Archive old or low-importance entities.
 
 **Parameters:**
 ```typescript
 {
-  entityNames: string[];
-  tags: string[];  // Tags to add (normalized to lowercase)
+  criteria: {
+    olderThan?: string;           // ISO date - archive entities older than this
+    importanceLessThan?: number;  // Archive entities below this importance
+    tags?: string[];              // Archive entities with these tags
+  };
+  dryRun?: boolean;               // Preview without changes (default: false)
 }
 ```
 
 **Returns:**
 ```typescript
 {
-  entitiesUpdated: number;
+  archivedCount: number;
+  archivedEntities: string[];
 }
 ```
 
 **Example:**
 ```json
 {
-  "entityNames": ["Alice", "Bob"],
-  "tags": ["senior", "engineering"]
+  "criteria": {
+    "olderThan": "2024-01-01T00:00:00Z",
+    "importanceLessThan": 3
+  },
+  "dryRun": true
 }
 ```
 
 ---
 
-### removeTagsFromEntities
+## Import/Export Operations
 
-Remove tags from multiple entities.
+### export_graph
+
+Export the knowledge graph in specified format.
 
 **Parameters:**
 ```typescript
 {
-  entityNames: string[];
-  tags: string[];
-}
-```
-
-**Returns:**
-```typescript
-{
-  entitiesUpdated: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityNames": ["Alice"],
-  "tags": ["junior"]
-}
-```
-
----
-
-### listTags
-
-List all unique tags in the knowledge graph.
-
-**Parameters:** None
-
-**Returns:**
-```typescript
-{
-  tags: string[];
-  count: number;
-}
-```
-
-**Example Response:**
-```json
-{
-  "tags": ["engineering", "senior", "team", "contractor"],
-  "count": 4
-}
-```
-
----
-
-### createTagAlias
-
-Create tag aliases for normalization.
-
-**Parameters:**
-```typescript
-{
-  canonical: string;    // Canonical tag
-  aliases: string[];    // Alternate forms
-}
-```
-
-**Returns:**
-```typescript
-{
-  canonical: string;
-  aliases: string[];
-}
-```
-
-**Example:**
-```json
-{
-  "canonical": "engineering",
-  "aliases": ["eng", "engineer", "dev"]
-}
-```
-
----
-
-### getTagSuggestions
-
-Get tag suggestions for an entity based on similar entities.
-
-**Parameters:**
-```typescript
-{
-  entityName: string;
-  limit?: number;  // Max suggestions (default: 5)
-}
-```
-
-**Returns:**
-```typescript
-{
-  suggestions: Array<{
-    tag: string;
-    confidence: number;  // 0.0-1.0
-  }>
-}
-```
-
-**Example:**
-```json
-{
-  "entityName": "Alice",
-  "limit": 5
-}
-```
-
----
-
-## Hierarchies
-
-### setParent
-
-Set the parent entity for hierarchical organization.
-
-**Parameters:**
-```typescript
-{
-  childName: string;
-  parentName: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity;  // Updated child entity
-}
-```
-
-**Example:**
-```json
-{
-  "childName": "Engineering_Team",
-  "parentName": "Company"
-}
-```
-
----
-
-### getChildren
-
-Get all direct children of an entity.
-
-**Parameters:**
-```typescript
-{
-  parentName: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  children: Entity[];
-  count: number;
-}
-```
-
-**Example:**
-```json
-{
-  "parentName": "Company"
-}
-```
-
----
-
-### getDescendants
-
-Get all descendants (children, grandchildren, etc.) of an entity.
-
-**Parameters:**
-```typescript
-{
-  parentName: string;
-  maxDepth?: number;  // Max levels (default: unlimited)
-}
-```
-
-**Returns:**
-```typescript
-{
-  descendants: Entity[];
-  count: number;
-  depth: number;
-}
-```
-
-**Example:**
-```json
-{
-  "parentName": "Company",
-  "maxDepth": 3
-}
-```
-
----
-
-## Statistics
-
-### getStats
-
-Get comprehensive knowledge graph statistics.
-
-**Parameters:** None
-
-**Returns:**
-```typescript
-{
-  entityCount: number;
-  relationCount: number;
-  entityTypes: { [type: string]: number };
-  relationTypes: { [type: string]: number };
-  tags: { [tag: string]: number };
-  avgObservationsPerEntity: number;
-  importanceDistribution: { [importance: number]: number };
-}
-```
-
-**Example Response:**
-```json
-{
-  "entityCount": 150,
-  "relationCount": 320,
-  "entityTypes": { "person": 50, "project": 30, "document": 70 },
-  "avgObservationsPerEntity": 3.2
-}
-```
-
----
-
-### getEntityTypeStats
-
-Get statistics for a specific entity type.
-
-**Parameters:**
-```typescript
-{
-  entityType: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  count: number;
-  tags: { [tag: string]: number };
-  avgImportance: number;
-  avgObservations: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityType": "person"
-}
-```
-
----
-
-### getTagStats
-
-Get statistics for a specific tag.
-
-**Parameters:**
-```typescript
-{
-  tag: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  count: number;
-  entityTypes: { [type: string]: number };
-  avgImportance: number;
-}
-```
-
-**Example:**
-```json
-{
-  "tag": "engineering"
-}
-```
-
----
-
-## Export Operations
-
-### exportGraph
-
-Export the entire knowledge graph in specified format.
-
-**Parameters:**
-```typescript
-{
-  format: "json" | "graphml" | "csv";
-  includeRelations?: boolean;  // Default: true
+  format: 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid';
+  filter?: {
+    entityType?: string;
+    tags?: string[];
+    minImportance?: number;
+  };
 }
 ```
 
@@ -1203,387 +1412,66 @@ Export the entire knowledge graph in specified format.
 }
 ```
 
-**Formats:**
-- **json**: Complete graph with all metadata
-- **graphml**: Graph format for visualization tools
-- **csv**: Entities and relations in separate CSV format
+**Supported Formats:**
+| Format | Description |
+|--------|-------------|
+| json | Complete graph with all metadata |
+| csv | Entities and relations in CSV format |
+| graphml | XML-based graph format |
+| gexf | Gephi exchange format |
+| dot | Graphviz DOT language |
+| markdown | Human-readable markdown |
+| mermaid | Mermaid diagram syntax |
 
 **Example:**
 ```json
 {
   "format": "json",
-  "includeRelations": true
+  "filter": { "entityType": "person" }
 }
 ```
 
 ---
 
-### exportEntities
+### import_graph
 
-Export specific entities.
+Import entities and relations from external data.
 
 **Parameters:**
 ```typescript
 {
-  entityNames: string[];
-  format: "json" | "csv";
-  includeRelations?: boolean;
-}
-```
-
-**Returns:**
-```typescript
-{
+  format: 'json' | 'csv' | 'graphml';
   data: string;
-  format: string;
-  entityCount: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityNames": ["Alice", "Bob"],
-  "format": "json",
-  "includeRelations": true
-}
-```
-
----
-
-### exportByQuery
-
-Export entities matching a search query.
-
-**Parameters:**
-```typescript
-{
-  query: string;
-  format: "json" | "csv";
-  includeRelations?: boolean;
+  mergeStrategy?: 'replace' | 'skip' | 'merge' | 'fail';
+  dryRun?: boolean;
 }
 ```
 
 **Returns:**
 ```typescript
 {
-  data: string;
-  format: string;
-  entityCount: number;
-}
-```
-
-**Example:**
-```json
-{
-  "query": "type:person AND engineering",
-  "format": "json"
-}
-```
-
----
-
-## Import Operations
-
-### importGraph
-
-Import entities and relations from JSON data.
-
-**Parameters:**
-```typescript
-{
-  data: {
-    entities: Entity[];
-    relations?: Relation[];
-  };
-  mode: "merge" | "replace";  // Default: "merge"
-}
-```
-
-**Returns:**
-```typescript
-{
-  entitiesImported: number;
-  relationsImported: number;
+  entitiesCreated: number;
+  entitiesUpdated: number;
   entitiesSkipped: number;
+  relationsCreated: number;
+  relationsSkipped: number;
+  errors: string[];
 }
 ```
 
-**Modes:**
-- **merge**: Add new entities, skip existing
-- **replace**: Clear graph first, then import
+**Merge Strategies:**
+- `replace`: Overwrite existing entities
+- `skip`: Skip entities that exist (default)
+- `merge`: Combine observations and tags
+- `fail`: Error if any conflicts
 
 **Example:**
 ```json
 {
-  "data": {
-    "entities": [...],
-    "relations": [...]
-  },
-  "mode": "merge"
-}
-```
-
----
-
-## Graph Operations
-
-### clearGraph
-
-Clear all entities and relations from the knowledge graph.
-
-**Parameters:**
-```typescript
-{
-  confirm: boolean;  // Must be true
-}
-```
-
-**Returns:**
-```typescript
-{
-  entitiesDeleted: number;
-  relationsDeleted: number;
-}
-```
-
-**Warning:** This operation is irreversible!
-
-**Example:**
-```json
-{
-  "confirm": true
-}
-```
-
----
-
-### validateGraph
-
-Validate graph integrity and return issues.
-
-**Parameters:** None
-
-**Returns:**
-```typescript
-{
-  valid: boolean;
-  issues: Array<{
-    type: "dangling_relation" | "missing_parent" | "circular_hierarchy";
-    description: string;
-    entities: string[];
-  }>;
-}
-```
-
-**Checks:**
-- Dangling relations (references non-existent entities)
-- Missing parents (parentId references don't exist)
-- Circular hierarchies (entity is its own ancestor)
-
-**Example Response:**
-```json
-{
-  "valid": false,
-  "issues": [
-    {
-      "type": "dangling_relation",
-      "description": "Relation references non-existent entity",
-      "entities": ["DeletedEntity"]
-    }
-  ]
-}
-```
-
----
-
-## Utility Operations
-
-### searchSimilarEntities
-
-Find entities similar to a given entity.
-
-**Parameters:**
-```typescript
-{
-  entityName: string;
-  threshold?: number;  // 0.0-1.0 (default: 0.7)
-  limit?: number;      // Max results (default: 10)
-}
-```
-
-**Returns:**
-```typescript
-{
-  similar: Array<{
-    entity: Entity;
-    similarity: number;
-  }>
-}
-```
-
-**Example:**
-```json
-{
-  "entityName": "Alice",
-  "threshold": 0.75,
-  "limit": 5
-}
-```
-
----
-
-### getEntityHistory
-
-Get modification history for an entity (if tracking enabled).
-
-**Parameters:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity;
-  createdAt: string;
-  lastModified: string;
-  modificationCount: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityName": "Alice"
-}
-```
-
----
-
-### bulkImportObservations
-
-Import observations from external sources.
-
-**Parameters:**
-```typescript
-{
-  entityName: string;
-  observations: string[];
-  deduplicate?: boolean;  // Remove duplicates (default: true)
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity;
-  observationsAdded: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityName": "Alice",
-  "observations": ["Led project Alpha", "Completed certification"],
-  "deduplicate": true
-}
-```
-
----
-
-### renameEntity
-
-Rename an entity (updates all relations).
-
-**Parameters:**
-```typescript
-{
-  oldName: string;
-  newName: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  entity: Entity;
-  relationsUpdated: number;
-}
-```
-
-**Notes:**
-- Updates all incoming and outgoing relations
-- Updates parent references
-- New name must not already exist
-
-**Example:**
-```json
-{
-  "oldName": "Alice_Smith",
-  "newName": "Alice Smith"
-}
-```
-
----
-
-### getRecentlyModified
-
-Get recently modified entities.
-
-**Parameters:**
-```typescript
-{
-  limit?: number;         // Max results (default: 20)
-  entityType?: string;    // Filter by type
-  since?: string;         // ISO 8601 date
-}
-```
-
-**Returns:**
-```typescript
-{
-  entities: Entity[];
-  count: number;
-}
-```
-
-**Example:**
-```json
-{
-  "limit": 10,
-  "since": "2025-11-20T00:00:00Z"
-}
-```
-
----
-
-### getOrphanedEntities
-
-Get entities with no relations.
-
-**Parameters:**
-```typescript
-{
-  entityType?: string;  // Filter by type
-}
-```
-
-**Returns:**
-```typescript
-{
-  entities: Entity[];
-  count: number;
-}
-```
-
-**Example:**
-```json
-{
-  "entityType": "person"
+  "format": "json",
+  "data": "{\"entities\":[...],\"relations\":[...]}",
+  "mergeStrategy": "merge",
+  "dryRun": true
 }
 ```
 
@@ -1596,39 +1484,45 @@ Get entities with no relations.
 ```json
 // 1. Create entities
 {
-  "tool": "createEntities",
-  "entities": [
-    { "name": "Alice", "entityType": "person", "observations": ["Engineer"] },
-    { "name": "Project_X", "entityType": "project", "observations": ["AI project"] }
-  ]
+  "tool": "create_entities",
+  "arguments": {
+    "entities": [
+      { "name": "Alice", "entityType": "person", "observations": ["Engineer"] },
+      { "name": "Project_X", "entityType": "project", "observations": ["AI project"] }
+    ]
+  }
 }
 
 // 2. Create relation
 {
-  "tool": "createRelations",
-  "relations": [
-    { "from": "Alice", "to": "Project_X", "relationType": "works_on" }
-  ]
+  "tool": "create_relations",
+  "arguments": {
+    "relations": [
+      { "from": "Alice", "to": "Project_X", "relationType": "works_on" }
+    ]
+  }
 }
 ```
 
-### Pattern 2: Search and Update
+### Pattern 2: Search and Tag
 
 ```json
 // 1. Search for entities
 {
-  "tool": "searchNodes",
-  "query": "engineer",
-  "tags": ["team"]
+  "tool": "search_nodes",
+  "arguments": {
+    "query": "engineer",
+    "minImportance": 5
+  }
 }
 
-// 2. Batch update results
+// 2. Add tags to results
 {
-  "tool": "batchUpdateEntities",
-  "updates": [
-    { "name": "Alice", "updates": { "importance": 9 } },
-    { "name": "Bob", "updates": { "importance": 8 } }
-  ]
+  "tool": "add_tags_to_multiple_entities",
+  "arguments": {
+    "entityNames": ["Alice", "Bob"],
+    "tags": ["senior"]
+  }
 }
 ```
 
@@ -1637,15 +1531,19 @@ Get entities with no relations.
 ```json
 // 1. Find duplicates
 {
-  "tool": "findDuplicates",
-  "threshold": 0.85
+  "tool": "find_duplicates",
+  "arguments": {
+    "threshold": 0.85
+  }
 }
 
 // 2. Review and merge
 {
-  "tool": "mergeEntities",
-  "entityNames": ["Alice Smith", "Alice_Smith"],
-  "targetName": "Alice Smith"
+  "tool": "merge_entities",
+  "arguments": {
+    "entityNames": ["Alice Smith", "Alice_Smith"],
+    "targetName": "Alice Smith"
+  }
 }
 ```
 
@@ -1657,18 +1555,19 @@ All tools return errors in this format:
 
 ```typescript
 {
-  "error": {
-    "code": string;
-    "message": string;
-    "details?: any;
-  }
+  "content": [{
+    "type": "text",
+    "text": "Error: <message>"
+  }],
+  "isError": true
 }
 ```
 
-**Common Error Codes:**
+**Common Error Types:**
 - `ValidationError`: Invalid input parameters
-- `NotFoundError`: Entity/relation not found
+- `EntityNotFoundError`: Entity doesn't exist
 - `DuplicateError`: Entity already exists
+- `CycleDetectedError`: Hierarchy would create a cycle
 - `SecurityError`: Path traversal or injection attempt
 
 ---
@@ -1677,32 +1576,32 @@ All tools return errors in this format:
 
 | Operation | Scale | Expected Time |
 |-----------|-------|---------------|
-| Create entities | 100 | <200ms |
-| Create entities | 1000 | <1500ms |
-| Batch update | 100 | <200ms |
-| Basic search | 500 entities | <100ms |
-| Ranked search | 500 entities | <600ms |
-| Boolean search | 500 entities | <150ms |
-| Fuzzy search | 500 entities | <200ms |
-| Find duplicates | 100 | <300ms |
-| Find duplicates | 500 | <1500ms |
-| Compress graph | 100 | <400ms |
-| Export graph | 1000 entities | <1000ms |
+| create_entities | 100 | <200ms |
+| create_entities | 1000 | <1500ms |
+| search_nodes | 500 entities | <100ms |
+| search_nodes_ranked | 500 entities | <600ms |
+| boolean_search | 500 entities | <150ms |
+| fuzzy_search | 500 entities | <200ms |
+| find_duplicates | 100 | <300ms |
+| find_duplicates | 500 | <1500ms |
+| compress_graph | 100 | <400ms |
+| export_graph | 1000 entities | <1000ms |
 
 ---
 
 ## Best Practices
 
-1. **Use Batch Operations**: Always prefer `createEntities` over multiple `createEntity` calls
+1. **Use Batch Operations**: Always prefer `create_entities` over multiple single entity calls
 2. **Filter Early**: Use tags and importance filters to reduce result sets
 3. **Choose Right Search**: Basic for simple queries, ranked for relevance, boolean for complex logic
-4. **Regular Compression**: Run `compressGraph` periodically to maintain quality
-5. **Validate Imports**: Use `validateGraph` after importing data
-6. **Tag Consistently**: Use `createTagAlias` for normalization
-7. **Export Before Major Changes**: Always backup before `clearGraph` or large merges
+4. **Regular Compression**: Run `find_duplicates` periodically to maintain quality
+5. **Validate Imports**: Use `validate_graph` after importing data
+6. **Tag Consistently**: Use `add_tag_alias` for normalization
+7. **Export Before Major Changes**: Always backup before `compress_graph` or large merges
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-25
-**Total Tools**: 45
+**Document Version**: 2.0
+**Last Updated**: 2025-12-02
+**Total Tools**: 47
+**Maintained By**: Daniel Simon Jr.
