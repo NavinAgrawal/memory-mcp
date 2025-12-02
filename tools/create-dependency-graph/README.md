@@ -1,146 +1,51 @@
-# Create Dependency Graph Tool
+# DeepThinking MCP Tools
 
-Scans the Memory MCP Server codebase and generates comprehensive dependency documentation.
+This directory contains utility scripts for maintaining the DeepThinking MCP codebase.
 
-## Output Files
+## Available Tools
 
-- **DEPENDENCY_GRAPH.md** - Human-readable documentation with:
-  - Architecture overview with layer diagrams
-  - Module dependency matrix
-  - Entry point analysis
-  - Per-module dependency breakdowns
-  - Cross-module function call flows
-  - Mermaid visualization diagram
-  - Circular dependency analysis
+### create-dependency-graph.ts
 
-- **DEPENDENCY_GRAPH.json** - Machine-readable data with:
-  - Complete file inventory
-  - Import/export tracking
-  - Class and method information
-  - Dependency edges
-  - Algorithm and pattern detection
+Scans the codebase and generates comprehensive dependency documentation.
 
-## Usage
-
-### Quick Run (from project root)
+**Usage:**
 
 ```bash
-# Using npx (no build required)
-npx tsx tools/create-dependency-graph/src/index.ts
+# Run via npm script (recommended)
+npm run docs:deps
 
-# Or with npm script
-cd tools/create-dependency-graph
-npm run dev
+# Or run directly with tsx
+npx tsx tools/create-dependency-graph.ts
 ```
 
-### Build and Run
+**Output:**
 
-```bash
-cd tools/create-dependency-graph
-npm install
-npm run build
-npm start
-```
+- `docs/architecture/DEPENDENCY_GRAPH.md` - Markdown documentation
+- `docs/architecture/dependency-graph.json` - JSON data structure
 
-### From Project Root
+**Features:**
 
-```bash
-# Add to package.json scripts:
-# "generate-deps": "npx tsx tools/create-dependency-graph/src/index.ts"
+- Scans all TypeScript files in `src/`
+- Parses imports and exports
+- Categorizes files into logical modules
+- Detects circular dependencies
+- Generates statistics (file count, export count, etc.)
+- Produces both human-readable Markdown and machine-readable JSON
+- Fully typed TypeScript for type safety
 
-npm run generate-deps
-```
+**Generated Documentation Includes:**
 
-## How It Works
+- External dependencies (npm packages)
+- Node.js built-in dependencies
+- Internal dependencies (relative imports)
+- Exported classes, interfaces, functions, constants
+- Circular dependency analysis
+- Visual dependency graph (Mermaid diagram)
+- Summary statistics
 
-1. **Scanning** - Recursively finds all `.ts` files in `src/memory/`
-2. **Parsing** - Uses TypeScript compiler API to extract:
-   - Import/export declarations
-   - Class definitions and methods
-   - Function declarations
-   - Interface and type definitions
-   - Constants and enums
-3. **Graph Building** - Constructs dependency graph with:
-   - Module relationships
-   - Dependency edges (imports, creates, uses, calls)
-   - Layer classification
-   - Circular dependency detection
-4. **Generation** - Creates both Markdown and JSON output
+## Adding New Tools
 
-## Configuration
-
-The tool is configured in `src/index.ts`:
-
-```typescript
-const config: ScanConfig = {
-  rootDir: process.cwd(),
-  srcDir: path.join(process.cwd(), 'src', 'memory'),
-  outputDir: path.join(process.cwd(), 'docs', 'architecture'),
-  excludePatterns: [
-    'node_modules',
-    'dist',
-    '__tests__',
-    '*.test.ts',
-    '*.spec.ts',
-  ],
-};
-```
-
-## Architecture
-
-```
-tools/create-dependency-graph/
-├── src/
-│   ├── index.ts           # CLI entry point
-│   ├── scanner.ts         # File discovery
-│   ├── parser.ts          # TypeScript AST parsing
-│   ├── graph-builder.ts   # Dependency graph construction
-│   ├── md-generator.ts    # Markdown output
-│   ├── json-generator.ts  # JSON output
-│   └── types.ts           # Type definitions
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-## Features Detected
-
-### Design Patterns
-- **Facade** - KnowledgeGraphManager
-- **Orchestrator** - SearchManager
-- **Dependency Injection** - GraphStorage
-- **Barrel Exports** - index.ts files
-
-### Algorithms
-- **TF-IDF** - Relevance ranking
-- **Levenshtein** - Fuzzy matching
-- **LRU Cache** - Search caching
-
-### Circular Dependencies
-- Detects runtime circular dependencies
-- Identifies safe type-only back-references
-- Reports findings in both outputs
-
-## Example Output
-
-### Markdown Summary
-```
-Summary:
-- 55 source files across 7 modules
-- 112 dependency edges tracked
-- 3 algorithm implementations
-- Zero circular dependencies verified
-```
-
-### JSON Structure
-```json
-{
-  "metadata": { "version": "...", "totalFiles": 55 },
-  "modules": { "core": {...}, "features": {...} },
-  "files": { "path/to/file.ts": {...} },
-  "dependencyGraph": { "layers": [...], "edges": [...] },
-  "algorithms": { "tfidf": {...} },
-  "patterns": { "facade": {...} },
-  "circularDependencies": { "detected": false }
-}
-```
+1. Create a new `.ts` file in this directory
+2. Add a corresponding npm script in `package.json`
+3. Document the tool in this README
+4. Run typecheck before committing: `npm run typecheck`

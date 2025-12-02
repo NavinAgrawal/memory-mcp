@@ -31,8 +31,9 @@
     "build": "npm run build --workspace=src/memory",
     "watch": "npm run watch --workspace=src/memory",
     "test": "npm run test --workspace=src/memory",
-    "typecheck": "npm run typecheck --workspace=src/memory",
-    "clean": "rm -rf src/memory/dist"
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf src/memory/dist",
+	"docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server-memory": "file:src/memory"
