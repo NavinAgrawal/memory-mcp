@@ -1,7 +1,7 @@
 {
   "metadata": {
     "name": "@danielsimonjr/memory-mcp",
-    "version": "0.47.0",
+    "version": "0.47.1",
     "lastUpdated": "2025-12-02",
     "totalFiles": 55,
     "totalModules": 1,
@@ -98,80 +98,6 @@
         ],
         "classes": [
           "GraphStorage"
-        ]
-      },
-      "src/memory/core/index.ts": {
-        "description": "Core Module Barrel Export",
-        "externalDependencies": [],
-        "nodeDependencies": [],
-        "internalDependencies": [
-          {
-            "file": "./GraphStorage.js",
-            "imports": [
-              "GraphStorage"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./EntityManager.js",
-            "imports": [
-              "EntityManager"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./RelationManager.js",
-            "imports": [
-              "RelationManager"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./ObservationManager.js",
-            "imports": [
-              "ObservationManager"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./KnowledgeGraphManager.js",
-            "imports": [
-              "KnowledgeGraphManager"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./TransactionManager.js",
-            "imports": [
-              "TransactionManager",
-              "OperationType",
-              "type TransactionOperation",
-              "type TransactionResult"
-            ],
-            "reExport": true
-          }
-        ],
-        "exports": [
-          "GraphStorage",
-          "EntityManager",
-          "RelationManager",
-          "ObservationManager",
-          "KnowledgeGraphManager",
-          "TransactionManager",
-          "OperationType",
-          "type TransactionOperation",
-          "type TransactionResult"
-        ],
-        "reExported": [
-          "GraphStorage",
-          "EntityManager",
-          "RelationManager",
-          "ObservationManager",
-          "KnowledgeGraphManager",
-          "TransactionManager",
-          "OperationType",
-          "type TransactionOperation",
-          "type TransactionResult"
         ]
       },
       "src/memory/core/KnowledgeGraphManager.ts": {
@@ -404,6 +330,80 @@
         ],
         "enums": [
           "OperationType"
+        ]
+      },
+      "src/memory/core/index.ts": {
+        "description": "Core Module Barrel Export",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "./GraphStorage.js",
+            "imports": [
+              "GraphStorage"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./EntityManager.js",
+            "imports": [
+              "EntityManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./RelationManager.js",
+            "imports": [
+              "RelationManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./ObservationManager.js",
+            "imports": [
+              "ObservationManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./KnowledgeGraphManager.js",
+            "imports": [
+              "KnowledgeGraphManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./TransactionManager.js",
+            "imports": [
+              "TransactionManager",
+              "OperationType",
+              "type TransactionOperation",
+              "type TransactionResult"
+            ],
+            "reExport": true
+          }
+        ],
+        "exports": [
+          "GraphStorage",
+          "EntityManager",
+          "RelationManager",
+          "ObservationManager",
+          "KnowledgeGraphManager",
+          "TransactionManager",
+          "OperationType",
+          "type TransactionOperation",
+          "type TransactionResult"
+        ],
+        "reExported": [
+          "GraphStorage",
+          "EntityManager",
+          "RelationManager",
+          "ObservationManager",
+          "KnowledgeGraphManager",
+          "TransactionManager",
+          "OperationType",
+          "type TransactionOperation",
+          "type TransactionResult"
         ]
       },
       "src/memory/features/AnalyticsManager.ts": {
@@ -691,6 +691,33 @@
           "ImportManager"
         ]
       },
+      "src/memory/features/TagManager.ts": {
+        "description": "Tag Manager",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "fs/promises",
+            "imports": [
+              "* as fs"
+            ]
+          }
+        ],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "TagAlias"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "TagManager"
+        ],
+        "classes": [
+          "TagManager"
+        ]
+      },
       "src/memory/features/index.ts": {
         "description": "Features Module Barrel Export",
         "externalDependencies": [],
@@ -805,33 +832,6 @@
           "type MergeStrategy",
           "ImportExportManager",
           "type ExportFilter"
-        ]
-      },
-      "src/memory/features/TagManager.ts": {
-        "description": "Tag Manager",
-        "externalDependencies": [],
-        "nodeDependencies": [
-          {
-            "module": "fs/promises",
-            "imports": [
-              "* as fs"
-            ]
-          }
-        ],
-        "internalDependencies": [
-          {
-            "file": "../types/index.js",
-            "imports": [
-              "TagAlias"
-            ],
-            "typeOnly": true
-          }
-        ],
-        "exports": [
-          "TagManager"
-        ],
-        "classes": [
-          "TagManager"
         ]
       },
       "src/memory/index.ts": {
@@ -1057,95 +1057,6 @@
         ],
         "constants": [
           "DEFAULT_FUZZY_THRESHOLD"
-        ]
-      },
-      "src/memory/search/index.ts": {
-        "description": "Search Module Barrel Export",
-        "externalDependencies": [],
-        "nodeDependencies": [],
-        "internalDependencies": [
-          {
-            "file": "./BasicSearch.js",
-            "imports": [
-              "BasicSearch"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./RankedSearch.js",
-            "imports": [
-              "RankedSearch"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./BooleanSearch.js",
-            "imports": [
-              "BooleanSearch"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./FuzzySearch.js",
-            "imports": [
-              "FuzzySearch"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./SearchSuggestions.js",
-            "imports": [
-              "SearchSuggestions"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./SavedSearchManager.js",
-            "imports": [
-              "SavedSearchManager"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./SearchManager.js",
-            "imports": [
-              "SearchManager"
-            ],
-            "reExport": true
-          },
-          {
-            "file": "./SearchFilterChain.js",
-            "imports": [
-              "SearchFilterChain",
-              "type SearchFilters",
-              "type ValidatedPagination"
-            ],
-            "reExport": true
-          }
-        ],
-        "exports": [
-          "BasicSearch",
-          "RankedSearch",
-          "BooleanSearch",
-          "FuzzySearch",
-          "SearchSuggestions",
-          "SavedSearchManager",
-          "SearchManager",
-          "SearchFilterChain",
-          "type SearchFilters",
-          "type ValidatedPagination"
-        ],
-        "reExported": [
-          "BasicSearch",
-          "RankedSearch",
-          "BooleanSearch",
-          "FuzzySearch",
-          "SearchSuggestions",
-          "SavedSearchManager",
-          "SearchManager",
-          "SearchFilterChain",
-          "type SearchFilters",
-          "type ValidatedPagination"
         ]
       },
       "src/memory/search/RankedSearch.ts": {
@@ -1412,6 +1323,95 @@
         ],
         "classes": [
           "TFIDFIndexManager"
+        ]
+      },
+      "src/memory/search/index.ts": {
+        "description": "Search Module Barrel Export",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "./BasicSearch.js",
+            "imports": [
+              "BasicSearch"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./RankedSearch.js",
+            "imports": [
+              "RankedSearch"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./BooleanSearch.js",
+            "imports": [
+              "BooleanSearch"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./FuzzySearch.js",
+            "imports": [
+              "FuzzySearch"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./SearchSuggestions.js",
+            "imports": [
+              "SearchSuggestions"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./SavedSearchManager.js",
+            "imports": [
+              "SavedSearchManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./SearchManager.js",
+            "imports": [
+              "SearchManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./SearchFilterChain.js",
+            "imports": [
+              "SearchFilterChain",
+              "type SearchFilters",
+              "type ValidatedPagination"
+            ],
+            "reExport": true
+          }
+        ],
+        "exports": [
+          "BasicSearch",
+          "RankedSearch",
+          "BooleanSearch",
+          "FuzzySearch",
+          "SearchSuggestions",
+          "SavedSearchManager",
+          "SearchManager",
+          "SearchFilterChain",
+          "type SearchFilters",
+          "type ValidatedPagination"
+        ],
+        "reExported": [
+          "BasicSearch",
+          "RankedSearch",
+          "BooleanSearch",
+          "FuzzySearch",
+          "SearchSuggestions",
+          "SavedSearchManager",
+          "SearchManager",
+          "SearchFilterChain",
+          "type SearchFilters",
+          "type ValidatedPagination"
         ]
       },
       "src/memory/server/MCPServer.ts": {
@@ -2526,11 +2526,11 @@
         "files": [
           "src/memory/core/EntityManager.ts",
           "src/memory/core/GraphStorage.ts",
-          "src/memory/core/index.ts",
           "src/memory/core/KnowledgeGraphManager.ts",
           "src/memory/core/ObservationManager.ts",
           "src/memory/core/RelationManager.ts",
           "src/memory/core/TransactionManager.ts",
+          "src/memory/core/index.ts",
           "src/memory/features/AnalyticsManager.ts",
           "src/memory/features/ArchiveManager.ts",
           "src/memory/features/BackupManager.ts",
@@ -2539,19 +2539,19 @@
           "src/memory/features/HierarchyManager.ts",
           "src/memory/features/ImportExportManager.ts",
           "src/memory/features/ImportManager.ts",
-          "src/memory/features/index.ts",
           "src/memory/features/TagManager.ts",
+          "src/memory/features/index.ts",
           "src/memory/index.ts",
           "src/memory/search/BasicSearch.ts",
           "src/memory/search/BooleanSearch.ts",
           "src/memory/search/FuzzySearch.ts",
-          "src/memory/search/index.ts",
           "src/memory/search/RankedSearch.ts",
           "src/memory/search/SavedSearchManager.ts",
           "src/memory/search/SearchFilterChain.ts",
           "src/memory/search/SearchManager.ts",
           "src/memory/search/SearchSuggestions.ts",
           "src/memory/search/TFIDFIndexManager.ts",
+          "src/memory/search/index.ts",
           "src/memory/server/MCPServer.ts",
           "src/memory/server/toolDefinitions.ts",
           "src/memory/server/toolHandlers.ts",

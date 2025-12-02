@@ -1,6 +1,6 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 0.47.0
+**Version**: 0.47.1
 **Last Updated**: 2025-11-26
 
 ## What Is This?
@@ -13,7 +13,7 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 |---------|-------------|
 | **Knowledge Graph** | Store entities and relations in a flexible graph structure |
 | **Persistent Memory** | Data persists across sessions in JSONL files |
-| **45 Tools** | Comprehensive API for graph operations |
+| **47 Tools** | Comprehensive API for graph operations |
 | **Hierarchical Nesting** | Parent-child relationships for tree organization |
 | **Advanced Search** | Basic, TF-IDF ranked, boolean, and fuzzy search |
 | **Duplicate Detection** | Intelligent compression with similarity scoring |
@@ -88,7 +88,7 @@ src/memory/
 │   └── index.ts                  # Barrel export
 ├── server/               # MCP protocol layer
 │   ├── MCPServer.ts              # Server initialization (67 lines)
-│   ├── toolDefinitions.ts        # 45 tool schemas
+│   ├── toolDefinitions.ts        # 47 tool schemas
 │   └── toolHandlers.ts           # Tool implementation registry
 ├── search/               # Search implementations
 │   ├── SearchManager.ts          # Search orchestrator
@@ -123,21 +123,21 @@ src/memory/
     └── index.ts
 ```
 
-## Tool Categories (45 Total)
+## Tool Categories (47 Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
 | **Entity** | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | **Relation** | 2 | create_relations, delete_relations |
 | **Observation** | 2 | add_observations, delete_observations |
-| **Search** | 5 | search_nodes, search_nodes_ranked, boolean_search, fuzzy_search, search_by_date_range |
-| **Hierarchy** | 8 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth |
-| **Compression** | 3 | find_duplicates, merge_entities, compress_graph |
-| **Tags** | 8 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags, add_tag_alias, resolve_tag |
-| **Saved Searches** | 6 | save_search, list_saved_searches, get_saved_search, execute_saved_search, delete_saved_search, update_saved_search |
+| **Search** | 6 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions |
+| **Saved Search** | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
+| **Tag** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
+| **Tag Alias** | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
+| **Hierarchy** | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
+| **Analytics** | 2 | get_graph_stats, validate_graph |
+| **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | **Import/Export** | 2 | export_graph (7 formats), import_graph (3 formats) |
-| **Analytics** | 3 | get_graph_stats, validate_graph, archive_entities |
-| **Tag Aliases** | 2 | list_tag_aliases, remove_tag_alias |
 
 ## Key Design Principles
 

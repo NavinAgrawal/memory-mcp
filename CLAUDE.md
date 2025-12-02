@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.48.0 (workspace) | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.47.1 (workspace) | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -48,17 +48,17 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 69 files
+### Source Structure (src/memory/) - 55 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 8 | KnowledgeGraphManager (facade), EntityManager, RelationManager, GraphStorage, ObservationManager, TransactionManager |
-| **features/** | 11 | HierarchyManager, CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, BackupManager |
-| **search/** | 11 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain |
+| **core/** | 7 | KnowledgeGraphManager (facade), EntityManager, RelationManager, GraphStorage, ObservationManager, TransactionManager |
+| **features/** | 10 | HierarchyManager, CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, ImportExportManager, BackupManager |
+| **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts, toolDefinitions.ts, toolHandlers.ts |
-| **types/** | 7 | Entity, relation, search, analytics, tag type definitions |
+| **types/** | 6 | Entity, relation, search, analytics, tag, import-export type definitions |
 | **utils/** | 18 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination |
-| **__tests__/** | 14 | Unit, integration, edge-case, performance tests |
+| **root** | 1 | index.ts (entry point) |
 
 ### Key Design Patterns
 
