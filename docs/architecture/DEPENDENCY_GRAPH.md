@@ -519,7 +519,7 @@ The codebase is organized into the following modules:
 | `../utils/logger.js` | `logger` | Import |
 | `./toolDefinitions.js` | `toolDefinitions` | Import |
 | `./toolHandlers.js` | `handleToolCall` | Import |
-| `../index.js` | `KnowledgeGraphManager` | Import (type-only) |
+| `../core/KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Import (type-only) |
 
 **Exports:**
 - Classes: `MCPServer`
@@ -540,7 +540,7 @@ The codebase is organized into the following modules:
 | File | Imports | Type |
 |------|---------|------|
 | `../utils/responseFormatter.js` | `formatToolResponse, formatTextResponse, formatRawResponse` | Import |
-| `../index.js` | `KnowledgeGraphManager` | Import (type-only) |
+| `../core/KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Import (type-only) |
 | `../types/index.js` | `SavedSearch` | Import (type-only) |
 
 **Exports:**
@@ -808,7 +808,7 @@ The codebase is organized into the following modules:
 | `EntityManager` | 5 files | 2 files |
 | `GraphStorage` | 2 files | 18 files |
 | `index` | 6 files | 0 files |
-| `KnowledgeGraphManager` | 13 files | 2 files |
+| `KnowledgeGraphManager` | 13 files | 4 files |
 | `ObservationManager` | 2 files | 1 files |
 | `RelationManager` | 5 files | 2 files |
 | `TransactionManager` | 4 files | 1 files |
@@ -822,7 +822,7 @@ The codebase is organized into the following modules:
 | `ImportManager` | 2 files | 3 files |
 | `index` | 9 files | 0 files |
 | `TagManager` | 1 files | 2 files |
-| `index` | 4 files | 2 files |
+| `index` | 4 files | 0 files |
 | `BasicSearch` | 6 files | 4 files |
 | `BooleanSearch` | 5 files | 2 files |
 | `FuzzySearch` | 5 files | 2 files |
@@ -840,18 +840,7 @@ The codebase is organized into the following modules:
 
 ## Circular Dependency Analysis
 
-**2 circular dependencies detected:**
-
-- **Runtime cycles**: 0 (require attention)
-- **Type-only cycles**: 2 (safe, no runtime impact)
-
-### Type-Only Circular Dependencies
-
-These cycles only involve type imports and are safe (erased at runtime):
-
-- src/memory/index.ts -> src/memory/server/MCPServer.ts -> src/memory/server/toolHandlers.ts -> src/memory/index.ts
-- src/memory/index.ts -> src/memory/server/MCPServer.ts -> src/memory/index.ts
-
+**No circular dependencies detected.**
 ---
 
 ## Visual Dependency Graph
@@ -895,7 +884,7 @@ graph TD
 | Total Enums | 1 |
 | Type-only Imports | 47 |
 | Runtime Circular Deps | 0 |
-| Type-only Circular Deps | 2 |
+| Type-only Circular Deps | 0 |
 
 ---
 

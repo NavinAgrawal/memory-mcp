@@ -1458,7 +1458,7 @@
             ]
           },
           {
-            "file": "../index.js",
+            "file": "../core/KnowledgeGraphManager.js",
             "imports": [
               "KnowledgeGraphManager"
             ],
@@ -1503,7 +1503,7 @@
             ]
           },
           {
-            "file": "../index.js",
+            "file": "../core/KnowledgeGraphManager.js",
             "imports": [
               "KnowledgeGraphManager"
             ],
@@ -2515,22 +2515,10 @@
   "dependencyGraph": {
     "circularDependencies": {
       "runtime": [],
-      "typeOnly": [
-        [
-          "src/memory/index.ts",
-          "src/memory/server/MCPServer.ts",
-          "src/memory/server/toolHandlers.ts",
-          "src/memory/index.ts"
-        ],
-        [
-          "src/memory/index.ts",
-          "src/memory/server/MCPServer.ts",
-          "src/memory/index.ts"
-        ]
-      ],
-      "total": 2,
+      "typeOnly": [],
+      "total": 0,
       "runtimeCount": 0,
-      "typeOnlyCount": 2
+      "typeOnlyCount": 0
     },
     "layers": [
       {
@@ -2609,6 +2597,6 @@
     "totalReExports": 139,
     "totalTypeOnlyImports": 47,
     "runtimeCircularDeps": 0,
-    "typeOnlyCircularDeps": 2
+    "typeOnlyCircularDeps": 0
   }
 }

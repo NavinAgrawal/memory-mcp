@@ -16,7 +16,7 @@ import {
 import { logger } from '../utils/logger.js';
 import { toolDefinitions } from './toolDefinitions.js';
 import { handleToolCall } from './toolHandlers.js';
-import type { KnowledgeGraphManager } from '../index.js';
+import type { KnowledgeGraphManager } from '../core/KnowledgeGraphManager.js';
 
 /**
  * MCP Server for Knowledge Graph operations.

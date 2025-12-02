@@ -8,7 +8,7 @@
  */
 
 import { formatToolResponse, formatTextResponse, formatRawResponse } from '../utils/responseFormatter.js';
-import type { KnowledgeGraphManager } from '../index.js';
+import type { KnowledgeGraphManager } from '../core/KnowledgeGraphManager.js';
 import type { SavedSearch } from '../types/index.js';
 
 /**
