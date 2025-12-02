@@ -95,14 +95,20 @@ interface PackageJson {
 // Constants
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT_DIR = join(__dirname, '..');
+const ROOT_DIR = join(__dirname, '..', '..');
 const SRC_DIR = join(ROOT_DIR, 'src');
 const OUTPUT_DIR = join(ROOT_DIR, 'docs', 'architecture');
 
-// Read package.json for version and name
+// Read package.json for version and name (prefer workspace package.json)
 let packageJson: PackageJson = { name: 'unknown', version: '0.0.0' };
 try {
-  packageJson = JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8')) as PackageJson;
+  // Try workspace package.json first (src/memory/package.json)
+  const workspacePackageJson = join(SRC_DIR, 'memory', 'package.json');
+  if (existsSync(workspacePackageJson)) {
+    packageJson = JSON.parse(readFileSync(workspacePackageJson, 'utf-8')) as PackageJson;
+  } else {
+    packageJson = JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8')) as PackageJson;
+  }
 } catch {
   console.warn('Warning: Could not read package.json, using defaults');
 }
@@ -118,6 +124,11 @@ function getAllTsFiles(dir: string, files: string[] = []): string[] {
   const entries = readdirSync(dir);
 
   for (const entry of entries) {
+    // Skip node_modules and dist directories
+    if (entry === 'node_modules' || entry === 'dist') {
+      continue;
+    }
+
     const fullPath = join(dir, entry);
     const stat = statSync(fullPath);
 
