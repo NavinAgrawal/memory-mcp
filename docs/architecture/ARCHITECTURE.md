@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
-**Version**: 0.47.0
-**Last Updated**: 2025-11-26
+**Version**: 0.47.1
+**Last Updated**: 2025-12-02
 
 ---
 
@@ -32,7 +32,7 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 - **Timestamps**: Automatic tracking of creation and modification times
 - **Batch Operations**: Efficient bulk updates
 
-### Key Statistics (v0.47.0)
+### Key Statistics (v0.47.1)
 
 - **396+ Tests**: 100% passing (unit, integration, edge cases, performance)
 - **Test Coverage**: 98%+ across core managers
@@ -86,7 +86,7 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 │  │  Layer 1: MCP Protocol Layer (server/)                 │ │
 │  │  ┌──────────────┬─────────────────┬─────────────────┐  │ │
 │  │  │ MCPServer.ts │ toolDefinitions │  toolHandlers   │  │ │
-│  │  │   (67 LOC)   │   (45 schemas)  │ (handler reg.)  │  │ │
+│  │  │   (67 LOC)   │   (47 schemas)  │ (handler reg.)  │  │ │
 │  │  └──────────────┴─────────────────┴─────────────────┘  │ │
 │  └────────────────────────────┬───────────────────────────┘ │
 │                               │                              │
@@ -166,24 +166,25 @@ export class MCPServer {
 ```
 
 #### toolDefinitions.ts (~400 lines)
-Contains all 45 tool schemas organized by category:
+Contains all 47 tool schemas organized by category:
 - Entity Tools (4): create_entities, delete_entities, read_graph, open_nodes
 - Relation Tools (2): create_relations, delete_relations
 - Observation Tools (2): add_observations, delete_observations
-- Search Tools (5): search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search
-- Hierarchy Tools (8): set_entity_parent, get_children, get_parent, etc.
-- Compression Tools (3): find_duplicates, merge_entities, compress_graph
-- Tag Tools (8): add_tags, remove_tags, set_importance, etc.
-- Saved Search Tools (6): save_search, list_saved_searches, etc.
+- Search Tools (6): search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions
+- Saved Search Tools (5): save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search
+- Tag Tools (6): add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags
+- Tag Alias Tools (5): add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag
+- Hierarchy Tools (9): set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity
+- Analytics Tools (2): get_graph_stats, validate_graph
+- Compression Tools (4): find_duplicates, merge_entities, compress_graph, archive_entities
 - Import/Export Tools (2): export_graph, import_graph
-- Analytics Tools (3): get_graph_stats, validate_graph, archive_entities
 
 #### toolHandlers.ts (~200 lines)
 ```typescript
 export const toolHandlers: Record<string, ToolHandler> = {
   create_entities: async (manager, args) =>
     formatToolResponse(await manager.createEntities(args.entities as any[])),
-  // ... 45 handlers total
+  // ... 47 handlers total
 };
 
 export async function handleToolCall(

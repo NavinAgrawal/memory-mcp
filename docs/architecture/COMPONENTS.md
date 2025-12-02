@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 0.47.0
-**Last Updated**: 2025-11-26
+**Version**: 0.47.1
+**Last Updated**: 2025-12-02
 
 ---
 
@@ -67,7 +67,7 @@ export class MCPServer {
 
 ### toolDefinitions (`server/toolDefinitions.ts`)
 
-**Purpose**: Schema definitions for all 45 MCP tools
+**Purpose**: Schema definitions for all 47 MCP tools
 
 **Lines**: ~400
 
@@ -92,20 +92,20 @@ export const toolDefinitions: ToolDefinition[]
 | Entity | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | Relation | 2 | create_relations, delete_relations |
 | Observation | 2 | add_observations, delete_observations |
-| Search | 5 | search_nodes, search_nodes_ranked, boolean_search, fuzzy_search, search_by_date_range |
-| Hierarchy | 8 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth |
-| Compression | 3 | find_duplicates, merge_entities, compress_graph |
-| Tags | 8 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags, add_tag_alias, resolve_tag |
-| Saved Searches | 6 | save_search, list_saved_searches, get_saved_search, execute_saved_search, delete_saved_search, update_saved_search |
+| Search | 6 | search_nodes, search_nodes_ranked, boolean_search, fuzzy_search, search_by_date_range, get_search_suggestions |
+| Saved Searches | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
+| Tag Management | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
+| Tag Aliases | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
+| Hierarchy | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
+| Analytics | 2 | get_graph_stats, validate_graph |
+| Compression | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | Import/Export | 2 | export_graph, import_graph |
-| Analytics | 3 | get_graph_stats, validate_graph, archive_entities |
-| Tag Aliases | 2 | list_tag_aliases, remove_tag_alias |
 
 ---
 
 ### toolHandlers (`server/toolHandlers.ts`)
 
-**Purpose**: Handler implementations for all 45 tools
+**Purpose**: Handler implementations for all 47 tools
 
 **Lines**: ~200
 

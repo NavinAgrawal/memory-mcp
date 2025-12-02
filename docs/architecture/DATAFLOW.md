@@ -1,7 +1,7 @@
 # Memory MCP - Data Flow Documentation
 
-**Version**: 0.47.0
-**Last Updated**: 2025-11-26
+**Version**: 0.47.1
+**Last Updated**: 2025-12-02
 
 ---
 
@@ -860,6 +860,6 @@ import_graph(format, data, mergeStrategy='skip', dryRun=false)
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-26
+**Document Version**: 1.1
+**Last Updated**: 2025-12-02
 **Maintained By**: Daniel Simon Jr.
