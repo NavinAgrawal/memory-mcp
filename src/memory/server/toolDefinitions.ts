@@ -2,7 +2,7 @@
  * MCP Tool Definitions
  *
  * Extracted from MCPServer.ts to reduce file size and improve maintainability.
- * Contains all 45 tool schemas for the Knowledge Graph MCP Server.
+ * Contains all 47 tool schemas for the Knowledge Graph MCP Server.
  *
  * @module server/toolDefinitions
  */

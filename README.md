@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.47.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-0.47.1-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 45 tools, hierarchical organization, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
+> **Enterprise-grade knowledge graph** with 47 tools, hierarchical organization, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
 
 ## Table of Contents
 
@@ -37,14 +37,13 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
 
 ### Advanced Features
-- **Hierarchical Nesting**: Parent-child relationships for organizing tree structures (8 tools)
-- **Memory Compression**: Intelligent duplicate detection and merging with similarity scoring (3 tools)
-- **Smart Archiving**: Criteria-based archiving by age, importance, or tags (1 tool)
-- **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching (3 tools)
-- **Import/Export**: 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)
-- **Tag Management**: Aliases, bulk operations, and validation (11 tools)
+- **Hierarchical Nesting**: Parent-child relationships for organizing tree structures (9 tools)
+- **Memory Compression**: Intelligent duplicate detection and merging with similarity scoring (4 tools)
+- **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching, date range search (6 tools)
+- **Import/Export**: 7 export formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid), 3 import formats
+- **Tag Management**: Tags, aliases, bulk operations, importance scores (11 tools)
 - **Saved Searches**: Store and execute frequent queries (5 tools)
-- **Graph Validation**: Integrity checks and orphan detection (1 tool)
+- **Graph Analytics**: Statistics, validation, integrity checks (2 tools)
 
 ### Data Management
 - **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
@@ -81,8 +80,8 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Security** | Basic | ✅ Input validation |
 | **Reliability** | Basic | ✅ Backups & Transactions |
 | **Performance** | Basic | ✅ Caching & Optimizations |
-| **Total Tools** | 11 | **45** (+309%) |
-| **Code Structure** | Monolithic | **Modular** (40+ files) |
+| **Total Tools** | 11 | **47** (+327%) |
+| **Code Structure** | Monolithic | **Modular** (55 files, ~10.8K lines) |
 
 ## Key Features
 
@@ -277,20 +276,53 @@ Add to `.vscode/mcp.json`:
 
 ## API Reference
 
-### Complete Tool List (45 Tools)
+### Complete Tool List (47 Tools)
 
-#### Core Entity & Relation Management (9 tools)
+#### Entity Operations (4 tools)
 - `create_entities` - Create multiple new entities
-- `create_relations` - Create multiple new relations
-- `add_observations` - Add observations to entities
 - `delete_entities` - Remove entities and their relations
-- `delete_observations` - Remove specific observations
-- `delete_relations` - Remove specific relations
 - `read_graph` - Read entire knowledge graph
-- `search_nodes` - Search for nodes by query
 - `open_nodes` - Retrieve specific nodes by name
 
-#### Hierarchical Nesting (8 tools)
+#### Relation Operations (2 tools)
+- `create_relations` - Create multiple new relations
+- `delete_relations` - Remove specific relations
+
+#### Observation Management (2 tools)
+- `add_observations` - Add observations to entities
+- `delete_observations` - Remove specific observations
+
+#### Search (6 tools)
+- `search_nodes` - Search for nodes by query with filters
+- `search_by_date_range` - Filter by date range
+- `search_nodes_ranked` - TF-IDF relevance ranking
+- `boolean_search` - Boolean queries (AND/OR/NOT)
+- `fuzzy_search` - Typo-tolerant search
+- `get_search_suggestions` - Get "Did you mean?" suggestions
+
+#### Saved Searches (5 tools)
+- `save_search` - Save search query
+- `list_saved_searches` - List all saved searches
+- `execute_saved_search` - Execute saved search
+- `delete_saved_search` - Delete saved search
+- `update_saved_search` - Update saved search
+
+#### Tag Management (6 tools)
+- `add_tags` - Add tags to entity
+- `remove_tags` - Remove tags from entity
+- `set_importance` - Set entity importance (0-10)
+- `add_tags_to_multiple_entities` - Add tags to multiple entities
+- `replace_tag` - Replace tag globally
+- `merge_tags` - Merge two tags into one
+
+#### Tag Aliases (5 tools)
+- `add_tag_alias` - Create tag synonym
+- `list_tag_aliases` - List all tag aliases
+- `remove_tag_alias` - Remove tag alias
+- `get_aliases_for_tag` - Get aliases for tag
+- `resolve_tag` - Resolve alias to canonical form
+
+#### Hierarchical Nesting (9 tools)
 - `set_entity_parent` - Set or remove parent relationship
 - `get_children` - Get immediate children
 - `get_parent` - Get parent entity
@@ -299,46 +331,17 @@ Add to `.vscode/mcp.json`:
 - `get_subtree` - Get entity + descendants with relations
 - `get_root_entities` - Get all entities with no parent
 - `get_entity_depth` - Get depth in hierarchy (0 = root)
+- `move_entity` - Move entity to new parent
 
-#### Memory Compression (3 tools)
+#### Graph Analytics (2 tools)
+- `get_graph_stats` - Get comprehensive graph statistics
+- `validate_graph` - Validate graph integrity
+
+#### Compression & Archiving (4 tools)
 - `find_duplicates` - Find similar entities by threshold
 - `merge_entities` - Merge multiple entities into one
 - `compress_graph` - Automated compression with dry-run
-
-#### Memory Archiving (1 tool)
 - `archive_entities` - Archive by age, importance, or tags
-
-#### Advanced Search (3 tools)
-- `search_nodes_ranked` - TF-IDF relevance ranking
-- `boolean_search` - Boolean queries (AND/OR/NOT)
-- `fuzzy_search` - Typo-tolerant search
-
-#### Search Management (6 tools)
-- `save_search` - Save search query
-- `list_saved_searches` - List all saved searches
-- `get_saved_search` - Get saved search details
-- `execute_saved_search` - Execute saved search
-- `delete_saved_search` - Delete saved search
-- `update_saved_search` - Update saved search
-- `get_search_suggestions` - Get "Did you mean?" suggestions
-
-#### Tag Management (8 tools)
-- `add_tags` - Add tags to entity
-- `remove_tags` - Remove tags from entity
-- `add_tags_to_multiple` - Add tags to multiple entities
-- `replace_tag` - Replace tag globally
-- `merge_tags` - Merge two tags into one
-- `add_tag_alias` - Create tag synonym
-- `list_tag_aliases` - List all tag aliases
-- `get_aliases_for_tag` - Get aliases for tag
-- `remove_tag_alias` - Remove tag alias
-- `resolve_tag` - Resolve alias to canonical form
-
-#### Graph Analytics & Validation (3 tools)
-- `get_graph_stats` - Get comprehensive graph statistics
-- `search_by_date_range` - Filter by date range
-- `validate_graph` - Validate graph integrity
-- `set_importance` - Set entity importance (0-10)
 
 #### Import & Export (2 tools)
 - `export_graph` - Export in 7 formats
@@ -711,6 +714,26 @@ Get depth in hierarchy (0 = root, 1 = child of root, etc.).
   depth: number;
 }
 ```
+</details>
+
+<details>
+<summary><b>Hierarchy: move_entity</b></summary>
+
+Move an entity to a new parent (shorthand for set_entity_parent).
+
+**Input:**
+```typescript
+{
+  entityName: string;
+  newParentName: string | null;  // null makes it a root entity
+}
+```
+
+**Returns:** Updated entity
+
+**Features:**
+- Automatic cycle detection
+- Updates lastModified timestamp
 </details>
 
 ---
@@ -1495,14 +1518,15 @@ All files use JSONL (JSON Lines) format where each line is a valid JSON object.
 Comprehensive documentation organized by category:
 
 **Core Documentation**
-- **[API Reference](docs/API.md)** - Complete API documentation for all 45+ tools
+- **[API Reference](docs/API.md)** - Complete API documentation for all 47 tools
 - **[Architecture](docs/ARCHITECTURE.md)** - Technical architecture and system design
+- **[Dependency Graph](docs/architecture/DEPENDENCY_GRAPH.md)** - Module dependencies and structure
 - **[Workflow](docs/WORKFLOW.md)** - Development workflow and procedures
 
 **User Guides**
-- **[Hierarchy Guide](docs/guides/HIERARCHY.md)** - Parent-child relationships (8 tools)
-- **[Compression Guide](docs/guides/COMPRESSION.md)** - Duplicate detection and merging (3 tools)
-- **[Archiving Guide](docs/guides/ARCHIVING.md)** - Memory lifecycle and archiving (1 tool)
+- **[Hierarchy Guide](docs/guides/HIERARCHY.md)** - Parent-child relationships (9 tools)
+- **[Compression Guide](docs/guides/COMPRESSION.md)** - Duplicate detection and merging (4 tools)
+- **[Archiving Guide](docs/guides/ARCHIVING.md)** - Memory lifecycle and archiving
 - **[Query Language](docs/guides/QUERY_LANGUAGE.md)** - Boolean search syntax reference
 - **[Migration Guide](docs/guides/MIGRATION.md)** - Version upgrade guide
 
@@ -1589,37 +1613,103 @@ npm test          # Run test suite with coverage
 npm run typecheck # TypeScript type checking
 ```
 
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│  Layer 1: MCP Protocol Layer            │
+│  server/MCPServer.ts + toolDefinitions  │
+│  + toolHandlers (47 tools)              │
+└──────────────────┬──────────────────────┘
+                   │
+┌──────────────────┴──────────────────────┐
+│  Layer 2: Managers (Facade Pattern)     │
+│  core/KnowledgeGraphManager.ts          │
+│  + 10 specialized managers (lazy init)  │
+└──────────────────┬──────────────────────┘
+                   │
+┌──────────────────┴──────────────────────┐
+│  Layer 3: Storage Layer                 │
+│  core/GraphStorage.ts (JSONL + cache)   │
+└─────────────────────────────────────────┘
+```
+
 ### Project Structure
 
 ```
 memory-mcp/
-├── src/memory/
-│   ├── types/                # Type definitions
-│   ├── utils/                # Utility functions
-│   ├── core/                 # Storage & managers
-│   ├── search/               # Search implementations
-│   ├── features/             # Feature managers
-│   ├── dist/                 # Compiled output
-│   ├── __tests__/            # Test files
-│   └── package.json
-├── CHANGELOG.md              # Version history
-├── HIERARCHY_GUIDE.md        # Nesting guide
-├── COMPRESSION_GUIDE.md      # Compression guide
-├── ARCHIVING_GUIDE.md        # Archiving guide
-├── QUERY_LANGUAGE.md         # Boolean search reference
-├── MIGRATION_GUIDE.md        # Upgrade guide
-├── package.json              # Root package
-└── README.md                 # This file
+├── src/memory/                     # Main source (55 TypeScript files)
+│   ├── index.ts                    # Entry point
+│   ├── core/                       # Core managers (7 files)
+│   │   ├── KnowledgeGraphManager.ts    # Central facade
+│   │   ├── EntityManager.ts            # Entity CRUD
+│   │   ├── RelationManager.ts          # Relation CRUD
+│   │   ├── ObservationManager.ts       # Observation ops
+│   │   ├── GraphStorage.ts             # JSONL I/O + caching
+│   │   ├── TransactionManager.ts       # ACID transactions
+│   │   └── index.ts
+│   ├── server/                     # MCP protocol layer (3 files)
+│   │   ├── MCPServer.ts                # Server setup (67 lines)
+│   │   ├── toolDefinitions.ts          # 47 tool schemas
+│   │   └── toolHandlers.ts             # Handler registry
+│   ├── search/                     # Search implementations (10 files)
+│   │   ├── SearchManager.ts            # Search orchestrator
+│   │   ├── BasicSearch.ts              # Text matching
+│   │   ├── RankedSearch.ts             # TF-IDF scoring
+│   │   ├── BooleanSearch.ts            # AND/OR/NOT logic
+│   │   ├── FuzzySearch.ts              # Typo tolerance
+│   │   ├── SavedSearchManager.ts       # Saved queries
+│   │   ├── SearchSuggestions.ts        # "Did you mean?"
+│   │   ├── TFIDFIndexManager.ts        # TF-IDF index
+│   │   ├── SearchFilterChain.ts        # Unified filters
+│   │   └── index.ts
+│   ├── features/                   # Advanced capabilities (10 files)
+│   │   ├── HierarchyManager.ts         # Parent-child ops
+│   │   ├── CompressionManager.ts       # Duplicate merging
+│   │   ├── ArchiveManager.ts           # Entity archiving
+│   │   ├── TagManager.ts               # Tag aliases
+│   │   ├── AnalyticsManager.ts         # Stats & validation
+│   │   ├── ExportManager.ts            # 7 export formats
+│   │   ├── ImportManager.ts            # 3 import formats
+│   │   ├── ImportExportManager.ts      # I/O orchestrator
+│   │   ├── BackupManager.ts            # Backup & restore
+│   │   └── index.ts
+│   ├── types/                      # TypeScript definitions (6 files)
+│   │   ├── entity.types.ts
+│   │   ├── search.types.ts
+│   │   ├── analytics.types.ts
+│   │   ├── import-export.types.ts
+│   │   ├── tag.types.ts
+│   │   └── index.ts
+│   ├── utils/                      # Shared utilities (18 files)
+│   │   ├── schemas.ts                  # Zod validation (14 schemas)
+│   │   ├── constants.ts                # Shared constants
+│   │   ├── errors.ts                   # Custom error types
+│   │   ├── levenshtein.ts              # Fuzzy match algorithm
+│   │   ├── tfidf.ts                    # TF-IDF ranking
+│   │   ├── searchCache.ts              # Result caching
+│   │   └── ... (more utilities)
+│   ├── __tests__/                  # Test suite (396 tests)
+│   └── dist/                       # Compiled output
+├── docs/                           # Documentation
+│   ├── architecture/               # Architecture docs
+│   ├── guides/                     # User guides
+│   └── README.md
+├── tools/                          # Development tools
+│   └── create-dependency-graph/    # Dependency analyzer
+├── CHANGELOG.md                    # Version history
+└── README.md                       # This file
 ```
 
 ### Scripts
 
 ```bash
-npm run build      # Build production
-npm run watch      # Watch mode
-npm test           # Run tests
-npm run typecheck  # Type check
-npm run clean      # Clean dist
+npm run build      # Build TypeScript to JavaScript
+npm run watch      # Watch mode for development
+npm test           # Run 396 tests with coverage
+npm run typecheck  # TypeScript strict type checking
+npm run clean      # Clean dist/ directories
+npm run docs:deps  # Generate dependency graph
 ```
 
 ## Contributing
@@ -1651,7 +1741,7 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and
 - **Fixed**: Bug fixes
 - **Security**: Security improvements
 
-**Current version**: v0.11.6 - [View full changelog →](CHANGELOG.md)
+**Current version**: v0.47.1 - [View full changelog →](CHANGELOG.md)
 
 ## License
 

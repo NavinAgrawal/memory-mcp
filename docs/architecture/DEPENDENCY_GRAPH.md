@@ -1,6 +1,6 @@
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 0.47.0 | **Last Updated**: 2025-12-02
+**Version**: 0.47.1 | **Last Updated**: 2025-12-02
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -59,23 +59,6 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `GraphStorage`
-
----
-
-### `src/memory/core/index.ts` - Core Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./GraphStorage.js` | `GraphStorage` | Re-export |
-| `./EntityManager.js` | `EntityManager` | Re-export |
-| `./RelationManager.js` | `RelationManager` | Re-export |
-| `./ObservationManager.js` | `ObservationManager` | Re-export |
-| `./KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Re-export |
-| `./TransactionManager.js` | `TransactionManager, OperationType, type TransactionOperation, type TransactionResult` | Re-export |
-
-**Exports:**
-- Re-exports: `GraphStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `KnowledgeGraphManager`, `TransactionManager`, `OperationType`, `type TransactionOperation`, `type TransactionResult`
 
 ---
 
@@ -152,6 +135,23 @@ The codebase is organized into the following modules:
 - Classes: `TransactionManager`
 - Interfaces: `TransactionResult`
 - Enums: `OperationType`
+
+---
+
+### `src/memory/core/index.ts` - Core Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./GraphStorage.js` | `GraphStorage` | Re-export |
+| `./EntityManager.js` | `EntityManager` | Re-export |
+| `./RelationManager.js` | `RelationManager` | Re-export |
+| `./ObservationManager.js` | `ObservationManager` | Re-export |
+| `./KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Re-export |
+| `./TransactionManager.js` | `TransactionManager, OperationType, type TransactionOperation, type TransactionResult` | Re-export |
+
+**Exports:**
+- Re-exports: `GraphStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `KnowledgeGraphManager`, `TransactionManager`, `OperationType`, `type TransactionOperation`, `type TransactionResult`
 
 ---
 
@@ -273,6 +273,23 @@ The codebase is organized into the following modules:
 
 ---
 
+### `src/memory/features/TagManager.ts` - Tag Manager
+
+**Node.js Built-in Dependencies:**
+| Module | Import |
+|--------|--------|
+| `fs/promises` | `* as fs` |
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `TagAlias` | Import (type-only) |
+
+**Exports:**
+- Classes: `TagManager`
+
+---
+
 ### `src/memory/features/index.ts` - Features Module Barrel Export
 
 **Internal Dependencies:**
@@ -290,23 +307,6 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Re-exports: `TagManager`, `HierarchyManager`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveResult`, `BackupManager`, `type BackupMetadata`, `type BackupInfo`, `ExportManager`, `type ExportFormat`, `ImportManager`, `type ImportFormat`, `type MergeStrategy`, `ImportExportManager`, `type ExportFilter`
-
----
-
-### `src/memory/features/TagManager.ts` - Tag Manager
-
-**Node.js Built-in Dependencies:**
-| Module | Import |
-|--------|--------|
-| `fs/promises` | `* as fs` |
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `../types/index.js` | `TagAlias` | Import (type-only) |
-
-**Exports:**
-- Classes: `TagManager`
 
 ---
 
@@ -380,25 +380,6 @@ The codebase is organized into the following modules:
 **Exports:**
 - Classes: `FuzzySearch`
 - Constants: `DEFAULT_FUZZY_THRESHOLD`
-
----
-
-### `src/memory/search/index.ts` - Search Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./BasicSearch.js` | `BasicSearch` | Re-export |
-| `./RankedSearch.js` | `RankedSearch` | Re-export |
-| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
-| `./FuzzySearch.js` | `FuzzySearch` | Re-export |
-| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
-| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
-| `./SearchManager.js` | `SearchManager` | Re-export |
-| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
-
-**Exports:**
-- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`
 
 ---
 
@@ -501,6 +482,25 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `TFIDFIndexManager`
+
+---
+
+### `src/memory/search/index.ts` - Search Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./BasicSearch.js` | `BasicSearch` | Re-export |
+| `./RankedSearch.js` | `RankedSearch` | Re-export |
+| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
+| `./FuzzySearch.js` | `FuzzySearch` | Re-export |
+| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
+| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
+| `./SearchManager.js` | `SearchManager` | Re-export |
+| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
+
+**Exports:**
+- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`
 
 ---
 
@@ -807,11 +807,11 @@ The codebase is organized into the following modules:
 |------|--------------|------------|
 | `EntityManager` | 5 files | 2 files |
 | `GraphStorage` | 2 files | 18 files |
-| `index` | 6 files | 0 files |
 | `KnowledgeGraphManager` | 13 files | 4 files |
 | `ObservationManager` | 2 files | 1 files |
 | `RelationManager` | 5 files | 2 files |
 | `TransactionManager` | 4 files | 1 files |
+| `index` | 6 files | 0 files |
 | `AnalyticsManager` | 2 files | 2 files |
 | `ArchiveManager` | 2 files | 2 files |
 | `BackupManager` | 2 files | 2 files |
@@ -820,19 +820,19 @@ The codebase is organized into the following modules:
 | `HierarchyManager` | 3 files | 2 files |
 | `ImportExportManager` | 4 files | 1 files |
 | `ImportManager` | 2 files | 3 files |
-| `index` | 9 files | 0 files |
 | `TagManager` | 1 files | 2 files |
+| `index` | 9 files | 0 files |
 | `index` | 4 files | 0 files |
 | `BasicSearch` | 6 files | 4 files |
 | `BooleanSearch` | 5 files | 2 files |
 | `FuzzySearch` | 5 files | 2 files |
-| `index` | 8 files | 0 files |
 | `RankedSearch` | 6 files | 2 files |
 | `SavedSearchManager` | 2 files | 2 files |
 | `SearchFilterChain` | 4 files | 5 files |
 | `SearchManager` | 8 files | 2 files |
 | `SearchSuggestions` | 2 files | 2 files |
 | `TFIDFIndexManager` | 2 files | 1 files |
+| `index` | 8 files | 0 files |
 | `MCPServer` | 4 files | 1 files |
 | `toolDefinitions` | 0 files | 1 files |
 
@@ -850,9 +850,9 @@ graph TD
     subgraph Memory
         N0[EntityManager]
         N1[GraphStorage]
-        N2[index]
-        N3[KnowledgeGraphManager]
-        N4[ObservationManager]
+        N2[KnowledgeGraphManager]
+        N3[ObservationManager]
+        N4[RelationManager]
         N5[...50 more]
     end
 
@@ -860,9 +860,7 @@ graph TD
     N2 --> N1
     N2 --> N0
     N2 --> N4
-    N2 --> N3
     N3 --> N1
-    N3 --> N0
     N4 --> N1
 ```
 
@@ -889,4 +887,4 @@ graph TD
 ---
 
 *Last Updated*: 2025-12-02
-*Version*: 0.47.0
+*Version*: 0.47.1
