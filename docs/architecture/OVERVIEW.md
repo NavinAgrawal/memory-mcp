@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 0.47.1
-**Last Updated**: 2025-11-26
+**Version**: 0.48.0
+**Last Updated**: 2025-12-09
 
 ## What Is This?
 

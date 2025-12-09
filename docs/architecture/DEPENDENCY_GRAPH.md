@@ -1,6 +1,6 @@
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 0.47.1 | **Last Updated**: 2025-12-02
+**Version**: 0.47.1 | **Last Updated**: 2025-12-09
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -9,11 +9,17 @@ This document provides a comprehensive dependency graph of all files, components
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Memory Dependencies](#memory-dependencies)
-3. [Dependency Matrix](#dependency-matrix)
-4. [Circular Dependency Analysis](#circular-dependency-analysis)
-5. [Visual Dependency Graph](#visual-dependency-graph)
-6. [Summary Statistics](#summary-statistics)
+2. [Core Dependencies](#core-dependencies)
+3. [Features Dependencies](#features-dependencies)
+4. [Memory Dependencies](#memory-dependencies)
+5. [Search Dependencies](#search-dependencies)
+6. [Server Dependencies](#server-dependencies)
+7. [Types Dependencies](#types-dependencies)
+8. [Utils Dependencies](#utils-dependencies)
+9. [Dependency Matrix](#dependency-matrix)
+10. [Circular Dependency Analysis](#circular-dependency-analysis)
+11. [Visual Dependency Graph](#visual-dependency-graph)
+12. [Summary Statistics](#summary-statistics)
 
 ---
 
@@ -21,11 +27,17 @@ This document provides a comprehensive dependency graph of all files, components
 
 The codebase is organized into the following modules:
 
-- **memory**: 55 files
+- **core**: 7 files
+- **features**: 9 files
+- **memory**: 2 files
+- **search**: 10 files
+- **server**: 3 files
+- **types**: 6 files
+- **utils**: 17 files
 
 ---
 
-## Memory Dependencies
+## Core Dependencies
 
 ### `src/memory/core/EntityManager.ts` - Entity Manager
 
@@ -59,6 +71,23 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `GraphStorage`
+
+---
+
+### `src/memory/core/index.ts` - Core Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./GraphStorage.js` | `GraphStorage` | Re-export |
+| `./EntityManager.js` | `EntityManager` | Re-export |
+| `./RelationManager.js` | `RelationManager` | Re-export |
+| `./ObservationManager.js` | `ObservationManager` | Re-export |
+| `./KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Re-export |
+| `./TransactionManager.js` | `TransactionManager, OperationType, type TransactionOperation, type TransactionResult` | Re-export |
+
+**Exports:**
+- Re-exports: `GraphStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `KnowledgeGraphManager`, `TransactionManager`, `OperationType`, `type TransactionOperation`, `type TransactionResult`
 
 ---
 
@@ -138,29 +167,14 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/memory/core/index.ts` - Core Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./GraphStorage.js` | `GraphStorage` | Re-export |
-| `./EntityManager.js` | `EntityManager` | Re-export |
-| `./RelationManager.js` | `RelationManager` | Re-export |
-| `./ObservationManager.js` | `ObservationManager` | Re-export |
-| `./KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Re-export |
-| `./TransactionManager.js` | `TransactionManager, OperationType, type TransactionOperation, type TransactionResult` | Re-export |
-
-**Exports:**
-- Re-exports: `GraphStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `KnowledgeGraphManager`, `TransactionManager`, `OperationType`, `type TransactionOperation`, `type TransactionResult`
-
----
+## Features Dependencies
 
 ### `src/memory/features/AnalyticsManager.ts` - Analytics Manager
 
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `ValidationReport, ValidationError, ValidationWarning, GraphStats` | Import (type-only) |
+| `../types/index.js` | `ValidationReport, ValidationIssue, ValidationWarning, GraphStats` | Import (type-only) |
 | `../core/GraphStorage.js` | `GraphStorage` | Import (type-only) |
 
 **Exports:**
@@ -244,22 +258,6 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/memory/features/ImportExportManager.ts` - Import/Export Manager
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `../types/index.js` | `KnowledgeGraph, ImportResult` | Import (type-only) |
-| `../search/BasicSearch.js` | `BasicSearch` | Import (type-only) |
-| `./ExportManager.js` | `ExportManager, ExportFormat` | Import |
-| `./ImportManager.js` | `ImportManager, ImportFormat, MergeStrategy` | Import |
-
-**Exports:**
-- Classes: `ImportExportManager`
-- Interfaces: `ExportFilter`
-
----
-
 ### `src/memory/features/ImportManager.ts` - Import Manager
 
 **Internal Dependencies:**
@@ -270,6 +268,25 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `ImportManager`
+
+---
+
+### `src/memory/features/index.ts` - Features Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./TagManager.js` | `TagManager` | Re-export |
+| `./HierarchyManager.js` | `HierarchyManager` | Re-export |
+| `./AnalyticsManager.js` | `AnalyticsManager` | Re-export |
+| `./CompressionManager.js` | `CompressionManager` | Re-export |
+| `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveResult` | Re-export |
+| `./BackupManager.js` | `BackupManager, type BackupMetadata, type BackupInfo` | Re-export |
+| `./ExportManager.js` | `ExportManager, type ExportFormat` | Re-export |
+| `./ImportManager.js` | `ImportManager, type ImportFormat, type MergeStrategy` | Re-export |
+
+**Exports:**
+- Re-exports: `TagManager`, `HierarchyManager`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveResult`, `BackupManager`, `type BackupMetadata`, `type BackupInfo`, `ExportManager`, `type ExportFormat`, `ImportManager`, `type ImportFormat`, `type MergeStrategy`
 
 ---
 
@@ -290,34 +307,9 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/memory/features/index.ts` - Features Module Barrel Export
+## Memory Dependencies
 
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./TagManager.js` | `TagManager` | Re-export |
-| `./HierarchyManager.js` | `HierarchyManager` | Re-export |
-| `./AnalyticsManager.js` | `AnalyticsManager` | Re-export |
-| `./CompressionManager.js` | `CompressionManager` | Re-export |
-| `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveResult` | Re-export |
-| `./BackupManager.js` | `BackupManager, type BackupMetadata, type BackupInfo` | Re-export |
-| `./ExportManager.js` | `ExportManager, type ExportFormat` | Re-export |
-| `./ImportManager.js` | `ImportManager, type ImportFormat, type MergeStrategy` | Re-export |
-| `./ImportExportManager.js` | `ImportExportManager, type ExportFilter` | Re-export |
-
-**Exports:**
-- Re-exports: `TagManager`, `HierarchyManager`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveResult`, `BackupManager`, `type BackupMetadata`, `type BackupInfo`, `ExportManager`, `type ExportFormat`, `ImportManager`, `type ImportFormat`, `type MergeStrategy`, `ImportExportManager`, `type ExportFilter`
-
----
-
-### `src/memory/index.ts` - Define memory file path using environment variable with fallback
-
-**Node.js Built-in Dependencies:**
-| Module | Import |
-|--------|--------|
-| `fs` | `promises` |
-| `path` | `path` |
-| `url` | `fileURLToPath` |
+### `src/memory/index.ts` - Import path utilities from canonical location (has path traversal protection)
 
 **Internal Dependencies:**
 | File | Imports | Type |
@@ -325,13 +317,26 @@ The codebase is organized into the following modules:
 | `./utils/logger.js` | `logger` | Import |
 | `./core/KnowledgeGraphManager.js` | `KnowledgeGraphManager` | Import |
 | `./server/MCPServer.js` | `MCPServer` | Import |
-| `./types/index.js` | `Entity, Relation, KnowledgeGraph, GraphStats, ValidationReport, ValidationError, ValidationWarning, SavedSearch, TagAlias, SearchResult, BooleanQueryNode, ImportResult, CompressionResult` | Import (type-only) |
+| `./utils/pathUtils.js` | `defaultMemoryPath, ensureMemoryFilePath` | Import |
+| `./types/index.js` | `Entity, Relation, KnowledgeGraph, GraphStats, ValidationReport, ValidationIssue, ValidationWarning, SavedSearch, TagAlias, SearchResult, BooleanQueryNode, ImportResult, CompressionResult` | Import (type-only) |
 
 **Exports:**
-- Functions: `ensureMemoryFilePath`
-- Constants: `defaultMemoryPath`
 
 ---
+
+### `src/memory/vitest.config.ts` - vitest.config module
+
+**External Dependencies:**
+| Package | Import |
+|---------|--------|
+| `vitest/config` | `defineConfig` |
+
+**Exports:**
+- Default: `defineConfig`
+
+---
+
+## Search Dependencies
 
 ### `src/memory/search/BasicSearch.ts` - Basic Search
 
@@ -380,6 +385,25 @@ The codebase is organized into the following modules:
 **Exports:**
 - Classes: `FuzzySearch`
 - Constants: `DEFAULT_FUZZY_THRESHOLD`
+
+---
+
+### `src/memory/search/index.ts` - Search Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./BasicSearch.js` | `BasicSearch` | Re-export |
+| `./RankedSearch.js` | `RankedSearch` | Re-export |
+| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
+| `./FuzzySearch.js` | `FuzzySearch` | Re-export |
+| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
+| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
+| `./SearchManager.js` | `SearchManager` | Re-export |
+| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
+
+**Exports:**
+- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`
 
 ---
 
@@ -485,24 +509,7 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/memory/search/index.ts` - Search Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./BasicSearch.js` | `BasicSearch` | Re-export |
-| `./RankedSearch.js` | `RankedSearch` | Re-export |
-| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
-| `./FuzzySearch.js` | `FuzzySearch` | Re-export |
-| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
-| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
-| `./SearchManager.js` | `SearchManager` | Re-export |
-| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
-
-**Exports:**
-- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`
-
----
+## Server Dependencies
 
 ### `src/memory/server/MCPServer.ts` - MCP Server
 
@@ -549,6 +556,8 @@ The codebase is organized into the following modules:
 
 ---
 
+## Types Dependencies
+
 ### `src/memory/types/analytics.types.ts` - Analytics Types
 
 ---
@@ -582,6 +591,8 @@ The codebase is organized into the following modules:
 ### `src/memory/types/tag.types.ts` - Tag Types
 
 ---
+
+## Utils Dependencies
 
 ### `src/memory/utils/constants.ts` - Application Constants
 
@@ -787,18 +798,6 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/memory/vitest.config.ts` - vitest.config module
-
-**External Dependencies:**
-| Package | Import |
-|---------|--------|
-| `vitest/config` | `defineConfig` |
-
-**Exports:**
-- Default: `defineConfig`
-
----
-
 ## Dependency Matrix
 
 ### File Import/Export Matrix
@@ -807,34 +806,34 @@ The codebase is organized into the following modules:
 |------|--------------|------------|
 | `EntityManager` | 5 files | 2 files |
 | `GraphStorage` | 2 files | 18 files |
+| `index` | 6 files | 0 files |
 | `KnowledgeGraphManager` | 13 files | 4 files |
 | `ObservationManager` | 2 files | 1 files |
 | `RelationManager` | 5 files | 2 files |
 | `TransactionManager` | 4 files | 1 files |
-| `index` | 6 files | 0 files |
 | `AnalyticsManager` | 2 files | 2 files |
 | `ArchiveManager` | 2 files | 2 files |
 | `BackupManager` | 2 files | 2 files |
 | `CompressionManager` | 5 files | 2 files |
-| `ExportManager` | 1 files | 3 files |
+| `ExportManager` | 1 files | 2 files |
 | `HierarchyManager` | 3 files | 2 files |
-| `ImportExportManager` | 4 files | 1 files |
-| `ImportManager` | 2 files | 3 files |
+| `ImportManager` | 2 files | 2 files |
+| `index` | 8 files | 0 files |
 | `TagManager` | 1 files | 2 files |
-| `index` | 9 files | 0 files |
-| `index` | 4 files | 0 files |
-| `BasicSearch` | 6 files | 4 files |
+| `index` | 5 files | 0 files |
+| `BasicSearch` | 6 files | 3 files |
 | `BooleanSearch` | 5 files | 2 files |
 | `FuzzySearch` | 5 files | 2 files |
+| `index` | 8 files | 0 files |
 | `RankedSearch` | 6 files | 2 files |
 | `SavedSearchManager` | 2 files | 2 files |
 | `SearchFilterChain` | 4 files | 5 files |
 | `SearchManager` | 8 files | 2 files |
 | `SearchSuggestions` | 2 files | 2 files |
 | `TFIDFIndexManager` | 2 files | 1 files |
-| `index` | 8 files | 0 files |
 | `MCPServer` | 4 files | 1 files |
 | `toolDefinitions` | 0 files | 1 files |
+| `toolHandlers` | 3 files | 1 files |
 
 ---
 
@@ -847,21 +846,92 @@ The codebase is organized into the following modules:
 
 ```mermaid
 graph TD
-    subgraph Memory
+    subgraph Core
         N0[EntityManager]
         N1[GraphStorage]
-        N2[KnowledgeGraphManager]
-        N3[ObservationManager]
-        N4[RelationManager]
-        N5[...50 more]
+        N2[index]
+        N3[KnowledgeGraphManager]
+        N4[ObservationManager]
+        N5[...2 more]
     end
 
+    subgraph Features
+        N6[AnalyticsManager]
+        N7[ArchiveManager]
+        N8[BackupManager]
+        N9[CompressionManager]
+        N10[ExportManager]
+        N11[...4 more]
+    end
+
+    subgraph Memory
+        N12[index]
+        N13[vitest.config]
+    end
+
+    subgraph Search
+        N14[BasicSearch]
+        N15[BooleanSearch]
+        N16[FuzzySearch]
+        N17[index]
+        N18[RankedSearch]
+        N19[...5 more]
+    end
+
+    subgraph Server
+        N20[MCPServer]
+        N21[toolDefinitions]
+        N22[toolHandlers]
+    end
+
+    subgraph Types
+        N23[analytics.types]
+        N24[entity.types]
+        N25[import-export.types]
+        N26[index]
+        N27[search.types]
+        N28[...1 more]
+    end
+
+    subgraph Utils
+        N29[constants]
+        N30[dateUtils]
+        N31[entityUtils]
+        N32[errors]
+        N33[filterUtils]
+        N34[...12 more]
+    end
+
+    N0 --> N26
     N0 --> N1
+    N0 --> N32
+    N0 --> N29
+    N1 --> N26
     N2 --> N1
     N2 --> N0
     N2 --> N4
+    N2 --> N3
+    N3 --> N29
     N3 --> N1
+    N3 --> N0
+    N3 --> N9
+    N3 --> N10
+    N3 --> N6
+    N3 --> N7
+    N3 --> N26
     N4 --> N1
+    N4 --> N32
+    N6 --> N26
+    N6 --> N1
+    N7 --> N26
+    N7 --> N1
+    N8 --> N1
+    N8 --> N32
+    N9 --> N26
+    N9 --> N1
+    N9 --> N32
+    N9 --> N29
+    N10 --> N26
 ```
 
 ---
@@ -870,21 +940,21 @@ graph TD
 
 | Category | Count |
 |----------|-------|
-| Total TypeScript Files | 55 |
-| Total Modules | 1 |
-| Total Lines of Code | 10835 |
-| Total Exports | 268 |
-| Total Re-exports | 139 |
-| Total Classes | 37 |
+| Total TypeScript Files | 54 |
+| Total Modules | 7 |
+| Total Lines of Code | 10740 |
+| Total Exports | 265 |
+| Total Re-exports | 137 |
+| Total Classes | 36 |
 | Total Interfaces | 27 |
-| Total Functions | 58 |
+| Total Functions | 57 |
 | Total Type Guards | 4 |
 | Total Enums | 1 |
-| Type-only Imports | 47 |
+| Type-only Imports | 45 |
 | Runtime Circular Deps | 0 |
 | Type-only Circular Deps | 0 |
 
 ---
 
-*Last Updated*: 2025-12-02
+*Last Updated*: 2025-12-09
 *Version*: 0.47.1

@@ -1,0 +1,1811 @@
+metadata:
+  name: "@danielsimonjr/memory-mcp"
+  version: 0.47.1
+  lastUpdated: "2025-12-09"
+  totalFiles: 54
+  totalModules: 7
+  totalExports: 265
+entryPoints: []
+modules:
+  core:
+    src/memory/core/EntityManager.ts:
+      description: Entity Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+          typeOnly: true
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/errors.js
+          imports:
+            - EntityNotFoundError
+            - InvalidImportanceError
+            - ValidationError
+        - file: ../utils/index.js
+          imports:
+            - BatchCreateEntitiesSchema
+            - UpdateEntitySchema
+            - EntityNamesSchema
+        - file: ../utils/constants.js
+          imports:
+            - GRAPH_LIMITS
+      exports:
+        - MIN_IMPORTANCE
+        - MAX_IMPORTANCE
+        - EntityManager
+      classes:
+        - EntityManager
+      constants:
+        - MIN_IMPORTANCE
+        - MAX_IMPORTANCE
+    src/memory/core/GraphStorage.ts:
+      description: Graph Storage
+      externalDependencies: []
+      nodeDependencies:
+        - module: fs
+          imports:
+            - promises
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - KnowledgeGraph
+            - Entity
+            - Relation
+          typeOnly: true
+        - file: ../utils/searchCache.js
+          imports:
+            - clearAllSearchCaches
+      exports:
+        - GraphStorage
+      classes:
+        - GraphStorage
+    src/memory/core/index.ts:
+      description: Core Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+          reExport: true
+        - file: ./EntityManager.js
+          imports:
+            - EntityManager
+          reExport: true
+        - file: ./RelationManager.js
+          imports:
+            - RelationManager
+          reExport: true
+        - file: ./ObservationManager.js
+          imports:
+            - ObservationManager
+          reExport: true
+        - file: ./KnowledgeGraphManager.js
+          imports:
+            - KnowledgeGraphManager
+          reExport: true
+        - file: ./TransactionManager.js
+          imports:
+            - TransactionManager
+            - OperationType
+            - type TransactionOperation
+            - type TransactionResult
+          reExport: true
+      exports:
+        - GraphStorage
+        - EntityManager
+        - RelationManager
+        - ObservationManager
+        - KnowledgeGraphManager
+        - TransactionManager
+        - OperationType
+        - type TransactionOperation
+        - type TransactionResult
+      reExported:
+        - GraphStorage
+        - EntityManager
+        - RelationManager
+        - ObservationManager
+        - KnowledgeGraphManager
+        - TransactionManager
+        - OperationType
+        - type TransactionOperation
+        - type TransactionResult
+    src/memory/core/KnowledgeGraphManager.ts:
+      description: Knowledge Graph Manager
+      externalDependencies: []
+      nodeDependencies:
+        - module: path
+          imports:
+            - path
+      internalDependencies:
+        - file: ../utils/constants.js
+          imports:
+            - DEFAULT_DUPLICATE_THRESHOLD
+            - SEARCH_LIMITS
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+        - file: ./EntityManager.js
+          imports:
+            - EntityManager
+        - file: ./RelationManager.js
+          imports:
+            - RelationManager
+        - file: ../search/SearchManager.js
+          imports:
+            - SearchManager
+        - file: ../features/CompressionManager.js
+          imports:
+            - CompressionManager
+        - file: ../features/HierarchyManager.js
+          imports:
+            - HierarchyManager
+        - file: ../features/ExportManager.js
+          imports:
+            - ExportManager
+        - file: ../features/ImportManager.js
+          imports:
+            - ImportManager
+        - file: ../features/AnalyticsManager.js
+          imports:
+            - AnalyticsManager
+        - file: ../features/TagManager.js
+          imports:
+            - TagManager
+        - file: ../features/ArchiveManager.js
+          imports:
+            - ArchiveManager
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - Relation
+            - KnowledgeGraph
+            - GraphStats
+            - ValidationReport
+            - SavedSearch
+            - TagAlias
+            - SearchResult
+            - ImportResult
+            - CompressionResult
+          typeOnly: true
+      exports:
+        - KnowledgeGraphManager
+      classes:
+        - KnowledgeGraphManager
+    src/memory/core/ObservationManager.ts:
+      description: Observation Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/errors.js
+          imports:
+            - EntityNotFoundError
+      exports:
+        - ObservationManager
+      classes:
+        - ObservationManager
+      interfaces:
+        - AddObservationsResult
+    src/memory/core/RelationManager.ts:
+      description: Relation Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Relation
+          typeOnly: true
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/errors.js
+          imports:
+            - ValidationError
+        - file: ../utils/index.js
+          imports:
+            - BatchCreateRelationsSchema
+            - DeleteRelationsSchema
+        - file: ../utils/constants.js
+          imports:
+            - GRAPH_LIMITS
+      exports:
+        - RelationManager
+      classes:
+        - RelationManager
+    src/memory/core/TransactionManager.ts:
+      description: Transaction Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - Relation
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../features/BackupManager.js
+          imports:
+            - BackupManager
+        - file: ../utils/errors.js
+          imports:
+            - KnowledgeGraphError
+      exports:
+        - TransactionManager
+        - OperationType
+      classes:
+        - TransactionManager
+      interfaces:
+        - TransactionResult
+      enums:
+        - OperationType
+  features:
+    src/memory/features/AnalyticsManager.ts:
+      description: Analytics Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - ValidationReport
+            - ValidationIssue
+            - ValidationWarning
+            - GraphStats
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+      exports:
+        - AnalyticsManager
+      classes:
+        - AnalyticsManager
+    src/memory/features/ArchiveManager.ts:
+      description: Archive Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+      exports:
+        - ArchiveManager
+      classes:
+        - ArchiveManager
+      interfaces:
+        - ArchiveCriteria
+        - ArchiveResult
+    src/memory/features/BackupManager.ts:
+      description: Backup Manager
+      externalDependencies: []
+      nodeDependencies:
+        - module: fs
+          imports:
+            - promises
+        - module: path
+          imports:
+            - dirname
+            - join
+      internalDependencies:
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/errors.js
+          imports:
+            - FileOperationError
+      exports:
+        - BackupManager
+      classes:
+        - BackupManager
+      interfaces:
+        - BackupMetadata
+        - BackupInfo
+    src/memory/features/CompressionManager.ts:
+      description: Compression Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - Relation
+            - CompressionResult
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/levenshtein.js
+          imports:
+            - levenshteinDistance
+        - file: ../utils/errors.js
+          imports:
+            - EntityNotFoundError
+            - InsufficientEntitiesError
+        - file: ../utils/constants.js
+          imports:
+            - SIMILARITY_WEIGHTS
+            - DEFAULT_DUPLICATE_THRESHOLD
+      exports:
+        - CompressionManager
+      classes:
+        - CompressionManager
+    src/memory/features/ExportManager.ts:
+      description: Export Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - KnowledgeGraph
+          typeOnly: true
+      exports:
+        - ExportManager
+      classes:
+        - ExportManager
+    src/memory/features/HierarchyManager.ts:
+      description: Hierarchy Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/errors.js
+          imports:
+            - EntityNotFoundError
+            - CycleDetectedError
+      exports:
+        - HierarchyManager
+      classes:
+        - HierarchyManager
+    src/memory/features/ImportManager.ts:
+      description: Import Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - Relation
+            - KnowledgeGraph
+            - ImportResult
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+      exports:
+        - ImportManager
+      classes:
+        - ImportManager
+    src/memory/features/index.ts:
+      description: Features Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./TagManager.js
+          imports:
+            - TagManager
+          reExport: true
+        - file: ./HierarchyManager.js
+          imports:
+            - HierarchyManager
+          reExport: true
+        - file: ./AnalyticsManager.js
+          imports:
+            - AnalyticsManager
+          reExport: true
+        - file: ./CompressionManager.js
+          imports:
+            - CompressionManager
+          reExport: true
+        - file: ./ArchiveManager.js
+          imports:
+            - ArchiveManager
+            - type ArchiveCriteria
+            - type ArchiveResult
+          reExport: true
+        - file: ./BackupManager.js
+          imports:
+            - BackupManager
+            - type BackupMetadata
+            - type BackupInfo
+          reExport: true
+        - file: ./ExportManager.js
+          imports:
+            - ExportManager
+            - type ExportFormat
+          reExport: true
+        - file: ./ImportManager.js
+          imports:
+            - ImportManager
+            - type ImportFormat
+            - type MergeStrategy
+          reExport: true
+      exports:
+        - TagManager
+        - HierarchyManager
+        - AnalyticsManager
+        - CompressionManager
+        - ArchiveManager
+        - type ArchiveCriteria
+        - type ArchiveResult
+        - BackupManager
+        - type BackupMetadata
+        - type BackupInfo
+        - ExportManager
+        - type ExportFormat
+        - ImportManager
+        - type ImportFormat
+        - type MergeStrategy
+      reExported:
+        - TagManager
+        - HierarchyManager
+        - AnalyticsManager
+        - CompressionManager
+        - ArchiveManager
+        - type ArchiveCriteria
+        - type ArchiveResult
+        - BackupManager
+        - type BackupMetadata
+        - type BackupInfo
+        - ExportManager
+        - type ExportFormat
+        - ImportManager
+        - type ImportFormat
+        - type MergeStrategy
+    src/memory/features/TagManager.ts:
+      description: Tag Manager
+      externalDependencies: []
+      nodeDependencies:
+        - module: fs/promises
+          imports:
+            - "* as fs"
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - TagAlias
+          typeOnly: true
+      exports:
+        - TagManager
+      classes:
+        - TagManager
+  memory:
+    src/memory/index.ts:
+      description: Import path utilities from canonical location (has path traversal protection)
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./utils/logger.js
+          imports:
+            - logger
+        - file: ./core/KnowledgeGraphManager.js
+          imports:
+            - KnowledgeGraphManager
+        - file: ./server/MCPServer.js
+          imports:
+            - MCPServer
+        - file: ./utils/pathUtils.js
+          imports:
+            - defaultMemoryPath
+            - ensureMemoryFilePath
+        - file: ./types/index.js
+          imports:
+            - Entity
+            - Relation
+            - KnowledgeGraph
+            - GraphStats
+            - ValidationReport
+            - ValidationIssue
+            - ValidationWarning
+            - SavedSearch
+            - TagAlias
+            - SearchResult
+            - BooleanQueryNode
+            - ImportResult
+            - CompressionResult
+          typeOnly: true
+      exports:
+        - defaultMemoryPath
+        - ensureMemoryFilePath
+        - KnowledgeGraphManager
+    src/memory/vitest.config.ts:
+      description: vitest.config module
+      externalDependencies:
+        - package: vitest/config
+          imports:
+            - defineConfig
+      nodeDependencies: []
+      internalDependencies: []
+      exports: []
+  search:
+    src/memory/search/BasicSearch.ts:
+      description: Basic Search
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/dateUtils.js
+          imports:
+            - isWithinDateRange
+        - file: ../utils/constants.js
+          imports:
+            - SEARCH_LIMITS
+        - file: ../utils/searchCache.js
+          imports:
+            - searchCaches
+        - file: ./SearchFilterChain.js
+          imports:
+            - SearchFilterChain
+            - SearchFilters
+      exports:
+        - BasicSearch
+      classes:
+        - BasicSearch
+    src/memory/search/BooleanSearch.ts:
+      description: Boolean Search
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - BooleanQueryNode
+            - Entity
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/constants.js
+          imports:
+            - SEARCH_LIMITS
+            - QUERY_LIMITS
+        - file: ../utils/errors.js
+          imports:
+            - ValidationError
+        - file: ./SearchFilterChain.js
+          imports:
+            - SearchFilterChain
+            - SearchFilters
+      exports:
+        - BooleanSearch
+      classes:
+        - BooleanSearch
+    src/memory/search/FuzzySearch.ts:
+      description: Fuzzy Search
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/levenshtein.js
+          imports:
+            - levenshteinDistance
+        - file: ../utils/constants.js
+          imports:
+            - SEARCH_LIMITS
+        - file: ./SearchFilterChain.js
+          imports:
+            - SearchFilterChain
+            - SearchFilters
+      exports:
+        - DEFAULT_FUZZY_THRESHOLD
+        - FuzzySearch
+      classes:
+        - FuzzySearch
+      constants:
+        - DEFAULT_FUZZY_THRESHOLD
+    src/memory/search/index.ts:
+      description: Search Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./BasicSearch.js
+          imports:
+            - BasicSearch
+          reExport: true
+        - file: ./RankedSearch.js
+          imports:
+            - RankedSearch
+          reExport: true
+        - file: ./BooleanSearch.js
+          imports:
+            - BooleanSearch
+          reExport: true
+        - file: ./FuzzySearch.js
+          imports:
+            - FuzzySearch
+          reExport: true
+        - file: ./SearchSuggestions.js
+          imports:
+            - SearchSuggestions
+          reExport: true
+        - file: ./SavedSearchManager.js
+          imports:
+            - SavedSearchManager
+          reExport: true
+        - file: ./SearchManager.js
+          imports:
+            - SearchManager
+          reExport: true
+        - file: ./SearchFilterChain.js
+          imports:
+            - SearchFilterChain
+            - type SearchFilters
+            - type ValidatedPagination
+          reExport: true
+      exports:
+        - BasicSearch
+        - RankedSearch
+        - BooleanSearch
+        - FuzzySearch
+        - SearchSuggestions
+        - SavedSearchManager
+        - SearchManager
+        - SearchFilterChain
+        - type SearchFilters
+        - type ValidatedPagination
+      reExported:
+        - BasicSearch
+        - RankedSearch
+        - BooleanSearch
+        - FuzzySearch
+        - SearchSuggestions
+        - SavedSearchManager
+        - SearchManager
+        - SearchFilterChain
+        - type SearchFilters
+        - type ValidatedPagination
+    src/memory/search/RankedSearch.ts:
+      description: Ranked Search
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - SearchResult
+            - TFIDFIndex
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/tfidf.js
+          imports:
+            - calculateTFIDF
+            - tokenize
+        - file: ../utils/constants.js
+          imports:
+            - SEARCH_LIMITS
+        - file: ./TFIDFIndexManager.js
+          imports:
+            - TFIDFIndexManager
+        - file: ./SearchFilterChain.js
+          imports:
+            - SearchFilterChain
+            - SearchFilters
+      exports:
+        - RankedSearch
+      classes:
+        - RankedSearch
+    src/memory/search/SavedSearchManager.ts:
+      description: Saved Search Manager
+      externalDependencies: []
+      nodeDependencies:
+        - module: fs/promises
+          imports:
+            - "* as fs"
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - SavedSearch
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ./BasicSearch.js
+          imports:
+            - BasicSearch
+          typeOnly: true
+      exports:
+        - SavedSearchManager
+      classes:
+        - SavedSearchManager
+    src/memory/search/SearchFilterChain.ts:
+      description: Search Filter Chain
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/entity.types.js
+          imports:
+            - Entity
+          typeOnly: true
+        - file: ../utils/tagUtils.js
+          imports:
+            - normalizeTags
+            - hasMatchingTag
+        - file: ../utils/filterUtils.js
+          imports:
+            - isWithinImportanceRange
+        - file: ../utils/paginationUtils.js
+          imports:
+            - validatePagination
+            - applyPagination
+            - ValidatedPagination
+      exports:
+        - SearchFilterChain
+      classes:
+        - SearchFilterChain
+      interfaces:
+        - SearchFilters
+    src/memory/search/SearchManager.ts:
+      description: Search Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - KnowledgeGraph
+            - SearchResult
+            - SavedSearch
+          typeOnly: true
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ./BasicSearch.js
+          imports:
+            - BasicSearch
+        - file: ./RankedSearch.js
+          imports:
+            - RankedSearch
+        - file: ./BooleanSearch.js
+          imports:
+            - BooleanSearch
+        - file: ./FuzzySearch.js
+          imports:
+            - FuzzySearch
+        - file: ./SearchSuggestions.js
+          imports:
+            - SearchSuggestions
+        - file: ./SavedSearchManager.js
+          imports:
+            - SavedSearchManager
+      exports:
+        - SearchManager
+      classes:
+        - SearchManager
+    src/memory/search/SearchSuggestions.ts:
+      description: Search Suggestions
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../core/GraphStorage.js
+          imports:
+            - GraphStorage
+          typeOnly: true
+        - file: ../utils/levenshtein.js
+          imports:
+            - levenshteinDistance
+      exports:
+        - SearchSuggestions
+      classes:
+        - SearchSuggestions
+    src/memory/search/TFIDFIndexManager.ts:
+      description: TF-IDF Index Manager
+      externalDependencies: []
+      nodeDependencies:
+        - module: fs/promises
+          imports:
+            - "* as fs"
+        - module: path
+          imports:
+            - "* as path"
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - TFIDFIndex
+            - DocumentVector
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ../utils/tfidf.js
+          imports:
+            - calculateIDF
+            - tokenize
+      exports:
+        - TFIDFIndexManager
+      classes:
+        - TFIDFIndexManager
+  server:
+    src/memory/server/MCPServer.ts:
+      description: MCP Server
+      externalDependencies:
+        - package: "@modelcontextprotocol/sdk/server/index.js"
+          imports:
+            - Server
+        - package: "@modelcontextprotocol/sdk/server/stdio.js"
+          imports:
+            - StdioServerTransport
+        - package: "@modelcontextprotocol/sdk/types.js"
+          imports:
+            - CallToolRequestSchema
+            - ListToolsRequestSchema
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../utils/logger.js
+          imports:
+            - logger
+        - file: ./toolDefinitions.js
+          imports:
+            - toolDefinitions
+        - file: ./toolHandlers.js
+          imports:
+            - handleToolCall
+        - file: ../core/KnowledgeGraphManager.js
+          imports:
+            - KnowledgeGraphManager
+          typeOnly: true
+      exports:
+        - MCPServer
+      classes:
+        - MCPServer
+    src/memory/server/toolDefinitions.ts:
+      description: MCP Tool Definitions
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - toolDefinitions
+        - toolCategories
+      interfaces:
+        - ToolDefinition
+      constants:
+        - toolDefinitions
+        - toolCategories
+    src/memory/server/toolHandlers.ts:
+      description: MCP Tool Handlers
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../utils/responseFormatter.js
+          imports:
+            - formatToolResponse
+            - formatTextResponse
+            - formatRawResponse
+        - file: ../core/KnowledgeGraphManager.js
+          imports:
+            - KnowledgeGraphManager
+          typeOnly: true
+        - file: ../types/index.js
+          imports:
+            - SavedSearch
+          typeOnly: true
+      exports:
+        - toolHandlers
+        - handleToolCall
+      functions:
+        - handleToolCall
+      constants:
+        - toolHandlers
+  types:
+    src/memory/types/analytics.types.ts:
+      description: Analytics Types
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports: []
+      interfaces:
+        - GraphStats
+        - ValidationReport
+        - ValidationIssue
+        - ValidationWarning
+    src/memory/types/entity.types.ts:
+      description: Entity Types
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports: []
+      interfaces:
+        - Entity
+        - Relation
+        - KnowledgeGraph
+    src/memory/types/import-export.types.ts:
+      description: Import/Export Types
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports: []
+      interfaces:
+        - ExportFilter
+        - ImportResult
+        - CompressionResult
+    src/memory/types/index.ts:
+      description: Types Module - Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./types/index.js
+          imports:
+            - Entity
+            - Relation
+            - KnowledgeGraph
+            - SearchResult
+      exports: []
+    src/memory/types/search.types.ts:
+      description: Search Types
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./entity.types.js
+          imports:
+            - Entity
+          typeOnly: true
+      exports: []
+      interfaces:
+        - SearchResult
+        - SavedSearch
+        - DocumentVector
+        - TFIDFIndex
+    src/memory/types/tag.types.ts:
+      description: Tag Types
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports: []
+      interfaces:
+        - TagAlias
+  utils:
+    src/memory/utils/constants.ts:
+      description: Application Constants
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - FILE_EXTENSIONS
+        - FILE_SUFFIXES
+        - DEFAULT_FILE_NAMES
+        - ENV_VARS
+        - DEFAULT_BASE_DIR
+        - LOG_PREFIXES
+        - SIMILARITY_WEIGHTS
+        - DEFAULT_DUPLICATE_THRESHOLD
+        - SEARCH_LIMITS
+        - IMPORTANCE_RANGE
+        - GRAPH_LIMITS
+        - QUERY_LIMITS
+      constants:
+        - FILE_EXTENSIONS
+        - FILE_SUFFIXES
+        - DEFAULT_FILE_NAMES
+        - ENV_VARS
+        - DEFAULT_BASE_DIR
+        - LOG_PREFIXES
+        - SIMILARITY_WEIGHTS
+        - DEFAULT_DUPLICATE_THRESHOLD
+        - SEARCH_LIMITS
+        - IMPORTANCE_RANGE
+        - GRAPH_LIMITS
+        - QUERY_LIMITS
+    src/memory/utils/dateUtils.ts:
+      description: Date Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - isWithinDateRange
+        - parseDateRange
+        - isValidISODate
+        - getCurrentTimestamp
+      functions:
+        - isWithinDateRange
+        - parseDateRange
+        - isValidISODate
+        - getCurrentTimestamp
+    src/memory/utils/entityUtils.ts:
+      description: Entity Lookup and Utility Functions
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/entity.types.js
+          imports:
+            - Entity
+            - KnowledgeGraph
+          typeOnly: true
+        - file: ./errors.js
+          imports:
+            - EntityNotFoundError
+      exports:
+        - findEntityByName
+        - findEntitiesByNames
+        - entityExists
+        - getEntityIndex
+        - removeEntityByName
+        - getEntityNameSet
+        - groupEntitiesByType
+        - touchEntity
+      functions:
+        - findEntityByName
+        - findEntityByName
+        - findEntityByName
+        - findEntityByName
+        - findEntitiesByNames
+        - entityExists
+        - getEntityIndex
+        - removeEntityByName
+        - getEntityNameSet
+        - groupEntitiesByType
+        - touchEntity
+    src/memory/utils/errors.ts:
+      description: Custom Error Types
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - KnowledgeGraphError
+        - EntityNotFoundError
+        - RelationNotFoundError
+        - DuplicateEntityError
+        - ValidationError
+        - CycleDetectedError
+        - InvalidImportanceError
+        - FileOperationError
+        - ImportError
+        - ExportError
+        - InsufficientEntitiesError
+      classes:
+        - KnowledgeGraphError
+        - EntityNotFoundError
+        - RelationNotFoundError
+        - DuplicateEntityError
+        - ValidationError
+        - CycleDetectedError
+        - InvalidImportanceError
+        - FileOperationError
+        - ImportError
+        - ExportError
+        - InsufficientEntitiesError
+    src/memory/utils/filterUtils.ts:
+      description: Entity Filtering Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/entity.types.js
+          imports:
+            - Entity
+          typeOnly: true
+      exports:
+        - isWithinImportanceRange
+        - filterByImportance
+        - isWithinDateRange
+        - filterByCreatedDate
+        - filterByModifiedDate
+        - filterByEntityType
+        - entityPassesFilters
+      interfaces:
+        - CommonSearchFilters
+      functions:
+        - isWithinImportanceRange
+        - filterByImportance
+        - isWithinDateRange
+        - filterByCreatedDate
+        - filterByModifiedDate
+        - filterByEntityType
+        - entityPassesFilters
+    src/memory/utils/index.ts:
+      description: Utilities Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./errors.js
+          imports:
+            - KnowledgeGraphError
+            - EntityNotFoundError
+            - RelationNotFoundError
+            - DuplicateEntityError
+            - ValidationError
+            - CycleDetectedError
+            - InvalidImportanceError
+            - FileOperationError
+            - ImportError
+            - ExportError
+            - InsufficientEntitiesError
+          reExport: true
+        - file: ./levenshtein.js
+          imports:
+            - levenshteinDistance
+          reExport: true
+        - file: ./tfidf.js
+          imports:
+            - calculateTF
+            - calculateIDF
+            - calculateTFIDF
+            - tokenize
+          reExport: true
+        - file: ./logger.js
+          imports:
+            - logger
+          reExport: true
+        - file: ./dateUtils.js
+          imports:
+            - isWithinDateRange
+            - parseDateRange
+            - isValidISODate
+            - getCurrentTimestamp
+          reExport: true
+        - file: ./validationUtils.js
+          imports:
+            - validateEntity
+            - validateRelation
+            - validateImportance
+            - validateTags
+            - type ValidationResult
+          reExport: true
+        - file: ./pathUtils.js
+          imports:
+            - defaultMemoryPath
+            - ensureMemoryFilePath
+            - validateFilePath
+          reExport: true
+        - file: ./constants.js
+          imports:
+            - FILE_EXTENSIONS
+            - FILE_SUFFIXES
+            - DEFAULT_FILE_NAMES
+            - ENV_VARS
+            - DEFAULT_BASE_DIR
+            - LOG_PREFIXES
+            - SIMILARITY_WEIGHTS
+            - DEFAULT_DUPLICATE_THRESHOLD
+            - SEARCH_LIMITS
+            - IMPORTANCE_RANGE
+          reExport: true
+        - file: ./schemas.js
+          imports:
+            - EntitySchema
+            - CreateEntitySchema
+            - UpdateEntitySchema
+            - RelationSchema
+            - CreateRelationSchema
+            - SearchQuerySchema
+            - DateRangeSchema
+            - TagAliasSchema
+            - ExportFormatSchema
+            - BatchCreateEntitiesSchema
+            - BatchCreateRelationsSchema
+            - EntityNamesSchema
+            - DeleteRelationsSchema
+            - type EntityInput
+            - type CreateEntityInput
+            - type UpdateEntityInput
+            - type RelationInput
+            - type CreateRelationInput
+            - type SearchQuery
+            - type DateRange
+            - type TagAlias
+            - type ExportFormat
+          reExport: true
+        - file: ./searchCache.js
+          imports:
+            - SearchCache
+            - searchCaches
+            - clearAllSearchCaches
+            - getAllCacheStats
+            - cleanupAllCaches
+            - type CacheStats
+          reExport: true
+        - file: ./responseFormatter.js
+          imports:
+            - formatToolResponse
+            - formatTextResponse
+            - formatRawResponse
+            - formatErrorResponse
+            - type ToolResponse
+          reExport: true
+        - file: ./tagUtils.js
+          imports:
+            - normalizeTag
+            - normalizeTags
+            - hasMatchingTag
+            - hasAllTags
+            - filterByTags
+            - addUniqueTags
+            - removeTags
+          reExport: true
+        - file: ./entityUtils.js
+          imports:
+            - findEntityByName
+            - findEntitiesByNames
+            - entityExists
+            - getEntityIndex
+            - removeEntityByName
+            - getEntityNameSet
+            - groupEntitiesByType
+            - touchEntity
+          reExport: true
+        - file: ./validationHelper.js
+          imports:
+            - formatZodErrors
+            - validateWithSchema
+            - validateSafe
+            - validateArrayWithSchema
+          reExport: true
+        - file: ./paginationUtils.js
+          imports:
+            - validatePagination
+            - applyPagination
+            - paginateArray
+            - getPaginationMeta
+            - type ValidatedPagination
+          reExport: true
+        - file: ./filterUtils.js
+          imports:
+            - isWithinImportanceRange
+            - filterByImportance
+            - filterByCreatedDate
+            - filterByModifiedDate
+            - filterByEntityType
+            - entityPassesFilters
+            - type CommonSearchFilters
+          reExport: true
+      exports:
+        - KnowledgeGraphError
+        - EntityNotFoundError
+        - RelationNotFoundError
+        - DuplicateEntityError
+        - ValidationError
+        - CycleDetectedError
+        - InvalidImportanceError
+        - FileOperationError
+        - ImportError
+        - ExportError
+        - InsufficientEntitiesError
+        - levenshteinDistance
+        - calculateTF
+        - calculateIDF
+        - calculateTFIDF
+        - tokenize
+        - logger
+        - isWithinDateRange
+        - parseDateRange
+        - isValidISODate
+        - getCurrentTimestamp
+        - validateEntity
+        - validateRelation
+        - validateImportance
+        - validateTags
+        - type ValidationResult
+        - defaultMemoryPath
+        - ensureMemoryFilePath
+        - validateFilePath
+        - FILE_EXTENSIONS
+        - FILE_SUFFIXES
+        - DEFAULT_FILE_NAMES
+        - ENV_VARS
+        - DEFAULT_BASE_DIR
+        - LOG_PREFIXES
+        - SIMILARITY_WEIGHTS
+        - DEFAULT_DUPLICATE_THRESHOLD
+        - SEARCH_LIMITS
+        - IMPORTANCE_RANGE
+        - EntitySchema
+        - CreateEntitySchema
+        - UpdateEntitySchema
+        - RelationSchema
+        - CreateRelationSchema
+        - SearchQuerySchema
+        - DateRangeSchema
+        - TagAliasSchema
+        - ExportFormatSchema
+        - BatchCreateEntitiesSchema
+        - BatchCreateRelationsSchema
+        - EntityNamesSchema
+        - DeleteRelationsSchema
+        - type EntityInput
+        - type CreateEntityInput
+        - type UpdateEntityInput
+        - type RelationInput
+        - type CreateRelationInput
+        - type SearchQuery
+        - type DateRange
+        - type TagAlias
+        - type ExportFormat
+        - SearchCache
+        - searchCaches
+        - clearAllSearchCaches
+        - getAllCacheStats
+        - cleanupAllCaches
+        - type CacheStats
+        - formatToolResponse
+        - formatTextResponse
+        - formatRawResponse
+        - formatErrorResponse
+        - type ToolResponse
+        - normalizeTag
+        - normalizeTags
+        - hasMatchingTag
+        - hasAllTags
+        - filterByTags
+        - addUniqueTags
+        - removeTags
+        - findEntityByName
+        - findEntitiesByNames
+        - entityExists
+        - getEntityIndex
+        - removeEntityByName
+        - getEntityNameSet
+        - groupEntitiesByType
+        - touchEntity
+        - formatZodErrors
+        - validateWithSchema
+        - validateSafe
+        - validateArrayWithSchema
+        - validatePagination
+        - applyPagination
+        - paginateArray
+        - getPaginationMeta
+        - type ValidatedPagination
+        - isWithinImportanceRange
+        - filterByImportance
+        - filterByCreatedDate
+        - filterByModifiedDate
+        - filterByEntityType
+        - entityPassesFilters
+        - type CommonSearchFilters
+      reExported:
+        - KnowledgeGraphError
+        - EntityNotFoundError
+        - RelationNotFoundError
+        - DuplicateEntityError
+        - ValidationError
+        - CycleDetectedError
+        - InvalidImportanceError
+        - FileOperationError
+        - ImportError
+        - ExportError
+        - InsufficientEntitiesError
+        - levenshteinDistance
+        - calculateTF
+        - calculateIDF
+        - calculateTFIDF
+        - tokenize
+        - logger
+        - isWithinDateRange
+        - parseDateRange
+        - isValidISODate
+        - getCurrentTimestamp
+        - validateEntity
+        - validateRelation
+        - validateImportance
+        - validateTags
+        - type ValidationResult
+        - defaultMemoryPath
+        - ensureMemoryFilePath
+        - validateFilePath
+        - FILE_EXTENSIONS
+        - FILE_SUFFIXES
+        - DEFAULT_FILE_NAMES
+        - ENV_VARS
+        - DEFAULT_BASE_DIR
+        - LOG_PREFIXES
+        - SIMILARITY_WEIGHTS
+        - DEFAULT_DUPLICATE_THRESHOLD
+        - SEARCH_LIMITS
+        - IMPORTANCE_RANGE
+        - EntitySchema
+        - CreateEntitySchema
+        - UpdateEntitySchema
+        - RelationSchema
+        - CreateRelationSchema
+        - SearchQuerySchema
+        - DateRangeSchema
+        - TagAliasSchema
+        - ExportFormatSchema
+        - BatchCreateEntitiesSchema
+        - BatchCreateRelationsSchema
+        - EntityNamesSchema
+        - DeleteRelationsSchema
+        - type EntityInput
+        - type CreateEntityInput
+        - type UpdateEntityInput
+        - type RelationInput
+        - type CreateRelationInput
+        - type SearchQuery
+        - type DateRange
+        - type TagAlias
+        - type ExportFormat
+        - SearchCache
+        - searchCaches
+        - clearAllSearchCaches
+        - getAllCacheStats
+        - cleanupAllCaches
+        - type CacheStats
+        - formatToolResponse
+        - formatTextResponse
+        - formatRawResponse
+        - formatErrorResponse
+        - type ToolResponse
+        - normalizeTag
+        - normalizeTags
+        - hasMatchingTag
+        - hasAllTags
+        - filterByTags
+        - addUniqueTags
+        - removeTags
+        - findEntityByName
+        - findEntitiesByNames
+        - entityExists
+        - getEntityIndex
+        - removeEntityByName
+        - getEntityNameSet
+        - groupEntitiesByType
+        - touchEntity
+        - formatZodErrors
+        - validateWithSchema
+        - validateSafe
+        - validateArrayWithSchema
+        - validatePagination
+        - applyPagination
+        - paginateArray
+        - getPaginationMeta
+        - type ValidatedPagination
+        - isWithinImportanceRange
+        - filterByImportance
+        - filterByCreatedDate
+        - filterByModifiedDate
+        - filterByEntityType
+        - entityPassesFilters
+        - type CommonSearchFilters
+    src/memory/utils/levenshtein.ts:
+      description: Levenshtein Distance Algorithm
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - levenshteinDistance
+      functions:
+        - levenshteinDistance
+    src/memory/utils/logger.ts:
+      description: Simple logging utility for the Memory MCP Server
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - logger
+      constants:
+        - logger
+    src/memory/utils/paginationUtils.ts:
+      description: Pagination Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./constants.js
+          imports:
+            - SEARCH_LIMITS
+      exports:
+        - validatePagination
+        - applyPagination
+        - paginateArray
+        - getPaginationMeta
+      interfaces:
+        - ValidatedPagination
+      functions:
+        - validatePagination
+        - applyPagination
+        - paginateArray
+        - getPaginationMeta
+    src/memory/utils/pathUtils.ts:
+      description: Path Utilities
+      externalDependencies: []
+      nodeDependencies:
+        - module: fs
+          imports:
+            - promises
+        - module: path
+          imports:
+            - path
+        - module: url
+          imports:
+            - fileURLToPath
+      internalDependencies:
+        - file: ./errors.js
+          imports:
+            - FileOperationError
+      exports:
+        - defaultMemoryPath
+        - validateFilePath
+        - ensureMemoryFilePath
+      functions:
+        - validateFilePath
+        - ensureMemoryFilePath
+      constants:
+        - defaultMemoryPath
+    src/memory/utils/responseFormatter.ts:
+      description: MCP Tool Response Formatter Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - formatToolResponse
+        - formatTextResponse
+        - formatRawResponse
+        - formatErrorResponse
+      functions:
+        - formatToolResponse
+        - formatTextResponse
+        - formatRawResponse
+        - formatErrorResponse
+    src/memory/utils/schemas.ts:
+      description: Validation Schemas
+      externalDependencies:
+        - package: zod
+          imports:
+            - z
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./constants.js
+          imports:
+            - IMPORTANCE_RANGE
+      exports:
+        - EntitySchema
+        - CreateEntitySchema
+        - UpdateEntitySchema
+        - RelationSchema
+        - CreateRelationSchema
+        - SearchQuerySchema
+        - DateRangeSchema
+        - TagAliasSchema
+        - ExportFormatSchema
+        - BatchCreateEntitiesSchema
+        - BatchCreateRelationsSchema
+        - EntityNamesSchema
+        - DeleteRelationsSchema
+      constants:
+        - EntitySchema
+        - CreateEntitySchema
+        - UpdateEntitySchema
+        - RelationSchema
+        - CreateRelationSchema
+        - SearchQuerySchema
+        - DateRangeSchema
+        - TagAliasSchema
+        - ExportFormatSchema
+        - BatchCreateEntitiesSchema
+        - BatchCreateRelationsSchema
+        - EntityNamesSchema
+        - DeleteRelationsSchema
+    src/memory/utils/searchCache.ts:
+      description: Search Result Cache
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - SearchResult
+            - KnowledgeGraph
+          typeOnly: true
+      exports:
+        - searchCaches
+        - clearAllSearchCaches
+        - getAllCacheStats
+        - cleanupAllCaches
+        - SearchCache
+      classes:
+        - SearchCache
+      interfaces:
+        - CacheStats
+      functions:
+        - clearAllSearchCaches
+        - getAllCacheStats
+        - cleanupAllCaches
+      constants:
+        - searchCaches
+    src/memory/utils/tagUtils.ts:
+      description: Tag Normalization and Matching Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - normalizeTag
+        - normalizeTags
+        - hasMatchingTag
+        - hasAllTags
+        - filterByTags
+        - addUniqueTags
+        - removeTags
+      functions:
+        - normalizeTag
+        - normalizeTags
+        - hasMatchingTag
+        - hasAllTags
+        - filterByTags
+        - addUniqueTags
+        - removeTags
+    src/memory/utils/tfidf.ts:
+      description: TF-IDF (Term Frequency-Inverse Document Frequency) Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - calculateTF
+        - calculateIDF
+        - calculateTFIDF
+        - tokenize
+        - calculateMultiTermTFIDF
+      functions:
+        - calculateTF
+        - calculateIDF
+        - calculateTFIDF
+        - tokenize
+        - calculateMultiTermTFIDF
+    src/memory/utils/validationHelper.ts:
+      description: Zod Schema Validation Helper
+      externalDependencies:
+        - package: zod
+          imports:
+            - ZodSchema
+            - ZodError
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./errors.js
+          imports:
+            - ValidationError
+      exports:
+        - formatZodErrors
+        - validateWithSchema
+        - validateSafe
+        - validateArrayWithSchema
+      functions:
+        - formatZodErrors
+        - validateWithSchema
+        - validateSafe
+        - validateArrayWithSchema
+    src/memory/utils/validationUtils.ts:
+      description: Validation Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./constants.js
+          imports:
+            - IMPORTANCE_RANGE
+      exports:
+        - validateEntity
+        - validateRelation
+        - validateImportance
+        - validateTags
+      interfaces:
+        - ValidationResult
+      functions:
+        - validateEntity
+        - validateRelation
+        - validateImportance
+        - validateTags
+dependencyGraph:
+  circularDependencies:
+    runtime: []
+    typeOnly: []
+    total: 0
+    runtimeCount: 0
+    typeOnlyCount: 0
+  layers:
+    - name: Core
+      files:
+        - src/memory/core/EntityManager.ts
+        - src/memory/core/GraphStorage.ts
+        - src/memory/core/index.ts
+        - src/memory/core/KnowledgeGraphManager.ts
+        - src/memory/core/ObservationManager.ts
+        - src/memory/core/RelationManager.ts
+        - src/memory/core/TransactionManager.ts
+    - name: Features
+      files:
+        - src/memory/features/AnalyticsManager.ts
+        - src/memory/features/ArchiveManager.ts
+        - src/memory/features/BackupManager.ts
+        - src/memory/features/CompressionManager.ts
+        - src/memory/features/ExportManager.ts
+        - src/memory/features/HierarchyManager.ts
+        - src/memory/features/ImportManager.ts
+        - src/memory/features/index.ts
+        - src/memory/features/TagManager.ts
+    - name: Memory
+      files:
+        - src/memory/index.ts
+        - src/memory/vitest.config.ts
+    - name: Search
+      files:
+        - src/memory/search/BasicSearch.ts
+        - src/memory/search/BooleanSearch.ts
+        - src/memory/search/FuzzySearch.ts
+        - src/memory/search/index.ts
+        - src/memory/search/RankedSearch.ts
+        - src/memory/search/SavedSearchManager.ts
+        - src/memory/search/SearchFilterChain.ts
+        - src/memory/search/SearchManager.ts
+        - src/memory/search/SearchSuggestions.ts
+        - src/memory/search/TFIDFIndexManager.ts
+    - name: Server
+      files:
+        - src/memory/server/MCPServer.ts
+        - src/memory/server/toolDefinitions.ts
+        - src/memory/server/toolHandlers.ts
+    - name: Types
+      files:
+        - src/memory/types/analytics.types.ts
+        - src/memory/types/entity.types.ts
+        - src/memory/types/import-export.types.ts
+        - src/memory/types/index.ts
+        - src/memory/types/search.types.ts
+        - src/memory/types/tag.types.ts
+    - name: Utils
+      files:
+        - src/memory/utils/constants.ts
+        - src/memory/utils/dateUtils.ts
+        - src/memory/utils/entityUtils.ts
+        - src/memory/utils/errors.ts
+        - src/memory/utils/filterUtils.ts
+        - src/memory/utils/index.ts
+        - src/memory/utils/levenshtein.ts
+        - src/memory/utils/logger.ts
+        - src/memory/utils/paginationUtils.ts
+        - src/memory/utils/pathUtils.ts
+        - src/memory/utils/responseFormatter.ts
+        - src/memory/utils/schemas.ts
+        - src/memory/utils/searchCache.ts
+        - src/memory/utils/tagUtils.ts
+        - src/memory/utils/tfidf.ts
+        - src/memory/utils/validationHelper.ts
+        - src/memory/utils/validationUtils.ts
+statistics:
+  totalTypeScriptFiles: 54
+  totalModules: 7
+  totalLinesOfCode: 10740
+  totalExports: 265
+  totalClasses: 36
+  totalInterfaces: 27
+  totalFunctions: 57
+  totalTypeGuards: 4
+  totalEnums: 1
+  totalConstants: 34
+  totalReExports: 137
+  totalTypeOnlyImports: 45
+  runtimeCircularDeps: 0
+  typeOnlyCircularDeps: 0

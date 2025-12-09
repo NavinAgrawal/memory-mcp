@@ -10,4 +10,4 @@ export { ArchiveManager, type ArchiveCriteria, type ArchiveResult } from './Arch
 export { BackupManager, type BackupMetadata, type BackupInfo } from './BackupManager.js';
 export { ExportManager, type ExportFormat } from './ExportManager.js';
 export { ImportManager, type ImportFormat, type MergeStrategy } from './ImportManager.js';
-export { ImportExportManager, type ExportFilter } from './ImportExportManager.js';
+// Note: ExportFilter type moved to types/import-export.types.ts

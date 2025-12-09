@@ -6,7 +6,7 @@
  * @module features/AnalyticsManager
  */
 
-import type { ValidationReport, ValidationError, ValidationWarning, GraphStats } from '../types/index.js';
+import type { ValidationReport, ValidationIssue, ValidationWarning, GraphStats } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 
 /**
@@ -30,7 +30,7 @@ export class AnalyticsManager {
    */
   async validateGraph(): Promise<ValidationReport> {
     const graph = await this.storage.loadGraph();
-    const errors: ValidationError[] = [];
+    const issues: ValidationIssue[] = [];
     const warnings: ValidationWarning[] = [];
 
     // Create a set of all entity names for fast lookup
@@ -39,14 +39,14 @@ export class AnalyticsManager {
     // Check for orphaned relations (relations pointing to non-existent entities)
     for (const relation of graph.relations) {
       if (!entityNames.has(relation.from)) {
-        errors.push({
+        issues.push({
           type: 'orphaned_relation',
           message: `Relation has non-existent source entity: "${relation.from}"`,
           details: { relation, missingEntity: relation.from },
         });
       }
       if (!entityNames.has(relation.to)) {
-        errors.push({
+        issues.push({
           type: 'orphaned_relation',
           message: `Relation has non-existent target entity: "${relation.to}"`,
           details: { relation, missingEntity: relation.to },
@@ -62,7 +62,7 @@ export class AnalyticsManager {
     }
     for (const [name, count] of entityNameCounts.entries()) {
       if (count > 1) {
-        errors.push({
+        issues.push({
           type: 'duplicate_entity',
           message: `Duplicate entity name found: "${name}" (${count} instances)`,
           details: { entityName: name, count },
@@ -73,21 +73,21 @@ export class AnalyticsManager {
     // Check for entities with invalid data
     for (const entity of graph.entities) {
       if (!entity.name || entity.name.trim() === '') {
-        errors.push({
+        issues.push({
           type: 'invalid_data',
           message: 'Entity has empty or missing name',
           details: { entity },
         });
       }
       if (!entity.entityType || entity.entityType.trim() === '') {
-        errors.push({
+        issues.push({
           type: 'invalid_data',
           message: `Entity "${entity.name}" has empty or missing entityType`,
           details: { entity },
         });
       }
       if (!Array.isArray(entity.observations)) {
-        errors.push({
+        issues.push({
           type: 'invalid_data',
           message: `Entity "${entity.name}" has invalid observations (not an array)`,
           details: { entity },
@@ -141,17 +141,17 @@ export class AnalyticsManager {
     }
 
     // Count specific issues
-    const orphanedRelationsCount = errors.filter(e => e.type === 'orphaned_relation').length;
+    const orphanedRelationsCount = issues.filter(e => e.type === 'orphaned_relation').length;
     const entitiesWithoutRelationsCount = warnings.filter(
       w => w.type === 'isolated_entity'
     ).length;
 
     return {
-      isValid: errors.length === 0,
-      errors,
+      isValid: issues.length === 0,
+      issues,
       warnings,
       summary: {
-        totalErrors: errors.length,
+        totalErrors: issues.length,
         totalWarnings: warnings.length,
         orphanedRelationsCount,
         entitiesWithoutRelationsCount,

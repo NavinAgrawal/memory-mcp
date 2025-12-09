@@ -30,12 +30,13 @@ export type {
 export type {
   GraphStats,
   ValidationReport,
-  ValidationError,
+  ValidationIssue,
   ValidationWarning,
 } from './analytics.types.js';
 
 // Import/Export types
 export type {
+  ExportFilter,
   ImportResult,
   CompressionResult,
 } from './import-export.types.js';

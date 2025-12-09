@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.47.1-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-0.48.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -81,7 +81,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Reliability** | Basic | ✅ Backups & Transactions |
 | **Performance** | Basic | ✅ Caching & Optimizations |
 | **Total Tools** | 11 | **47** (+327%) |
-| **Code Structure** | Monolithic | **Modular** (55 files, ~10.8K lines) |
+| **Code Structure** | Monolithic | **Modular** (54 files, ~10.7K lines) |
 
 ## Key Features
 
@@ -1573,7 +1573,7 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/memory/                     # Main source (55 TypeScript files)
+├── src/memory/                     # Main source (54 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── core/                       # Core managers (7 files)
 │   │   ├── KnowledgeGraphManager.ts    # Central facade
@@ -1598,7 +1598,7 @@ memory-mcp/
 │   │   ├── TFIDFIndexManager.ts        # TF-IDF index
 │   │   ├── SearchFilterChain.ts        # Unified filters
 │   │   └── index.ts
-│   ├── features/                   # Advanced capabilities (10 files)
+│   ├── features/                   # Advanced capabilities (9 files)
 │   │   ├── HierarchyManager.ts         # Parent-child ops
 │   │   ├── CompressionManager.ts       # Duplicate merging
 │   │   ├── ArchiveManager.ts           # Entity archiving
@@ -1606,7 +1606,6 @@ memory-mcp/
 │   │   ├── AnalyticsManager.ts         # Stats & validation
 │   │   ├── ExportManager.ts            # 7 export formats
 │   │   ├── ImportManager.ts            # 3 import formats
-│   │   ├── ImportExportManager.ts      # I/O orchestrator
 │   │   ├── BackupManager.ts            # Backup & restore
 │   │   └── index.ts
 │   ├── types/                      # TypeScript definitions (6 files)
@@ -1676,7 +1675,7 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and
 - **Fixed**: Bug fixes
 - **Security**: Security improvements
 
-**Current version**: v0.47.1 - [View full changelog →](CHANGELOG.md)
+**Current version**: v0.48.0 - [View full changelog →](CHANGELOG.md)
 
 ## License
 

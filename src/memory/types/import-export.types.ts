@@ -2,8 +2,32 @@
  * Import/Export Types
  *
  * Type definitions for import and export operations, including
- * result summaries and compression results.
+ * result summaries, compression results, and export filters.
  */
+
+/**
+ * Export filter criteria for filtering graph exports by date, type, or tags.
+ *
+ * @example
+ * ```typescript
+ * const filter: ExportFilter = {
+ *   startDate: '2024-01-01',
+ *   endDate: '2024-12-31',
+ *   entityType: 'Person',
+ *   tags: ['important', 'reviewed']
+ * };
+ * ```
+ */
+export interface ExportFilter {
+  /** Start date for filtering (ISO 8601) */
+  startDate?: string;
+  /** End date for filtering (ISO 8601) */
+  endDate?: string;
+  /** Entity type filter */
+  entityType?: string;
+  /** Tags filter */
+  tags?: string[];
+}
 
 /**
  * Result summary from importing a knowledge graph.

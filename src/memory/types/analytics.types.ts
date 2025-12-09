@@ -81,11 +81,11 @@ export interface GraphStats {
  * ```
  */
 export interface ValidationReport {
-  /** True if graph has no errors (warnings are acceptable) */
+  /** True if graph has no issues (warnings are acceptable) */
   isValid: boolean;
 
-  /** Array of critical errors found */
-  errors: ValidationError[];
+  /** Array of critical issues found */
+  issues: ValidationIssue[];
 
   /** Array of warnings (non-critical issues) */
   warnings: ValidationWarning[];
@@ -100,16 +100,17 @@ export interface ValidationReport {
 }
 
 /**
- * Represents a critical error found during graph validation.
+ * Represents a critical issue found during graph validation.
+ * Note: Named ValidationIssue to avoid collision with ValidationError class in utils/errors.ts
  */
-export interface ValidationError {
-  /** Type of error */
+export interface ValidationIssue {
+  /** Type of issue */
   type: 'orphaned_relation' | 'duplicate_entity' | 'invalid_data';
 
-  /** Human-readable error message */
+  /** Human-readable issue message */
   message: string;
 
-  /** Additional details about the error */
+  /** Additional details about the issue */
   details?: Record<string, unknown>;
 }
 

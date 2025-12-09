@@ -212,7 +212,7 @@ describe('Performance Benchmarks', () => {
       // searchNodesRanked returns SearchResult[] directly (not KnowledgeGraph)
       expect(results.length).toBeGreaterThan(0);
       expect(duration).toBeLessThan(PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);
-    });
+    }, PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);
 
     it('should perform boolean search within time limit', async () => {
       const startTime = Date.now();

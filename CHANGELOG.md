@@ -5,7 +5,7 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.48.0] - 2025-12-01
+## [0.48.0] - 2025-12-09
 
 ### Added
 - **Dependency Graph Tool** - New tool to scan codebase and generate dependency documentation
@@ -20,20 +20,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tracks algorithms (TF-IDF, Levenshtein, LRU Cache)
   - Analyzes circular dependencies
   - Generates Mermaid visualization diagram
+  - **NEW**: YAML output format (~25% smaller than JSON)
+  - **NEW**: Compact summary JSON for LLM consumption (~2.8KB)
 
   **Output Files**:
   - `docs/architecture/DEPENDENCY_GRAPH.md` - Human-readable documentation
-  - `docs/architecture/DEPENDENCY_GRAPH.json` - Machine-readable data
+  - `docs/architecture/dependency-graph.json` - Machine-readable data (full)
+  - `docs/architecture/dependency-graph.yaml` - YAML format (compact)
+  - `docs/architecture/dependency-summary.compact.json` - LLM-optimized summary
 
   **Usage**:
   ```bash
+  npm run docs:deps
+  # or
   npx tsx tools/create-dependency-graph/src/index.ts
   ```
 
   **Results**:
-  - Scans 55 TypeScript files across 7 modules
-  - Creates 112 dependency edges
-  - Tracks 3 algorithms and 4 design patterns
+  - Scans 54 TypeScript files across 7 modules
+  - Tracks 265 exports and 137 re-exports
+  - ~10.7K lines of code
+  - 0 circular dependencies
+
+### Fixed
+- **ValidationError Naming Collision** - Renamed `ValidationError` interface to `ValidationIssue` in `analytics.types.ts` to avoid collision with the `ValidationError` class in `utils/errors.ts`
+  - Updated `ValidationReport.errors` → `ValidationReport.issues`
+  - Updated `AnalyticsManager.ts` to use `ValidationIssue` type
+
+- **Duplicate defaultMemoryPath** - Removed duplicate definition from `index.ts`, now imports from canonical location in `utils/pathUtils.ts`
+
+### Removed
+- **ImportExportManager.ts** - Removed unused facade class from `features/` module
+  - Moved `ExportFilter` interface to `types/import-export.types.ts`
+  - This class was never used; `ExportManager` and `ImportManager` are used directly
+
+### Changed
+- Updated file count from 55 to 54 TypeScript files (after removing ImportExportManager.ts)
+- Updated test for platform-specific path handling in `file-path.test.ts`
+- Fixed flaky ranked search benchmark test by adding explicit timeout (30s)
 
 ## [0.47.0] - 2025-11-26
 

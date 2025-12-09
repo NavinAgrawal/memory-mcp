@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { logger } from './utils/logger.js';
 import { KnowledgeGraphManager } from './core/KnowledgeGraphManager.js';
 import { MCPServer } from './server/MCPServer.js';
+// Import path utilities from canonical location (has path traversal protection)
+import { defaultMemoryPath, ensureMemoryFilePath } from './utils/pathUtils.js';
 import type {
   Entity,
   Relation,
   KnowledgeGraph,
   GraphStats,
   ValidationReport,
-  ValidationError,
+  ValidationIssue,
   ValidationWarning,
   SavedSearch,
   TagAlias,
@@ -22,41 +21,8 @@ import type {
   CompressionResult,
 } from './types/index.js';
 
-// Define memory file path using environment variable with fallback
-export const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.jsonl');
-
-// Handle backward compatibility: migrate memory.json to memory.jsonl if needed
-export async function ensureMemoryFilePath(): Promise<string> {
-  if (process.env.MEMORY_FILE_PATH) {
-    // Custom path provided, use it as-is (with absolute path resolution)
-    return path.isAbsolute(process.env.MEMORY_FILE_PATH)
-      ? process.env.MEMORY_FILE_PATH
-      : path.join(path.dirname(fileURLToPath(import.meta.url)), process.env.MEMORY_FILE_PATH);
-  }
-  
-  // No custom path set, check for backward compatibility migration
-  const oldMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.json');
-  const newMemoryPath = defaultMemoryPath;
-  
-  try {
-    // Check if old file exists and new file doesn't
-    await fs.access(oldMemoryPath);
-    try {
-      await fs.access(newMemoryPath);
-      // Both files exist, use new one (no migration needed)
-      return newMemoryPath;
-    } catch {
-      // Old file exists, new file doesn't - migrate
-      logger.info('Found legacy memory.json file, migrating to memory.jsonl for JSONL format compatibility');
-      await fs.rename(oldMemoryPath, newMemoryPath);
-      logger.info('Successfully migrated memory.json to memory.jsonl');
-      return newMemoryPath;
-    }
-  } catch {
-    // Old file doesn't exist, use new path
-    return newMemoryPath;
-  }
-}
+// Re-export path utilities for backward compatibility
+export { defaultMemoryPath, ensureMemoryFilePath };
 
 // Re-export types for backward compatibility
 export type {
@@ -65,7 +31,7 @@ export type {
   KnowledgeGraph,
   GraphStats,
   ValidationReport,
-  ValidationError,
+  ValidationIssue,
   ValidationWarning,
   SavedSearch,
   TagAlias,

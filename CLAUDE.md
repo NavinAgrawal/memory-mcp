@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (396 tests)
+npm test              # Run tests with coverage (390 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
-npm run docs:deps     # Generate dependency graph (v0.48.0+)
+npm run docs:deps     # Generate dependency graph
 
 # Run a single test file
 npx vitest run src/memory/__tests__/unit/core/EntityManager.test.ts
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.47.1 (workspace) | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.48.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -48,17 +48,17 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 55 TypeScript files
+### Source Structure (src/memory/) - 54 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
 | **core/** | 7 | KnowledgeGraphManager (facade), EntityManager, RelationManager, GraphStorage, ObservationManager, TransactionManager |
-| **features/** | 10 | HierarchyManager, CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, ImportExportManager, BackupManager |
+| **features/** | 9 | HierarchyManager, CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, BackupManager |
 | **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
-| **server/** | 3 | MCPServer.ts, toolDefinitions.ts, toolHandlers.ts |
+| **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
 | **types/** | 6 | Entity, relation, search, analytics, tag, import-export type definitions |
-| **utils/** | 18 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination |
-| **root** | 1 | index.ts (entry point) |
+| **utils/** | 17 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination, caching |
+| **root** | 2 | index.ts (entry point), memory/ subfolder entry |
 
 ### Key Design Patterns
 
@@ -125,14 +125,26 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (396 tests, 14 files):
-- `unit/core/` - EntityManager, GraphStorage, RelationManager
-- `unit/features/` - CompressionManager
-- `unit/search/` - BasicSearch, BooleanSearch, FuzzySearch, RankedSearch
-- `unit/utils/` - Levenshtein utility
-- `integration/` - Workflow integration tests
-- `edge-cases/` - Edge case coverage
-- `performance/` - Benchmarks (may fail on slow machines)
+Tests are in `src/memory/__tests__/` (390 tests, 14 files):
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| edge-cases.test.ts | 35 | Boundary conditions |
+| file-path.test.ts | 9 | Path handling |
+| integration/workflows.test.ts | 12 | End-to-end workflows |
+| knowledge-graph.test.ts | 31 | Core graph operations |
+| performance/benchmarks.test.ts | 18 | Performance validation |
+| unit/core/EntityManager.test.ts | 31 | Entity CRUD |
+| unit/core/GraphStorage.test.ts | 11 | Storage layer |
+| unit/core/RelationManager.test.ts | 24 | Relation operations |
+| unit/features/CompressionManager.test.ts | 32 | Duplicate detection |
+| unit/search/BasicSearch.test.ts | 37 | Basic search |
+| unit/search/BooleanSearch.test.ts | 52 | AND/OR/NOT queries |
+| unit/search/FuzzySearch.test.ts | 53 | Levenshtein matching |
+| unit/search/RankedSearch.test.ts | 35 | TF-IDF ranking |
+| unit/utils/levenshtein.test.ts | 12 | String distance |
+
+**Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 
 ## Performance & Optimizations
 
@@ -143,17 +155,28 @@ Tests are in `src/memory/__tests__/` (396 tests, 14 files):
 - Batch operations support via TransactionManager
 - Handles 2000+ entities efficiently
 
-## Recent Refactoring (v0.44.0+)
+## Server Architecture (v0.44.0+)
 
-- **MCPServer.ts**: Reduced from 907 → 67 lines (92.6% reduction)
-- **toolDefinitions.ts**: Extracted 47 tool schemas by category
-- **toolHandlers.ts**: Handler registry and dispatch logic
-- **Consolidated constants**: SIMILARITY_WEIGHTS centralized
+- **MCPServer.ts**: 66 lines (reduced from 907, 92.6% reduction)
+- **toolDefinitions.ts**: 760 lines - all 47 tool schemas organized by category
+- **toolHandlers.ts**: 301 lines - handler registry and dispatch logic
+- **Consolidated constants**: SIMILARITY_WEIGHTS centralized in constants.ts
+
+## Dependencies
+
+**Production:**
+- @modelcontextprotocol/sdk: ^1.21.1
+- zod: ^4.1.13
+
+**Development:**
+- TypeScript: ^5.6.2
+- Vitest: ^4.0.13
+- @vitest/coverage-v8: ^4.0.13
 
 ## Documentation
 
-Comprehensive docs in `docs/` (26 files):
-- `architecture/` - OVERVIEW.md, COMPONENTS.md, DATAFLOW.md, DEPENDENCY_GRAPH.md
+Comprehensive docs in `docs/` directory:
+- `architecture/` - OVERVIEW.md, COMPONENTS.md, DATAFLOW.md
 - `development/` - Plans, tasks, workflow guides
 - `guides/` - ARCHIVING.md, COMPRESSION.md, HIERARCHY.md, QUERY_LANGUAGE.md
 - `reports/` - Sprint summaries, improvements

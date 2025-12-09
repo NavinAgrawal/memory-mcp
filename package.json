@@ -33,9 +33,13 @@
     "test": "npm run test --workspace=src/memory",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf src/memory/dist",
-	"docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts"
+    "docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server-memory": "file:src/memory"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.1"
   }
 }

@@ -4,10 +4,12 @@
  * Generic Dependency Graph Generator
  *
  * Scans a TypeScript codebase and generates:
- * - docs/architecture/DEPENDENCY_GRAPH.md
- * - docs/architecture/dependency-graph.json
+ * - docs/architecture/DEPENDENCY_GRAPH.md (human-readable)
+ * - docs/architecture/dependency-graph.json (machine-readable)
+ * - docs/architecture/dependency-graph.yaml (compact, ~40% smaller than JSON)
+ * - docs/architecture/dependency-summary.compact.json (LLM-optimized, ~10KB)
  *
- * Usage: npx tsx tools/create-dependency-graph.ts
+ * Usage: npx tsx tools/create-dependency-graph/create-dependency-graph.ts
  *
  * This tool is generic and does not depend on any codebase-specific functions.
  * It dynamically discovers the project structure from the filesystem.
@@ -16,6 +18,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname, relative, basename } from 'path';
 import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 
 // Types
 interface Dependency {
@@ -352,6 +355,7 @@ function extractDescription(content: string): string | null {
 
 /**
  * Dynamically discover and categorize files into modules based on directory structure
+ * Supports nested structures like src/memory/core/, src/memory/features/, etc.
  */
 function categorizeFiles(files: ParsedFile[]): ModuleMap {
   const modules: ModuleMap = {};
@@ -366,10 +370,21 @@ function categorizeFiles(files: ParsedFile[]): ModuleMap {
       continue;
     }
 
-    // Extract the module name from path (first directory after src/)
+    // Extract the module name from path
     const parts = relativePath.split('/');
     if (parts.length >= 2 && parts[0] === 'src') {
-      const moduleName = parts[1].replace('.ts', '');
+      let moduleName: string;
+
+      // If structure is src/package/submodule/ (e.g., src/memory/core/)
+      // use submodule as the module name for better granularity
+      if (parts.length >= 4 && !parts[2].endsWith('.ts')) {
+        moduleName = parts[2]; // Use submodule name (core, features, search, etc.)
+      } else if (parts.length === 3 && parts[2].endsWith('.ts')) {
+        // File directly in src/package/ (e.g., src/memory/index.ts)
+        moduleName = parts[1]; // Use package name
+      } else {
+        moduleName = parts[1].replace('.ts', '');
+      }
 
       // If it's a file directly in src/, categorize by filename
       if (parts.length === 2) {
@@ -964,6 +979,96 @@ function generateMarkdown(files: ParsedFile[], modules: ModuleMap, stats: Statis
 }
 
 /**
+ * Generate compact summary for LLM consumption (~10KB target)
+ * Uses CTON-style compression: no whitespace, abbreviated keys
+ */
+function generateCompactSummary(files: ParsedFile[], modules: ModuleMap, stats: Statistics, circularDeps: CircularDependencyResult): string {
+  // Abbreviate module names and create compact structure
+  const summary = {
+    m: { // metadata
+      n: packageJson.name,
+      v: packageJson.version,
+      d: new Date().toISOString().split('T')[0],
+      f: stats.totalTypeScriptFiles,
+      e: stats.totalExports,
+      re: stats.totalReExports
+    },
+    s: { // statistics
+      loc: stats.totalLinesOfCode,
+      cls: stats.totalClasses,
+      int: stats.totalInterfaces,
+      fn: stats.totalFunctions,
+      tg: stats.totalTypeGuards,
+      en: stats.totalEnums,
+      co: stats.totalConstants,
+      toi: stats.totalTypeOnlyImports
+    },
+    c: { // circular deps
+      rt: circularDeps.runtime.length,
+      to: circularDeps.typeOnly.length,
+      // Only include first 5 runtime cycles (if any) for context
+      rtp: circularDeps.runtime.slice(0, 5).map(c => c.map(p => p.split('/').pop()?.replace('.ts', '')).join('→'))
+    },
+    mod: {} as Record<string, { f: number; exp?: string[]; cls?: string[]; err?: string[]; int?: string[]; fn?: string[] }>,
+    // Hot paths: files with most dependencies
+    hp: [] as { p: string; i: number; o: number }[]
+  };
+
+  // Compact module summary - more granular breakdown
+  for (const [modName, modFiles] of Object.entries(modules)) {
+    const fileList = Object.values(modFiles);
+    const allClasses = fileList.flatMap(f => f.exports.classes);
+    const allInterfaces = fileList.flatMap(f => f.exports.interfaces);
+    const allFunctions = fileList.flatMap(f => f.exports.functions);
+    const allConstants = fileList.flatMap(f => f.exports.constants);
+
+    // Separate error classes from regular classes
+    const errorClasses = allClasses.filter(c => c.endsWith('Error'));
+    const regularClasses = allClasses.filter(c => !c.endsWith('Error'));
+
+    const modEntry: { f: number; exp?: string[]; cls?: string[]; err?: string[]; int?: string[]; fn?: string[] } = {
+      f: Object.keys(modFiles).length
+    };
+
+    // Include top exports (constants are usually important API surface)
+    if (allConstants.length > 0) {
+      modEntry.exp = [...new Set(allConstants)].slice(0, 15);
+    }
+    if (regularClasses.length > 0) {
+      modEntry.cls = [...new Set(regularClasses)];
+    }
+    if (errorClasses.length > 0) {
+      modEntry.err = [...new Set(errorClasses)];
+    }
+    if (allInterfaces.length > 0) {
+      modEntry.int = [...new Set(allInterfaces)];
+    }
+    if (allFunctions.length > 0) {
+      modEntry.fn = [...new Set(allFunctions)].slice(0, 15);
+    }
+
+    summary.mod[modName] = modEntry;
+  }
+
+  // Find hot paths (files with highest connectivity)
+  const connectivity = files.map(f => ({
+    p: f.path.split('/').slice(-2).join('/'),
+    i: f.internalDependencies.length,
+    o: files.filter(other =>
+      other.internalDependencies.some(d => {
+        const resolved = resolvePath(other.path, d.file);
+        return resolved === f.path;
+      })
+    ).length
+  })).sort((a, b) => (b.i + b.o) - (a.i + a.o));
+
+  summary.hp = connectivity.slice(0, 15);
+
+  // Output as minified JSON (CTON-style: no whitespace)
+  return JSON.stringify(summary);
+}
+
+/**
  * Main function
  */
 async function main(): Promise<void> {
@@ -1009,11 +1114,33 @@ async function main(): Promise<void> {
   const markdown = generateMarkdown(parsedFiles, modules, stats, circularDeps, matrix);
 
   // Write outputs
-  writeFileSync(join(OUTPUT_DIR, 'dependency-graph.json'), JSON.stringify(json, null, 2));
-  console.log('Written: docs/architecture/dependency-graph.json');
+  const jsonOutput = JSON.stringify(json, null, 2);
+  writeFileSync(join(OUTPUT_DIR, 'dependency-graph.json'), jsonOutput);
+  const jsonSize = Buffer.byteLength(jsonOutput, 'utf8');
+  console.log(`Written: docs/architecture/dependency-graph.json (${(jsonSize / 1024).toFixed(1)}KB)`);
+
+  // Write YAML output (more compact, ~40% smaller than JSON)
+  const yamlOutput = yaml.dump(json, {
+    indent: 2,
+    lineWidth: 120,
+    noRefs: true,
+    sortKeys: false,
+    quotingType: '"',
+    forceQuotes: false,
+  });
+  writeFileSync(join(OUTPUT_DIR, 'dependency-graph.yaml'), yamlOutput);
+  const yamlSize = Buffer.byteLength(yamlOutput, 'utf8');
+  const yamlSavings = ((1 - yamlSize / jsonSize) * 100).toFixed(0);
+  console.log(`Written: docs/architecture/dependency-graph.yaml (${(yamlSize / 1024).toFixed(1)}KB, ${yamlSavings}% smaller)`);
 
   writeFileSync(join(OUTPUT_DIR, 'DEPENDENCY_GRAPH.md'), markdown);
   console.log('Written: docs/architecture/DEPENDENCY_GRAPH.md');
+
+  // Write compact summary for LLM consumption (CTON-style, ~10KB)
+  const compactSummary = generateCompactSummary(parsedFiles, modules, stats, circularDeps);
+  writeFileSync(join(OUTPUT_DIR, 'dependency-summary.compact.json'), compactSummary);
+  const compactSize = Buffer.byteLength(compactSummary, 'utf8');
+  console.log(`Written: docs/architecture/dependency-summary.compact.json (${(compactSize / 1024).toFixed(1)}KB)`);
 
   console.log('\nDependency graph generation complete!');
   console.log(`  - ${stats.totalTypeScriptFiles} files analyzed`);
@@ -1022,6 +1149,7 @@ async function main(): Promise<void> {
   console.log(`  - ${circularDeps.all.length} circular dependencies:`);
   console.log(`      ${circularDeps.runtime.length} runtime (require attention)`);
   console.log(`      ${circularDeps.typeOnly.length} type-only (safe)`);
+  console.log(`\nOutput sizes: JSON ${(jsonSize / 1024).toFixed(1)}KB → YAML ${(yamlSize / 1024).toFixed(1)}KB (${yamlSavings}% reduction) → Compact ${(compactSize / 1024).toFixed(1)}KB`);
 }
 
 main().catch(console.error);

@@ -41,12 +41,16 @@ describe('ensureMemoryFilePath', () => {
 
   describe('with MEMORY_FILE_PATH environment variable', () => {
     it('should return absolute path when MEMORY_FILE_PATH is absolute', async () => {
-      const absolutePath = '/tmp/custom-memory.jsonl';
+      // Use platform-appropriate absolute path
+      const absolutePath = process.platform === 'win32'
+        ? 'C:\\tmp\\custom-memory.jsonl'
+        : '/tmp/custom-memory.jsonl';
       process.env.MEMORY_FILE_PATH = absolutePath;
 
       const result = await ensureMemoryFilePath();
 
-      expect(result).toBe(absolutePath);
+      // Path may be normalized (backslashes on Windows)
+      expect(path.normalize(result)).toBe(path.normalize(absolutePath));
     });
 
     it('should convert relative path to absolute when MEMORY_FILE_PATH is relative', async () => {
