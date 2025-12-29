@@ -6,7 +6,7 @@
  * @module features/HierarchyManager
  */
 
-import type { Entity, KnowledgeGraph } from '../types/index.js';
+import type { Entity, KnowledgeGraph, ReadonlyKnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { EntityNotFoundError, CycleDetectedError } from '../utils/errors.js';
 
@@ -30,26 +30,30 @@ export class HierarchyManager {
    * @throws {CycleDetectedError} If setting parent would create a cycle
    */
   async setEntityParent(entityName: string, parentName: string | null): Promise<Entity> {
-    const graph = await this.storage.loadGraph();
-    const entity = graph.entities.find(e => e.name === entityName);
+    // Use read-only graph for validation checks
+    const readGraph = await this.storage.loadGraph();
+    const entityExists = readGraph.entities.find(e => e.name === entityName);
 
-    if (!entity) {
+    if (!entityExists) {
       throw new EntityNotFoundError(entityName);
     }
 
     // If setting a parent, validate it exists and doesn't create a cycle
     if (parentName !== null) {
-      const parent = graph.entities.find(e => e.name === parentName);
+      const parent = readGraph.entities.find(e => e.name === parentName);
       if (!parent) {
         throw new EntityNotFoundError(parentName);
       }
 
       // Check for cycles
-      if (this.wouldCreateCycle(graph, entityName, parentName)) {
+      if (this.wouldCreateCycle(readGraph, entityName, parentName)) {
         throw new CycleDetectedError(entityName, parentName);
       }
     }
 
+    // Get mutable copy for write operation
+    const graph = await this.storage.getGraphForMutation();
+    const entity = graph.entities.find(e => e.name === entityName)!;
     entity.parentId = parentName || undefined;
     entity.lastModified = new Date().toISOString();
 
@@ -66,7 +70,7 @@ export class HierarchyManager {
    * @returns True if cycle would be created
    */
   private wouldCreateCycle(
-    graph: KnowledgeGraph,
+    graph: ReadonlyKnowledgeGraph,
     entityName: string,
     parentName: string
   ): boolean {

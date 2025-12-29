@@ -66,17 +66,18 @@ export class RelationManager {
       throw new ValidationError('Invalid relation data', errors);
     }
 
-    const graph = await this.storage.loadGraph();
+    // Use read-only graph for checking existing relations
+    const readGraph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 
     // Check graph size limits
-    const relationsToAdd = relations.filter(r => !graph.relations.some(existing =>
+    const relationsToAdd = relations.filter(r => !readGraph.relations.some(existing =>
       existing.from === r.from &&
       existing.to === r.to &&
       existing.relationType === r.relationType
     ));
 
-    if (graph.relations.length + relationsToAdd.length > GRAPH_LIMITS.MAX_RELATIONS) {
+    if (readGraph.relations.length + relationsToAdd.length > GRAPH_LIMITS.MAX_RELATIONS) {
       throw new ValidationError(
         'Graph size limit exceeded',
         [`Adding ${relationsToAdd.length} relations would exceed maximum of ${GRAPH_LIMITS.MAX_RELATIONS} relations`]
@@ -90,6 +91,8 @@ export class RelationManager {
         lastModified: r.lastModified || timestamp,
       }));
 
+    // Get mutable copy for write operation
+    const graph = await this.storage.getGraphForMutation();
     graph.relations.push(...newRelations);
     await this.storage.saveGraph(graph);
 
@@ -142,7 +145,7 @@ export class RelationManager {
       throw new ValidationError('Invalid relation data', errors);
     }
 
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
 
     // Track affected entities

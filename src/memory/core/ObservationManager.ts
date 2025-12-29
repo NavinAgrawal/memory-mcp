@@ -64,11 +64,12 @@ export class ObservationManager {
   async addObservations(
     observations: { entityName: string; contents: string[] }[]
   ): Promise<AddObservationsResult[]> {
-    const graph = await this.storage.loadGraph();
-    const timestamp = new Date().toISOString();
+    // Use read-only graph for validation
+    const readGraph = await this.storage.loadGraph();
+    const results: AddObservationsResult[] = [];
 
-    const results = observations.map(o => {
-      const entity = graph.entities.find(e => e.name === o.entityName);
+    for (const o of observations) {
+      const entity = readGraph.entities.find(e => e.name === o.entityName);
 
       if (!entity) {
         throw new EntityNotFoundError(o.entityName);
@@ -78,20 +79,18 @@ export class ObservationManager {
         content => !entity.observations.includes(content)
       );
 
-      entity.observations.push(...newObservations);
-
-      // Update lastModified if observations were added
       if (newObservations.length > 0) {
-        entity.lastModified = timestamp;
+        // OPTIMIZED: Use updateEntity for in-place update + append
+        const updatedObservations = [...entity.observations, ...newObservations];
+        await this.storage.updateEntity(o.entityName, { observations: updatedObservations });
       }
 
-      return {
+      results.push({
         entityName: o.entityName,
         addedObservations: newObservations,
-      };
-    });
+      });
+    }
 
-    await this.storage.saveGraph(graph);
     return results;
   }
 
@@ -134,7 +133,7 @@ export class ObservationManager {
   async deleteObservations(
     deletions: { entityName: string; observations: string[] }[]
   ): Promise<void> {
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
 
     deletions.forEach(d => {

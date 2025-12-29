@@ -178,7 +178,7 @@ export class CompressionManager {
       throw new InsufficientEntitiesError('merging', 2, entityNames.length);
     }
 
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const entitiesToMerge = entityNames.map(name => {
       const entity = graph.entities.find(e => e.name === name);
       if (!entity) {

@@ -358,7 +358,7 @@ describe('CompressionManager', () => {
 
     it('should handle graph with no duplicates', async () => {
       // Remove all entities and add distinct ones
-      const graph = await storage.loadGraph();
+      const graph = await storage.getGraphForMutation();
       graph.entities = [];
       graph.relations = [];
       await storage.saveGraph(graph);

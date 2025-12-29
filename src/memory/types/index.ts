@@ -15,6 +15,7 @@ export type {
   Entity,
   Relation,
   KnowledgeGraph,
+  ReadonlyKnowledgeGraph,
 } from './entity.types.js';
 
 // Search types

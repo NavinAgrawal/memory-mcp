@@ -6,7 +6,7 @@
  * @module search/RankedSearch
  */
 
-import type { SearchResult, TFIDFIndex } from '../types/index.js';
+import type { Entity, SearchResult, TFIDFIndex } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
@@ -121,7 +121,7 @@ export class RankedSearch {
    * Search using pre-calculated TF-IDF index (fast path).
    */
   private searchWithIndex(
-    entities: typeof this.storage extends GraphStorage ? Awaited<ReturnType<GraphStorage['loadGraph']>>['entities'] : never,
+    entities: Entity[],
     queryTerms: string[],
     index: TFIDFIndex,
     limit: number
@@ -188,7 +188,7 @@ export class RankedSearch {
    * Search without index (on-the-fly calculation, slow path).
    */
   private searchWithoutIndex(
-    entities: typeof this.storage extends GraphStorage ? Awaited<ReturnType<GraphStorage['loadGraph']>>['entities'] : never,
+    entities: Entity[],
     queryTerms: string[],
     limit: number
   ): SearchResult[] {

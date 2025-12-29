@@ -27,6 +27,7 @@ import type {
   Entity,
   Relation,
   KnowledgeGraph,
+  ReadonlyKnowledgeGraph,
   GraphStats,
   ValidationReport,
   SavedSearch,
@@ -120,7 +121,7 @@ export class KnowledgeGraphManager {
     return (this._archiveManager ??= new ArchiveManager(this.storage));
   }
 
-  private async loadGraph(): Promise<KnowledgeGraph> {
+  private async loadGraph(): Promise<ReadonlyKnowledgeGraph> {
     return this.storage.loadGraph();
   }
 
@@ -158,7 +159,7 @@ export class KnowledgeGraphManager {
     return this.relationManager.deleteRelations(relations);
   }
 
-  async readGraph(): Promise<KnowledgeGraph> {
+  async readGraph(): Promise<ReadonlyKnowledgeGraph> {
     return this.loadGraph();
   }
 
@@ -517,7 +518,7 @@ export class KnowledgeGraphManager {
     }
   ): Promise<string> {
     // Get filtered or full graph based on filter parameter
-    let graph: KnowledgeGraph;
+    let graph: ReadonlyKnowledgeGraph;
     if (filter) {
       graph = await this.searchByDateRange(
         filter.startDate,

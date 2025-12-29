@@ -57,10 +57,10 @@ export class SearchFilterChain {
    * @param filters - Filter criteria to apply
    * @returns Filtered entities array
    */
-  static applyFilters(entities: Entity[], filters: SearchFilters): Entity[] {
+  static applyFilters(entities: readonly Entity[], filters: SearchFilters): Entity[] {
     // Early return if no filters are active
     if (!this.hasActiveFilters(filters)) {
-      return entities;
+      return [...entities];
     }
 
     // Pre-normalize tags once for efficiency

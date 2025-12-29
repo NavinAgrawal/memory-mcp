@@ -69,12 +69,13 @@ export class EntityManager {
       throw new ValidationError('Invalid entity data', errors);
     }
 
-    const graph = await this.storage.loadGraph();
+    // Use read-only graph for checking existing entities
+    const readGraph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
 
     // Check graph size limits
-    const entitiesToAdd = entities.filter(e => !graph.entities.some(existing => existing.name === e.name));
-    if (graph.entities.length + entitiesToAdd.length > GRAPH_LIMITS.MAX_ENTITIES) {
+    const entitiesToAdd = entities.filter(e => !readGraph.entities.some(existing => existing.name === e.name));
+    if (readGraph.entities.length + entitiesToAdd.length > GRAPH_LIMITS.MAX_ENTITIES) {
       throw new ValidationError(
         'Graph size limit exceeded',
         [`Adding ${entitiesToAdd.length} entities would exceed maximum of ${GRAPH_LIMITS.MAX_ENTITIES} entities`]
@@ -105,8 +106,15 @@ export class EntityManager {
         return entity;
       });
 
-    graph.entities.push(...newEntities);
-    await this.storage.saveGraph(graph);
+    // OPTIMIZED: Use append for single entity, bulk save for multiple
+    // (N individual appends is slower than one bulk write)
+    if (newEntities.length === 1) {
+      await this.storage.appendEntity(newEntities[0]);
+    } else if (newEntities.length > 1) {
+      const graph = await this.storage.getGraphForMutation();
+      graph.entities.push(...newEntities);
+      await this.storage.saveGraph(graph);
+    }
 
     return newEntities;
   }
@@ -144,7 +152,7 @@ export class EntityManager {
       throw new ValidationError('Invalid entity names', errors);
     }
 
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
 
     graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
     graph.relations = graph.relations.filter(
@@ -229,7 +237,7 @@ export class EntityManager {
       throw new ValidationError('Invalid update data', errors);
     }
 
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const entity = graph.entities.find(e => e.name === name);
 
     if (!entity) {
@@ -289,7 +297,7 @@ export class EntityManager {
       }
     }
 
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
     const updatedEntities: Entity[] = [];
 
@@ -341,27 +349,27 @@ export class EntityManager {
   async addObservations(
     observations: { entityName: string; contents: string[] }[]
   ): Promise<{ entityName: string; addedObservations: string[] }[]> {
-    const graph = await this.storage.loadGraph();
-    const timestamp = new Date().toISOString();
+    // Use read-only graph for validation
+    const readGraph = await this.storage.loadGraph();
+    const results: { entityName: string; addedObservations: string[] }[] = [];
 
-    const results = observations.map(o => {
-      const entity = graph.entities.find(e => e.name === o.entityName);
+    for (const o of observations) {
+      const entity = readGraph.entities.find(e => e.name === o.entityName);
       if (!entity) {
         throw new EntityNotFoundError(o.entityName);
       }
 
       const newObservations = o.contents.filter(content => !entity.observations.includes(content));
-      entity.observations.push(...newObservations);
 
-      // Update lastModified timestamp if observations were added
       if (newObservations.length > 0) {
-        entity.lastModified = timestamp;
+        // OPTIMIZED: Use updateEntity for in-place update + append
+        const updatedObservations = [...entity.observations, ...newObservations];
+        await this.storage.updateEntity(o.entityName, { observations: updatedObservations });
       }
 
-      return { entityName: o.entityName, addedObservations: newObservations };
-    });
+      results.push({ entityName: o.entityName, addedObservations: newObservations });
+    }
 
-    await this.storage.saveGraph(graph);
     return results;
   }
 
@@ -395,7 +403,7 @@ export class EntityManager {
   async deleteObservations(
     deletions: { entityName: string; observations: string[] }[]
   ): Promise<void> {
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
 
     deletions.forEach(d => {
@@ -425,31 +433,24 @@ export class EntityManager {
    * @throws {EntityNotFoundError} If entity is not found
    */
   async addTags(entityName: string, tags: string[]): Promise<{ entityName: string; addedTags: string[] }> {
-    const graph = await this.storage.loadGraph();
-    const timestamp = new Date().toISOString();
-
-    const entity = graph.entities.find(e => e.name === entityName);
+    // Check entity exists using read-only graph
+    const readGraph = await this.storage.loadGraph();
+    const entity = readGraph.entities.find(e => e.name === entityName);
     if (!entity) {
       throw new EntityNotFoundError(entityName);
     }
 
     // Initialize tags array if it doesn't exist
-    if (!entity.tags) {
-      entity.tags = [];
-    }
+    const existingTags = entity.tags || [];
 
     // Normalize tags to lowercase and filter out duplicates
     const normalizedTags = tags.map(tag => tag.toLowerCase());
-    const newTags = normalizedTags.filter(tag => !entity.tags!.includes(tag));
+    const newTags = normalizedTags.filter(tag => !existingTags.includes(tag));
 
-    entity.tags.push(...newTags);
-
-    // Update lastModified timestamp if tags were added
     if (newTags.length > 0) {
-      entity.lastModified = timestamp;
+      // OPTIMIZED: Use updateEntity for in-place update + append
+      await this.storage.updateEntity(entityName, { tags: [...existingTags, ...newTags] });
     }
-
-    await this.storage.saveGraph(graph);
 
     return { entityName, addedTags: newTags };
   }
@@ -463,7 +464,7 @@ export class EntityManager {
    * @throws {EntityNotFoundError} If entity is not found
    */
   async removeTags(entityName: string, tags: string[]): Promise<{ entityName: string; removedTags: string[] }> {
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
 
     const entity = graph.entities.find(e => e.name === entityName);
@@ -507,23 +508,20 @@ export class EntityManager {
    * @throws {Error} If importance is out of range
    */
   async setImportance(entityName: string, importance: number): Promise<{ entityName: string; importance: number }> {
-    const graph = await this.storage.loadGraph();
-    const timestamp = new Date().toISOString();
-
     // Validate importance range (0-10)
     if (importance < 0 || importance > 10) {
       throw new Error(`Importance must be between 0 and 10, got ${importance}`);
     }
 
-    const entity = graph.entities.find(e => e.name === entityName);
+    // Check entity exists using read-only graph
+    const readGraph = await this.storage.loadGraph();
+    const entity = readGraph.entities.find(e => e.name === entityName);
     if (!entity) {
       throw new EntityNotFoundError(entityName);
     }
 
-    entity.importance = importance;
-    entity.lastModified = timestamp;
-
-    await this.storage.saveGraph(graph);
+    // OPTIMIZED: Use updateEntity for in-place update + append
+    await this.storage.updateEntity(entityName, { importance });
 
     return { entityName, importance };
   }
@@ -536,7 +534,7 @@ export class EntityManager {
    * @returns Array of results showing which tags were added to each entity
    */
   async addTagsToMultipleEntities(entityNames: string[], tags: string[]): Promise<{ entityName: string; addedTags: string[] }[]> {
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
     const normalizedTags = tags.map(tag => tag.toLowerCase());
     const results: { entityName: string; addedTags: string[] }[] = [];
@@ -576,7 +574,7 @@ export class EntityManager {
    * @returns Result with affected entities and count
    */
   async replaceTag(oldTag: string, newTag: string): Promise<{ affectedEntities: string[]; count: number }> {
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
     const normalizedOldTag = oldTag.toLowerCase();
     const normalizedNewTag = newTag.toLowerCase();
@@ -610,7 +608,7 @@ export class EntityManager {
    * @returns Object with affected entity names and count
    */
   async mergeTags(tag1: string, tag2: string, targetTag: string): Promise<{ affectedEntities: string[]; count: number }> {
-    const graph = await this.storage.loadGraph();
+    const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
     const normalizedTag1 = tag1.toLowerCase();
     const normalizedTag2 = tag2.toLowerCase();

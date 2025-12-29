@@ -347,7 +347,7 @@ describe('Integration: Complete Workflows', () => {
       ]);
 
       // Manually adjust createdAt for testing
-      const graph = await storage.loadGraph();
+      const graph = await storage.getGraphForMutation();
       graph.entities[0].createdAt = yesterday.toISOString();
       await storage.saveGraph(graph);
 

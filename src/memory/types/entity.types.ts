@@ -114,3 +114,12 @@ export interface KnowledgeGraph {
   /** Array of all relations between entities */
   relations: Relation[];
 }
+
+/**
+ * Read-only version of KnowledgeGraph for safe cache access.
+ * Prevents accidental mutation of cached data.
+ */
+export type ReadonlyKnowledgeGraph = {
+  readonly entities: readonly Entity[];
+  readonly relations: readonly Relation[];
+};

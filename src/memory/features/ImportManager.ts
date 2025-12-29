@@ -276,7 +276,7 @@ export class ImportManager {
     mergeStrategy: MergeStrategy,
     dryRun: boolean
   ): Promise<ImportResult> {
-    const existingGraph = await this.storage.loadGraph();
+    const existingGraph = await this.storage.getGraphForMutation();
     const result: ImportResult = {
       entitiesAdded: 0,
       entitiesSkipped: 0,

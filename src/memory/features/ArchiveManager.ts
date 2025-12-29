@@ -52,10 +52,11 @@ export class ArchiveManager {
    * @returns Archive result with count and entity names
    */
   async archiveEntities(criteria: ArchiveCriteria, dryRun: boolean = false): Promise<ArchiveResult> {
-    const graph = await this.storage.loadGraph();
+    // Use read-only graph for analysis
+    const readGraph = await this.storage.loadGraph();
     const toArchive: Entity[] = [];
 
-    for (const entity of graph.entities) {
+    for (const entity of readGraph.entities) {
       let shouldArchive = false;
 
       // Check age criteria
@@ -90,6 +91,8 @@ export class ArchiveManager {
     }
 
     if (!dryRun && toArchive.length > 0) {
+      // Get mutable copy for write operation
+      const graph = await this.storage.getGraphForMutation();
       // Remove archived entities from main graph
       const archiveNames = new Set(toArchive.map(e => e.name));
       graph.entities = graph.entities.filter(e => !archiveNames.has(e.name));

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (390 tests)
+npm test              # Run tests with coverage (407 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.48.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.49.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -125,17 +125,18 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (390 tests, 14 files):
+Tests are in `src/memory/__tests__/` (407 tests, 15 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
 | edge-cases.test.ts | 35 | Boundary conditions |
 | file-path.test.ts | 9 | Path handling |
 | integration/workflows.test.ts | 12 | End-to-end workflows |
-| knowledge-graph.test.ts | 31 | Core graph operations |
+| knowledge-graph.test.ts | 30 | Core graph operations |
 | performance/benchmarks.test.ts | 18 | Performance validation |
+| performance/write-performance.test.ts | 16 | Write optimization tests |
 | unit/core/EntityManager.test.ts | 31 | Entity CRUD |
-| unit/core/GraphStorage.test.ts | 11 | Storage layer |
+| unit/core/GraphStorage.test.ts | 10 | Storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
 | unit/features/CompressionManager.test.ts | 32 | Duplicate detection |
 | unit/search/BasicSearch.test.ts | 37 | Basic search |
@@ -148,6 +149,9 @@ Tests are in `src/memory/__tests__/` (390 tests, 14 files):
 
 ## Performance & Optimizations
 
+- **O(1) read operations** - Direct cache access without copying (Sprint 1)
+- **O(1) single-entity writes** - Append-only file operations (Sprint 2)
+- **Append-only update pattern** - File deduplication on load
 - In-memory caching with write-through invalidation
 - 50x faster duplicate detection using two-level bucketing
 - Lazy TF-IDF index loading

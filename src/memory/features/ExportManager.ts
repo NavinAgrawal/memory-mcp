@@ -6,7 +6,7 @@
  * @module features/ExportManager
  */
 
-import type { KnowledgeGraph } from '../types/index.js';
+import type { KnowledgeGraph, ReadonlyKnowledgeGraph } from '../types/index.js';
 
 /**
  * Supported export formats.
@@ -24,7 +24,7 @@ export class ExportManager {
    * @param format - Export format
    * @returns Formatted export string
    */
-  exportGraph(graph: KnowledgeGraph, format: ExportFormat): string {
+  exportGraph(graph: ReadonlyKnowledgeGraph, format: ExportFormat): string {
     switch (format) {
       case 'json':
         return this.exportAsJson(graph);
@@ -48,14 +48,14 @@ export class ExportManager {
   /**
    * Export as pretty-printed JSON.
    */
-  private exportAsJson(graph: KnowledgeGraph): string {
+  private exportAsJson(graph: ReadonlyKnowledgeGraph): string {
     return JSON.stringify(graph, null, 2);
   }
 
   /**
    * Export as CSV with proper escaping.
    */
-  private exportAsCsv(graph: KnowledgeGraph): string {
+  private exportAsCsv(graph: ReadonlyKnowledgeGraph): string {
     const lines: string[] = [];
 
     const escapeCsvField = (field: string | undefined | null): string => {
@@ -112,7 +112,7 @@ export class ExportManager {
   /**
    * Export as GraphML XML format.
    */
-  private exportAsGraphML(graph: KnowledgeGraph): string {
+  private exportAsGraphML(graph: ReadonlyKnowledgeGraph): string {
     const lines: string[] = [];
 
     const escapeXml = (str: string | undefined | null): string => {
@@ -172,7 +172,7 @@ export class ExportManager {
   /**
    * Export as GEXF format for Gephi.
    */
-  private exportAsGEXF(graph: KnowledgeGraph): string {
+  private exportAsGEXF(graph: ReadonlyKnowledgeGraph): string {
     const lines: string[] = [];
 
     const escapeXml = (str: string | undefined | null): string => {
@@ -228,7 +228,7 @@ export class ExportManager {
   /**
    * Export as DOT format for GraphViz.
    */
-  private exportAsDOT(graph: KnowledgeGraph): string {
+  private exportAsDOT(graph: ReadonlyKnowledgeGraph): string {
     const lines: string[] = [];
 
     const escapeDot = (str: string): string => {
@@ -264,7 +264,7 @@ export class ExportManager {
   /**
    * Export as Markdown documentation.
    */
-  private exportAsMarkdown(graph: KnowledgeGraph): string {
+  private exportAsMarkdown(graph: ReadonlyKnowledgeGraph): string {
     const lines: string[] = [];
 
     lines.push('# Knowledge Graph Export');
@@ -307,7 +307,7 @@ export class ExportManager {
   /**
    * Export as Mermaid diagram.
    */
-  private exportAsMermaid(graph: KnowledgeGraph): string {
+  private exportAsMermaid(graph: ReadonlyKnowledgeGraph): string {
     const lines: string[] = [];
 
     const sanitizeId = (str: string): string => str.replace(/[^a-zA-Z0-9_]/g, '_');

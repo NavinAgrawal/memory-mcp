@@ -312,9 +312,10 @@ describe('Performance Benchmarks', () => {
       expect(graph.entities.length).toBe(500);
       expect(loadDuration).toBeLessThan(PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);
 
-      // Measure save time
+      // Measure save time (need mutable copy for saveGraph)
       const startSave = Date.now();
-      await storage.saveGraph(graph);
+      const mutableGraph = await storage.getGraphForMutation();
+      await storage.saveGraph(mutableGraph);
       const saveDuration = Date.now() - startSave;
 
       expect(saveDuration).toBeLessThan(PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);

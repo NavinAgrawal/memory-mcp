@@ -9,7 +9,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { TFIDFIndex, DocumentVector, KnowledgeGraph } from '../types/index.js';
+import type { TFIDFIndex, DocumentVector, KnowledgeGraph, ReadonlyKnowledgeGraph } from '../types/index.js';
 import { calculateIDF, tokenize } from '../utils/tfidf.js';
 
 const INDEX_VERSION = '1.0';
@@ -42,7 +42,7 @@ export class TFIDFIndexManager {
    * @param graph - Knowledge graph to index
    * @returns Newly built TF-IDF index
    */
-  async buildIndex(graph: KnowledgeGraph): Promise<TFIDFIndex> {
+  async buildIndex(graph: ReadonlyKnowledgeGraph): Promise<TFIDFIndex> {
     const documents = new Map<string, DocumentVector>();
     const allDocumentTexts: string[] = [];
     const allTokens: string[][] = [];
@@ -99,7 +99,7 @@ export class TFIDFIndexManager {
    * @param graph - Updated knowledge graph
    * @param changedEntityNames - Names of entities that changed
    */
-  async updateIndex(graph: KnowledgeGraph, changedEntityNames: Set<string>): Promise<TFIDFIndex> {
+  async updateIndex(graph: ReadonlyKnowledgeGraph, changedEntityNames: Set<string>): Promise<TFIDFIndex> {
     if (!this.index) {
       // No existing index, build from scratch
       return this.buildIndex(graph);

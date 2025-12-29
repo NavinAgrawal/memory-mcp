@@ -101,9 +101,15 @@ describe('GraphStorage', () => {
       expect(graph.entities).toHaveLength(0); // Empty from first load
     });
 
-    it('should return deep copy of cached data', async () => {
+    it('should return read-only graph from loadGraph and mutable copy from getGraphForMutation', async () => {
+      // loadGraph returns read-only reference (same object)
       const graph1 = await storage.loadGraph();
-      graph1.entities.push({
+      const graph2 = await storage.loadGraph();
+      expect(graph1).toBe(graph2); // Same cached reference
+
+      // getGraphForMutation returns a mutable copy
+      const mutableGraph = await storage.getGraphForMutation();
+      mutableGraph.entities.push({
         name: 'Mutated',
         entityType: 'test',
         observations: [],
@@ -111,9 +117,9 @@ describe('GraphStorage', () => {
         lastModified: new Date().toISOString(),
       });
 
-      const graph2 = await storage.loadGraph();
-
-      expect(graph2.entities).toHaveLength(0); // Not affected by mutation
+      // Original cache should not be affected until saveGraph is called
+      const graph3 = await storage.loadGraph();
+      expect(graph3.entities).toHaveLength(0);
     });
   });
 

@@ -8,7 +8,7 @@
  */
 
 import { promises as fs } from 'fs';
-import type { KnowledgeGraph, Entity, Relation } from '../types/index.js';
+import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 
 /**
@@ -36,6 +36,18 @@ export class GraphStorage {
   private cache: KnowledgeGraph | null = null;
 
   /**
+   * Number of pending append operations since last compaction.
+   * Used to trigger automatic compaction when threshold is reached.
+   */
+  private pendingAppends: number = 0;
+
+  /**
+   * Threshold for automatic compaction.
+   * After this many appends, the file is rewritten to remove duplicates.
+   */
+  private readonly compactionThreshold: number = 100;
+
+  /**
    * Create a new GraphStorage instance.
    *
    * @param memoryFilePath - Absolute path to the JSONL file
@@ -43,33 +55,71 @@ export class GraphStorage {
   constructor(private memoryFilePath: string) {}
 
   /**
-   * Load the knowledge graph from disk.
+   * Load the knowledge graph from disk (read-only access).
    *
-   * OPTIMIZED: Uses in-memory cache to avoid repeated disk reads.
-   * Cache is populated on first load and invalidated on writes.
+   * OPTIMIZED: Returns cached reference directly without copying.
+   * This is O(1) regardless of graph size. For mutation operations,
+   * use getGraphForMutation() instead.
    *
-   * Reads the JSONL file and reconstructs the graph structure.
-   * Returns empty graph if file doesn't exist.
-   *
-   * @returns Promise resolving to the loaded knowledge graph
+   * @returns Promise resolving to read-only knowledge graph reference
    * @throws Error if file exists but cannot be read or parsed
    */
-  async loadGraph(): Promise<KnowledgeGraph> {
-    // Return cached graph if available
+  async loadGraph(): Promise<ReadonlyKnowledgeGraph> {
+    // Return cached graph directly (no copying - O(1))
     if (this.cache !== null) {
-      // Return a deep copy to prevent external mutations from affecting cache
-      return {
-        entities: this.cache.entities.map(e => ({ ...e })),
-        relations: this.cache.relations.map(r => ({ ...r })),
-      };
+      return this.cache;
     }
 
     // Cache miss - load from disk
+    await this.loadFromDisk();
+    return this.cache!;
+  }
+
+  /**
+   * Get a mutable copy of the graph for write operations.
+   *
+   * Creates deep copies of entity and relation arrays to allow
+   * safe mutation without affecting the cached data.
+   *
+   * @returns Promise resolving to mutable knowledge graph copy
+   */
+  async getGraphForMutation(): Promise<KnowledgeGraph> {
+    await this.ensureLoaded();
+    return {
+      entities: this.cache!.entities.map(e => ({
+        ...e,
+        observations: [...e.observations],
+        tags: e.tags ? [...e.tags] : undefined,
+      })),
+      relations: this.cache!.relations.map(r => ({ ...r })),
+    };
+  }
+
+  /**
+   * Ensure the cache is loaded from disk.
+   *
+   * @returns Promise resolving when cache is populated
+   */
+  async ensureLoaded(): Promise<void> {
+    if (this.cache === null) {
+      await this.loadFromDisk();
+    }
+  }
+
+  /**
+   * Internal method to load graph from disk into cache.
+   */
+  private async loadFromDisk(): Promise<void> {
     try {
       const data = await fs.readFile(this.memoryFilePath, 'utf-8');
       const lines = data.split('\n').filter((line: string) => line.trim() !== '');
 
-      const graph = lines.reduce((graph: KnowledgeGraph, line: string) => {
+      // Use Maps to deduplicate - later entries override earlier ones
+      // This supports append-only updates where new versions are appended
+      const entityMap = new Map<string, Entity>();
+      const relationMap = new Map<string, Relation>();
+
+      for (const line of lines) {
         const item = JSON.parse(line);
 
         if (item.type === 'entity') {
@@ -78,7 +128,8 @@ export class GraphStorage {
           // Add lastModified if missing for backward compatibility
           if (!item.lastModified) item.lastModified = item.createdAt;
 
-          graph.entities.push(item as Entity);
+          // Use name as key - later entries override earlier ones
+          entityMap.set(item.name, item as Entity);
         }
 
         if (item.type === 'relation') {
@@ -87,26 +138,25 @@ export class GraphStorage {
           // Add lastModified if missing for backward compatibility
           if (!item.lastModified) item.lastModified = item.createdAt;
 
-          graph.relations.push(item as Relation);
+          // Use composite key for relations
+          const key = `${item.from}:${item.to}:${item.relationType}`;
+          relationMap.set(key, item as Relation);
         }
+      }
 
-        return graph;
-      }, { entities: [], relations: [] });
+      // Convert maps to arrays
+      const graph: KnowledgeGraph = {
+        entities: Array.from(entityMap.values()),
+        relations: Array.from(relationMap.values()),
+      };
 
       // Populate cache
       this.cache = graph;
-
-      // Return a deep copy
-      return {
-        entities: graph.entities.map(e => ({ ...e })),
-        relations: graph.relations.map(r => ({ ...r })),
-      };
     } catch (error) {
-      // File doesn't exist - return empty graph
+      // File doesn't exist - create empty graph
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
-        const emptyGraph = { entities: [], relations: [] };
-        this.cache = emptyGraph;
-        return { entities: [], relations: [] };
+        this.cache = { entities: [], relations: [] };
+        return;
       }
       throw error;
     }
@@ -115,7 +165,7 @@ export class GraphStorage {
   /**
    * Save the knowledge graph to disk.
    *
-   * OPTIMIZED: Invalidates cache after write to ensure consistency.
+   * OPTIMIZED: Updates cache directly after write to avoid re-reading.
    *
    * Writes the graph to JSONL format, with one JSON object per line.
    *
@@ -156,11 +206,220 @@ export class GraphStorage {
 
     await fs.writeFile(this.memoryFilePath, lines.join('\n'));
 
-    // Invalidate cache to ensure next load reads fresh data
-    this.cache = null;
+    // Update cache directly with the saved graph (avoid re-reading from disk)
+    this.cache = graph;
+
+    // Reset pending appends since file is now clean
+    this.pendingAppends = 0;
 
     // Clear all search caches since graph data has changed
     clearAllSearchCaches();
+  }
+
+  /**
+   * Append a single entity to the file (O(1) write operation).
+   *
+   * OPTIMIZED: Uses file append instead of full rewrite.
+   * Updates cache in-place and triggers compaction when threshold is reached.
+   *
+   * @param entity - The entity to append
+   * @returns Promise resolving when append is complete
+   */
+  async appendEntity(entity: Entity): Promise<void> {
+    await this.ensureLoaded();
+
+    const entityData: Record<string, unknown> = {
+      type: 'entity',
+      name: entity.name,
+      entityType: entity.entityType,
+      observations: entity.observations,
+      createdAt: entity.createdAt,
+      lastModified: entity.lastModified,
+    };
+
+    // Only include optional fields if they exist
+    if (entity.tags !== undefined) entityData.tags = entity.tags;
+    if (entity.importance !== undefined) entityData.importance = entity.importance;
+    if (entity.parentId !== undefined) entityData.parentId = entity.parentId;
+
+    const line = JSON.stringify(entityData);
+
+    // Append to file (prepend newline if file exists and has content)
+    try {
+      const stat = await fs.stat(this.memoryFilePath);
+      if (stat.size > 0) {
+        await fs.appendFile(this.memoryFilePath, '\n' + line);
+      } else {
+        await fs.writeFile(this.memoryFilePath, line);
+      }
+    } catch (error) {
+      // File doesn't exist - create it
+      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        await fs.writeFile(this.memoryFilePath, line);
+      } else {
+        throw error;
+      }
+    }
+
+    // Update cache in-place
+    this.cache!.entities.push(entity);
+    this.pendingAppends++;
+
+    // Clear search caches
+    clearAllSearchCaches();
+
+    // Trigger compaction if threshold reached
+    if (this.pendingAppends >= this.compactionThreshold) {
+      await this.compact();
+    }
+  }
+
+  /**
+   * Append a single relation to the file (O(1) write operation).
+   *
+   * OPTIMIZED: Uses file append instead of full rewrite.
+   * Updates cache in-place and triggers compaction when threshold is reached.
+   *
+   * @param relation - The relation to append
+   * @returns Promise resolving when append is complete
+   */
+  async appendRelation(relation: Relation): Promise<void> {
+    await this.ensureLoaded();
+
+    const line = JSON.stringify({
+      type: 'relation',
+      from: relation.from,
+      to: relation.to,
+      relationType: relation.relationType,
+      createdAt: relation.createdAt,
+      lastModified: relation.lastModified,
+    });
+
+    // Append to file (prepend newline if file exists and has content)
+    try {
+      const stat = await fs.stat(this.memoryFilePath);
+      if (stat.size > 0) {
+        await fs.appendFile(this.memoryFilePath, '\n' + line);
+      } else {
+        await fs.writeFile(this.memoryFilePath, line);
+      }
+    } catch (error) {
+      // File doesn't exist - create it
+      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        await fs.writeFile(this.memoryFilePath, line);
+      } else {
+        throw error;
+      }
+    }
+
+    // Update cache in-place
+    this.cache!.relations.push(relation);
+    this.pendingAppends++;
+
+    // Clear search caches
+    clearAllSearchCaches();
+
+    // Trigger compaction if threshold reached
+    if (this.pendingAppends >= this.compactionThreshold) {
+      await this.compact();
+    }
+  }
+
+  /**
+   * Compact the file by rewriting it with only current cache contents.
+   *
+   * Removes duplicate entries and cleans up the file.
+   * Resets pending appends counter.
+   *
+   * @returns Promise resolving when compaction is complete
+   */
+  async compact(): Promise<void> {
+    if (this.cache === null) {
+      return;
+    }
+
+    // Rewrite file with current cache (removes duplicates/updates)
+    await this.saveGraph(this.cache);
+    this.pendingAppends = 0;
+  }
+
+  /**
+   * Get the current pending appends count.
+   *
+   * Useful for testing compaction behavior.
+   *
+   * @returns Number of pending appends since last compaction
+   */
+  getPendingAppends(): number {
+    return this.pendingAppends;
+  }
+
+  /**
+   * Update an entity in-place in the cache and append to file.
+   *
+   * OPTIMIZED: Modifies cache directly and appends updated version to file.
+   * Does not rewrite the entire file - compaction handles deduplication later.
+   *
+   * @param entityName - Name of the entity to update
+   * @param updates - Partial entity updates to apply
+   * @returns Promise resolving to true if entity was found and updated, false otherwise
+   */
+  async updateEntity(entityName: string, updates: Partial<Entity>): Promise<boolean> {
+    await this.ensureLoaded();
+
+    const entityIndex = this.cache!.entities.findIndex(e => e.name === entityName);
+    if (entityIndex === -1) {
+      return false;
+    }
+
+    // Update cache in-place
+    const entity = this.cache!.entities[entityIndex];
+    Object.assign(entity, updates);
+    entity.lastModified = new Date().toISOString();
+
+    // Append updated version to file
+    const entityData: Record<string, unknown> = {
+      type: 'entity',
+      name: entity.name,
+      entityType: entity.entityType,
+      observations: entity.observations,
+      createdAt: entity.createdAt,
+      lastModified: entity.lastModified,
+    };
+
+    if (entity.tags !== undefined) entityData.tags = entity.tags;
+    if (entity.importance !== undefined) entityData.importance = entity.importance;
+    if (entity.parentId !== undefined) entityData.parentId = entity.parentId;
+
+    const line = JSON.stringify(entityData);
+
+    // Append to file
+    try {
+      const stat = await fs.stat(this.memoryFilePath);
+      if (stat.size > 0) {
+        await fs.appendFile(this.memoryFilePath, '\n' + line);
+      } else {
+        await fs.writeFile(this.memoryFilePath, line);
+      }
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        await fs.writeFile(this.memoryFilePath, line);
+      } else {
+        throw error;
+      }
+    }
+
+    this.pendingAppends++;
+
+    // Clear search caches
+    clearAllSearchCaches();
+
+    // Trigger compaction if threshold reached
+    if (this.pendingAppends >= this.compactionThreshold) {
+      await this.compact();
+    }
+
+    return true;
   }
 
   /**

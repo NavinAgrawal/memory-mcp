@@ -266,8 +266,8 @@ export class TransactionManager {
         'Transaction backup (auto-created)'
       );
 
-      // Load current graph
-      const graph = await this.storage.loadGraph();
+      // Load mutable copy of graph for transaction
+      const graph = await this.storage.getGraphForMutation();
       const timestamp = new Date().toISOString();
 
       // Apply all operations
