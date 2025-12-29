@@ -10,22 +10,34 @@
 /**
  * Check if a date falls within a specified range.
  *
- * @param date - ISO 8601 date string to check
+ * @param date - ISO 8601 date string to check (may be undefined)
  * @param start - Optional start date (inclusive)
  * @param end - Optional end date (inclusive)
- * @returns True if date is within range
+ * @returns True if date is within range or no filters are set
  *
  * @example
  * ```typescript
  * isWithinDateRange('2024-06-15T00:00:00Z', '2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z'); // true
  * isWithinDateRange('2024-06-15T00:00:00Z', '2024-07-01T00:00:00Z'); // false
+ * isWithinDateRange(undefined); // true (no filters)
+ * isWithinDateRange(undefined, '2024-01-01T00:00:00Z'); // false (has filter but no date)
  * ```
  */
 export function isWithinDateRange(
-  date: string,
+  date: string | undefined,
   start?: string,
   end?: string
 ): boolean {
+  // If no filters set, always pass
+  if (!start && !end) {
+    return true;
+  }
+
+  // If date is undefined but we have filters, fail
+  if (!date) {
+    return false;
+  }
+
   const dateObj = new Date(date);
 
   if (isNaN(dateObj.getTime())) {

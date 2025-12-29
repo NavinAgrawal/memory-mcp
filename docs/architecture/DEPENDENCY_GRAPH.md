@@ -209,7 +209,7 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `KnowledgeGraph, ReadonlyKnowledgeGraph` | Import (type-only) |
+| `../types/index.js` | `ReadonlyKnowledgeGraph` | Import (type-only) |
 
 **Exports:**
 - Classes: `ExportManager`
@@ -4955,7 +4955,7 @@ graph TD
 |----------|-------|
 | Total TypeScript Files | 369 |
 | Total Modules | 1 |
-| Total Lines of Code | 61521 |
+| Total Lines of Code | 61501 |
 | Total Exports | 2435 |
 | Total Re-exports | 836 |
 | Total Classes | 79 |

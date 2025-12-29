@@ -6,6 +6,7 @@
  */
 
 import type { Entity } from '../types/entity.types.js';
+import { isWithinDateRange } from './dateUtils.js';
 
 /**
  * Checks if an entity's importance is within the specified range.
@@ -71,43 +72,6 @@ export function filterByImportance(
   return entities.filter(e =>
     isWithinImportanceRange(e.importance, minImportance, maxImportance)
   );
-}
-
-/**
- * Checks if a date value is within the specified range.
- * Handles undefined values appropriately.
- *
- * @param dateValue - ISO 8601 date string to check (may be undefined)
- * @param startDate - Start of date range (inclusive)
- * @param endDate - End of date range (inclusive)
- * @returns true if date is within range or no filters are set
- */
-export function isWithinDateRange(
-  dateValue: string | undefined,
-  startDate?: string,
-  endDate?: string
-): boolean {
-  // If no filters set, always pass
-  if (!startDate && !endDate) {
-    return true;
-  }
-
-  // If date value is undefined but we have filters, fail
-  if (!dateValue) {
-    return false;
-  }
-
-  const date = new Date(dateValue);
-
-  if (startDate && date < new Date(startDate)) {
-    return false;
-  }
-
-  if (endDate && date > new Date(endDate)) {
-    return false;
-  }
-
-  return true;
 }
 
 /**

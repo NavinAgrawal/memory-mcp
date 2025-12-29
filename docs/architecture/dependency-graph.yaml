@@ -343,7 +343,6 @@ modules:
       internalDependencies:
         - file: ../types/index.js
           imports:
-            - KnowledgeGraph
             - ReadonlyKnowledgeGraph
           typeOnly: true
       exports:
@@ -12367,7 +12366,7 @@ dependencyGraph:
 statistics:
   totalTypeScriptFiles: 369
   totalModules: 1
-  totalLinesOfCode: 61521
+  totalLinesOfCode: 61501
   totalExports: 2435
   totalClasses: 79
   totalInterfaces: 572

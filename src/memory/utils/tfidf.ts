@@ -85,25 +85,3 @@ export function tokenize(text: string): string[] {
     .split(/\s+/)
     .filter(token => token.length > 0);
 }
-
-/**
- * Calculate TF-IDF scores for multiple search terms.
- *
- * @param terms - Array of search terms
- * @param document - The document text
- * @param documents - Array of all documents
- * @returns Map of term to TF-IDF score
- */
-export function calculateMultiTermTFIDF(
-  terms: string[],
-  document: string,
-  documents: string[]
-): Map<string, number> {
-  const scores = new Map<string, number>();
-
-  for (const term of terms) {
-    scores.set(term, calculateTFIDF(term, document, documents));
-  }
-
-  return scores;
-}
