@@ -10,6 +10,7 @@
 import { promises as fs } from 'fs';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
+import { NameIndex, TypeIndex, LowercaseCache, type LowercaseData } from '../utils/indexes.js';
 
 /**
  * GraphStorage manages persistence of the knowledge graph to disk.
@@ -46,6 +47,21 @@ export class GraphStorage {
    * After this many appends, the file is rewritten to remove duplicates.
    */
   private readonly compactionThreshold: number = 100;
+
+  /**
+   * O(1) entity lookup by name.
+   */
+  private nameIndex: NameIndex = new NameIndex();
+
+  /**
+   * O(1) entity lookup by type.
+   */
+  private typeIndex: TypeIndex = new TypeIndex();
+
+  /**
+   * Pre-computed lowercase strings for search optimization.
+   */
+  private lowercaseCache: LowercaseCache = new LowercaseCache();
 
   /**
    * Create a new GraphStorage instance.
@@ -152,14 +168,36 @@ export class GraphStorage {
 
       // Populate cache
       this.cache = graph;
+
+      // Build indexes from loaded entities
+      this.buildIndexes(graph.entities);
     } catch (error) {
       // File doesn't exist - create empty graph
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
         this.cache = { entities: [], relations: [] };
+        this.clearIndexes();
         return;
       }
       throw error;
     }
+  }
+
+  /**
+   * Build all indexes from entity array.
+   */
+  private buildIndexes(entities: Entity[]): void {
+    this.nameIndex.build(entities);
+    this.typeIndex.build(entities);
+    this.lowercaseCache.build(entities);
+  }
+
+  /**
+   * Clear all indexes.
+   */
+  private clearIndexes(): void {
+    this.nameIndex.clear();
+    this.typeIndex.clear();
+    this.lowercaseCache.clear();
   }
 
   /**
@@ -208,6 +246,9 @@ export class GraphStorage {
 
     // Update cache directly with the saved graph (avoid re-reading from disk)
     this.cache = graph;
+
+    // Rebuild indexes with new graph data
+    this.buildIndexes(graph.entities);
 
     // Reset pending appends since file is now clean
     this.pendingAppends = 0;
@@ -263,6 +304,12 @@ export class GraphStorage {
 
     // Update cache in-place
     this.cache!.entities.push(entity);
+
+    // Update indexes
+    this.nameIndex.add(entity);
+    this.typeIndex.add(entity);
+    this.lowercaseCache.set(entity);
+
     this.pendingAppends++;
 
     // Clear search caches
@@ -374,8 +421,16 @@ export class GraphStorage {
 
     // Update cache in-place
     const entity = this.cache!.entities[entityIndex];
+    const oldType = entity.entityType;
     Object.assign(entity, updates);
     entity.lastModified = new Date().toISOString();
+
+    // Update indexes
+    this.nameIndex.add(entity); // Update reference
+    if (updates.entityType && updates.entityType !== oldType) {
+      this.typeIndex.updateType(entityName, oldType, updates.entityType);
+    }
+    this.lowercaseCache.set(entity); // Recompute lowercase
 
     // Append updated version to file
     const entityData: Record<string, unknown> = {
@@ -431,6 +486,7 @@ export class GraphStorage {
    */
   clearCache(): void {
     this.cache = null;
+    this.clearIndexes();
   }
 
   /**
@@ -440,5 +496,71 @@ export class GraphStorage {
    */
   getFilePath(): string {
     return this.memoryFilePath;
+  }
+
+  // ==================== Index Accessors ====================
+
+  /**
+   * Get an entity by name in O(1) time.
+   *
+   * OPTIMIZED: Uses NameIndex for constant-time lookup.
+   *
+   * @param name - Entity name to look up
+   * @returns Entity if found, undefined otherwise
+   */
+  getEntityByName(name: string): Entity | undefined {
+    return this.nameIndex.get(name);
+  }
+
+  /**
+   * Check if an entity exists by name in O(1) time.
+   *
+   * @param name - Entity name to check
+   * @returns True if entity exists
+   */
+  hasEntity(name: string): boolean {
+    return this.nameIndex.has(name);
+  }
+
+  /**
+   * Get all entities of a given type in O(1) time.
+   *
+   * OPTIMIZED: Uses TypeIndex for constant-time lookup of entity names,
+   * then uses NameIndex for O(1) entity retrieval.
+   *
+   * @param entityType - Entity type to filter by (case-insensitive)
+   * @returns Array of entities with the given type
+   */
+  getEntitiesByType(entityType: string): Entity[] {
+    const names = this.typeIndex.getNames(entityType);
+    const entities: Entity[] = [];
+    for (const name of names) {
+      const entity = this.nameIndex.get(name);
+      if (entity) {
+        entities.push(entity);
+      }
+    }
+    return entities;
+  }
+
+  /**
+   * Get pre-computed lowercase data for an entity.
+   *
+   * OPTIMIZED: Avoids repeated toLowerCase() calls during search.
+   *
+   * @param entityName - Entity name to get lowercase data for
+   * @returns LowercaseData if entity exists, undefined otherwise
+   */
+  getLowercased(entityName: string): LowercaseData | undefined {
+    return this.lowercaseCache.get(entityName);
+  }
+
+  /**
+   * Get all unique entity types in the graph.
+   *
+   * @returns Array of unique entity types (lowercase)
+   */
+  getEntityTypes(): string[] {
+    return this.typeIndex.getTypes();
   }
 }

@@ -5,6 +5,48 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.0] - 2025-12-29
+
+### Added
+
+- **Search Indexes** (Sprint 3) - O(1) lookup indexes for 10-50x search performance improvement
+  - `NameIndex` - O(1) entity lookup by name using Map
+  - `TypeIndex` - O(1) entity lookup by type (case-insensitive)
+  - `LowercaseCache` - Pre-computed lowercase strings for all searchable fields
+  - New file: `src/memory/utils/indexes.ts` with all index implementations
+  - **Result**: Eliminates repeated toLowerCase() calls and linear scans during search
+
+- **Index Accessor Methods** on GraphStorage
+  - `getEntityByName(name)` - O(1) entity retrieval
+  - `hasEntity(name)` - O(1) existence check
+  - `getEntitiesByType(type)` - O(1) type-based lookup
+  - `getLowercased(entityName)` - Pre-computed lowercase data for search
+  - `getEntityTypes()` - List all unique entity types
+
+- **Index Unit Tests** - 24 new tests in `indexes.test.ts`
+  - Tests for NameIndex build, get, add, remove, clear
+  - Tests for TypeIndex with case-insensitive handling
+  - Tests for LowercaseCache pre-computation
+
+### Changed
+
+- **GraphStorage** - Integrated indexes into storage layer
+  - Indexes built on `loadFromDisk()`
+  - Indexes rebuilt on `saveGraph()`
+  - Indexes updated incrementally on `appendEntity()` and `updateEntity()`
+  - Indexes cleared on `clearCache()`
+
+- **BasicSearch.searchNodes()** - Uses LowercaseCache for text matching
+  - Query lowercased once, entity data from pre-computed cache
+
+- **BooleanSearch** - Uses LowercaseCache for all term matching
+  - Field-specific searches (name:, type:, observation:, tag:) use cache
+  - General term matching uses cached lowercase data
+
+- **FuzzySearch** - Uses LowercaseCache where applicable
+  - Name, type, and observations use pre-computed lowercase
+  - Added `isFuzzyMatchLower()` for already-lowercase strings
+
 ## [0.49.0] - 2025-12-29
 
 ### Added

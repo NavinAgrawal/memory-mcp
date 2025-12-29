@@ -56,7 +56,17 @@ export class BasicSearch {
     const queryLower = query.toLowerCase();
 
     // First filter by text match (search-specific)
+    // OPTIMIZED: Uses pre-computed lowercase cache to avoid repeated toLowerCase() calls
     const textMatched = graph.entities.filter(e => {
+      const lowercased = this.storage.getLowercased(e.name);
+      if (lowercased) {
+        return (
+          lowercased.name.includes(queryLower) ||
+          lowercased.entityType.includes(queryLower) ||
+          lowercased.observations.some(o => o.includes(queryLower))
+        );
+      }
+      // Fallback for entities not in cache (shouldn't happen in normal use)
       return (
         e.name.toLowerCase().includes(queryLower) ||
         e.entityType.toLowerCase().includes(queryLower) ||

@@ -247,39 +247,55 @@ export class BooleanSearch {
 
       case 'TERM': {
         const value = node.value;
+        // OPTIMIZED: Use pre-computed lowercase cache
+        const lowercased = this.storage.getLowercased(entity.name);
 
         // Field-specific search
         if (node.field) {
           switch (node.field) {
             case 'name':
-              return entity.name.toLowerCase().includes(value);
+              return lowercased ? lowercased.name.includes(value) : entity.name.toLowerCase().includes(value);
             case 'type':
             case 'entitytype':
-              return entity.entityType.toLowerCase().includes(value);
+              return lowercased ? lowercased.entityType.includes(value) : entity.entityType.toLowerCase().includes(value);
             case 'observation':
             case 'observations':
-              return entity.observations.some(obs => obs.toLowerCase().includes(value));
+              return lowercased
+                ? lowercased.observations.some(obs => obs.includes(value))
+                : entity.observations.some(obs => obs.toLowerCase().includes(value));
             case 'tag':
             case 'tags':
-              return entity.tags ? entity.tags.some(tag => tag.toLowerCase().includes(value)) : false;
+              return lowercased
+                ? lowercased.tags.some(tag => tag.includes(value))
+                : (entity.tags?.some(tag => tag.toLowerCase().includes(value)) || false);
             default:
               // Unknown field, search all text fields
-              return this.entityMatchesTerm(entity, value);
+              return this.entityMatchesTerm(entity, value, lowercased);
           }
         }
 
         // General search across all fields
-        return this.entityMatchesTerm(entity, value);
+        return this.entityMatchesTerm(entity, value, lowercased);
       }
     }
   }
 
   /**
    * Check if entity matches a search term in any text field.
+   * OPTIMIZED: Uses pre-computed lowercase data when available.
    */
-  private entityMatchesTerm(entity: Entity, term: string): boolean {
-    const termLower = term.toLowerCase();
+  private entityMatchesTerm(entity: Entity, term: string, lowercased?: ReturnType<typeof this.storage.getLowercased>): boolean {
+    if (lowercased) {
+      return (
+        lowercased.name.includes(term) ||
+        lowercased.entityType.includes(term) ||
+        lowercased.observations.some(obs => obs.includes(term)) ||
+        lowercased.tags.some(tag => tag.includes(term))
+      );
+    }
 
+    // Fallback for entities not in cache
+    const termLower = term.toLowerCase();
     return (
       entity.name.toLowerCase().includes(termLower) ||
       entity.entityType.toLowerCase().includes(termLower) ||

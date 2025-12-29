@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (407 tests)
+npm test              # Run tests with coverage (431 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.49.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.50.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -48,7 +48,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 54 TypeScript files
+### Source Structure (src/memory/) - 55 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
@@ -57,7 +57,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 | **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
 | **types/** | 6 | Entity, relation, search, analytics, tag, import-export type definitions |
-| **utils/** | 17 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination, caching |
+| **utils/** | 18 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination, caching, indexes |
 | **root** | 2 | index.ts (entry point), memory/ subfolder entry |
 
 ### Key Design Patterns

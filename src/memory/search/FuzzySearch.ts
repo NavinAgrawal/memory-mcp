@@ -50,22 +50,31 @@ export class FuzzySearch {
     limit: number = SEARCH_LIMITS.DEFAULT
   ): Promise<KnowledgeGraph> {
     const graph = await this.storage.loadGraph();
+    const queryLower = query.toLowerCase();
 
     // First filter by fuzzy text match (search-specific)
+    // OPTIMIZED: Uses pre-computed lowercase cache where applicable
     const fuzzyMatched = graph.entities.filter(e => {
-      return (
-        this.isFuzzyMatch(e.name, query, threshold) ||
-        this.isFuzzyMatch(e.entityType, query, threshold) ||
-        e.observations.some(
-          o =>
-            // For observations, split into words and check each word
-            o
-              .toLowerCase()
-              .split(/\s+/)
-              .some(word => this.isFuzzyMatch(word, query, threshold)) ||
-            // Also check if the observation contains the query
-            this.isFuzzyMatch(o, query, threshold)
-        )
+      const lowercased = this.storage.getLowercased(e.name);
+
+      // Check name match (use pre-computed lowercase)
+      const nameLower = lowercased?.name ?? e.name.toLowerCase();
+      if (this.isFuzzyMatchLower(nameLower, queryLower, threshold)) return true;
+
+      // Check type match (use pre-computed lowercase)
+      const typeLower = lowercased?.entityType ?? e.entityType.toLowerCase();
+      if (this.isFuzzyMatchLower(typeLower, queryLower, threshold)) return true;
+
+      // Check observations (use pre-computed lowercase array)
+      const obsLower = lowercased?.observations ?? e.observations.map(o => o.toLowerCase());
+      return obsLower.some(
+        o =>
+          // For observations, split into words and check each word
+          o
+            .split(/\s+/)
+            .some(word => this.isFuzzyMatchLower(word, queryLower, threshold)) ||
+          // Also check if the observation contains the query
+          this.isFuzzyMatchLower(o, queryLower, threshold)
       );
     });
 
@@ -105,6 +114,20 @@ export class FuzzySearch {
     const s1 = str1.toLowerCase();
     const s2 = str2.toLowerCase();
 
+    return this.isFuzzyMatchLower(s1, s2, threshold);
+  }
+
+  /**
+   * Check if two already-lowercase strings match with fuzzy logic.
+   *
+   * OPTIMIZED: Skips toLowerCase() calls when strings are already lowercase.
+   *
+   * @param s1 - First string (already lowercase)
+   * @param s2 - Second string (already lowercase)
+   * @param threshold - Similarity threshold (0.0 to 1.0)
+   * @returns True if strings match fuzzily
+   */
+  private isFuzzyMatchLower(s1: string, s2: string, threshold: number = 0.7): boolean {
     // Exact match
     if (s1 === s2) return true;
 
