@@ -5,6 +5,30 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.0] - 2025-12-29
+
+### Changed
+
+- **Manager Consolidation** (Sprint 4) - Reduced manager count for simpler architecture
+  - **EntityManager** now handles all entity operations including:
+    - Entity CRUD (create, read, update, delete)
+    - Observations (add, delete)
+    - Tags (add, remove, set importance, bulk operations)
+    - Hierarchy (setParent, getChildren, getParent, getAncestors, getDescendants, getSubtree, getRootEntities, getEntityDepth, moveEntity)
+  - **HierarchyManager** merged into EntityManager (265 lines → 0)
+  - **ObservationManager** removed (was already unused, functionality in EntityManager)
+  - **TagManager** kept separate (manages tag aliases in separate `tag-aliases.jsonl` file)
+
+- **KnowledgeGraphManager** - Updated to use EntityManager for hierarchy operations
+  - Removed HierarchyManager lazy getter
+  - All hierarchy methods now delegate to EntityManager
+  - Manager count reduced from 10 to 8
+
+### Removed
+
+- `src/memory/features/HierarchyManager.ts` - Merged into EntityManager
+- `src/memory/core/ObservationManager.ts` - Functionality already in EntityManager
+
 ## [0.50.0] - 2025-12-29
 
 ### Added

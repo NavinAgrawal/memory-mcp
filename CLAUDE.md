@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.50.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.51.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -39,7 +39,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ┌──────────────────┴──────────────────────┐
 │  Layer 2: Managers (Facade Pattern)     │
 │  core/KnowledgeGraphManager.ts          │
-│  + 10 specialized managers (lazy init)  │
+│  + 8 specialized managers (lazy init)   │
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────┴──────────────────────┐
@@ -48,12 +48,12 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 55 TypeScript files
+### Source Structure (src/memory/) - 53 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 7 | KnowledgeGraphManager (facade), EntityManager, RelationManager, GraphStorage, ObservationManager, TransactionManager |
-| **features/** | 9 | HierarchyManager, CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, BackupManager |
+| **core/** | 5 | KnowledgeGraphManager (facade), EntityManager (CRUD + hierarchy), RelationManager, GraphStorage, TransactionManager |
+| **features/** | 7 | CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, BackupManager |
 | **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
 | **types/** | 6 | Entity, relation, search, analytics, tag, import-export type definitions |
@@ -63,7 +63,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ### Key Design Patterns
 
 1. **Facade Pattern**: KnowledgeGraphManager delegates to specialized managers
-2. **Lazy Initialization**: 10 managers instantiated on-demand
+2. **Lazy Initialization**: 8 managers instantiated on-demand
 3. **Dependency Injection**: GraphStorage injected into managers
 4. **Handler Registry**: Tool handlers mapped in toolHandlers.ts
 5. **Barrel Exports**: Each module exports via index.ts
@@ -125,7 +125,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (407 tests, 15 files):
+Tests are in `src/memory/__tests__/` (431 tests, 16 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -134,7 +134,7 @@ Tests are in `src/memory/__tests__/` (407 tests, 15 files):
 | integration/workflows.test.ts | 12 | End-to-end workflows |
 | knowledge-graph.test.ts | 30 | Core graph operations |
 | performance/benchmarks.test.ts | 18 | Performance validation |
-| performance/write-performance.test.ts | 16 | Write optimization tests |
+| performance/write-performance.test.ts | 17 | Write optimization tests |
 | unit/core/EntityManager.test.ts | 31 | Entity CRUD |
 | unit/core/GraphStorage.test.ts | 10 | Storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
@@ -143,6 +143,7 @@ Tests are in `src/memory/__tests__/` (407 tests, 15 files):
 | unit/search/BooleanSearch.test.ts | 52 | AND/OR/NOT queries |
 | unit/search/FuzzySearch.test.ts | 53 | Levenshtein matching |
 | unit/search/RankedSearch.test.ts | 35 | TF-IDF ranking |
+| unit/utils/indexes.test.ts | 24 | Search index tests |
 | unit/utils/levenshtein.test.ts | 12 | String distance |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.

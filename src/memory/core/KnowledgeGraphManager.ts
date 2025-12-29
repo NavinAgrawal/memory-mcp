@@ -17,7 +17,6 @@ import { EntityManager } from './EntityManager.js';
 import { RelationManager } from './RelationManager.js';
 import { SearchManager } from '../search/SearchManager.js';
 import { CompressionManager } from '../features/CompressionManager.js';
-import { HierarchyManager } from '../features/HierarchyManager.js';
 import { ExportManager } from '../features/ExportManager.js';
 import { ImportManager } from '../features/ImportManager.js';
 import { AnalyticsManager } from '../features/AnalyticsManager.js';
@@ -42,11 +41,10 @@ import type {
  *
  * This class serves as the main facade for interacting with the knowledge graph,
  * delegating to specialized managers for different concerns:
- * - EntityManager: Entity CRUD operations
+ * - EntityManager: Entity CRUD, observations, tags, and hierarchy operations
  * - RelationManager: Relation CRUD operations
  * - SearchManager: All search operations (basic, ranked, boolean, fuzzy)
  * - CompressionManager: Duplicate detection and merging
- * - HierarchyManager: Parent-child relationships and tree operations
  * - ExportManager: Export to various formats
  * - ImportManager: Import from various formats
  * - AnalyticsManager: Statistics and validation
@@ -63,7 +61,6 @@ export class KnowledgeGraphManager {
   private _relationManager?: RelationManager;
   private _searchManager?: SearchManager;
   private _compressionManager?: CompressionManager;
-  private _hierarchyManager?: HierarchyManager;
   private _exportManager?: ExportManager;
   private _importManager?: ImportManager;
   private _analyticsManager?: AnalyticsManager;
@@ -95,10 +92,6 @@ export class KnowledgeGraphManager {
 
   private get compressionManager(): CompressionManager {
     return (this._compressionManager ??= new CompressionManager(this.storage));
-  }
-
-  private get hierarchyManager(): HierarchyManager {
-    return (this._hierarchyManager ??= new HierarchyManager(this.storage));
   }
 
   private get exportManager(): ExportManager {
@@ -351,63 +344,63 @@ export class KnowledgeGraphManager {
    * @returns Updated entity
    */
   async setEntityParent(entityName: string, parentName: string | null): Promise<Entity> {
-    return this.hierarchyManager.setEntityParent(entityName, parentName);
+    return this.entityManager.setEntityParent(entityName, parentName);
   }
 
   /**
    * Get the immediate children of an entity
    */
   async getChildren(entityName: string): Promise<Entity[]> {
-    return this.hierarchyManager.getChildren(entityName);
+    return this.entityManager.getChildren(entityName);
   }
 
   /**
    * Get the parent of an entity
    */
   async getParent(entityName: string): Promise<Entity | null> {
-    return this.hierarchyManager.getParent(entityName);
+    return this.entityManager.getParent(entityName);
   }
 
   /**
    * Get all ancestors of an entity (parent, grandparent, etc.)
    */
   async getAncestors(entityName: string): Promise<Entity[]> {
-    return this.hierarchyManager.getAncestors(entityName);
+    return this.entityManager.getAncestors(entityName);
   }
 
   /**
    * Get all descendants of an entity (children, grandchildren, etc.)
    */
   async getDescendants(entityName: string): Promise<Entity[]> {
-    return this.hierarchyManager.getDescendants(entityName);
+    return this.entityManager.getDescendants(entityName);
   }
 
   /**
    * Get the entire subtree rooted at an entity (entity + all descendants)
    */
   async getSubtree(entityName: string): Promise<KnowledgeGraph> {
-    return this.hierarchyManager.getSubtree(entityName);
+    return this.entityManager.getSubtree(entityName);
   }
 
   /**
    * Get root entities (entities with no parent)
    */
   async getRootEntities(): Promise<Entity[]> {
-    return this.hierarchyManager.getRootEntities();
+    return this.entityManager.getRootEntities();
   }
 
   /**
    * Get the depth of an entity in the hierarchy (0 for root, 1 for child of root, etc.)
    */
   async getEntityDepth(entityName: string): Promise<number> {
-    return this.hierarchyManager.getEntityDepth(entityName);
+    return this.entityManager.getEntityDepth(entityName);
   }
 
   /**
    * Move an entity to a new parent (maintaining its descendants)
    */
   async moveEntity(entityName: string, newParentName: string | null): Promise<Entity> {
-    return this.hierarchyManager.moveEntity(entityName, newParentName);
+    return this.entityManager.moveEntity(entityName, newParentName);
   }
 
   // Phase 3: Memory compression - duplicate detection and merging
