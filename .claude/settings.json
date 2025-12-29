@@ -1,0 +1,144 @@
+{
+  "project": {
+    "name": "MCP Servers Collection",
+    "description": "Collection of 13 specialized Model Context Protocol servers (9 local + 4 global packages)",
+    "type": "multi-server-repository"
+  },
+  "defaultServer": "memory-mcp",
+  "enabledServers": [
+    "deepthinking-mcp",
+    "math-mcp",
+    "memory-mcp",
+    "fzf-mcp",
+    "sequential-thinking-mcp",
+    "playwright",
+    "time",
+    "windows-mcp"
+  ],
+  "disabledServers": [
+    "everything-mcp",
+    "substack-mcp"
+  ],
+  "platformSpecific": {
+    "windows": {
+      "required": ["everything-mcp"],
+      "optional": []
+    },
+    "crossPlatform": [
+      "deepthinking-mcp",
+      "fzf-mcp",
+      "math-mcp",
+      "memory-mcp",
+      "fermat-mcp",
+      "remember-mcp",
+      "substack-mcp"
+    ]
+  },
+  "serverCategories": {
+    "reasoning": ["deepthinking-mcp", "sequential-thinking-mcp"],
+    "mathematics": ["math-mcp", "fermat-mcp"],
+    "memory": ["memory-mcp", "remember-mcp"],
+    "search": ["everything-mcp", "fzf-mcp"],
+    "integration": ["substack-mcp"],
+    "automation": ["playwright", "windows-mcp"],
+    "utilities": ["time"]
+  },
+  "buildRequirements": {
+    "typescript": {
+      "servers": ["deepthinking-mcp", "math-mcp", "memory-mcp", "substack-mcp"],
+      "buildCommand": "npm run build",
+      "entryPoint": "dist/"
+    },
+    "javascript": {
+      "servers": ["everything-mcp", "fzf-mcp"],
+      "buildCommand": null,
+      "entryPoint": "index.js"
+    },
+    "python": {
+      "servers": ["fermat-mcp", "remember-mcp", "time"],
+      "buildCommand": null,
+      "entryPoint": "server.py",
+      "pythonVersion": "3.12+"
+    },
+    "globalPackages": {
+      "servers": ["sequential-thinking-mcp", "playwright", "windows-mcp"],
+      "note": "Installed globally via npm install -g <package>"
+    }
+  },
+  "dependencies": {
+    "external": {
+      "everything-mcp": {
+        "name": "Everything",
+        "executable": "es.exe",
+        "platform": "windows",
+        "url": "https://www.voidtools.com/"
+      },
+      "fzf-mcp": {
+        "name": "fzf",
+        "executable": "fzf",
+        "autoInstall": true,
+        "note": "Auto-downloads during npm install"
+      }
+    },
+    "wasm": {
+      "math-mcp": {
+        "buildCommand": "cd wasm && npm install && npx gulp",
+        "files": ["wasm/build/release.wasm", "wasm/build/debug.wasm"]
+      }
+    }
+  },
+  "testing": {
+    "deepthinking-mcp": {
+      "framework": "vitest",
+      "coverage": true,
+      "command": "npm test",
+      "testCount": "791+"
+    },
+    "math-mcp": {
+      "framework": "vitest",
+      "tests": ["integration", "unit", "security", "correctness"],
+      "totalTests": "119+ security tests"
+    },
+    "memory-mcp": {
+      "framework": "vitest",
+      "tests": "396+",
+      "coverage": true
+    },
+    "substack-mcp": {
+      "framework": "jest",
+      "types": ["unit", "integration", "e2e"]
+    }
+  },
+  "performance": {
+    "math-mcp": {
+      "acceleration": "WASM + WebWorkers",
+      "speedup": "up to 1920x",
+      "metrics": "Prometheus on port 9090"
+    },
+    "memory-mcp": {
+      "optimization": "In-memory caching, 50x faster duplicate detection"
+    },
+    "deepthinking-mcp": {
+      "features": "LRU caching, rate limiting, input validation",
+      "modes": "33 reasoning modes (21 fully implemented + 12 experimental) including meta-reasoning"
+    }
+  },
+  "documentation": {
+    "localCLAUDEmd": [
+      "deepthinking-mcp",
+      "math-mcp",
+      "memory-mcp",
+      "substack-mcp"
+    ],
+    "readmeOnly": [
+      "everything-mcp",
+      "fermat-mcp",
+      "fzf-mcp",
+      "remember-mcp",
+      "sequential-thinking-mcp",
+      "playwright",
+      "time",
+      "windows-mcp"
+    ]
+  }
+}
