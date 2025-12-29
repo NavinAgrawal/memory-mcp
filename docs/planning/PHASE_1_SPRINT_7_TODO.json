@@ -1,0 +1,110 @@
+{
+  "phase": 1,
+  "sprint": 7,
+  "title": "Optimize TF-IDF Index",
+  "priority": "MEDIUM",
+  "effort": "7-8 hours",
+  "status": "pending",
+  "impact": "Faster ranked search, reduced memory",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Search Layer",
+      "description": "Implement lazy-loading for TF-IDF index - Build index only on first ranked search, cache and reuse, rebuild only when entity count changes",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/search/TFIDFIndexManager.ts"],
+      "codeSnippet": "export class TFIDFIndexManager {\n  private index: TFIDFIndex | null = null;\n  private lastEntityCount = 0;\n\n  async getIndex(entities: Entity[]): Promise<TFIDFIndex> {\n    if (this.index && entities.length === this.lastEntityCount) {\n      return this.index;\n    }\n    this.index = this.buildIndex(entities);\n    this.lastEntityCount = entities.length;\n    return this.index;\n  }\n}",
+      "acceptanceCriteria": [
+        "Index built on first ranked search only",
+        "Index cached and reused",
+        "Index invalidated on mutations",
+        "Rebuild only when entity count changes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Search Layer",
+      "description": "Implement incremental TF-IDF updates - Add addEntity() and removeEntity() methods for O(1) index updates instead of full rebuild",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/search/TFIDFIndexManager.ts"],
+      "codeSnippet": "addEntity(entity: Entity): void {\n  if (!this.index) return;\n  const terms = this.tokenize(this.getSearchableText(entity));\n  for (const term of new Set(terms)) {\n    this.index.documentFrequency.set(term, (this.index.documentFrequency.get(term) || 0) + 1);\n  }\n  this.index.termFrequencies.set(entity.name, this.countTerms(terms));\n  this.index.documentCount++;\n}",
+      "acceptanceCriteria": [
+        "addEntity() updates index incrementally",
+        "removeEntity() updates index incrementally",
+        "No full rebuild on single entity changes",
+        "All ranked search tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core Infrastructure",
+      "description": "Integrate TF-IDF with GraphStorage events - Call addEntity/removeEntity on mutations, invalidate on cache clear",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/core/GraphStorage.ts"],
+      "acceptanceCriteria": [
+        "TF-IDF updated on entity add",
+        "TF-IDF updated on entity update",
+        "TF-IDF invalidated on cache clear",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Search Layer",
+      "description": "Optimize TF-IDF memory usage - Use numeric term IDs instead of strings, use Uint16Array for small counts, implement vocabulary pruning (remove terms in < 2 docs)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/search/TFIDFIndexManager.ts"],
+      "acceptanceCriteria": [
+        "Reduced memory footprint",
+        "Vocabulary pruning implemented",
+        "Performance maintained",
+        "All ranked search tests pass"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Testing",
+      "description": "Add TF-IDF performance tests - Create tests for index build time (< 100ms for 1000 entities), incremental update time (< 1ms), search time (< 10ms), memory usage (< 10MB for 10000 entities)",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/performance/tfidf-performance.test.ts"],
+      "testCases": [
+        "should build index in < 100ms for 1000 entities",
+        "should update incrementally in < 1ms",
+        "should search in < 10ms for 1000 entities",
+        "should use < 10MB for 10000 entities"
+      ],
+      "acceptanceCriteria": [
+        "4+ TF-IDF performance tests",
+        "Tests validate target performance",
+        "Memory usage tested"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "TF-IDF index lazy-loaded",
+    "Incremental updates working",
+    "Memory usage optimized",
+    "Build time < 100ms for 1000 entities",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "src/memory/search/TFIDFIndexManager.ts",
+    "src/memory/core/GraphStorage.ts"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/performance/tfidf-performance.test.ts"
+  ],
+  "totalEstimatedHours": 7.5,
+  "dependencies": ["Sprint 3"],
+  "notes": "This sprint optimizes the TF-IDF index used for ranked search. Currently the index is built eagerly and fully rebuilt on changes. After this sprint, the index is lazy-loaded and updated incrementally."
+}

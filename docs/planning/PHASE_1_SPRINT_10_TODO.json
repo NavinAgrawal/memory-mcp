@@ -1,0 +1,91 @@
+{
+  "phase": 1,
+  "sprint": 10,
+  "title": "Final Cleanup and Verification",
+  "priority": "LOW",
+  "effort": "3-4 hours",
+  "status": "pending",
+  "impact": "Polish and verification",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Verification",
+      "description": "Run full test suite and fix any failures - Execute typecheck, all tests, and build to verify zero errors",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "commands": [
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "acceptanceCriteria": [
+        "Zero TypeScript errors",
+        "All 396+ tests pass",
+        "Build succeeds",
+        "No console warnings"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Verification",
+      "description": "Run performance benchmarks and document results - Verify target metrics (read < 0.1ms, search < 2ms, add < 5ms, memory < 1.2x graph)",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "targetMetrics": {
+        "readLatency1000Entities": "< 0.1ms",
+        "searchLatencySimpleQuery": "< 2ms",
+        "addEntityLatency": "< 5ms",
+        "memoryUsage": "< 1.2x graph size"
+      },
+      "acceptanceCriteria": [
+        "All performance targets met",
+        "Benchmark results documented",
+        "No performance regressions"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Release",
+      "description": "Update package version and changelog - Bump version to 0.12.0, document all changes in CHANGELOG.md, update CLAUDE.md version reference",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["package.json", "CHANGELOG.md", "CLAUDE.md"],
+      "acceptanceCriteria": [
+        "Version bumped to 0.12.0",
+        "CHANGELOG updated with all changes",
+        "All references consistent"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Release",
+      "description": "Create git commit with comprehensive summary - Commit all changes with detailed message summarizing performance improvements",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "commitMessage": "feat: Phase 1 performance refactoring\n\n- Eliminate deep copying on reads (100x improvement)\n- Add append-only writes (4x improvement)\n- Add indexes for O(1) lookups\n- Consolidate managers (10 → 4)\n- Standardize error handling\n- Optimize TF-IDF index\n\nPerformance improvements:\n- Read latency: 15ms → 0.1ms\n- Search latency: 25ms → 2ms\n- Write latency: 20ms → 5ms\n- Memory usage: -45%\n- Code lines: -44%",
+      "acceptanceCriteria": [
+        "Clean commit history",
+        "Meaningful commit message",
+        "All changes included"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All tests passing",
+    "All performance targets met",
+    "Version and changelog updated",
+    "Clean commit ready for release"
+  ],
+  "filesModified": [
+    "package.json",
+    "CHANGELOG.md",
+    "CLAUDE.md"
+  ],
+  "totalEstimatedHours": 3.5,
+  "dependencies": ["Sprint 9"],
+  "notes": "This is the final sprint - verification and release preparation. All previous sprints must be complete before this sprint. The commit message should summarize all the improvements made in Phase 1."
+}

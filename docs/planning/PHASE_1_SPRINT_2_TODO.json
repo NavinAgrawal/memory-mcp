@@ -1,0 +1,110 @@
+{
+  "phase": 1,
+  "sprint": 2,
+  "title": "Fix Write Amplification",
+  "priority": "HIGH",
+  "effort": "8-9 hours",
+  "status": "pending",
+  "impact": "4-10x write performance improvement",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core Infrastructure",
+      "description": "Implement append-only write mode for single mutations in GraphStorage - Add appendEntity() and appendRelation() methods that append to file instead of rewriting, implement automatic compaction after threshold",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphStorage.ts"],
+      "codeSnippet": "async appendEntity(entity: Entity): Promise<void> {\n  const line = JSON.stringify({ type: 'entity', ...entity });\n  await fs.appendFile(this.memoryFilePath, '\\n' + line);\n  this.cache?.entities.push(entity);\n  if (this.pendingWrites.length >= this.compactionThreshold) {\n    await this.compact();\n  }\n}",
+      "acceptanceCriteria": [
+        "appendEntity() and appendRelation() methods implemented",
+        "Append-only writes for add operations",
+        "Cache updated in-place after append",
+        "Automatic compaction after threshold (100 appends)",
+        "All storage tests pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core Infrastructure",
+      "description": "Implement update-in-place for entity modifications - Add updateEntity() method that updates cache in-place and appends new version, deferred compaction",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphStorage.ts"],
+      "acceptanceCriteria": [
+        "updateEntity() method implemented",
+        "Updates modify cache in-place",
+        "Updates append to file (deferred compaction)",
+        "Benchmark shows 5x+ improvement for single updates"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core Infrastructure",
+      "description": "Update EntityManager to use append operations - Modify createEntities() to use appendEntity(), addObservations/setImportance/addTags to use updateEntity()",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/core/EntityManager.ts"],
+      "methodsToUpdate": ["createEntities()", "addObservations()", "setImportance()", "addTags()"],
+      "acceptanceCriteria": [
+        "Creation uses append operations",
+        "Updates use in-place modification + append",
+        "Delete still uses full rewrite (acceptable)",
+        "All EntityManager tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core Infrastructure",
+      "description": "Update ObservationManager to use append operations - Modify addObservations() to use updateEntity() for each modified entity",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/core/ObservationManager.ts"],
+      "acceptanceCriteria": [
+        "addObservations() uses append pattern",
+        "All observation tests pass",
+        "Benchmark confirms improved latency"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Testing",
+      "description": "Add write performance benchmark tests - Create new test file validating O(1) append operations and compaction behavior",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/performance/write-performance.test.ts"],
+      "testCases": [
+        "should add single entity without full rewrite (< 10ms for 1000-entity graph)",
+        "should add observation without full rewrite (O(1))",
+        "should compact after threshold writes (verify file is clean after)"
+      ],
+      "acceptanceCriteria": [
+        "3+ write performance tests",
+        "Tests validate O(1) append operations",
+        "Tests validate compaction behavior"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Add operations use append-only writes",
+    "Update operations modify cache in-place",
+    "Automatic compaction prevents file bloat",
+    "Write latency < 5ms for single operations",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "src/memory/core/GraphStorage.ts",
+    "src/memory/core/EntityManager.ts",
+    "src/memory/core/ObservationManager.ts"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/performance/write-performance.test.ts"
+  ],
+  "totalEstimatedHours": 8.5,
+  "dependencies": ["Sprint 1"],
+  "notes": "This sprint addresses the write amplification problem where every mutation rewrites the entire file. After this sprint, add operations are O(1) file appends. Delete operations still require full rewrite which is acceptable for their lower frequency."
+}

@@ -1,0 +1,114 @@
+{
+  "phase": 1,
+  "sprint": 3,
+  "title": "Add Indexes for Search Performance",
+  "priority": "HIGH",
+  "effort": "8-9 hours",
+  "status": "pending",
+  "impact": "10-50x search performance improvement",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Utilities",
+      "description": "Create NameIndex for O(1) entity lookup - Implement Map-based index with build(), get(), add(), remove(), has() methods",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/utils/indexes.ts"],
+      "codeSnippet": "export class NameIndex {\n  private index: Map<string, Entity> = new Map();\n  build(entities: Entity[]): void { ... }\n  get(name: string): Entity | undefined { return this.index.get(name); }\n  add(entity: Entity): void { this.index.set(entity.name, entity); }\n  remove(name: string): void { this.index.delete(name); }\n}",
+      "acceptanceCriteria": [
+        "NameIndex class implemented",
+        "O(1) get/add/remove/has operations",
+        "Integrated with GraphStorage cache",
+        "Invalidated on full graph reload"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Utilities",
+      "description": "Create TypeIndex for efficient type-based queries - Implement Map<type, Set<entityNames>> index with case-insensitive type handling",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/utils/indexes.ts"],
+      "acceptanceCriteria": [
+        "TypeIndex class implemented",
+        "O(1) type lookup",
+        "Handles case-insensitive types",
+        "5+ unit tests"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Utilities",
+      "description": "Create LowercaseCache to avoid repeated toLowerCase() calls - Pre-compute lowercase versions of all searchable fields (name, type, observations, tags)",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/utils/indexes.ts"],
+      "acceptanceCriteria": [
+        "LowercaseCache class implemented",
+        "Pre-computed lowercase for all searchable fields",
+        "Updated on entity modifications",
+        "5+ unit tests"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core Infrastructure",
+      "description": "Integrate indexes with GraphStorage - Add all three indexes to GraphStorage, build on graph load, update on mutations, expose accessor methods",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphStorage.ts"],
+      "codeSnippet": "export class GraphStorage {\n  private nameIndex: NameIndex = new NameIndex();\n  private typeIndex: TypeIndex = new TypeIndex();\n  private lowercaseCache: LowercaseCache = new LowercaseCache();\n  \n  getEntityByName(name: string): Entity | undefined { ... }\n  getEntitiesByType(type: string): Entity[] { ... }\n  getLowercased(name: string) { ... }\n}",
+      "acceptanceCriteria": [
+        "All three indexes integrated into GraphStorage",
+        "Indexes built on graph load",
+        "Indexes updated on mutations",
+        "Indexes cleared on cache invalidation",
+        "All existing tests pass"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Search Layer",
+      "description": "Update search classes to use indexes - Modify BasicSearch, BooleanSearch, FuzzySearch to use getLowercased() and getEntitiesByType()",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/search/BasicSearch.ts",
+        "src/memory/search/BooleanSearch.ts",
+        "src/memory/search/FuzzySearch.ts"
+      ],
+      "codeSnippet": "private entityMatchesTerm(entity: Entity, term: string): boolean {\n  const termLower = term.toLowerCase();\n  const lowercased = this.storage.getLowercased(entity.name);\n  return lowercased.name.includes(termLower) || lowercased.type.includes(termLower) || ...;\n}",
+      "acceptanceCriteria": [
+        "All search classes use getLowercased() for comparisons",
+        "Term is lowercased once, not per entity",
+        "Type-specific searches use getEntitiesByType()",
+        "All 177 search tests pass",
+        "Benchmark shows 10x+ search improvement"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "O(1) entity lookup by name",
+    "O(1) entities by type",
+    "No repeated toLowerCase() calls during search",
+    "Search latency < 2ms for simple queries",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "src/memory/core/GraphStorage.ts",
+    "src/memory/search/BasicSearch.ts",
+    "src/memory/search/BooleanSearch.ts",
+    "src/memory/search/FuzzySearch.ts"
+  ],
+  "filesCreated": [
+    "src/memory/utils/indexes.ts"
+  ],
+  "totalEstimatedHours": 8.5,
+  "dependencies": ["Sprint 1"],
+  "notes": "This sprint eliminates full table scans on every search. The LowercaseCache is particularly important as the current code does toLowerCase() on every entity field for every search comparison. With 10,000 entities and 10 observations each, that's 100,000+ toLowerCase() calls per search."
+}

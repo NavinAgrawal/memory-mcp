@@ -1,0 +1,109 @@
+{
+  "phase": 1,
+  "sprint": 5,
+  "title": "Simplify Server Layer",
+  "priority": "MEDIUM",
+  "effort": "7-8 hours",
+  "status": "pending",
+  "impact": "Cleaner code, easier maintenance",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Server Layer",
+      "description": "Consolidate tool handlers into category files - Split toolHandlers.ts (301 lines) into handlers/entity.ts, handlers/search.ts, handlers/graph.ts, handlers/io.ts with single registry in handlers/index.ts",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/server/toolHandlers.ts",
+        "src/memory/server/handlers/index.ts",
+        "src/memory/server/handlers/entity.ts",
+        "src/memory/server/handlers/search.ts",
+        "src/memory/server/handlers/graph.ts",
+        "src/memory/server/handlers/io.ts"
+      ],
+      "acceptanceCriteria": [
+        "Handlers organized by category",
+        "Each category file < 100 lines",
+        "Single registry in index.ts",
+        "All 47 tools still work"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Server Layer",
+      "description": "Reduce tool definition verbosity - Shorten descriptions to single line, remove redundant field descriptions in toolDefinitions.ts (760 lines)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/server/toolDefinitions.ts"],
+      "acceptanceCriteria": [
+        "All descriptions single-line, < 80 chars",
+        "Removed redundant field descriptions",
+        "File reduced from 760 to ~500 lines",
+        "All tools still validate correctly"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Server Layer",
+      "description": "Create shared schema builders - Extract common schema patterns (entityName, entityNames, importance, tags, pagination) to reduce duplication in tool definitions",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/server/schemaBuilders.ts"],
+      "codeSnippet": "export const CommonSchemas = {\n  entityName: { type: 'string', minLength: 1 },\n  entityNames: { type: 'array', items: { type: 'string' }, minItems: 1 },\n  importance: { type: 'number', minimum: 0, maximum: 10 },\n  tags: { type: 'array', items: { type: 'string' } },\n};",
+      "acceptanceCriteria": [
+        "Common schemas extracted",
+        "Builder functions for repeated patterns",
+        "Tool definitions use builders",
+        "No functionality change"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core Infrastructure",
+      "description": "Remove async from synchronous operations - Make getEntity(), getRelation(), and search helper methods synchronous when reading from cache, add async wrappers for cold-start",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/EntityManager.ts",
+        "src/memory/core/RelationManager.ts",
+        "src/memory/search/SearchManager.ts"
+      ],
+      "codeSnippet": "// Before\nasync getEntity(name: string): Promise<Entity | null> { ... }\n\n// After\ngetEntity(name: string): Entity | null {\n  return this.storage.getEntityByName(name) || null;\n}\nasync getEntityAsync(name: string): Promise<Entity | null> {\n  await this.storage.ensureLoaded();\n  return this.getEntity(name);\n}",
+      "acceptanceCriteria": [
+        "Read operations synchronous (use cache directly)",
+        "Async wrapper for cold-start cases",
+        "All tests pass",
+        "API remains compatible (async still works)"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Handler code organized by category",
+    "Tool definitions reduced by ~30%",
+    "Common patterns extracted",
+    "Synchronous operations where appropriate",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "src/memory/server/toolHandlers.ts",
+    "src/memory/server/toolDefinitions.ts",
+    "src/memory/core/EntityManager.ts",
+    "src/memory/core/RelationManager.ts",
+    "src/memory/search/SearchManager.ts"
+  ],
+  "filesCreated": [
+    "src/memory/server/handlers/index.ts",
+    "src/memory/server/handlers/entity.ts",
+    "src/memory/server/handlers/search.ts",
+    "src/memory/server/handlers/graph.ts",
+    "src/memory/server/handlers/io.ts",
+    "src/memory/server/schemaBuilders.ts"
+  ],
+  "totalEstimatedHours": 6.5,
+  "dependencies": ["Sprint 4"],
+  "notes": "This sprint cleans up the server layer. The JSDoc removal script (Task 5.5 in original plan) is optional and can be skipped if time is constrained. Focus on the handler reorganization and async/sync cleanup."
+}

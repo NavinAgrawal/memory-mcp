@@ -1,0 +1,136 @@
+{
+  "phase": 1,
+  "sprint": 4,
+  "title": "Consolidate Manager Classes",
+  "priority": "MEDIUM",
+  "effort": "9-10 hours",
+  "status": "pending",
+  "impact": "40% code reduction, simpler architecture",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Consolidation",
+      "description": "Merge EntityManager and ObservationManager - Move addObservations() and deleteObservations() into EntityManager, update all imports, delete ObservationManager.ts",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/EntityManager.ts",
+        "src/memory/core/ObservationManager.ts"
+      ],
+      "filesToDelete": ["src/memory/core/ObservationManager.ts"],
+      "acceptanceCriteria": [
+        "All observation methods in EntityManager",
+        "ObservationManager.ts deleted",
+        "All imports updated",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Consolidation",
+      "description": "Merge TagManager into EntityManager - Move addTags(), removeTags(), setImportance(), addTagsToMultipleEntities(), replaceTag(), mergeTags() into EntityManager, keep TagAliasManager separate",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/EntityManager.ts",
+        "src/memory/features/TagManager.ts"
+      ],
+      "filesToDelete": ["src/memory/features/TagManager.ts"],
+      "acceptanceCriteria": [
+        "All tag methods in EntityManager",
+        "TagManager.ts deleted",
+        "TagAliasManager remains separate",
+        "All imports updated",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Consolidation",
+      "description": "Merge HierarchyManager into EntityManager - Move all 9 hierarchy methods (setEntityParent, getChildren, getParent, getAncestors, getDescendants, getSubtree, getRootEntities, getEntityDepth, moveEntity) into EntityManager",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/EntityManager.ts",
+        "src/memory/features/HierarchyManager.ts"
+      ],
+      "filesToDelete": ["src/memory/features/HierarchyManager.ts"],
+      "acceptanceCriteria": [
+        "All hierarchy methods in EntityManager",
+        "HierarchyManager.ts deleted",
+        "All imports updated",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Consolidation",
+      "description": "Create unified SearchManager facade - Inline BasicSearch, BooleanSearch, RankedSearch, FuzzySearch logic into single SearchManager class with intelligent dispatch",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/search/SearchManager.ts",
+        "src/memory/search/BasicSearch.ts",
+        "src/memory/search/BooleanSearch.ts",
+        "src/memory/search/RankedSearch.ts",
+        "src/memory/search/FuzzySearch.ts"
+      ],
+      "filesToDelete": [
+        "src/memory/search/BasicSearch.ts",
+        "src/memory/search/BooleanSearch.ts",
+        "src/memory/search/RankedSearch.ts",
+        "src/memory/search/FuzzySearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "Single SearchManager with all search logic",
+        "BasicSearch, BooleanSearch, RankedSearch, FuzzySearch deleted",
+        "All 177 search tests pass",
+        "Code reduced by ~400 lines"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Consolidation",
+      "description": "Update KnowledgeGraphManager to use consolidated classes - Reduce from 10 lazy-loaded managers to 4 (EntityManager, RelationManager, SearchManager, ExportManager)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/core/KnowledgeGraphManager.ts"],
+      "codeSnippet": "export class KnowledgeGraphManager {\n  private _entityManager?: EntityManager;      // Entities, observations, tags, hierarchy\n  private _relationManager?: RelationManager;   // Relations\n  private _searchManager?: SearchManager;       // All search functionality\n  private _exportManager?: ExportManager;       // Import/export/backup\n  // Remove: _compressionManager, _hierarchyManager, _importManager, _analyticsManager, _tagManager, _archiveManager\n}",
+      "acceptanceCriteria": [
+        "Only 4 manager references",
+        "All delegating methods updated",
+        "All tests pass",
+        "KnowledgeGraphManager reduced from 552 lines to ~300 lines"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Manager count reduced from 10 to 4",
+    "~1,500 lines of code removed",
+    "7 files deleted",
+    "All 396+ tests pass",
+    "Architecture is simpler and easier to understand"
+  ],
+  "filesModified": [
+    "src/memory/core/EntityManager.ts",
+    "src/memory/core/KnowledgeGraphManager.ts",
+    "src/memory/search/SearchManager.ts"
+  ],
+  "filesDeleted": [
+    "src/memory/core/ObservationManager.ts",
+    "src/memory/features/TagManager.ts",
+    "src/memory/features/HierarchyManager.ts",
+    "src/memory/search/BasicSearch.ts",
+    "src/memory/search/BooleanSearch.ts",
+    "src/memory/search/RankedSearch.ts",
+    "src/memory/search/FuzzySearch.ts"
+  ],
+  "totalEstimatedHours": 9.5,
+  "dependencies": ["Sprint 2", "Sprint 3"],
+  "notes": "This sprint addresses the over-engineering problem of having 10 managers for a single JSONL file. After consolidation, the architecture is: EntityManager (entities, observations, tags, hierarchy), RelationManager (relations), SearchManager (all search), ExportManager (import/export/backup). TagAliasManager remains separate since it uses a different data file."
+}

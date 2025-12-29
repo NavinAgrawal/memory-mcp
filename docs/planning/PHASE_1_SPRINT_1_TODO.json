@@ -1,0 +1,117 @@
+{
+  "phase": 1,
+  "sprint": 1,
+  "title": "Eliminate Deep Copying (Critical Performance)",
+  "priority": "CRITICAL",
+  "effort": "7-8 hours",
+  "status": "pending",
+  "impact": "100-150x read performance improvement",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core Infrastructure",
+      "description": "Replace deep copy with read-only reference in GraphStorage.loadGraph() - Return this.cache directly instead of mapping entities/relations, add getGraphForMutation() method for write operations",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphStorage.ts"],
+      "acceptanceCriteria": [
+        "loadGraph() returns Readonly<KnowledgeGraph> without copying",
+        "New getGraphForMutation() method does shallow array copy only",
+        "All existing tests pass",
+        "Add benchmark test confirming O(1) read performance"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core Infrastructure",
+      "description": "Update EntityManager to use read-only access - Change all read operations to use loadGraph() directly, mutation operations to use getGraphForMutation()",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/core/EntityManager.ts"],
+      "methodsToUpdate": ["getEntity()", "getAllEntities()", "createEntities()", "deleteEntities()"],
+      "acceptanceCriteria": [
+        "Read methods use loadGraph() directly",
+        "Mutation methods use getGraphForMutation()",
+        "All 31 EntityManager tests pass",
+        "No external mutation of returned entities in tests"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core Infrastructure",
+      "description": "Update RelationManager to use read-only access - Same pattern as EntityManager for getRelation(), getRelationsForEntity(), createRelations(), deleteRelations()",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/core/RelationManager.ts"],
+      "acceptanceCriteria": [
+        "Read methods use loadGraph() directly",
+        "Mutation methods use getGraphForMutation()",
+        "All 24 RelationManager tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Search Layer",
+      "description": "Update all search classes to use read-only access - Remove defensive copying in BasicSearch, RankedSearch, BooleanSearch, FuzzySearch",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": [
+        "src/memory/search/BasicSearch.ts",
+        "src/memory/search/RankedSearch.ts",
+        "src/memory/search/BooleanSearch.ts",
+        "src/memory/search/FuzzySearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "All search classes use loadGraph() directly",
+        "No redundant copying in search chain",
+        "All 177 search tests pass",
+        "Benchmark shows improved search latency"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Testing",
+      "description": "Add performance benchmark tests for read operations - Create new test file validating O(1) read complexity and memory stability",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/performance/read-performance.test.ts"],
+      "testCases": [
+        "should read graph in O(1) time regardless of size (100, 1000, 5000 entities)",
+        "should not allocate memory on repeated reads (1000 reads)",
+        "should handle concurrent reads without copying (100 concurrent reads)"
+      ],
+      "acceptanceCriteria": [
+        "3+ performance tests for read operations",
+        "Tests validate O(1) read complexity",
+        "Tests validate memory stability"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Read operations return cached reference without copying",
+    "Mutation operations use shallow array copy",
+    "All 396+ tests pass",
+    "Read latency < 0.1ms for 1000 entities",
+    "No memory growth on repeated reads"
+  ],
+  "filesModified": [
+    "src/memory/core/GraphStorage.ts",
+    "src/memory/core/EntityManager.ts",
+    "src/memory/core/RelationManager.ts",
+    "src/memory/search/BasicSearch.ts",
+    "src/memory/search/RankedSearch.ts",
+    "src/memory/search/BooleanSearch.ts",
+    "src/memory/search/FuzzySearch.ts"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/performance/read-performance.test.ts"
+  ],
+  "totalEstimatedHours": 7,
+  "dependencies": [],
+  "notes": "This is the highest priority sprint. The deep copying issue causes O(n) overhead on every read operation. After this sprint, read operations should be O(1). This sprint must be completed before Sprints 2 and 3."
+}

@@ -1,0 +1,119 @@
+{
+  "phase": 1,
+  "sprint": 6,
+  "title": "Fix Error Handling Inconsistencies",
+  "priority": "MEDIUM",
+  "effort": "6-7 hours",
+  "status": "pending",
+  "impact": "Consistent behavior, better debugging",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Documentation",
+      "description": "Audit and document error handling patterns - Create ERROR_HANDLING.md documenting all custom error types, when to throw vs return null, error message format",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["docs/development/ERROR_HANDLING.md"],
+      "acceptanceCriteria": [
+        "All error types documented",
+        "Clear guidelines for each scenario",
+        "Examples provided"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core Infrastructure",
+      "description": "Standardize entity not found behavior - Ensure read operations return null/empty, mutation operations throw EntityNotFoundError consistently across EntityManager",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/EntityManager.ts"],
+      "codeSnippet": "// Pattern for mutations\nasync setImportance(entityName: string, importance: number): Promise<void> {\n  const entity = this.storage.getEntityByName(entityName);\n  if (!entity) {\n    throw new EntityNotFoundError(entityName);\n  }\n  // ... continue\n}",
+      "acceptanceCriteria": [
+        "All read operations return null/empty for missing",
+        "All mutation operations throw for missing",
+        "Update tests to match new behavior",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Utilities",
+      "description": "Create centralized error factory - Add factory functions to errors.ts for consistent error creation: entityNotFound(), relationNotFound(), validationFailed(), operationFailed()",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/utils/errors.ts"],
+      "codeSnippet": "export function entityNotFound(name: string): EntityNotFoundError {\n  return new EntityNotFoundError(name);\n}\n\nexport function validationFailed(field: string, reason: string): ValidationError {\n  return new ValidationError(`Invalid ${field}: ${reason}`, [reason]);\n}",
+      "acceptanceCriteria": [
+        "Factory functions for all error types",
+        "Consistent error message format",
+        "Used throughout codebase",
+        "5+ tests for error factories"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core Infrastructure",
+      "description": "Add error context to all throws - Ensure all errors include context (operation, input, reason) especially in BooleanSearch query parsing, GraphStorage file I/O, ImportManager parsing",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/search/SearchManager.ts",
+        "src/memory/core/GraphStorage.ts",
+        "src/memory/features/ImportManager.ts"
+      ],
+      "codeSnippet": "// Before\nthrow new Error('Failed to parse query');\n\n// After\nthrow new ValidationError(\n  'Failed to parse boolean query',\n  [`Query: \"${query}\"`, `Position: ${position}`, `Reason: ${reason}`]\n);",
+      "acceptanceCriteria": [
+        "All errors include context",
+        "Context includes: operation, input, reason",
+        "Error messages are helpful for debugging",
+        "No generic Error throws (use custom types)"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Testing",
+      "description": "Add error handling tests - Create comprehensive tests validating error behavior for EntityNotFoundError, ValidationError, read operations returning null, mutation operations throwing",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/errors.test.ts"],
+      "testCases": [
+        "EntityNotFoundError should be thrown for mutations on missing entities",
+        "EntityNotFoundError should include entity name in message",
+        "ValidationError should include field and reason",
+        "Read operations should return null for missing entities",
+        "Read operations should return empty array for no matches"
+      ],
+      "acceptanceCriteria": [
+        "10+ error handling tests",
+        "Tests verify consistent behavior",
+        "Tests verify error messages"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Error handling patterns documented",
+    "Consistent throw vs return null behavior",
+    "All errors include helpful context",
+    "Error factory functions in use",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "src/memory/core/EntityManager.ts",
+    "src/memory/utils/errors.ts",
+    "src/memory/search/SearchManager.ts",
+    "src/memory/core/GraphStorage.ts",
+    "src/memory/features/ImportManager.ts"
+  ],
+  "filesCreated": [
+    "docs/development/ERROR_HANDLING.md",
+    "src/memory/__tests__/unit/errors.test.ts"
+  ],
+  "totalEstimatedHours": 6.5,
+  "dependencies": ["Sprint 4"],
+  "notes": "This sprint standardizes error handling which is currently inconsistent (sometimes throws, sometimes silently skips). The standard is: read operations return null/empty, mutation operations throw. All errors should include context for debugging."
+}

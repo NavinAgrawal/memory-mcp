@@ -1,0 +1,103 @@
+{
+  "phase": 1,
+  "sprint": 9,
+  "title": "Documentation and Testing Updates",
+  "priority": "LOW",
+  "effort": "5-6 hours",
+  "status": "pending",
+  "impact": "Better maintainability",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Documentation",
+      "description": "Update CLAUDE.md with new architecture - Reduce manager count (10 to 4), document new index system, update file count estimates, add performance characteristics",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["CLAUDE.md"],
+      "acceptanceCriteria": [
+        "Architecture section updated",
+        "File counts accurate",
+        "Performance notes added",
+        "Build commands verified"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Documentation",
+      "description": "Add Architecture Decision Records - Create ADR-001-index-system.md documenting why indexes were added, design decisions, performance/memory tradeoffs, alternatives considered",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": [
+        "docs/development/ADR-001-index-system.md",
+        "docs/development/ADR-002-manager-consolidation.md"
+      ],
+      "acceptanceCriteria": [
+        "ADR for index system",
+        "ADR for manager consolidation",
+        "Clear rationale documented"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Testing",
+      "description": "Update test organization - Restructure __tests__/ into unit/core, unit/search, unit/utils, integration/, performance/ directories",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/"],
+      "targetStructure": {
+        "__tests__/unit/core/": ["EntityManager.test.ts", "RelationManager.test.ts", "GraphStorage.test.ts"],
+        "__tests__/unit/search/": ["SearchManager.test.ts"],
+        "__tests__/unit/utils/": ["indexes.test.ts", "validation.test.ts"],
+        "__tests__/integration/": ["workflows.test.ts"],
+        "__tests__/performance/": ["read-performance.test.ts", "write-performance.test.ts", "search-performance.test.ts"]
+      },
+      "acceptanceCriteria": [
+        "Tests organized by category",
+        "Performance tests separated",
+        "All tests still pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Testing",
+      "description": "Add missing unit tests for new code - Create tests for indexes.ts (NameIndex, TypeIndex, LowercaseCache), dates.ts, validation.ts, and error factories",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/__tests__/unit/utils/indexes.test.ts",
+        "src/memory/__tests__/unit/utils/dates.test.ts",
+        "src/memory/__tests__/unit/utils/validation.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "80%+ coverage for new utilities",
+        "All edge cases tested",
+        "Performance characteristics documented"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Documentation reflects new architecture",
+    "ADRs capture design decisions",
+    "Tests properly organized",
+    "New code has unit tests",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "CLAUDE.md",
+    "src/memory/__tests__/ (restructured)"
+  ],
+  "filesCreated": [
+    "docs/development/ADR-001-index-system.md",
+    "docs/development/ADR-002-manager-consolidation.md",
+    "src/memory/__tests__/unit/utils/indexes.test.ts",
+    "src/memory/__tests__/unit/utils/dates.test.ts",
+    "src/memory/__tests__/unit/utils/validation.test.ts"
+  ],
+  "totalEstimatedHours": 5.5,
+  "dependencies": ["Sprint 8"],
+  "notes": "This sprint brings documentation up to date with the refactored architecture. The ADRs (Architecture Decision Records) are important for future maintainers to understand why certain design decisions were made."
+}

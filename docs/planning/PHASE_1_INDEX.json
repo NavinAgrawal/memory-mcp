@@ -1,0 +1,187 @@
+{
+  "phase": 1,
+  "title": "Performance & Architecture Refactoring",
+  "description": "Address critical performance and architectural issues identified in the Comprehensive Codebase Review",
+  "version": "1.0.0",
+  "created": "2025-12-29",
+  "totalSprints": 10,
+  "totalTasks": 47,
+  "totalEstimatedHours": 69,
+  "status": "pending",
+  "targetMetrics": {
+    "readLatency": { "current": "~15ms", "target": "~0.1ms", "improvement": "150x" },
+    "writeLatency": { "current": "~20ms", "target": "~5ms", "improvement": "4x" },
+    "searchLatency": { "current": "~25ms", "target": "~2ms", "improvement": "12x" },
+    "memoryUsage": { "current": "2x graph size", "target": "1.1x graph size", "improvement": "45% reduction" },
+    "sourceLines": { "current": "10,672", "target": "~6,000", "improvement": "44% reduction" },
+    "fileCount": { "current": "54", "target": "~30", "improvement": "44% reduction" }
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Eliminate Deep Copying (Critical Performance)",
+      "priority": "CRITICAL",
+      "focus": "Remove O(n) deep copying on every read operation",
+      "tasks": 5,
+      "hours": 7,
+      "file": "PHASE_1_SPRINT_1_TODO.json",
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "sprint": 2,
+      "title": "Fix Write Amplification",
+      "priority": "HIGH",
+      "focus": "Implement append-only writes instead of full file rewrites",
+      "tasks": 5,
+      "hours": 8.5,
+      "file": "PHASE_1_SPRINT_2_TODO.json",
+      "status": "pending",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 3,
+      "title": "Add Indexes for Search Performance",
+      "priority": "HIGH",
+      "focus": "Add NameIndex, TypeIndex, LowercaseCache for O(1) lookups",
+      "tasks": 5,
+      "hours": 8.5,
+      "file": "PHASE_1_SPRINT_3_TODO.json",
+      "status": "pending",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 4,
+      "title": "Consolidate Manager Classes",
+      "priority": "MEDIUM",
+      "focus": "Reduce 10 managers to 4, delete ~1,500 lines",
+      "tasks": 5,
+      "hours": 9.5,
+      "file": "PHASE_1_SPRINT_4_TODO.json",
+      "status": "pending",
+      "dependencies": [2, 3]
+    },
+    {
+      "sprint": 5,
+      "title": "Simplify Server Layer",
+      "priority": "MEDIUM",
+      "focus": "Organize handlers, reduce tool definition verbosity",
+      "tasks": 4,
+      "hours": 6.5,
+      "file": "PHASE_1_SPRINT_5_TODO.json",
+      "status": "pending",
+      "dependencies": [4]
+    },
+    {
+      "sprint": 6,
+      "title": "Fix Error Handling Inconsistencies",
+      "priority": "MEDIUM",
+      "focus": "Standardize throw vs return null, add error context",
+      "tasks": 5,
+      "hours": 6.5,
+      "file": "PHASE_1_SPRINT_6_TODO.json",
+      "status": "pending",
+      "dependencies": [4]
+    },
+    {
+      "sprint": 7,
+      "title": "Optimize TF-IDF Index",
+      "priority": "MEDIUM",
+      "focus": "Lazy loading, incremental updates, memory optimization",
+      "tasks": 5,
+      "hours": 7.5,
+      "file": "PHASE_1_SPRINT_7_TODO.json",
+      "status": "pending",
+      "dependencies": [3]
+    },
+    {
+      "sprint": 8,
+      "title": "Reduce Code Duplication",
+      "priority": "LOW",
+      "focus": "Extract filter chain, pagination, date utilities",
+      "tasks": 5,
+      "hours": 6.5,
+      "file": "PHASE_1_SPRINT_8_TODO.json",
+      "status": "pending",
+      "dependencies": [5, 6, 7]
+    },
+    {
+      "sprint": 9,
+      "title": "Documentation and Testing Updates",
+      "priority": "LOW",
+      "focus": "Update CLAUDE.md, add ADRs, reorganize tests",
+      "tasks": 4,
+      "hours": 5.5,
+      "file": "PHASE_1_SPRINT_9_TODO.json",
+      "status": "pending",
+      "dependencies": [8]
+    },
+    {
+      "sprint": 10,
+      "title": "Final Cleanup and Verification",
+      "priority": "LOW",
+      "focus": "Run all tests, benchmarks, prepare release",
+      "tasks": 4,
+      "hours": 3.5,
+      "file": "PHASE_1_SPRINT_10_TODO.json",
+      "status": "pending",
+      "dependencies": [9]
+    }
+  ],
+  "dependencyGraph": {
+    "description": "Sprint dependency order",
+    "mermaid": "graph TD\n    S1[Sprint 1: Deep Copy] --> S2[Sprint 2: Write Amplification]\n    S1 --> S3[Sprint 3: Indexes]\n    S2 --> S4[Sprint 4: Manager Consolidation]\n    S3 --> S4\n    S4 --> S5[Sprint 5: Server Layer]\n    S4 --> S6[Sprint 6: Error Handling]\n    S3 --> S7[Sprint 7: TF-IDF]\n    S5 --> S8[Sprint 8: Code Duplication]\n    S6 --> S8\n    S7 --> S8\n    S8 --> S9[Sprint 9: Documentation]\n    S9 --> S10[Sprint 10: Final Cleanup]"
+  },
+  "parallelExecutionGroups": [
+    { "group": 1, "sprints": [1], "description": "Must complete first" },
+    { "group": 2, "sprints": [2, 3], "description": "Can run in parallel after Sprint 1" },
+    { "group": 3, "sprints": [4], "description": "After Sprints 2 and 3" },
+    { "group": 4, "sprints": [5, 6, 7], "description": "Can run in parallel after Sprint 4 (5,6) or Sprint 3 (7)" },
+    { "group": 5, "sprints": [8], "description": "After Sprints 5, 6, 7" },
+    { "group": 6, "sprints": [9], "description": "After Sprint 8" },
+    { "group": 7, "sprints": [10], "description": "Final - after Sprint 9" }
+  ],
+  "filesToDelete": [
+    "src/memory/core/ObservationManager.ts",
+    "src/memory/features/TagManager.ts",
+    "src/memory/features/HierarchyManager.ts",
+    "src/memory/search/BasicSearch.ts",
+    "src/memory/search/BooleanSearch.ts",
+    "src/memory/search/RankedSearch.ts",
+    "src/memory/search/FuzzySearch.ts"
+  ],
+  "filesToCreate": [
+    "src/memory/utils/indexes.ts",
+    "src/memory/utils/dates.ts",
+    "src/memory/utils/validation.ts",
+    "src/memory/utils/pagination.ts",
+    "src/memory/search/SearchFilterChain.ts",
+    "src/memory/server/handlers/index.ts",
+    "src/memory/server/handlers/entity.ts",
+    "src/memory/server/handlers/search.ts",
+    "src/memory/server/handlers/graph.ts",
+    "src/memory/server/handlers/io.ts",
+    "src/memory/server/schemaBuilders.ts",
+    "docs/development/ERROR_HANDLING.md",
+    "docs/development/ADR-001-index-system.md",
+    "docs/development/ADR-002-manager-consolidation.md",
+    "src/memory/__tests__/performance/read-performance.test.ts",
+    "src/memory/__tests__/performance/write-performance.test.ts",
+    "src/memory/__tests__/performance/tfidf-performance.test.ts",
+    "src/memory/__tests__/unit/errors.test.ts",
+    "src/memory/__tests__/unit/utils/indexes.test.ts",
+    "src/memory/__tests__/unit/utils/dates.test.ts",
+    "src/memory/__tests__/unit/utils/validation.test.ts"
+  ],
+  "riskAssessment": [
+    { "risk": "Breaking API changes", "probability": "Medium", "impact": "High", "mitigation": "Run full test suite after each sprint" },
+    { "risk": "Performance regression", "probability": "Low", "impact": "High", "mitigation": "Benchmark after each sprint" },
+    { "risk": "Data corruption", "probability": "Low", "impact": "Critical", "mitigation": "Test with real memory.jsonl files" },
+    { "risk": "Incomplete consolidation", "probability": "Medium", "impact": "Medium", "mitigation": "Track file deletions carefully" }
+  ],
+  "agentDistribution": {
+    "sonnet": { "tasks": 19, "description": "Complex refactoring, consolidation, performance-critical code" },
+    "haiku": { "tasks": 28, "description": "Documentation, simple updates, tests, utilities" }
+  },
+  "notes": "Sprint 1 is the critical path - it must be completed first as both Sprint 2 and Sprint 3 depend on it. Sprints 2 and 3 can run in parallel. After those complete, Sprint 4 can begin. This ordering minimizes total execution time while respecting dependencies."
+}

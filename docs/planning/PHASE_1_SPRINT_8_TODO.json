@@ -1,0 +1,114 @@
+{
+  "phase": 1,
+  "sprint": 8,
+  "title": "Reduce Code Duplication",
+  "priority": "LOW",
+  "effort": "6-7 hours",
+  "status": "pending",
+  "impact": "Easier maintenance, fewer bugs",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Search Layer",
+      "description": "Extract common filter logic - Create SearchFilterChain class with chainable filter methods (addTagFilter, addImportanceFilter, addDateFilter, addTypeFilter) used by all search operations",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/search/SearchFilterChain.ts"],
+      "codeSnippet": "export class SearchFilterChain {\n  private filters: SearchFilter[] = [];\n\n  addTagFilter(tags: string[]): this { ... }\n  addImportanceFilter(min?: number, max?: number): this { ... }\n  addDateFilter(start?: string, end?: string): this { ... }\n\n  apply(entities: Entity[]): Entity[] {\n    return this.filters.reduce((result, filter) => filter.apply(result), entities);\n  }\n}",
+      "acceptanceCriteria": [
+        "Single filter chain class",
+        "Used by all search classes",
+        "Chainable API",
+        "10+ filter tests"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Utilities",
+      "description": "Extract common pagination logic - Create paginate<T>() function with PaginatedResult interface returning items, total, offset, limit, hasMore",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/utils/pagination.ts"],
+      "codeSnippet": "export interface PaginatedResult<T> {\n  items: T[];\n  total: number;\n  offset: number;\n  limit: number;\n  hasMore: boolean;\n}\n\nexport function paginate<T>(items: T[], options: PaginationOptions = {}): PaginatedResult<T> {\n  const offset = Math.max(0, options.offset || 0);\n  const limit = Math.min(200, Math.max(1, options.limit || 50));\n  return { items: items.slice(offset, offset + limit), total: items.length, offset, limit, hasMore: offset + limit < items.length };\n}",
+      "acceptanceCriteria": [
+        "Single paginate function",
+        "Used by all search/list operations",
+        "Returns metadata (total, hasMore)",
+        "5+ pagination tests"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Utilities",
+      "description": "Consolidate date handling - Create dates.ts with now(), isValidISODate(), compareDates(), isInRange() functions used throughout codebase",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/utils/dates.ts"],
+      "acceptanceCriteria": [
+        "Single date utility module",
+        "Used throughout codebase",
+        "ISO 8601 handling consistent",
+        "5+ date utility tests"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Cleanup",
+      "description": "Remove dead code - Use ts-prune to find unused exports, search for commented-out code, remove unused utility functions and types",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["Multiple files across src/memory/"],
+      "commands": [
+        "npx ts-prune src/memory",
+        "grep -r 'TODO|FIXME|XXX' src/memory"
+      ],
+      "acceptanceCriteria": [
+        "No unused exports",
+        "No commented-out code",
+        "No TODO comments older than 30 days",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Utilities",
+      "description": "Consolidate validation utilities - Create validation.ts with validateEntityName(), validateImportance(), validateTags() functions with consistent error messages",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/utils/validation.ts"],
+      "codeSnippet": "export function validateEntityName(name: string): void {\n  if (!name || name.trim() === '') {\n    throw new ValidationError('Entity name cannot be empty');\n  }\n  if (name.length > 500) {\n    throw new ValidationError('Entity name cannot exceed 500 characters');\n  }\n}",
+      "acceptanceCriteria": [
+        "Single validation module",
+        "Consistent error messages",
+        "Used by all input handlers",
+        "10+ validation tests"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Filter logic extracted and reused",
+    "Pagination logic centralized",
+    "Date handling consistent",
+    "Dead code removed",
+    "Validation consolidated",
+    "All 396+ tests pass"
+  ],
+  "filesModified": [
+    "src/memory/search/SearchManager.ts",
+    "Multiple files using pagination/dates/validation"
+  ],
+  "filesCreated": [
+    "src/memory/search/SearchFilterChain.ts",
+    "src/memory/utils/pagination.ts",
+    "src/memory/utils/dates.ts",
+    "src/memory/utils/validation.ts"
+  ],
+  "totalEstimatedHours": 6.5,
+  "dependencies": ["Sprint 5", "Sprint 6", "Sprint 7"],
+  "notes": "This sprint focuses on DRY (Don't Repeat Yourself) - extracting common patterns into reusable utilities. The filter chain pattern is particularly important as filtering logic is currently duplicated across all search classes."
+}
