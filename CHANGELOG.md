@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src/memory/features/HierarchyManager.ts` - Merged into EntityManager
 - `src/memory/core/ObservationManager.ts` - Functionality already in EntityManager
 
+### Fixed
+
+- **Unused code cleanup** - Removed dead code flagged by strict typecheck
+  - Removed unused `KnowledgeGraph` import from `ExportManager.ts`
+  - Removed unused `isFuzzyMatch` method from `FuzzySearch.ts` (superseded by `isFuzzyMatchLower`)
+
 ## [0.50.0] - 2025-12-29
 
 ### Added

@@ -6,7 +6,7 @@
  * @module features/ExportManager
  */
 
-import type { KnowledgeGraph, ReadonlyKnowledgeGraph } from '../types/index.js';
+import type { ReadonlyKnowledgeGraph } from '../types/index.js';
 
 /**
  * Supported export formats.

@@ -7,18 +7,16 @@
  * - docs/architecture/DEPENDENCY_GRAPH.md (human-readable)
  * - docs/architecture/dependency-graph.json (machine-readable)
  * - docs/architecture/dependency-graph.yaml (compact, ~40% smaller than JSON)
- * - docs/architecture/dependency-summary.compact.json (LLM-optimized, ~10KB)
  *
- * Usage: npx tsx tools/create-dependency-graph/create-dependency-graph.ts
+ * Usage: npx tsx tools/create-dependency-graph.ts
  *
  * This tool is generic and does not depend on any codebase-specific functions.
  * It dynamically discovers the project structure from the filesystem.
  */
 
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname, relative, basename } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import yaml from 'js-yaml';
+import { basename, dirname, join, relative } from 'path';
 
 // Types
 interface Dependency {
@@ -82,6 +80,19 @@ interface Statistics {
   totalTypeOnlyImports: number;
   runtimeCircularDeps: number;  // Excludes type-only cycles
   typeOnlyCircularDeps: number; // Type-only cycles (not runtime issues)
+  unusedFilesCount: number;
+  unusedExportsCount: number;
+}
+
+interface UnusedExport {
+  file: string;
+  name: string;
+  type: 'function' | 'class' | 'interface' | 'type' | 'constant' | 'enum' | 'other';
+}
+
+interface UnusedAnalysis {
+  unusedFiles: string[];
+  unusedExports: UnusedExport[];
 }
 
 interface ModuleMap {
@@ -95,23 +106,49 @@ interface PackageJson {
   version: string;
 }
 
-// Constants
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT_DIR = join(__dirname, '..', '..');
+// Constants - support CLI argument or current working directory for portability
+function getProjectRoot(): string {
+  // Check for CLI argument: --root=/path/to/project or first positional arg
+  const args = process.argv.slice(2);
+  for (const arg of args) {
+    if (arg.startsWith('--root=')) {
+      return arg.slice(7);
+    }
+    if (arg === '--help' || arg === '-h') {
+      console.log(`
+Dependency Graph Generator
+
+Usage:
+  create-dependency-graph [options] [project-root]
+
+Options:
+  --root=<path>   Project root directory (default: current directory)
+  --help, -h      Show this help
+
+Examples:
+  create-dependency-graph                     # Use current directory
+  create-dependency-graph ./my-project        # Specify project path
+  create-dependency-graph --root=C:/projects/my-app
+`);
+      process.exit(0);
+    }
+    // First non-flag argument is the project root
+    if (!arg.startsWith('-') && existsSync(arg)) {
+      return arg;
+    }
+  }
+  // Fallback to current working directory
+  return process.cwd();
+}
+
+const ROOT_DIR = getProjectRoot();
 const SRC_DIR = join(ROOT_DIR, 'src');
 const OUTPUT_DIR = join(ROOT_DIR, 'docs', 'architecture');
 
-// Read package.json for version and name (prefer workspace package.json)
+// Read package.json for version and name
 let packageJson: PackageJson = { name: 'unknown', version: '0.0.0' };
 try {
-  // Try workspace package.json first (src/memory/package.json)
-  const workspacePackageJson = join(SRC_DIR, 'memory', 'package.json');
-  if (existsSync(workspacePackageJson)) {
-    packageJson = JSON.parse(readFileSync(workspacePackageJson, 'utf-8')) as PackageJson;
-  } else {
-    packageJson = JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8')) as PackageJson;
-  }
+  packageJson = JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8')) as PackageJson;
 } catch {
   console.warn('Warning: Could not read package.json, using defaults');
 }
@@ -127,11 +164,6 @@ function getAllTsFiles(dir: string, files: string[] = []): string[] {
   const entries = readdirSync(dir);
 
   for (const entry of entries) {
-    // Skip node_modules and dist directories
-    if (entry === 'node_modules' || entry === 'dist') {
-      continue;
-    }
-
     const fullPath = join(dir, entry);
     const stat = statSync(fullPath);
 
@@ -355,7 +387,6 @@ function extractDescription(content: string): string | null {
 
 /**
  * Dynamically discover and categorize files into modules based on directory structure
- * Supports nested structures like src/memory/core/, src/memory/features/, etc.
  */
 function categorizeFiles(files: ParsedFile[]): ModuleMap {
   const modules: ModuleMap = {};
@@ -370,21 +401,10 @@ function categorizeFiles(files: ParsedFile[]): ModuleMap {
       continue;
     }
 
-    // Extract the module name from path
+    // Extract the module name from path (first directory after src/)
     const parts = relativePath.split('/');
     if (parts.length >= 2 && parts[0] === 'src') {
-      let moduleName: string;
-
-      // If structure is src/package/submodule/ (e.g., src/memory/core/)
-      // use submodule as the module name for better granularity
-      if (parts.length >= 4 && !parts[2].endsWith('.ts')) {
-        moduleName = parts[2]; // Use submodule name (core, features, search, etc.)
-      } else if (parts.length === 3 && parts[2].endsWith('.ts')) {
-        // File directly in src/package/ (e.g., src/memory/index.ts)
-        moduleName = parts[1]; // Use package name
-      } else {
-        moduleName = parts[1].replace('.ts', '');
-      }
+      const moduleName = parts[1].replace('.ts', '');
 
       // If it's a file directly in src/, categorize by filename
       if (parts.length === 2) {
@@ -556,9 +576,99 @@ function detectCircularDependencies(files: ParsedFile[]): CircularDependencyResu
 }
 
 /**
+ * Detect unused files and exports
+ */
+function detectUnused(files: ParsedFile[]): UnusedAnalysis {
+  const filePaths = new Set(files.map(f => f.path));
+
+  // Build a set of all imported files
+  const importedFiles = new Set<string>();
+  // Build a map of all imported symbols per file
+  const importedSymbols = new Map<string, Set<string>>();
+
+  for (const file of files) {
+    for (const dep of file.internalDependencies) {
+      const resolved = resolvePath(file.path, dep.file);
+      if (filePaths.has(resolved)) {
+        importedFiles.add(resolved);
+
+        // Track which symbols are imported
+        if (!importedSymbols.has(resolved)) {
+          importedSymbols.set(resolved, new Set());
+        }
+        const symbols = importedSymbols.get(resolved)!;
+        for (const imp of dep.imports) {
+          if (imp === '*') {
+            // Wildcard import - mark all exports as used
+            symbols.add('*');
+          } else {
+            symbols.add(imp.replace(/^\* as /, ''));
+          }
+        }
+      }
+    }
+  }
+
+  // Find unused files (excluding entry point and index files which are re-export hubs)
+  const unusedFiles: string[] = [];
+  for (const file of files) {
+    if (file.path === 'src/index.ts') continue; // Entry point is always "used"
+    if (file.name === 'index' && file.exports.reExported.length > 0) continue; // Re-export hubs
+    if (!importedFiles.has(file.path)) {
+      unusedFiles.push(file.path);
+    }
+  }
+
+  // Find unused exports
+  const unusedExports: UnusedExport[] = [];
+  for (const file of files) {
+    const usedSymbols = importedSymbols.get(file.path);
+    const isWildcardImported = usedSymbols?.has('*');
+
+    // Skip if file is not imported at all (already reported as unused file)
+    // or if it's wildcard imported (all exports considered used)
+    if (!usedSymbols || isWildcardImported) continue;
+
+    // Check each export
+    for (const fn of file.exports.functions) {
+      if (!usedSymbols.has(fn)) {
+        unusedExports.push({ file: file.path, name: fn, type: 'function' });
+      }
+    }
+    for (const cls of file.exports.classes) {
+      if (!usedSymbols.has(cls)) {
+        unusedExports.push({ file: file.path, name: cls, type: 'class' });
+      }
+    }
+    for (const iface of file.exports.interfaces) {
+      if (!usedSymbols.has(iface)) {
+        unusedExports.push({ file: file.path, name: iface, type: 'interface' });
+      }
+    }
+    for (const type of file.exports.types) {
+      if (!usedSymbols.has(type) && !file.exports.interfaces.includes(type)) {
+        unusedExports.push({ file: file.path, name: type, type: 'type' });
+      }
+    }
+    for (const en of file.exports.enums) {
+      if (!usedSymbols.has(en)) {
+        unusedExports.push({ file: file.path, name: en, type: 'enum' });
+      }
+    }
+    for (const constant of file.exports.constants) {
+      if (!usedSymbols.has(constant)) {
+        unusedExports.push({ file: file.path, name: constant, type: 'constant' });
+      }
+    }
+  }
+
+  return { unusedFiles, unusedExports };
+}
+
+/**
  * Generate statistics from parsed files
  */
-function generateStatistics(files: ParsedFile[], modules: ModuleMap, circularDeps: CircularDependencyResult): Statistics {
+function generateStatistics(files: ParsedFile[], modules: ModuleMap, circularDeps: CircularDependencyResult, unusedAnalysis: UnusedAnalysis): Statistics {
   let totalExports = 0;
   let totalClasses = 0;
   let totalInterfaces = 0;
@@ -608,7 +718,9 @@ function generateStatistics(files: ParsedFile[], modules: ModuleMap, circularDep
     totalReExports,
     totalTypeOnlyImports,
     runtimeCircularDeps: circularDeps.runtime.length,
-    typeOnlyCircularDeps: circularDeps.typeOnly.length
+    typeOnlyCircularDeps: circularDeps.typeOnly.length,
+    unusedFilesCount: unusedAnalysis.unusedFiles.length,
+    unusedExportsCount: unusedAnalysis.unusedExports.length
   };
 }
 
@@ -1009,45 +1121,24 @@ function generateCompactSummary(files: ParsedFile[], modules: ModuleMap, stats: 
       // Only include first 5 runtime cycles (if any) for context
       rtp: circularDeps.runtime.slice(0, 5).map(c => c.map(p => p.split('/').pop()?.replace('.ts', '')).join('→'))
     },
-    mod: {} as Record<string, { f: number; exp?: string[]; cls?: string[]; err?: string[]; int?: string[]; fn?: string[] }>,
+    mod: {} as Record<string, { f: number; exp: string[]; cls?: string[]; int?: string[] }>,
     // Hot paths: files with most dependencies
     hp: [] as { p: string; i: number; o: number }[]
   };
 
-  // Compact module summary - more granular breakdown
+  // Compact module summary
   for (const [modName, modFiles] of Object.entries(modules)) {
     const fileList = Object.values(modFiles);
-    const allClasses = fileList.flatMap(f => f.exports.classes);
-    const allInterfaces = fileList.flatMap(f => f.exports.interfaces);
-    const allFunctions = fileList.flatMap(f => f.exports.functions);
-    const allConstants = fileList.flatMap(f => f.exports.constants);
+    const exports = fileList.flatMap(f => f.exports.named).slice(0, 20);
+    const classes = fileList.flatMap(f => f.exports.classes);
+    const interfaces = fileList.flatMap(f => f.exports.interfaces).slice(0, 10);
 
-    // Separate error classes from regular classes
-    const errorClasses = allClasses.filter(c => c.endsWith('Error'));
-    const regularClasses = allClasses.filter(c => !c.endsWith('Error'));
-
-    const modEntry: { f: number; exp?: string[]; cls?: string[]; err?: string[]; int?: string[]; fn?: string[] } = {
-      f: Object.keys(modFiles).length
+    summary.mod[modName] = {
+      f: Object.keys(modFiles).length,
+      exp: [...new Set(exports)]
     };
-
-    // Include top exports (constants are usually important API surface)
-    if (allConstants.length > 0) {
-      modEntry.exp = [...new Set(allConstants)].slice(0, 15);
-    }
-    if (regularClasses.length > 0) {
-      modEntry.cls = [...new Set(regularClasses)];
-    }
-    if (errorClasses.length > 0) {
-      modEntry.err = [...new Set(errorClasses)];
-    }
-    if (allInterfaces.length > 0) {
-      modEntry.int = [...new Set(allInterfaces)];
-    }
-    if (allFunctions.length > 0) {
-      modEntry.fn = [...new Set(allFunctions)].slice(0, 15);
-    }
-
-    summary.mod[modName] = modEntry;
+    if (classes.length > 0) summary.mod[modName].cls = [...new Set(classes)];
+    if (interfaces.length > 0) summary.mod[modName].int = [...new Set(interfaces)];
   }
 
   // Find hot paths (files with highest connectivity)
@@ -1101,8 +1192,11 @@ async function main(): Promise<void> {
   const circularDeps = detectCircularDependencies(parsedFiles);
   console.log(`Found ${circularDeps.all.length} circular dependencies (${circularDeps.runtime.length} runtime, ${circularDeps.typeOnly.length} type-only)`);
 
-  // Generate statistics (now needs circularDeps)
-  const stats = generateStatistics(parsedFiles, modules, circularDeps);
+  // Detect unused files and exports
+  const unusedAnalysis = detectUnused(parsedFiles);
+
+  // Generate statistics
+  const stats = generateStatistics(parsedFiles, modules, circularDeps, unusedAnalysis);
   console.log('Generated statistics');
 
   // Build dependency matrix
@@ -1114,10 +1208,8 @@ async function main(): Promise<void> {
   const markdown = generateMarkdown(parsedFiles, modules, stats, circularDeps, matrix);
 
   // Write outputs
-  const jsonOutput = JSON.stringify(json, null, 2);
-  writeFileSync(join(OUTPUT_DIR, 'dependency-graph.json'), jsonOutput);
-  const jsonSize = Buffer.byteLength(jsonOutput, 'utf8');
-  console.log(`Written: docs/architecture/dependency-graph.json (${(jsonSize / 1024).toFixed(1)}KB)`);
+  writeFileSync(join(OUTPUT_DIR, 'dependency-graph.json'), JSON.stringify(json, null, 2));
+  console.log('Written: docs/architecture/dependency-graph.json');
 
   // Write YAML output (more compact, ~40% smaller than JSON)
   const yamlOutput = yaml.dump(json, {
@@ -1129,9 +1221,7 @@ async function main(): Promise<void> {
     forceQuotes: false,
   });
   writeFileSync(join(OUTPUT_DIR, 'dependency-graph.yaml'), yamlOutput);
-  const yamlSize = Buffer.byteLength(yamlOutput, 'utf8');
-  const yamlSavings = ((1 - yamlSize / jsonSize) * 100).toFixed(0);
-  console.log(`Written: docs/architecture/dependency-graph.yaml (${(yamlSize / 1024).toFixed(1)}KB, ${yamlSavings}% smaller)`);
+  console.log('Written: docs/architecture/dependency-graph.yaml');
 
   writeFileSync(join(OUTPUT_DIR, 'DEPENDENCY_GRAPH.md'), markdown);
   console.log('Written: docs/architecture/DEPENDENCY_GRAPH.md');
@@ -1149,7 +1239,76 @@ async function main(): Promise<void> {
   console.log(`  - ${circularDeps.all.length} circular dependencies:`);
   console.log(`      ${circularDeps.runtime.length} runtime (require attention)`);
   console.log(`      ${circularDeps.typeOnly.length} type-only (safe)`);
-  console.log(`\nOutput sizes: JSON ${(jsonSize / 1024).toFixed(1)}KB → YAML ${(yamlSize / 1024).toFixed(1)}KB (${yamlSavings}% reduction) → Compact ${(compactSize / 1024).toFixed(1)}KB`);
+  console.log(`  - ${unusedAnalysis.unusedFiles.length} potentially unused files`);
+  console.log(`  - ${unusedAnalysis.unusedExports.length} potentially unused exports`);
+
+  // Print unused files if any
+  if (unusedAnalysis.unusedFiles.length > 0) {
+    console.log('\nPotentially unused files:');
+    for (const file of unusedAnalysis.unusedFiles.slice(0, 20)) {
+      console.log(`  - ${file}`);
+    }
+    if (unusedAnalysis.unusedFiles.length > 20) {
+      console.log(`  ... and ${unusedAnalysis.unusedFiles.length - 20} more`);
+    }
+  }
+
+  // Print unused exports if any (grouped by file)
+  if (unusedAnalysis.unusedExports.length > 0) {
+    console.log('\nPotentially unused exports:');
+    const byFile = new Map<string, UnusedExport[]>();
+    for (const exp of unusedAnalysis.unusedExports) {
+      if (!byFile.has(exp.file)) byFile.set(exp.file, []);
+      byFile.get(exp.file)!.push(exp);
+    }
+    let shown = 0;
+    for (const [file, exports] of byFile) {
+      if (shown >= 10) {
+        console.log(`  ... and ${byFile.size - 10} more files with unused exports`);
+        break;
+      }
+      console.log(`  ${file}:`);
+      for (const exp of exports.slice(0, 5)) {
+        console.log(`    - ${exp.name} (${exp.type})`);
+      }
+      if (exports.length > 5) {
+        console.log(`    ... and ${exports.length - 5} more`);
+      }
+      shown++;
+    }
+  }
+
+  // Write full unused analysis to a separate file
+  const unusedReportPath = join(OUTPUT_DIR, 'unused-analysis.md');
+  let unusedReport = '# Unused Files and Exports Analysis\n\n';
+  unusedReport += `**Generated**: ${new Date().toISOString().split('T')[0]}\n\n`;
+  unusedReport += `## Summary\n\n`;
+  unusedReport += `- **Potentially unused files**: ${unusedAnalysis.unusedFiles.length}\n`;
+  unusedReport += `- **Potentially unused exports**: ${unusedAnalysis.unusedExports.length}\n\n`;
+
+  unusedReport += `## Potentially Unused Files\n\n`;
+  unusedReport += `These files are not imported by any other file in the codebase:\n\n`;
+  for (const file of unusedAnalysis.unusedFiles) {
+    unusedReport += `- \`${file}\`\n`;
+  }
+
+  unusedReport += `\n## Potentially Unused Exports\n\n`;
+  unusedReport += `These exports are not imported by any other file in the codebase:\n\n`;
+  const byFileForReport = new Map<string, UnusedExport[]>();
+  for (const exp of unusedAnalysis.unusedExports) {
+    if (!byFileForReport.has(exp.file)) byFileForReport.set(exp.file, []);
+    byFileForReport.get(exp.file)!.push(exp);
+  }
+  for (const [file, exports] of byFileForReport) {
+    unusedReport += `### \`${file}\`\n\n`;
+    for (const exp of exports) {
+      unusedReport += `- \`${exp.name}\` (${exp.type})\n`;
+    }
+    unusedReport += '\n';
+  }
+
+  writeFileSync(unusedReportPath, unusedReport);
+  console.log(`\nWritten: ${unusedReportPath}`);
 }
 
 main().catch(console.error);

@@ -98,26 +98,6 @@ export class FuzzySearch {
   }
 
   /**
-   * Check if two strings match with fuzzy logic.
-   *
-   * Returns true if:
-   * - Strings are identical
-   * - One contains the other
-   * - Levenshtein similarity >= threshold
-   *
-   * @param str1 - First string
-   * @param str2 - Second string
-   * @param threshold - Similarity threshold (0.0 to 1.0)
-   * @returns True if strings match fuzzily
-   */
-  private isFuzzyMatch(str1: string, str2: string, threshold: number = 0.7): boolean {
-    const s1 = str1.toLowerCase();
-    const s2 = str2.toLowerCase();
-
-    return this.isFuzzyMatchLower(s1, s2, threshold);
-  }
-
-  /**
    * Check if two already-lowercase strings match with fuzzy logic.
    *
    * OPTIMIZED: Skips toLowerCase() calls when strings are already lowercase.

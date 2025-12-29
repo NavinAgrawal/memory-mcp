@@ -1,0 +1,26 @@
+{
+  "name": "chunking-for-files",
+  "version": "1.0.0",
+  "description": "Split and merge large files for editing within context limits",
+  "main": "chunking-for-files.ts",
+  "bin": {
+    "chunking-for-files": "./chunking-for-files.ts"
+  },
+  "scripts": {
+    "build": "bun build chunking-for-files.ts --compile --outfile chunking-for-files.exe",
+    "build:ts": "tsc",
+    "build:exe": "npm run build:ts && pkg dist/chunking-for-files.js --target node18-win-x64 --output chunking-for-files.exe",
+    "start": "bun run chunking-for-files.ts"
+  },
+  "keywords": [
+    "markdown",
+    "chunker",
+    "chunking",
+    "split",
+    "merge",
+    "llm",
+    "context"
+  ],
+  "author": "DeepThinking MCP",
+  "license": "MIT"
+}
