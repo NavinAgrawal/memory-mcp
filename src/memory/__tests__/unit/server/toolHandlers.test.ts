@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { toolHandlers, handleToolCall } from '../../../server/toolHandlers.js';
-import { KnowledgeGraphManager } from '../../../core/KnowledgeGraphManager.js';
+import { KnowledgeGraphManager } from '../../../core/index.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';

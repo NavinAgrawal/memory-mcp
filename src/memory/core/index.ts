@@ -5,7 +5,9 @@
 export { GraphStorage } from './GraphStorage.js';
 export { EntityManager, type ArchiveCriteria, type ArchiveResult } from './EntityManager.js';
 export { RelationManager } from './RelationManager.js';
-export { KnowledgeGraphManager } from './KnowledgeGraphManager.js';
+export { ManagerContext } from './ManagerContext.js';
+// Backward compatibility alias
+export { ManagerContext as KnowledgeGraphManager } from './ManagerContext.js';
 export {
   TransactionManager,
   OperationType,

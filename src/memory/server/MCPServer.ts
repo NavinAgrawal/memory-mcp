@@ -16,7 +16,7 @@ import {
 import { logger } from '../utils/logger.js';
 import { toolDefinitions } from './toolDefinitions.js';
 import { handleToolCall } from './toolHandlers.js';
-import type { KnowledgeGraphManager } from '../core/KnowledgeGraphManager.js';
+import type { ManagerContext } from '../core/ManagerContext.js';
 
 /**
  * MCP Server for Knowledge Graph operations.
@@ -24,10 +24,10 @@ import type { KnowledgeGraphManager } from '../core/KnowledgeGraphManager.js';
  */
 export class MCPServer {
   private server: Server;
-  private manager: KnowledgeGraphManager;
+  private ctx: ManagerContext;
 
-  constructor(manager: KnowledgeGraphManager) {
-    this.manager = manager;
+  constructor(ctx: ManagerContext) {
+    this.ctx = ctx;
     this.server = new Server(
       {
         name: "memory-server",
@@ -54,7 +54,7 @@ export class MCPServer {
     // Register call tool handler
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      return handleToolCall(name, args || {}, this.manager);
+      return handleToolCall(name, args || {}, this.ctx);
     });
   }
 

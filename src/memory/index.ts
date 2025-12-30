@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { logger } from './utils/logger.js';
-import { KnowledgeGraphManager } from './core/KnowledgeGraphManager.js';
+import { ManagerContext } from './core/ManagerContext.js';
 import { MCPServer } from './server/MCPServer.js';
 // Import path utilities from canonical location (has path traversal protection)
 import { defaultMemoryPath, ensureMemoryFilePath } from './utils/pathUtils.js';
@@ -41,20 +41,23 @@ export type {
   CompressionResult,
 };
 
-// Re-export KnowledgeGraphManager for backward compatibility
-export { KnowledgeGraphManager };
+// Re-export ManagerContext (replaces KnowledgeGraphManager)
+export { ManagerContext };
 
-let knowledgeGraphManager: KnowledgeGraphManager;
+// Backward compatibility alias
+export { ManagerContext as KnowledgeGraphManager };
+
+let managerContext: ManagerContext;
 
 async function main() {
   // Initialize memory file path with backward compatibility
   const memoryFilePath = await ensureMemoryFilePath();
 
-  // Initialize knowledge graph manager with the memory file path
-  knowledgeGraphManager = new KnowledgeGraphManager(memoryFilePath);
+  // Initialize manager context with the memory file path
+  managerContext = new ManagerContext(memoryFilePath);
 
   // Initialize and start MCP server
-  const server = new MCPServer(knowledgeGraphManager);
+  const server = new MCPServer(managerContext);
   await server.start();
 }
 

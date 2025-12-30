@@ -1,12 +1,14 @@
 /**
- * KnowledgeGraphManager Unit Tests
+ * ManagerContext Unit Tests
  *
- * Tests for the central facade pattern implementation, lazy initialization,
+ * Tests for the central context implementation, lazy initialization,
  * path derivation, and manager delegation.
+ *
+ * Note: Uses KnowledgeGraphManager alias for backward compatibility.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { KnowledgeGraphManager } from '../../../core/KnowledgeGraphManager.js';
+import { KnowledgeGraphManager } from '../../../core/index.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';

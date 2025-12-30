@@ -5,6 +5,25 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.56.0] - 2025-12-30
+
+### Changed
+
+- **Phase 1 Sprint 12: Abstraction Layer Reduction** - Simplified architecture
+  - **Sprint 12.1-12.3**: Created ManagerContext as lightweight replacement for KnowledgeGraphManager
+    - Direct manager access via lazy-initialized getters (entityManager, relationManager, etc.)
+    - Convenience methods for backward compatibility with KnowledgeGraphManager API
+    - Tool handlers now call managers directly (3 layers instead of 6)
+  - **Sprint 12.4**: Removed KnowledgeGraphManager.ts facade
+    - ManagerContext provides same API with cleaner architecture
+    - Backward compatibility alias exported: `export { ManagerContext as KnowledgeGraphManager }`
+
+### Removed
+
+- **KnowledgeGraphManager.ts** - Replaced by simpler ManagerContext (~307 lines vs ~450 lines)
+  - All functionality preserved in ManagerContext
+  - External consumers can still import `KnowledgeGraphManager` (alias to ManagerContext)
+
 ## [0.55.0] - 2025-12-30
 
 ### Changed

@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.55.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.56.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -35,11 +35,12 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 │  server/MCPServer.ts + toolDefinitions  │
 │  + toolHandlers (47 tools)              │
 └──────────────────┬──────────────────────┘
-                   │
+                   │ (direct manager access)
 ┌──────────────────┴──────────────────────┐
-│  Layer 2: Managers (Facade Pattern)     │
-│  core/KnowledgeGraphManager.ts          │
-│  + 4 specialized managers (lazy init)   │
+│  Layer 2: Managers + Context            │
+│  core/ManagerContext.ts (lazy init)     │
+│  → EntityManager, RelationManager       │
+│  → SearchManager, IOManager, TagManager │
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────┴──────────────────────┐
@@ -48,11 +49,11 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 47 TypeScript files
+### Source Structure (src/memory/) - 46 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 5 | KnowledgeGraphManager (facade), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, TransactionManager |
+| **core/** | 5 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, TransactionManager |
 | **features/** | 2 | TagManager (tag aliases), IOManager (import/export/backup) |
 | **search/** | 10 | SearchManager (orchestrator + compression + analytics), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
@@ -62,11 +63,12 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 
 ### Key Design Patterns
 
-1. **Facade Pattern**: KnowledgeGraphManager delegates to specialized managers
-2. **Lazy Initialization**: 4 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager)
-3. **Dependency Injection**: GraphStorage injected into managers
-4. **Handler Registry**: Tool handlers mapped in toolHandlers.ts
-5. **Barrel Exports**: Each module exports via index.ts
+1. **Context Pattern**: ManagerContext holds all managers with lazy-initialized getters
+2. **Direct Manager Access**: Tool handlers call managers directly via `ctx.entityManager`, `ctx.searchManager`, etc.
+3. **Lazy Initialization**: 5 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager, TagManager)
+4. **Dependency Injection**: GraphStorage injected into managers
+5. **Handler Registry**: Tool handlers mapped in toolHandlers.ts
+6. **Barrel Exports**: Each module exports via index.ts (includes `KnowledgeGraphManager` alias)
 
 ### Data Model
 
