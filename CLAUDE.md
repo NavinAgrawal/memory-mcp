@@ -49,17 +49,17 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 46 TypeScript files
+### Source Structure (src/memory/) - 49 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 5 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, TransactionManager |
-| **features/** | 2 | TagManager (tag aliases), IOManager (import/export/backup) |
+| **core/** | 7 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, TransactionManager, StorageFactory, index |
+| **features/** | 3 | TagManager (tag aliases), IOManager (import/export/backup), index |
 | **search/** | 10 | SearchManager (orchestrator + compression + analytics), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
-| **types/** | 6 | Entity, relation, search, analytics, tag, import-export type definitions |
-| **utils/** | 18 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination, caching, indexes |
-| **root** | 2 | index.ts (entry point), memory/ subfolder entry |
+| **types/** | 7 | Entity, relation, search, analytics, tag, import-export, storage type definitions |
+| **utils/** | 17 | Zod schemas (14 validators), constants, errors, searchAlgorithms (levenshtein + tfidf), logger, pagination, caching, indexes |
+| **root** | 2 | index.ts (entry point), vitest.config.ts |
 
 ### Key Design Patterns
 
@@ -127,7 +127,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1349 tests, 38 files):
+Tests are in `src/memory/__tests__/` (1484 tests, 38 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -172,7 +172,7 @@ Tests are in `src/memory/__tests__/` (1349 tests, 38 files):
 - In-memory caching with write-through invalidation
 - 50x faster duplicate detection using two-level bucketing
 - Lazy TF-IDF index loading
-- Lazy manager initialization (4 managers load on-demand)
+- Lazy manager initialization (5 managers load on-demand)
 - Batch operations support via TransactionManager
 - Handles 2000+ entities efficiently
 
