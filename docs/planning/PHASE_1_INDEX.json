@@ -2,12 +2,13 @@
   "phase": 1,
   "title": "Performance & Architecture Refactoring",
   "description": "Address critical performance and architectural issues identified in the Comprehensive Codebase Review",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "created": "2025-12-29",
-  "totalSprints": 10,
-  "totalTasks": 47,
-  "totalEstimatedHours": 69,
-  "status": "pending",
+  "updated": "2025-12-30",
+  "totalSprints": 14,
+  "totalTasks": 61,
+  "totalEstimatedHours": 96,
+  "status": "in_progress",
   "targetMetrics": {
     "readLatency": { "current": "~15ms", "target": "~0.1ms", "improvement": "150x" },
     "writeLatency": { "current": "~20ms", "target": "~5ms", "improvement": "4x" },
@@ -126,11 +127,60 @@
       "file": "PHASE_1_SPRINT_10_TODO.json",
       "status": "pending",
       "dependencies": [9]
+    },
+    {
+      "sprint": 11,
+      "title": "Further Manager Consolidation (Remaining Critique)",
+      "priority": "MEDIUM",
+      "focus": "Reduce from 9 managers to 4 as originally planned - merge remaining managers",
+      "tasks": 4,
+      "hours": 8,
+      "file": "PHASE_1_SPRINT_11_TODO.json",
+      "status": "pending",
+      "dependencies": [10],
+      "critiqueSource": "Analysis Report: 'Still 9 managers - Could consolidate further'"
+    },
+    {
+      "sprint": 12,
+      "title": "Reduce Abstraction Layers (Remaining Critique)",
+      "priority": "MEDIUM",
+      "focus": "Simplify 6-layer call stack to 3 layers for common operations",
+      "tasks": 4,
+      "hours": 7,
+      "file": "PHASE_1_SPRINT_12_TODO.json",
+      "status": "pending",
+      "dependencies": [11],
+      "critiqueSource": "Analysis Report: 'Abstraction layers - Still 6 layers for operations'"
+    },
+    {
+      "sprint": 13,
+      "title": "SQLite Migration Preparation (Remaining Critique)",
+      "priority": "LOW",
+      "focus": "Create storage abstraction layer and SQLite adapter for future migration path",
+      "tasks": 4,
+      "hours": 8,
+      "file": "PHASE_1_SPRINT_13_TODO.json",
+      "status": "pending",
+      "dependencies": [11],
+      "critiqueSource": "Analysis Report: 'Still JSONL - Not SQLite'"
+    },
+    {
+      "sprint": 14,
+      "title": "Code Volume Reduction (Remaining Critique)",
+      "priority": "LOW",
+      "focus": "Reduce code from 11,131 lines to target ~6,000 lines through consolidation",
+      "tasks": 2,
+      "hours": 3.5,
+      "file": "PHASE_1_SPRINT_14_TODO.json",
+      "status": "pending",
+      "dependencies": [12, 13],
+      "critiqueSource": "Analysis Report: 'Code volume - Slightly larger (+459 lines)'",
+      "note": "Reduced from 4 tasks - Sprint 11 & 12 already delete manager files and KGM"
     }
   ],
   "dependencyGraph": {
     "description": "Sprint dependency order",
-    "mermaid": "graph TD\n    S1[Sprint 1: Deep Copy] --> S2[Sprint 2: Write Amplification]\n    S1 --> S3[Sprint 3: Indexes]\n    S2 --> S4[Sprint 4: Manager Consolidation]\n    S3 --> S4\n    S4 --> S5[Sprint 5: Server Layer]\n    S4 --> S6[Sprint 6: Error Handling]\n    S3 --> S7[Sprint 7: TF-IDF]\n    S5 --> S8[Sprint 8: Code Duplication]\n    S6 --> S8\n    S7 --> S8\n    S8 --> S9[Sprint 9: Documentation]\n    S9 --> S10[Sprint 10: Final Cleanup]"
+    "mermaid": "graph TD\n    S1[Sprint 1: Deep Copy] --> S2[Sprint 2: Write Amplification]\n    S1 --> S3[Sprint 3: Indexes]\n    S2 --> S4[Sprint 4: Manager Consolidation]\n    S3 --> S4\n    S4 --> S5[Sprint 5: Server Layer]\n    S4 --> S6[Sprint 6: Error Handling]\n    S3 --> S7[Sprint 7: TF-IDF]\n    S5 --> S8[Sprint 8: Code Duplication]\n    S6 --> S8\n    S7 --> S8\n    S8 --> S9[Sprint 9: Documentation]\n    S9 --> S10[Sprint 10: Final Cleanup]\n    S10 --> S11[Sprint 11: Further Manager Consolidation]\n    S11 --> S12[Sprint 12: Reduce Abstraction Layers]\n    S11 --> S13[Sprint 13: SQLite Migration Prep]\n    S12 --> S14[Sprint 14: Code Volume Reduction]\n    S13 --> S14"
   },
   "parallelExecutionGroups": [
     { "group": 1, "sprints": [1], "description": "Must complete first" },
@@ -139,7 +189,10 @@
     { "group": 4, "sprints": [5, 6, 7], "description": "Can run in parallel after Sprint 4 (5,6) or Sprint 3 (7)" },
     { "group": 5, "sprints": [8], "description": "After Sprints 5, 6, 7" },
     { "group": 6, "sprints": [9], "description": "After Sprint 8" },
-    { "group": 7, "sprints": [10], "description": "Final - after Sprint 9" }
+    { "group": 7, "sprints": [10], "description": "Final - after Sprint 9" },
+    { "group": 8, "sprints": [11], "description": "Remaining Critique - after Sprint 10" },
+    { "group": 9, "sprints": [12, 13], "description": "Can run in parallel after Sprint 11" },
+    { "group": 10, "sprints": [14], "description": "Final cleanup - after Sprints 12 and 13" }
   ],
   "filesToDelete": [
     "src/memory/core/ObservationManager.ts",
@@ -148,7 +201,14 @@
     "src/memory/search/BasicSearch.ts",
     "src/memory/search/BooleanSearch.ts",
     "src/memory/search/RankedSearch.ts",
-    "src/memory/search/FuzzySearch.ts"
+    "src/memory/search/FuzzySearch.ts",
+    "src/memory/features/CompressionManager.ts",
+    "src/memory/features/AnalyticsManager.ts",
+    "src/memory/features/ArchiveManager.ts",
+    "src/memory/features/ImportManager.ts",
+    "src/memory/features/ExportManager.ts",
+    "src/memory/features/BackupManager.ts",
+    "src/memory/core/KnowledgeGraphManager.ts"
   ],
   "filesToCreate": [
     "src/memory/utils/indexes.ts",
@@ -171,7 +231,11 @@
     "src/memory/__tests__/unit/errors.test.ts",
     "src/memory/__tests__/unit/utils/indexes.test.ts",
     "src/memory/__tests__/unit/utils/dates.test.ts",
-    "src/memory/__tests__/unit/utils/validation.test.ts"
+    "src/memory/__tests__/unit/utils/validation.test.ts",
+    "src/memory/features/IOManager.ts",
+    "src/memory/types/storage.types.ts",
+    "src/memory/core/SQLiteStorage.ts",
+    "src/memory/core/StorageFactory.ts"
   ],
   "riskAssessment": [
     { "risk": "Breaking API changes", "probability": "Medium", "impact": "High", "mitigation": "Run full test suite after each sprint" },
@@ -180,8 +244,37 @@
     { "risk": "Incomplete consolidation", "probability": "Medium", "impact": "Medium", "mitigation": "Track file deletions carefully" }
   ],
   "agentDistribution": {
-    "sonnet": { "tasks": 19, "description": "Complex refactoring, consolidation, performance-critical code" },
-    "haiku": { "tasks": 28, "description": "Documentation, simple updates, tests, utilities" }
+    "sonnet": { "tasks": 32, "description": "Complex refactoring, consolidation, performance-critical code" },
+    "haiku": { "tasks": 29, "description": "Documentation, simple updates, tests, utilities" }
   },
-  "notes": "Sprint 1 is the critical path - it must be completed first as both Sprint 2 and Sprint 3 depend on it. Sprints 2 and 3 can run in parallel. After those complete, Sprint 4 can begin. This ordering minimizes total execution time while respecting dependencies."
+  "notes": "Sprint 1 is the critical path - it must be completed first as both Sprint 2 and Sprint 3 depend on it. Sprints 2 and 3 can run in parallel. After those complete, Sprint 4 can begin. This ordering minimizes total execution time while respecting dependencies.",
+  "remainingCritique": {
+    "description": "Issues from Comprehensive_Codebase_Review.md that remain after Sprints 1-10",
+    "items": [
+      {
+        "issue": "Still 9 managers - Could consolidate further",
+        "originalTarget": "4 managers",
+        "currentState": "9 managers",
+        "addressedIn": "Sprint 11"
+      },
+      {
+        "issue": "Abstraction layers - Still 6 layers for operations",
+        "originalTarget": "2-3 layers",
+        "currentState": "6 layers",
+        "addressedIn": "Sprint 12"
+      },
+      {
+        "issue": "Still JSONL - Not SQLite",
+        "originalTarget": "SQLite or similar",
+        "currentState": "JSONL with append-only",
+        "addressedIn": "Sprint 13 (preparation)"
+      },
+      {
+        "issue": "Code volume - Slightly larger",
+        "originalTarget": "~6,000 lines",
+        "currentState": "11,131 lines",
+        "addressedIn": "Sprint 14"
+      }
+    ]
+  }
 }

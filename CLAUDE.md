@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.56.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.57.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 

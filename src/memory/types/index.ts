@@ -46,3 +46,10 @@ export type {
 export type {
   TagAlias,
 } from './tag.types.js';
+
+// Storage types
+export type {
+  IGraphStorage,
+  StorageConfig,
+  LowercaseData,
+} from './storage.types.js';

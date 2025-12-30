@@ -14,3 +14,4 @@ export {
   type TransactionOperation,
   type TransactionResult,
 } from './TransactionManager.js';
+export { createStorage, createStorageFromPath } from './StorageFactory.js';

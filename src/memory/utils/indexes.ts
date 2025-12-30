@@ -9,18 +9,7 @@
  * @module utils/indexes
  */
 
-import type { Entity } from '../types/index.js';
-
-/**
- * Pre-computed lowercase data for an entity.
- * Avoids repeated toLowerCase() calls during search operations.
- */
-export interface LowercaseData {
-  name: string;
-  entityType: string;
-  observations: string[];
-  tags: string[];
-}
+import type { Entity, LowercaseData } from '../types/index.js';
 
 /**
  * NameIndex provides O(1) entity lookup by name.

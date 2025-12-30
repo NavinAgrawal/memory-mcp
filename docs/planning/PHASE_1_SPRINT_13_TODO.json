@@ -1,0 +1,164 @@
+{
+  "phase": 1,
+  "sprint": 13,
+  "title": "SQLite Migration Preparation (Remaining Critique)",
+  "priority": "LOW",
+  "effort": "8 hours",
+  "status": "pending",
+  "impact": "Create storage abstraction to enable future SQLite migration without breaking changes",
+  "critiqueSource": "Comprehensive_Codebase_Review.md: 'Still JSONL - Not SQLite'",
+  "currentState": {
+    "storage": "JSONL file",
+    "features": [
+      "Append-only writes",
+      "In-memory cache",
+      "NameIndex, TypeIndex for O(1) lookups"
+    ],
+    "limitations": [
+      "No full-text search (manual implementation)",
+      "No ACID transactions",
+      "No concurrent access",
+      "Manual index maintenance"
+    ]
+  },
+  "targetState": {
+    "storage": "Abstracted - supports JSONL or SQLite",
+    "interface": "IGraphStorage",
+    "adapters": [
+      "JSONLStorage (current)",
+      "SQLiteStorage (optional)"
+    ]
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Storage Abstraction",
+      "description": "Create IGraphStorage interface - Define common interface for all storage operations used by managers",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/types/storage.types.ts (new)"
+      ],
+      "interface": {
+        "name": "IGraphStorage",
+        "methods": [
+          "loadGraph(): Promise<KnowledgeGraph>",
+          "saveGraph(graph: KnowledgeGraph): Promise<void>",
+          "appendEntity(entity: Entity): Promise<void>",
+          "appendRelation(relation: Relation): Promise<void>",
+          "updateEntity(name: string, updates: Partial<Entity>): Promise<void>",
+          "deleteEntity(name: string): Promise<void>",
+          "deleteRelation(from: string, to: string, type: string): Promise<void>",
+          "getEntityByName(name: string): Entity | undefined",
+          "getEntitiesByType(type: string): Entity[]",
+          "search(query: string, options?: SearchOptions): Promise<Entity[]>"
+        ]
+      },
+      "acceptanceCriteria": [
+        "IGraphStorage interface defined",
+        "All current GraphStorage methods covered",
+        "Types exported from index"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Storage Abstraction",
+      "description": "Refactor GraphStorage to implement IGraphStorage - Update current implementation to implement the interface",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/GraphStorage.ts"
+      ],
+      "changes": [
+        "Rename to JSONLStorage",
+        "Implement IGraphStorage interface",
+        "Extract common logic to base class if helpful"
+      ],
+      "acceptanceCriteria": [
+        "GraphStorage implements IGraphStorage",
+        "All existing tests pass",
+        "No functionality changes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "SQLite Implementation",
+      "description": "Create SQLiteStorage adapter - Implement IGraphStorage using better-sqlite3 for optional SQLite backend",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/SQLiteStorage.ts (new)"
+      ],
+      "dependencies": [
+        "better-sqlite3 (optional dependency)"
+      ],
+      "schema": {
+        "tables": [
+          "entities (name TEXT PRIMARY KEY, type TEXT, observations TEXT, tags TEXT, importance INTEGER, parent_id TEXT, created_at TEXT, modified_at TEXT)",
+          "relations (from_entity TEXT, to_entity TEXT, relation_type TEXT, created_at TEXT, PRIMARY KEY(from_entity, to_entity, relation_type))",
+          "entity_fts USING fts5(name, type, observations, tags)"
+        ],
+        "indexes": [
+          "idx_entity_type ON entities(type)",
+          "idx_entity_parent ON entities(parent_id)",
+          "idx_relation_from ON relations(from_entity)",
+          "idx_relation_to ON relations(to_entity)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "SQLiteStorage implements IGraphStorage",
+        "All CRUD operations work",
+        "FTS5 for full-text search",
+        "Pass same test suite as JSONL"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Integration",
+      "description": "Add storage factory and configuration - Create factory function to instantiate correct storage based on config",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": [
+        "src/memory/core/StorageFactory.ts (new)",
+        "src/memory/index.ts"
+      ],
+      "implementation": {
+        "factory": "createStorage(config: StorageConfig): IGraphStorage",
+        "config": {
+          "type": "'jsonl' | 'sqlite'",
+          "path": "string"
+        },
+        "envVar": "MEMORY_STORAGE_TYPE"
+      },
+      "acceptanceCriteria": [
+        "Factory creates correct storage type",
+        "Default remains JSONL for backwards compatibility",
+        "Environment variable override works",
+        "Documentation updated"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "IGraphStorage interface defined",
+    "JSONLStorage passes all tests",
+    "SQLiteStorage passes all tests (optional)",
+    "Storage type configurable",
+    "Backwards compatible (JSONL default)",
+    "All 1484 tests pass"
+  ],
+  "newDependencies": [
+    {
+      "package": "better-sqlite3",
+      "version": "^9.0.0",
+      "optional": true,
+      "reason": "SQLite storage backend"
+    }
+  ],
+  "totalEstimatedHours": 8,
+  "dependencies": ["Sprint 11"],
+  "notes": "This sprint prepares for future SQLite migration by abstracting the storage layer. SQLite provides: built-in indexes, FTS5 for full-text search, ACID transactions, and proven reliability. The abstraction allows users to choose their backend without code changes."
+}

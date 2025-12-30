@@ -2,15 +2,15 @@
  * Graph Storage
  *
  * Handles file I/O operations for the knowledge graph using JSONL format.
- * Provides persistence layer abstraction for graph data.
+ * Implements IGraphStorage interface for storage abstraction.
  *
  * @module core/GraphStorage
  */
 
 import { promises as fs } from 'fs';
-import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph } from '../types/index.js';
+import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
-import { NameIndex, TypeIndex, LowercaseCache, type LowercaseData } from '../utils/indexes.js';
+import { NameIndex, TypeIndex, LowercaseCache } from '../utils/indexes.js';
 
 /**
  * GraphStorage manages persistence of the knowledge graph to disk.
@@ -29,7 +29,7 @@ import { NameIndex, TypeIndex, LowercaseCache, type LowercaseData } from '../uti
  * await storage.saveGraph(graph);
  * ```
  */
-export class GraphStorage {
+export class GraphStorage implements IGraphStorage {
   /**
    * In-memory cache of the knowledge graph.
    * Null when cache is empty or invalidated.

@@ -1,10 +1,11 @@
 # Phase 1 Refactoring Plan: Performance & Architecture Fixes
 
-**Version**: 1.0.0
+**Version**: 2.0.1
 **Created**: 2025-12-29
+**Updated**: 2025-12-30
 **Status**: Active
-**Total Sprints**: 10
-**Total Tasks**: 47 tasks organized into sprints of 4-5 items
+**Total Sprints**: 14
+**Total Tasks**: 61 tasks organized into sprints of 2-5 items
 
 ---
 
@@ -1769,10 +1770,388 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
+## Sprint 11: Further Manager Consolidation (Remaining Critique)
+
+**Priority**: MEDIUM
+**Estimated Duration**: 1 day
+**Impact**: Reduce managers from 9 to 4 as originally planned
+**Critique Source**: Analysis Report: "Still 9 managers - Could consolidate further"
+
+### Task 11.1: Merge CompressionManager into SearchManager
+
+**Files**:
+- `src/memory/search/SearchManager.ts`
+- `src/memory/features/CompressionManager.ts` (to be deleted)
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Methods to Move**:
+- `findDuplicates()`
+- `mergeEntities()`
+- `compressGraph()`
+
+**Acceptance Criteria**:
+- [ ] All compression methods in SearchManager
+- [ ] CompressionManager.ts deleted
+- [ ] All compression tests pass
+- [ ] find_duplicates tool works
+
+---
+
+### Task 11.2: Merge AnalyticsManager into SearchManager
+
+**Files**:
+- `src/memory/search/SearchManager.ts`
+- `src/memory/features/AnalyticsManager.ts` (to be deleted)
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Methods to Move**:
+- `getGraphStats()`
+- `validateGraph()`
+
+**Acceptance Criteria**:
+- [ ] All analytics methods in SearchManager
+- [ ] AnalyticsManager.ts deleted
+- [ ] All analytics tests pass
+- [ ] get_graph_stats tool works
+
+---
+
+### Task 11.3: Merge ArchiveManager into EntityManager
+
+**Files**:
+- `src/memory/core/EntityManager.ts`
+- `src/memory/features/ArchiveManager.ts` (to be deleted)
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Methods to Move**:
+- `archiveEntities()`
+
+**Acceptance Criteria**:
+- [ ] Archive methods in EntityManager
+- [ ] ArchiveManager.ts deleted
+- [ ] All archive tests pass
+- [ ] archive_entities tool works
+
+---
+
+### Task 11.4: Create IOManager from ImportManager + ExportManager
+
+**Files**:
+- `src/memory/features/IOManager.ts` (new)
+- `src/memory/features/ImportManager.ts` (to be deleted)
+- `src/memory/features/ExportManager.ts` (to be deleted)
+- `src/memory/features/BackupManager.ts` (to be deleted)
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Methods to Move**:
+- `importGraph()`
+- `exportGraph()`
+- `createBackup()`
+- `restoreBackup()`
+- `listBackups()`
+
+**Acceptance Criteria**:
+- [ ] Single IOManager with all I/O methods
+- [ ] ImportManager.ts deleted
+- [ ] ExportManager.ts deleted
+- [ ] BackupManager.ts deleted
+- [ ] All import/export/backup tests pass
+
+---
+
+## Sprint 12: Reduce Abstraction Layers (Remaining Critique)
+
+**Priority**: MEDIUM
+**Estimated Duration**: 1 day
+**Impact**: Simplify call stack from 6 layers to 3 layers
+**Critique Source**: Analysis Report: "Abstraction layers - Still 6 layers for operations"
+
+**Current Call Stack (6 layers)**:
+1. toolHandlers.ts - routes to handler
+2. handler calls KnowledgeGraphManager.method()
+3. KGM delegates to specialized Manager
+4. Manager calls GraphStorage.loadGraph()
+5. GraphStorage reads from cache/file
+6. Manager mutates and calls GraphStorage.saveGraph()
+
+**Target Call Stack (3 layers)**:
+1. toolHandlers.ts - routes to handler
+2. handler calls Manager.method() directly
+3. Manager uses GraphStorage for persistence
+
+### Task 12.1: Bypass KnowledgeGraphManager for Entity Operations
+
+**Files**:
+- `src/memory/server/toolHandlers.ts`
+- `src/memory/core/KnowledgeGraphManager.ts`
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Changes**:
+- toolHandlers imports EntityManager directly
+- Entity tool handlers call EntityManager methods
+- Remove entity delegation from KnowledgeGraphManager
+
+**Acceptance Criteria**:
+- [ ] Entity tools bypass KGM facade
+- [ ] Call stack reduced by 1 layer
+- [ ] All entity tests pass
+- [ ] No API changes to tools
+
+---
+
+### Task 12.2: Bypass KnowledgeGraphManager for Search Operations
+
+**Files**:
+- `src/memory/server/toolHandlers.ts`
+- `src/memory/core/KnowledgeGraphManager.ts`
+
+**Estimated Time**: 1.5 hours
+**Agent**: Claude Sonnet
+
+**Changes**:
+- toolHandlers imports SearchManager directly
+- Search tool handlers call SearchManager methods
+- Remove search delegation from KnowledgeGraphManager
+
+**Acceptance Criteria**:
+- [ ] Search tools bypass KGM facade
+- [ ] All search tests pass
+- [ ] No API changes to tools
+
+---
+
+### Task 12.3: Bypass KnowledgeGraphManager for I/O Operations
+
+**Files**:
+- `src/memory/server/toolHandlers.ts`
+- `src/memory/core/KnowledgeGraphManager.ts`
+
+**Estimated Time**: 1.5 hours
+**Agent**: Claude Sonnet
+
+**Changes**:
+- toolHandlers imports IOManager directly
+- Import/export/backup handlers call IOManager
+- Remove I/O delegation from KnowledgeGraphManager
+
+**Acceptance Criteria**:
+- [ ] I/O tools bypass KGM facade
+- [ ] All import/export tests pass
+- [ ] No API changes to tools
+
+---
+
+### Task 12.4: Deprecate or Simplify KnowledgeGraphManager
+
+**Files**:
+- `src/memory/core/KnowledgeGraphManager.ts`
+- `src/memory/index.ts`
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Options**:
+- **Option A**: Delete KGM entirely - managers instantiated in toolHandlers (~550 lines removed)
+- **Option B**: Keep KGM as factory only - createManagers() returns all 4 managers (~400 lines removed)
+
+**Acceptance Criteria**:
+- [ ] KGM either deleted or reduced to <100 lines
+- [ ] No facade delegation pattern
+- [ ] All tests pass
+- [ ] Entry point (index.ts) still works
+
+---
+
+## Sprint 13: SQLite Migration Preparation (Remaining Critique)
+
+**Priority**: LOW
+**Estimated Duration**: 1 day
+**Impact**: Create storage abstraction for future SQLite migration
+**Critique Source**: Analysis Report: "Still JSONL - Not SQLite"
+
+### Task 13.1: Create IGraphStorage Interface
+
+**File**: `src/memory/types/storage.types.ts` (new)
+**Estimated Time**: 1.5 hours
+**Agent**: Claude Sonnet
+
+**Interface**:
+```typescript
+interface IGraphStorage {
+  loadGraph(): Promise<KnowledgeGraph>;
+  saveGraph(graph: KnowledgeGraph): Promise<void>;
+  appendEntity(entity: Entity): Promise<void>;
+  appendRelation(relation: Relation): Promise<void>;
+  updateEntity(name: string, updates: Partial<Entity>): Promise<void>;
+  deleteEntity(name: string): Promise<void>;
+  deleteRelation(from: string, to: string, type: string): Promise<void>;
+  getEntityByName(name: string): Entity | undefined;
+  getEntitiesByType(type: string): Entity[];
+  search(query: string, options?: SearchOptions): Promise<Entity[]>;
+}
+```
+
+**Acceptance Criteria**:
+- [ ] IGraphStorage interface defined
+- [ ] All current GraphStorage methods covered
+- [ ] Types exported from index
+
+---
+
+### Task 13.2: Refactor GraphStorage to Implement IGraphStorage
+
+**File**: `src/memory/core/GraphStorage.ts`
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Changes**:
+- Rename to JSONLStorage
+- Implement IGraphStorage interface
+- Extract common logic to base class if helpful
+
+**Acceptance Criteria**:
+- [ ] GraphStorage implements IGraphStorage
+- [ ] All existing tests pass
+- [ ] No functionality changes
+
+---
+
+### Task 13.3: Create SQLiteStorage Adapter
+
+**File**: `src/memory/core/SQLiteStorage.ts` (new)
+**Estimated Time**: 3 hours
+**Agent**: Claude Sonnet
+
+**Dependencies**: `better-sqlite3` (optional dependency)
+
+**Schema**:
+```sql
+-- Tables
+entities (name TEXT PRIMARY KEY, type TEXT, observations TEXT, tags TEXT, importance INTEGER, parent_id TEXT, created_at TEXT, modified_at TEXT)
+relations (from_entity TEXT, to_entity TEXT, relation_type TEXT, created_at TEXT, PRIMARY KEY(from_entity, to_entity, relation_type))
+entity_fts USING fts5(name, type, observations, tags)
+
+-- Indexes
+idx_entity_type ON entities(type)
+idx_entity_parent ON entities(parent_id)
+idx_relation_from ON relations(from_entity)
+idx_relation_to ON relations(to_entity)
+```
+
+**Acceptance Criteria**:
+- [ ] SQLiteStorage implements IGraphStorage
+- [ ] All CRUD operations work
+- [ ] FTS5 for full-text search
+- [ ] Pass same test suite as JSONL
+
+---
+
+### Task 13.4: Add Storage Factory and Configuration
+
+**Files**:
+- `src/memory/core/StorageFactory.ts` (new)
+- `src/memory/index.ts`
+
+**Estimated Time**: 1.5 hours
+**Agent**: Claude Haiku
+
+**Implementation**:
+```typescript
+function createStorage(config: StorageConfig): IGraphStorage {
+  switch (config.type) {
+    case 'sqlite':
+      return new SQLiteStorage(config.path);
+    case 'jsonl':
+    default:
+      return new JSONLStorage(config.path);
+  }
+}
+```
+
+**Environment Variable**: `MEMORY_STORAGE_TYPE` ('jsonl' | 'sqlite')
+
+**Acceptance Criteria**:
+- [ ] Factory creates correct storage type
+- [ ] Default remains JSONL for backwards compatibility
+- [ ] Environment variable override works
+- [ ] Documentation updated
+
+---
+
+## Sprint 14: Code Volume Reduction (Remaining Critique)
+
+**Priority**: LOW
+**Estimated Duration**: 0.5 days
+**Impact**: Reduce codebase from 11,131 to ~6,000 lines
+**Critique Source**: Analysis Report: "Code volume - Slightly larger (+459 lines)"
+
+> **Note**: Sprint 11 already deletes the 6 consolidated manager files, and Sprint 12 already removes/reduces KnowledgeGraphManager. This sprint focuses on the remaining consolidation work.
+
+**Prior Reductions**:
+- Sprint 4: ~1,500 lines (ObservationManager, TagManager, HierarchyManager merged)
+- Sprint 11: ~1,200 lines (6 manager files deleted)
+- Sprint 12: ~550 lines (KnowledgeGraphManager deleted/reduced)
+
+### Task 14.1: Consolidate Search Modules
+
+**Files**:
+- `src/memory/search/SearchManager.ts`
+- `src/memory/search/BasicSearch.ts` (merge)
+- `src/memory/search/BooleanSearch.ts` (merge)
+- `src/memory/search/RankedSearch.ts` (merge)
+- `src/memory/search/FuzzySearch.ts` (merge)
+
+**Estimated Time**: 2 hours
+**Agent**: Claude Sonnet
+
+**Estimated Lines Removed**: ~800
+
+**Acceptance Criteria**:
+- [ ] 4 search modules merged into SearchManager
+- [ ] No separate search class files
+- [ ] All search tests pass
+- [ ] Shared utilities extracted to avoid duplication
+
+---
+
+### Task 14.2: Reduce Utility File Count
+
+**Files**: `src/memory/utils/` (18 files → 6 files)
+**Estimated Time**: 1.5 hours
+**Agent**: Claude Sonnet
+
+**Target Structure**:
+- `validation.ts` - All Zod schemas (merge 14 schema files)
+- `search.ts` - levenshtein, tfidf utilities
+- `formatting.ts` - responseFormatter, pagination
+- `indexes.ts` - NameIndex, TypeIndex, LowercaseCache
+- `errors.ts` - Error classes and handling
+- `constants.ts` - All constants
+
+**Estimated Lines Removed**: ~400
+
+**Acceptance Criteria**:
+- [ ] Utils reduced from 18 to 6 files
+- [ ] All utility tests pass
+- [ ] No duplicate code
+
+---
+
 ## Appendix A: File Deletion Checklist
 
 After consolidation, these files should be deleted:
 
+**Sprint 1-10 (Original Plan)**:
 ```
 src/memory/core/ObservationManager.ts
 src/memory/features/TagManager.ts
@@ -1783,16 +2162,31 @@ src/memory/search/RankedSearch.ts
 src/memory/search/FuzzySearch.ts
 ```
 
-**Estimated Lines Removed**: ~1,500
+**Sprint 11-14 (Remaining Critique)**:
+```
+src/memory/features/CompressionManager.ts
+src/memory/features/AnalyticsManager.ts
+src/memory/features/ArchiveManager.ts
+src/memory/features/ImportManager.ts
+src/memory/features/ExportManager.ts
+src/memory/features/BackupManager.ts
+src/memory/core/KnowledgeGraphManager.ts (or reduce to <100 lines)
+```
+
+**Estimated Lines Removed**: ~4,500 total
 
 ---
 
 ## Appendix B: New Files Created
 
+**Sprint 1-10 (Original Plan)**:
 ```
 src/memory/utils/indexes.ts
 src/memory/utils/dates.ts
 src/memory/utils/validation.ts
+src/memory/utils/pagination.ts
+src/memory/search/SearchFilterChain.ts
+src/memory/server/handlers/index.ts
 src/memory/server/handlers/entity.ts
 src/memory/server/handlers/search.ts
 src/memory/server/handlers/graph.ts
@@ -1800,7 +2194,23 @@ src/memory/server/handlers/io.ts
 src/memory/server/schemaBuilders.ts
 docs/development/ERROR_HANDLING.md
 docs/development/ADR-001-index-system.md
+docs/development/ADR-002-manager-consolidation.md
+src/memory/__tests__/performance/read-performance.test.ts
+src/memory/__tests__/performance/write-performance.test.ts
+src/memory/__tests__/performance/tfidf-performance.test.ts
+src/memory/__tests__/unit/errors.test.ts
+src/memory/__tests__/unit/utils/indexes.test.ts
+src/memory/__tests__/unit/utils/dates.test.ts
+src/memory/__tests__/unit/utils/validation.test.ts
 scripts/strip-jsdoc.ts
+```
+
+**Sprint 11-14 (Remaining Critique)**:
+```
+src/memory/features/IOManager.ts
+src/memory/types/storage.types.ts
+src/memory/core/SQLiteStorage.ts
+src/memory/core/StorageFactory.ts
 ```
 
 ---
@@ -1821,7 +2231,27 @@ graph TD
     S7 --> S8
     S8 --> S9[Sprint 9: Documentation]
     S9 --> S10[Sprint 10: Final Cleanup]
+    S10 --> S11[Sprint 11: Further Manager Consolidation]
+    S11 --> S12[Sprint 12: Reduce Abstraction Layers]
+    S11 --> S13[Sprint 13: SQLite Migration Prep]
+    S12 --> S14[Sprint 14: Code Volume Reduction]
+    S13 --> S14
 ```
+
+### Parallel Execution Groups
+
+| Group | Sprints | Description |
+|-------|---------|-------------|
+| 1 | Sprint 1 | Must complete first |
+| 2 | Sprint 2, 3 | Can run in parallel after Sprint 1 |
+| 3 | Sprint 4 | After Sprints 2 and 3 |
+| 4 | Sprint 5, 6, 7 | Can run in parallel after Sprint 4 (5,6) or Sprint 3 (7) |
+| 5 | Sprint 8 | After Sprints 5, 6, 7 |
+| 6 | Sprint 9 | After Sprint 8 |
+| 7 | Sprint 10 | After Sprint 9 |
+| 8 | Sprint 11 | After Sprint 10 (Remaining Critique) |
+| 9 | Sprint 12, 13 | Can run in parallel after Sprint 11 |
+| 10 | Sprint 14 | After Sprints 12 and 13 |
 
 ---
 
@@ -1840,4 +2270,6 @@ graph TD
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2025-12-29 | 1.0.0 | Initial refactoring plan |
+| 2025-12-29 | 1.0.0 | Initial refactoring plan (Sprints 1-10) |
+| 2025-12-30 | 2.0.0 | Added Sprints 11-14 to address remaining critique items: Further Manager Consolidation (9→4 managers), Reduce Abstraction Layers (6→3 layers), SQLite Migration Prep (IGraphStorage interface), Code Volume Reduction (11,131→6,000 lines) |
+| 2025-12-30 | 2.0.1 | Fixed Sprint 14: Removed redundant tasks 14.1-14.2 (already done in Sprint 11-12), reduced to 2 tasks (61 total). Updated Appendix B with missing files. Fixed Sprint 11 line estimate (500→1,200). Updated agentDistribution (32 sonnet, 29 haiku). |
