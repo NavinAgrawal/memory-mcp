@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphStorage } from '../../core/GraphStorage.js';
 import { EntityManager } from '../../core/EntityManager.js';
 import { RelationManager } from '../../core/RelationManager.js';
-import { CompressionManager } from '../../features/CompressionManager.js';
+import { SearchManager } from '../../search/SearchManager.js';
 import { BasicSearch } from '../../search/BasicSearch.js';
 import { RankedSearch } from '../../search/RankedSearch.js';
 import { BooleanSearch } from '../../search/BooleanSearch.js';
@@ -22,24 +22,26 @@ describe('Integration: Complete Workflows', () => {
   let storage: GraphStorage;
   let entityManager: EntityManager;
   let relationManager: RelationManager;
-  let compressionManager: CompressionManager;
+  let searchManager: SearchManager;
   let basicSearch: BasicSearch;
   let rankedSearch: RankedSearch;
   let booleanSearch: BooleanSearch;
   let fuzzySearch: FuzzySearch;
   let testDir: string;
   let testFilePath: string;
+  let savedSearchesPath: string;
 
   beforeEach(async () => {
     // Create unique temp directory for each test
     testDir = join(tmpdir(), `integration-test-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-graph.jsonl');
+    savedSearchesPath = join(testDir, 'saved-searches.jsonl');
 
     storage = new GraphStorage(testFilePath);
     entityManager = new EntityManager(storage);
     relationManager = new RelationManager(storage);
-    compressionManager = new CompressionManager(storage);
+    searchManager = new SearchManager(storage, savedSearchesPath);
     basicSearch = new BasicSearch(storage);
     rankedSearch = new RankedSearch(storage);
     booleanSearch = new BooleanSearch(storage);
@@ -156,7 +158,7 @@ describe('Integration: Complete Workflows', () => {
       expect(beforeSearch.entities).toHaveLength(2);
 
       // Step 3: Compress duplicates with lower threshold for similar names
-      const compressionResult = await compressionManager.compressGraph(0.7);
+      const compressionResult = await searchManager.compressGraph(0.7);
 
       // If duplicates were found and merged
       if (compressionResult.entitiesMerged > 0) {
@@ -194,7 +196,7 @@ describe('Integration: Complete Workflows', () => {
       expect(beforeSearch.relations.length).toBeGreaterThanOrEqual(0);
 
       // Compress with lower threshold
-      await compressionManager.compressGraph(0.7);
+      await searchManager.compressGraph(0.7);
 
       // Verify graph is still functional after compression
       const afterSearch = await basicSearch.searchNodes('');

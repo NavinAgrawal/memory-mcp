@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (431 tests)
+npm test              # Run tests with coverage (1484 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.52.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.55.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -39,7 +39,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ┌──────────────────┴──────────────────────┐
 │  Layer 2: Managers (Facade Pattern)     │
 │  core/KnowledgeGraphManager.ts          │
-│  + 8 specialized managers (lazy init)   │
+│  + 4 specialized managers (lazy init)   │
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────┴──────────────────────┐
@@ -48,13 +48,13 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 53 TypeScript files
+### Source Structure (src/memory/) - 47 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 5 | KnowledgeGraphManager (facade), EntityManager (CRUD + hierarchy), RelationManager, GraphStorage, TransactionManager |
-| **features/** | 7 | CompressionManager, ArchiveManager, TagManager, AnalyticsManager, ExportManager, ImportManager, BackupManager |
-| **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
+| **core/** | 5 | KnowledgeGraphManager (facade), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, TransactionManager |
+| **features/** | 2 | TagManager (tag aliases), IOManager (import/export/backup) |
+| **search/** | 10 | SearchManager (orchestrator + compression + analytics), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
 | **types/** | 6 | Entity, relation, search, analytics, tag, import-export type definitions |
 | **utils/** | 18 | Zod schemas (14 validators), constants, errors, levenshtein, tfidf, logger, pagination, caching, indexes |
@@ -63,7 +63,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ### Key Design Patterns
 
 1. **Facade Pattern**: KnowledgeGraphManager delegates to specialized managers
-2. **Lazy Initialization**: 8 managers instantiated on-demand
+2. **Lazy Initialization**: 4 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager)
 3. **Dependency Injection**: GraphStorage injected into managers
 4. **Handler Registry**: Tool handlers mapped in toolHandlers.ts
 5. **Barrel Exports**: Each module exports via index.ts
@@ -138,12 +138,12 @@ Tests are in `src/memory/__tests__/` (1349 tests, 38 files):
 | unit/core/EntityManager.test.ts | 31 | Entity CRUD |
 | unit/core/GraphStorage.test.ts | 10 | Storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
-| unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats |
-| unit/features/ArchiveManager.test.ts | 27 | Entity archival |
-| unit/features/BackupManager.test.ts | 27 | Backup/restore |
-| unit/features/CompressionManager.test.ts | 32 | Duplicate detection |
-| unit/features/ExportManager.test.ts | 84 | Export formats |
-| unit/features/ImportManager.test.ts | 26 | Import formats |
+| unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
+| unit/features/ArchiveManager.test.ts | 27 | Entity archival (via EntityManager) |
+| unit/features/BackupManager.test.ts | 27 | Backup/restore (via IOManager) |
+| unit/features/CompressionManager.test.ts | 32 | Duplicate detection (via SearchManager) |
+| unit/features/ExportManager.test.ts | 84 | Export formats (via IOManager) |
+| unit/features/ImportManager.test.ts | 26 | Import formats (via IOManager) |
 | unit/features/TagManager.test.ts | 35 | Tag aliases |
 | unit/search/BasicSearch.test.ts | 37 | Basic search |
 | unit/search/BooleanSearch.test.ts | 52 | AND/OR/NOT queries |
@@ -170,7 +170,7 @@ Tests are in `src/memory/__tests__/` (1349 tests, 38 files):
 - In-memory caching with write-through invalidation
 - 50x faster duplicate detection using two-level bucketing
 - Lazy TF-IDF index loading
-- Lazy manager initialization (10 managers load on-demand)
+- Lazy manager initialization (4 managers load on-demand)
 - Batch operations support via TransactionManager
 - Handles 2000+ entities efficiently
 

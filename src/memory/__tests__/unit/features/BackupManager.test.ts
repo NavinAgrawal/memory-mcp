@@ -1,19 +1,20 @@
 /**
- * BackupManager Unit Tests
+ * Backup Operations Unit Tests
  *
  * Tests for backup creation, listing, restoration, and cleanup.
+ * (Originally BackupManager, merged into IOManager in Sprint 11.4)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { BackupManager } from '../../../features/BackupManager.js';
+import { IOManager } from '../../../features/IOManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('BackupManager', () => {
+describe('IOManager Backup Operations', () => {
   let storage: GraphStorage;
-  let manager: BackupManager;
+  let manager: IOManager;
   let testDir: string;
   let testFilePath: string;
 
@@ -22,7 +23,7 @@ describe('BackupManager', () => {
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-memory.jsonl');
     storage = new GraphStorage(testFilePath);
-    manager = new BackupManager(storage);
+    manager = new IOManager(storage);
   });
 
   afterEach(async () => {
@@ -36,7 +37,7 @@ describe('BackupManager', () => {
   describe('Constructor', () => {
     it('should create manager with storage', () => {
       expect(manager).toBeDefined();
-      expect(manager).toBeInstanceOf(BackupManager);
+      expect(manager).toBeInstanceOf(IOManager);
     });
 
     it('should derive backup directory from storage path', () => {

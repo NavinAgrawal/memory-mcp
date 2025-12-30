@@ -5,6 +5,59 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.0] - 2025-12-30
+
+### Changed
+
+- **Phase 1 Sprint 11: Manager Consolidation** - Reduced from 9 managers to 4
+  - **Sprint 11.1**: Merged CompressionManager into SearchManager
+    - Duplicate detection (find_duplicates) now via SearchManager
+    - Entity merging (merge_entities) via SearchManager
+    - Graph compression (compress_graph) via SearchManager
+  - **Sprint 11.2**: Merged AnalyticsManager into SearchManager
+    - Graph statistics (get_graph_stats) now via SearchManager
+    - Graph validation (validate_graph) via SearchManager
+  - **Sprint 11.3**: Merged ArchiveManager into EntityManager
+    - Archive operations (archive_entities) now via EntityManager
+    - Added ArchiveCriteria and ArchiveResult types to EntityManager
+  - **Sprint 11.4**: Created IOManager from BackupManager, ExportManager, ImportManager
+    - Unified I/O operations in single manager (874 lines)
+    - Export (7 formats), Import (3 formats), Backup/Restore operations
+    - TransactionManager updated to use IOManager
+
+### Removed
+
+- **Deleted managers** (functionality preserved in consolidated managers)
+  - CompressionManager.ts (merged into SearchManager)
+  - AnalyticsManager.ts (merged into SearchManager)
+  - ArchiveManager.ts (merged into EntityManager)
+  - BackupManager.ts, ExportManager.ts, ImportManager.ts (merged into IOManager)
+
+## [0.54.0] - 2025-12-30
+
+### Added
+
+- **Phase 2B Sprint 1: E2E Tool Tests** - Client-side MCP tool testing (95 tests)
+  - `e2e/tools/entity-tools.test.ts` (56 tests) - Entity CRUD operations
+    - create_entities: required/optional params, response format, error handling, edge cases
+    - delete_entities: batch operations, cascade relations, error handling
+    - read_graph: empty/populated graphs, response format validation
+    - open_nodes: single/multiple nodes, related entities, edge cases
+  - `e2e/tools/relation-tools.test.ts` (39 tests) - Relation CRUD operations
+    - create_relations: required params, persistence, graph integrity
+    - delete_relations: selective deletion, relation type matching
+    - Complex relation networks, bidirectional relations
+
+- **Phase 2B Sprint 3 (Early): Observation Tool Tests** (40 tests)
+  - `e2e/tools/observation-tools.test.ts` - Observation management
+    - add_observations: batch operations, persistence, timestamps
+    - delete_observations: selective deletion, unicode support
+    - Workflow integration tests
+
+### Fixed
+
+- Extended timeout for 5000-element graph benchmark test (30000ms)
+
 ## [0.53.0] - 2025-12-29
 
 ### Added

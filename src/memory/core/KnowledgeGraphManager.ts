@@ -16,12 +16,8 @@ import { GraphStorage } from './GraphStorage.js';
 import { EntityManager } from './EntityManager.js';
 import { RelationManager } from './RelationManager.js';
 import { SearchManager } from '../search/SearchManager.js';
-import { CompressionManager } from '../features/CompressionManager.js';
-import { ExportManager } from '../features/ExportManager.js';
-import { ImportManager } from '../features/ImportManager.js';
-import { AnalyticsManager } from '../features/AnalyticsManager.js';
+import { IOManager } from '../features/IOManager.js';
 import { TagManager } from '../features/TagManager.js';
-import { ArchiveManager } from '../features/ArchiveManager.js';
 import type {
   Entity,
   Relation,
@@ -41,15 +37,11 @@ import type {
  *
  * This class serves as the main facade for interacting with the knowledge graph,
  * delegating to specialized managers for different concerns:
- * - EntityManager: Entity CRUD, observations, tags, and hierarchy operations
+ * - EntityManager: Entity CRUD, observations, tags, hierarchy, and archive operations
  * - RelationManager: Relation CRUD operations
- * - SearchManager: All search operations (basic, ranked, boolean, fuzzy)
- * - CompressionManager: Duplicate detection and merging
- * - ExportManager: Export to various formats
- * - ImportManager: Import from various formats
- * - AnalyticsManager: Statistics and validation
+ * - SearchManager: All search operations + compression + analytics
+ * - IOManager: Import, export, and backup operations (Sprint 11.4)
  * - TagManager: Tag alias management
- * - ArchiveManager: Entity archiving
  */
 export class KnowledgeGraphManager {
   private readonly savedSearchesFilePath: string;
@@ -60,12 +52,8 @@ export class KnowledgeGraphManager {
   private _entityManager?: EntityManager;
   private _relationManager?: RelationManager;
   private _searchManager?: SearchManager;
-  private _compressionManager?: CompressionManager;
-  private _exportManager?: ExportManager;
-  private _importManager?: ImportManager;
-  private _analyticsManager?: AnalyticsManager;
+  private _ioManager?: IOManager;
   private _tagManager?: TagManager;
-  private _archiveManager?: ArchiveManager;
 
   constructor(memoryFilePath: string) {
     // Saved searches file is stored alongside the memory file
@@ -90,28 +78,12 @@ export class KnowledgeGraphManager {
     return (this._searchManager ??= new SearchManager(this.storage, this.savedSearchesFilePath));
   }
 
-  private get compressionManager(): CompressionManager {
-    return (this._compressionManager ??= new CompressionManager(this.storage));
-  }
-
-  private get exportManager(): ExportManager {
-    return (this._exportManager ??= new ExportManager());
-  }
-
-  private get importManager(): ImportManager {
-    return (this._importManager ??= new ImportManager(this.storage));
-  }
-
-  private get analyticsManager(): AnalyticsManager {
-    return (this._analyticsManager ??= new AnalyticsManager(this.storage));
+  private get ioManager(): IOManager {
+    return (this._ioManager ??= new IOManager(this.storage));
   }
 
   private get tagManager(): TagManager {
     return (this._tagManager ??= new TagManager(this.tagAliasesFilePath));
-  }
-
-  private get archiveManager(): ArchiveManager {
-    return (this._archiveManager ??= new ArchiveManager(this.storage));
   }
 
   private async loadGraph(): Promise<ReadonlyKnowledgeGraph> {
@@ -181,7 +153,7 @@ export class KnowledgeGraphManager {
   }
 
   async getGraphStats(): Promise<GraphStats> {
-    return this.analyticsManager.getGraphStats();
+    return this.searchManager.getGraphStats();
   }
   // Phase 3: Add tags to an entity
   async addTags(entityName: string, tags: string[]): Promise<{ entityName: string; addedTags: string[] }> {
@@ -225,7 +197,7 @@ export class KnowledgeGraphManager {
    * Validate the knowledge graph for integrity issues and provide a detailed report
    */
   async validateGraph(): Promise<ValidationReport> {
-    return this.analyticsManager.validateGraph();
+    return this.searchManager.validateGraph();
   }
 
   // Tier 0 C4: Saved searches for efficient query management
@@ -410,7 +382,7 @@ export class KnowledgeGraphManager {
    * @returns Array of duplicate groups (each group has similar entities)
    */
   async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]> {
-    return this.compressionManager.findDuplicates(threshold);
+    return this.searchManager.findDuplicates(threshold);
   }
 
   /**
@@ -420,7 +392,7 @@ export class KnowledgeGraphManager {
    * @returns The merged entity
    */
   async mergeEntities(entityNames: string[], targetName?: string): Promise<Entity> {
-    return this.compressionManager.mergeEntities(entityNames, targetName);
+    return this.searchManager.mergeEntities(entityNames, targetName);
   }
 
   /**
@@ -430,7 +402,7 @@ export class KnowledgeGraphManager {
    * @returns Compression result with statistics
    */
   async compressGraph(threshold: number = 0.8, dryRun: boolean = false): Promise<CompressionResult> {
-    return this.compressionManager.compressGraph(threshold, dryRun);
+    return this.searchManager.compressGraph(threshold, dryRun);
   }
 
   // Phase 4: Memory archiving system
@@ -448,7 +420,7 @@ export class KnowledgeGraphManager {
     },
     dryRun: boolean = false
   ): Promise<{ archived: number; entityNames: string[] }> {
-    return this.archiveManager.archiveEntities(criteria, dryRun);
+    return this.entityManager.archiveEntities(criteria, dryRun);
   }
 
   // Tier 0 B2: Tag aliases for synonym management
@@ -523,7 +495,7 @@ export class KnowledgeGraphManager {
       graph = await this.loadGraph();
     }
 
-    return this.exportManager.exportGraph(graph, format);
+    return this.ioManager.exportGraph(graph, format);
   }
 
   // Tier 0 D2: Import capabilities with merge strategies
@@ -541,6 +513,6 @@ export class KnowledgeGraphManager {
     mergeStrategy: 'replace' | 'skip' | 'merge' | 'fail' = 'skip',
     dryRun: boolean = false
   ): Promise<ImportResult> {
-    return this.importManager.importGraph(format, data, mergeStrategy, dryRun);
+    return this.ioManager.importGraph(format, data, mergeStrategy, dryRun);
   }
 }

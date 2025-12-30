@@ -1,19 +1,20 @@
 /**
- * ArchiveManager Unit Tests
+ * Archive Operations Unit Tests
  *
  * Tests for entity archival based on age, importance, and tags.
+ * (Originally ArchiveManager, merged into EntityManager in Sprint 11.3)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ArchiveManager } from '../../../features/ArchiveManager.js';
+import { EntityManager } from '../../../core/EntityManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('ArchiveManager', () => {
+describe('EntityManager Archive Operations', () => {
   let storage: GraphStorage;
-  let manager: ArchiveManager;
+  let manager: EntityManager;
   let testDir: string;
   let testFilePath: string;
 
@@ -22,7 +23,7 @@ describe('ArchiveManager', () => {
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-memory.jsonl');
     storage = new GraphStorage(testFilePath);
-    manager = new ArchiveManager(storage);
+    manager = new EntityManager(storage);
   });
 
   afterEach(async () => {

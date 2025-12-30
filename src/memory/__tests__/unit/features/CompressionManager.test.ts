@@ -1,9 +1,12 @@
 /**
- * CompressionManager Unit Tests
+ * Compression Operations Unit Tests
+ *
+ * Tests compression functionality now integrated into SearchManager.
+ * (Originally CompressionManager, merged in Sprint 11.1)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { CompressionManager } from '../../../features/CompressionManager.js';
+import { SearchManager } from '../../../search/SearchManager.js';
 import { EntityManager } from '../../../core/EntityManager.js';
 import { RelationManager } from '../../../core/RelationManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
@@ -12,22 +15,24 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('CompressionManager', () => {
+describe('SearchManager Compression Operations', () => {
   let storage: GraphStorage;
-  let compressionManager: CompressionManager;
+  let searchManager: SearchManager;
   let entityManager: EntityManager;
   let relationManager: RelationManager;
   let testDir: string;
   let testFilePath: string;
+  let savedSearchesPath: string;
 
   beforeEach(async () => {
     // Create unique temp directory for each test
     testDir = join(tmpdir(), `compression-manager-test-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-graph.jsonl');
+    savedSearchesPath = join(testDir, 'saved-searches.jsonl');
 
     storage = new GraphStorage(testFilePath);
-    compressionManager = new CompressionManager(storage);
+    searchManager = new SearchManager(storage, savedSearchesPath);
     entityManager = new EntityManager(storage);
     relationManager = new RelationManager(storage);
   });
@@ -49,7 +54,7 @@ describe('CompressionManager', () => {
         { name: 'Bob Jones', entityType: 'person', observations: ['Manager'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.8);
+      const duplicates = await searchManager.findDuplicates(0.8);
 
       expect(duplicates).toHaveLength(1);
       expect(duplicates[0]).toContain('Alice Smith');
@@ -62,7 +67,7 @@ describe('CompressionManager', () => {
         { name: 'Bob', entityType: 'person', observations: ['Manager'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.9);
+      const duplicates = await searchManager.findDuplicates(0.9);
       expect(duplicates).toHaveLength(0);
     });
 
@@ -72,12 +77,12 @@ describe('CompressionManager', () => {
         { name: 'ProjectX', entityType: 'company', observations: ['Software'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.7);
+      const duplicates = await searchManager.findDuplicates(0.7);
       expect(duplicates).toHaveLength(0); // Different types, not duplicates
     });
 
     it('should handle empty graph', async () => {
-      const duplicates = await compressionManager.findDuplicates();
+      const duplicates = await searchManager.findDuplicates();
       expect(duplicates).toEqual([]);
     });
 
@@ -86,7 +91,7 @@ describe('CompressionManager', () => {
         { name: 'Alice', entityType: 'person', observations: [] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates();
+      const duplicates = await searchManager.findDuplicates();
       expect(duplicates).toEqual([]);
     });
 
@@ -96,7 +101,7 @@ describe('CompressionManager', () => {
         { name: 'ALICE SMITH', entityType: 'person', observations: ['Engineer'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.9);
+      const duplicates = await searchManager.findDuplicates(0.9);
       expect(duplicates).toHaveLength(1);
       expect(duplicates[0]).toHaveLength(2);
     });
@@ -107,7 +112,7 @@ describe('CompressionManager', () => {
         { name: 'Alicia', entityType: 'person', observations: ['Software engineer', 'Loves Python', 'Works remotely'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.7);
+      const duplicates = await searchManager.findDuplicates(0.7);
       expect(duplicates).toHaveLength(1);
     });
 
@@ -127,7 +132,7 @@ describe('CompressionManager', () => {
         },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.85);
+      const duplicates = await searchManager.findDuplicates(0.85);
       expect(duplicates).toHaveLength(1);
     });
 
@@ -140,7 +145,7 @@ describe('CompressionManager', () => {
         { name: 'Charlie', entityType: 'person', observations: ['C'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.8);
+      const duplicates = await searchManager.findDuplicates(0.8);
       expect(duplicates).toHaveLength(2); // Two separate duplicate groups
     });
 
@@ -155,7 +160,7 @@ describe('CompressionManager', () => {
         { name: 'Charles', entityType: 'person', observations: [] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.7);
+      const duplicates = await searchManager.findDuplicates(0.7);
       // Each prefix group might have duplicates, but they don't cross-compare
       expect(duplicates.length).toBeGreaterThanOrEqual(0);
     });
@@ -190,7 +195,7 @@ describe('CompressionManager', () => {
     });
 
     it('should merge two entities and combine observations', async () => {
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia']);
 
       expect(merged.name).toBe('Alice');
       expect(merged.observations).toContain('Engineer');
@@ -200,7 +205,7 @@ describe('CompressionManager', () => {
     });
 
     it('should merge tags from all entities', async () => {
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia']);
 
       expect(merged.tags).toContain('tech');
       expect(merged.tags).toContain('python');
@@ -209,24 +214,24 @@ describe('CompressionManager', () => {
     });
 
     it('should use highest importance value', async () => {
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia']);
       expect(merged.importance).toBe(9); // Alicia has 9, Alice has 8
     });
 
     it('should use earliest createdAt timestamp', async () => {
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia']);
       expect(merged.createdAt).toBe('2024-01-01T00:00:00.000Z');
     });
 
     it('should update lastModified timestamp', async () => {
       const beforeMerge = new Date().toISOString();
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia']);
       expect(merged.lastModified).toBeDefined();
       expect(merged.lastModified! >= beforeMerge).toBe(true);
     });
 
     it('should remove merged entities from graph', async () => {
-      await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      await searchManager.mergeEntities(['Alice', 'Alicia']);
 
       const alice = await entityManager.getEntity('Alice');
       const alicia = await entityManager.getEntity('Alicia');
@@ -237,18 +242,18 @@ describe('CompressionManager', () => {
 
     it('should throw error when merging less than 2 entities', async () => {
       await expect(
-        compressionManager.mergeEntities(['Alice'])
+        searchManager.mergeEntities(['Alice'])
       ).rejects.toThrow(InsufficientEntitiesError);
     });
 
     it('should throw error when entity not found', async () => {
       await expect(
-        compressionManager.mergeEntities(['Alice', 'NonExistent'])
+        searchManager.mergeEntities(['Alice', 'NonExistent'])
       ).rejects.toThrow(EntityNotFoundError);
     });
 
     it('should rename merged entity if targetName provided', async () => {
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia'], 'Alice Smith');
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia'], 'Alice Smith');
 
       expect(merged.name).toBe('Alice Smith');
 
@@ -265,7 +270,7 @@ describe('CompressionManager', () => {
         { from: 'Alicia', to: 'Bob', relationType: 'reports_to' },
       ]);
 
-      await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      await searchManager.mergeEntities(['Alice', 'Alicia']);
 
       const aliceRelations = await relationManager.getRelations('Alice');
       expect(aliceRelations).toHaveLength(2);
@@ -279,7 +284,7 @@ describe('CompressionManager', () => {
         { from: 'Alicia', to: 'Bob', relationType: 'works_with' }, // Duplicate after merge
       ]);
 
-      await compressionManager.mergeEntities(['Alice', 'Alicia']);
+      await searchManager.mergeEntities(['Alice', 'Alicia']);
 
       const relations = await relationManager.getRelations('Alice');
       const worksWithRelations = relations.filter(r =>
@@ -290,7 +295,7 @@ describe('CompressionManager', () => {
     });
 
     it('should handle merging entities with no tags', async () => {
-      const merged = await compressionManager.mergeEntities(['Bob', 'Alice']);
+      const merged = await searchManager.mergeEntities(['Bob', 'Alice']);
       // Bob has no tags, Alice has tags
       expect(merged.tags).toContain('tech');
       expect(merged.tags).toContain('python');
@@ -301,7 +306,7 @@ describe('CompressionManager', () => {
         { name: 'Alice2', entityType: 'person', observations: ['Observation 1'] },
       ]);
 
-      const merged = await compressionManager.mergeEntities(['Alice', 'Alicia', 'Alice2']);
+      const merged = await searchManager.mergeEntities(['Alice', 'Alicia', 'Alice2']);
 
       const alice = await entityManager.getEntity('Alice');
       const alicia = await entityManager.getEntity('Alicia');
@@ -327,7 +332,7 @@ describe('CompressionManager', () => {
     });
 
     it('should compress graph and return statistics', async () => {
-      const result = await compressionManager.compressGraph(0.8);
+      const result = await searchManager.compressGraph(0.8);
 
       expect(result.duplicatesFound).toBe(4); // 4 total duplicates in 2 groups
       expect(result.entitiesMerged).toBe(2); // 2 entities merged into others
@@ -339,7 +344,7 @@ describe('CompressionManager', () => {
       const beforeGraph = await storage.loadGraph();
       const beforeEntityCount = beforeGraph.entities.length;
 
-      const result = await compressionManager.compressGraph(0.8, true);
+      const result = await searchManager.compressGraph(0.8, true);
 
       const afterGraph = await storage.loadGraph();
       expect(afterGraph.entities).toHaveLength(beforeEntityCount);
@@ -349,7 +354,7 @@ describe('CompressionManager', () => {
     });
 
     it('should calculate space freed correctly', async () => {
-      const result = await compressionManager.compressGraph(0.8);
+      const result = await searchManager.compressGraph(0.8);
 
       expect(result.spaceFreed).toBeGreaterThan(0);
       expect(result.duplicatesFound).toBeGreaterThan(0);
@@ -369,7 +374,7 @@ describe('CompressionManager', () => {
         { name: 'Charlie', entityType: 'person', observations: ['Designer'] },
       ]);
 
-      const result = await compressionManager.compressGraph(0.9);
+      const result = await searchManager.compressGraph(0.9);
 
       expect(result.duplicatesFound).toBe(0);
       expect(result.entitiesMerged).toBe(0);
@@ -377,8 +382,8 @@ describe('CompressionManager', () => {
     });
 
     it('should work with different thresholds', async () => {
-      const resultHigh = await compressionManager.compressGraph(0.95, true);
-      const resultLow = await compressionManager.compressGraph(0.6, true);
+      const resultHigh = await searchManager.compressGraph(0.95, true);
+      const resultLow = await searchManager.compressGraph(0.6, true);
 
       // Lower threshold should find more duplicates
       expect(resultLow.duplicatesFound).toBeGreaterThanOrEqual(resultHigh.duplicatesFound);
@@ -392,7 +397,7 @@ describe('CompressionManager', () => {
         { name: 'Alicia', entityType: 'person', observations: [] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.7);
+      const duplicates = await searchManager.findDuplicates(0.7);
       expect(duplicates.length).toBeGreaterThanOrEqual(0);
     });
 
@@ -405,7 +410,7 @@ describe('CompressionManager', () => {
         { name: longName2, entityType: 'person', observations: ['Test'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.8);
+      const duplicates = await searchManager.findDuplicates(0.8);
       expect(duplicates.length).toBeGreaterThanOrEqual(0);
     });
 
@@ -415,7 +420,7 @@ describe('CompressionManager', () => {
         { name: 'Alice_Smith', entityType: 'person', observations: ['Engineer'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.7);
+      const duplicates = await searchManager.findDuplicates(0.7);
       expect(duplicates.length).toBeGreaterThanOrEqual(0);
     });
 
@@ -425,7 +430,7 @@ describe('CompressionManager', () => {
         { name: 'Cafe', entityType: 'location', observations: ['Coffee shop'] },
       ]);
 
-      const duplicates = await compressionManager.findDuplicates(0.8);
+      const duplicates = await searchManager.findDuplicates(0.8);
       expect(duplicates.length).toBeGreaterThanOrEqual(0);
     });
   });

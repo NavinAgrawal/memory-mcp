@@ -10,7 +10,7 @@
 
 import type { Entity, Relation, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
-import { BackupManager } from '../features/BackupManager.js';
+import { IOManager } from '../features/IOManager.js';
 import { KnowledgeGraphError } from '../utils/errors.js';
 
 /**
@@ -94,11 +94,11 @@ export interface TransactionResult {
 export class TransactionManager {
   private operations: TransactionOperation[] = [];
   private inTransaction: boolean = false;
-  private backupManager: BackupManager;
+  private ioManager: IOManager;
   private transactionBackup?: string;
 
   constructor(private storage: GraphStorage) {
-    this.backupManager = new BackupManager(storage);
+    this.ioManager = new IOManager(storage);
   }
 
   /**
@@ -262,7 +262,7 @@ export class TransactionManager {
 
     try {
       // Create backup for rollback
-      this.transactionBackup = await this.backupManager.createBackup(
+      this.transactionBackup = await this.ioManager.createBackup(
         'Transaction backup (auto-created)'
       );
 
@@ -286,7 +286,7 @@ export class TransactionManager {
 
       // Delete the transaction backup (no longer needed)
       if (this.transactionBackup) {
-        await this.backupManager.deleteBackup(this.transactionBackup);
+        await this.ioManager.deleteBackup(this.transactionBackup);
         this.transactionBackup = undefined;
       }
 
@@ -334,11 +334,11 @@ export class TransactionManager {
 
     try {
       // Restore from backup
-      await this.backupManager.restoreFromBackup(this.transactionBackup);
+      await this.ioManager.restoreFromBackup(this.transactionBackup);
 
       // Clean up
       const backupUsed = this.transactionBackup;
-      await this.backupManager.deleteBackup(this.transactionBackup);
+      await this.ioManager.deleteBackup(this.transactionBackup);
 
       this.inTransaction = false;
       this.operations = [];

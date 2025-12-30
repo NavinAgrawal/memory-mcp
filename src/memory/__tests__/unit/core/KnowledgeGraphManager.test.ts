@@ -422,7 +422,7 @@ describe('KnowledgeGraphManager', () => {
   });
 
   describe('Analytics Operations Delegation', () => {
-    it('should delegate getGraphStats to AnalyticsManager', async () => {
+    it('should delegate getGraphStats to SearchManager', async () => {
       await manager.createEntities([
         { name: 'A', entityType: 'type1', observations: [] },
         { name: 'B', entityType: 'type2', observations: [] }
@@ -433,7 +433,7 @@ describe('KnowledgeGraphManager', () => {
       expect(stats.totalRelations).toBe(0);
     });
 
-    it('should delegate validateGraph to AnalyticsManager', async () => {
+    it('should delegate validateGraph to SearchManager', async () => {
       const report = await manager.validateGraph();
       expect(report.isValid).toBeDefined();
       expect(report.issues).toBeDefined();
@@ -479,7 +479,7 @@ describe('KnowledgeGraphManager', () => {
   });
 
   describe('Archive Operations Delegation', () => {
-    it('should delegate archiveEntities to ArchiveManager', async () => {
+    it('should delegate archiveEntities to EntityManager', async () => {
       await manager.createEntities([
         { name: 'Old', entityType: 'test', observations: [] }
       ]);
@@ -495,7 +495,7 @@ describe('KnowledgeGraphManager', () => {
   });
 
   describe('Import/Export Operations Delegation', () => {
-    it('should delegate exportGraph to ExportManager', async () => {
+    it('should delegate exportGraph to IOManager', async () => {
       await manager.createEntities([
         { name: 'Export', entityType: 'test', observations: ['data'] }
       ]);
@@ -518,7 +518,7 @@ describe('KnowledgeGraphManager', () => {
       }
     });
 
-    it('should delegate importGraph to ImportManager', async () => {
+    it('should delegate importGraph to IOManager', async () => {
       const jsonData = JSON.stringify({
         entities: [{ name: 'Imported', entityType: 'test', observations: [] }],
         relations: []
@@ -596,16 +596,16 @@ describe('KnowledgeGraphManager', () => {
       const results = await manager.searchNodes('task');
       expect(results.entities.length).toBe(2);
 
-      // Get stats (AnalyticsManager)
+      // Get stats (SearchManager)
       const stats = await manager.getGraphStats();
       expect(stats.totalEntities).toBe(3);
       expect(stats.totalRelations).toBe(1);
 
-      // Export (ExportManager)
+      // Export (IOManager)
       const exported = await manager.exportGraph('json');
       expect(exported).toContain('Project');
 
-      // Validate (AnalyticsManager)
+      // Validate (SearchManager)
       const validation = await manager.validateGraph();
       expect(validation.isValid).toBe(true);
     });

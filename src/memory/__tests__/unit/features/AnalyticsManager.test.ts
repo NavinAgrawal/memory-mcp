@@ -1,28 +1,31 @@
 /**
- * AnalyticsManager Unit Tests
+ * Analytics Operations Unit Tests
  *
  * Tests for graph validation and statistics.
+ * (Originally AnalyticsManager, merged into SearchManager in Sprint 11.2)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AnalyticsManager } from '../../../features/AnalyticsManager.js';
+import { SearchManager } from '../../../search/SearchManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('AnalyticsManager', () => {
+describe('SearchManager Analytics Operations', () => {
   let storage: GraphStorage;
-  let manager: AnalyticsManager;
+  let manager: SearchManager;
   let testDir: string;
   let testFilePath: string;
+  let savedSearchesPath: string;
 
   beforeEach(async () => {
     testDir = join(tmpdir(), `analytics-manager-test-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-memory.jsonl');
+    savedSearchesPath = join(testDir, 'saved-searches.jsonl');
     storage = new GraphStorage(testFilePath);
-    manager = new AnalyticsManager(storage);
+    manager = new SearchManager(storage, savedSearchesPath);
   });
 
   afterEach(async () => {

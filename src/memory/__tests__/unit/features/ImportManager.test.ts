@@ -1,19 +1,20 @@
 /**
- * ImportManager Unit Tests
+ * Import Operations Unit Tests
  *
  * Tests for JSON, CSV, and GraphML imports with merge strategies.
+ * (Originally ImportManager, merged into IOManager in Sprint 11.4)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ImportManager } from '../../../features/ImportManager.js';
+import { IOManager } from '../../../features/IOManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('ImportManager', () => {
+describe('IOManager Import Operations', () => {
   let storage: GraphStorage;
-  let manager: ImportManager;
+  let manager: IOManager;
   let testDir: string;
   let testFilePath: string;
 
@@ -22,7 +23,7 @@ describe('ImportManager', () => {
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-memory.jsonl');
     storage = new GraphStorage(testFilePath);
-    manager = new ImportManager(storage);
+    manager = new IOManager(storage);
   });
 
   afterEach(async () => {

@@ -1,19 +1,31 @@
 /**
- * ExportManager Unit Tests
+ * Export Operations Unit Tests
  *
  * Tests for JSON, CSV, GraphML, GEXF, DOT, Markdown, and Mermaid exports.
+ * (Originally ExportManager, merged into IOManager in Sprint 11.4)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { ExportManager, type ExportFormat } from '../../../features/ExportManager.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { IOManager, type ExportFormat } from '../../../features/IOManager.js';
+import { GraphStorage } from '../../../core/GraphStorage.js';
 import type { KnowledgeGraph } from '../../../types/index.js';
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 
-describe('ExportManager', () => {
-  let manager: ExportManager;
+describe('IOManager Export Operations', () => {
+  let storage: GraphStorage;
+  let manager: IOManager;
+  let testDir: string;
+  let testFilePath: string;
   let sampleGraph: KnowledgeGraph;
 
-  beforeEach(() => {
-    manager = new ExportManager();
+  beforeEach(async () => {
+    testDir = join(tmpdir(), `export-manager-test-${Date.now()}-${Math.random()}`);
+    await fs.mkdir(testDir, { recursive: true });
+    testFilePath = join(testDir, 'test-memory.jsonl');
+    storage = new GraphStorage(testFilePath);
+    manager = new IOManager(storage);
     sampleGraph = {
       entities: [
         {
@@ -44,10 +56,18 @@ describe('ExportManager', () => {
     };
   });
 
+  afterEach(async () => {
+    try {
+      await fs.rm(testDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
   describe('Constructor', () => {
     it('should create manager instance', () => {
       expect(manager).toBeDefined();
-      expect(manager).toBeInstanceOf(ExportManager);
+      expect(manager).toBeInstanceOf(IOManager);
     });
   });
 
