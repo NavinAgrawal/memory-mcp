@@ -122,7 +122,7 @@ describe('TransactionManager', () => {
         expect(txManager.getOperationCount()).toBe(1);
 
         // Rollback before commit (no backup exists yet, so success=false but state is cleared)
-        const result = await txManager.rollback();
+        await txManager.rollback();
 
         // Verify transaction state cleared
         expect(txManager.isInTransaction()).toBe(false);

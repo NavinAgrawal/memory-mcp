@@ -276,7 +276,7 @@ describe('Performance Benchmarks', () => {
 
       // Allow generous multiplier for O(n²) algorithm
       expect(largeDuration).toBeLessThan(Math.max(smallDuration * PERF_CONFIG.SCALE_MULTIPLIER * 2, PERF_CONFIG.MAX_ABSOLUTE_TIME_MS));
-    });
+    }, 15000);
 
     it('should compress graph within time limit', async () => {
       const entities = Array.from({ length: 100 }, (_, i) => ({

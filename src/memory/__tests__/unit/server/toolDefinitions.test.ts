@@ -53,9 +53,6 @@ describe('toolDefinitions', () => {
   });
 
   describe('Tool Categories', () => {
-    const getToolsByPrefix = (prefix: string) =>
-      toolDefinitions.filter(t => t.name.startsWith(prefix));
-
     it('should have entity tools', () => {
       const entityTools = ['create_entities', 'delete_entities', 'read_graph', 'open_nodes'];
       for (const name of entityTools) {

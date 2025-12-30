@@ -125,7 +125,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1223 tests, 35 files):
+Tests are in `src/memory/__tests__/` (1349 tests, 38 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|

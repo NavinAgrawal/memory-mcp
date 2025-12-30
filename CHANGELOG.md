@@ -5,6 +5,34 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.53.0] - 2025-12-29
+
+### Added
+
+- **Phase 2 Audit Completions** - Missing test files from Phase 2 sprint plans (1349 total tests)
+  - `SearchManager.test.ts` (34 tests) - Search orchestrator dispatch tests
+    - Basic search dispatch with filters
+    - Ranked/Boolean/Fuzzy search delegation
+    - Saved searches integration
+    - Result aggregation and edge cases
+  - `validationUtils.test.ts` (50 tests) - Runtime validation utilities
+    - validateEntity - all fields and edge cases
+    - validateRelation - required field validation
+    - validateImportance - range and boundary checks
+    - validateTags - array and string validation
+  - `errors.test.ts` (42 tests) - Custom error class tests
+    - All 10 error types (EntityNotFoundError, RelationNotFoundError, etc.)
+    - Error inheritance chain verification
+    - Unique error codes
+    - JSON serialization
+
+### Fixed
+
+- Removed unused `result` variable in TransactionManager.test.ts
+- Removed unused `getToolsByPrefix` helper in toolDefinitions.test.ts
+- Removed unused `vi` import in toolHandlers.test.ts
+- Extended timeout for duplicate detection benchmark test (15000ms)
+
 ## [0.52.0] - 2025-12-29
 
 ### Added

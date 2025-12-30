@@ -4,7 +4,7 @@
  * Tests for all 45 tool handler functions and the handleToolCall dispatcher.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { toolHandlers, handleToolCall } from '../../../server/toolHandlers.js';
 import { KnowledgeGraphManager } from '../../../core/KnowledgeGraphManager.js';
 import { promises as fs } from 'fs';
