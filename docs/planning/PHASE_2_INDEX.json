@@ -1,0 +1,145 @@
+{
+  "phase": 2,
+  "title": "Test Coverage Expansion",
+  "description": "Achieve >90% test coverage across all modules, focusing on untested critical paths identified by dependency graph analysis",
+  "version": "1.0.0",
+  "created": "2025-12-29",
+  "totalSprints": 6,
+  "totalTasks": 24,
+  "totalEstimatedHours": 48,
+  "totalNewTests": 431,
+  "status": "pending",
+  "targetMetrics": {
+    "overallCoverage": { "current": "40%", "target": ">90%", "improvement": "+50%" },
+    "coreCoverage": { "current": "45%", "target": "95%", "improvement": "+50%" },
+    "featuresCoverage": { "current": "21%", "target": "90%", "improvement": "+69%" },
+    "serverCoverage": { "current": "16%", "target": "85%", "improvement": "+69%" },
+    "searchCoverage": { "current": "55%", "target": "90%", "improvement": "+35%" },
+    "utilsCoverage": { "current": "47%", "target": "90%", "improvement": "+43%" },
+    "testCount": { "current": "431", "target": "~862", "improvement": "+431 tests" }
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Server Layer Tests (Critical Path)",
+      "priority": "CRITICAL",
+      "focus": "Test entry point for all 47 MCP tools - toolHandlers, toolDefinitions, MCPServer",
+      "tasks": 4,
+      "hours": 8,
+      "newTests": 77,
+      "file": "PHASE_2_SPRINT_1_TODO.json",
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "sprint": 2,
+      "title": "Core Manager Tests",
+      "priority": "HIGH",
+      "focus": "Data integrity and transaction safety - TransactionManager, EntityManager hierarchy, GraphStorage",
+      "tasks": 4,
+      "hours": 10,
+      "newTests": 80,
+      "file": "PHASE_2_SPRINT_2_TODO.json",
+      "status": "pending",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 3,
+      "title": "Features Module Tests",
+      "priority": "HIGH",
+      "focus": "Key functionality - TagManager, BackupManager, ImportManager, ExportManager",
+      "tasks": 4,
+      "hours": 10,
+      "newTests": 95,
+      "file": "PHASE_2_SPRINT_3_TODO.json",
+      "status": "pending",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 4,
+      "title": "Search Module Tests",
+      "priority": "MEDIUM",
+      "focus": "Search orchestration - SearchManager, SavedSearchManager, TFIDFIndexManager",
+      "tasks": 4,
+      "hours": 8,
+      "newTests": 60,
+      "file": "PHASE_2_SPRINT_4_TODO.json",
+      "status": "pending",
+      "dependencies": [2, 3]
+    },
+    {
+      "sprint": 5,
+      "title": "Utils Module Tests",
+      "priority": "MEDIUM",
+      "focus": "Foundation utilities - entityUtils, tagUtils, validationHelper, validationUtils",
+      "tasks": 4,
+      "hours": 6,
+      "newTests": 62,
+      "file": "PHASE_2_SPRINT_5_TODO.json",
+      "status": "pending",
+      "dependencies": [4]
+    },
+    {
+      "sprint": 6,
+      "title": "Analytics and Archive Tests",
+      "priority": "LOW",
+      "focus": "Read-only operations - AnalyticsManager, ArchiveManager, SearchFilterChain, errors",
+      "tasks": 4,
+      "hours": 6,
+      "newTests": 57,
+      "file": "PHASE_2_SPRINT_6_TODO.json",
+      "status": "pending",
+      "dependencies": [5]
+    }
+  ],
+  "dependencyGraph": {
+    "description": "Sprint dependency order",
+    "mermaid": "graph TD\n    S1[Sprint 1: Server Tests] --> S2[Sprint 2: Core Tests]\n    S1 --> S3[Sprint 3: Features Tests]\n    S2 --> S4[Sprint 4: Search Tests]\n    S3 --> S4\n    S4 --> S5[Sprint 5: Utils Tests]\n    S5 --> S6[Sprint 6: Analytics Tests]"
+  },
+  "parallelExecutionGroups": [
+    { "group": 1, "sprints": [1], "description": "Critical path - must complete first" },
+    { "group": 2, "sprints": [2, 3], "description": "Can run in parallel after Sprint 1" },
+    { "group": 3, "sprints": [4], "description": "After Sprints 2 and 3" },
+    { "group": 4, "sprints": [5], "description": "After Sprint 4" },
+    { "group": 5, "sprints": [6], "description": "Final - after Sprint 5" }
+  ],
+  "filesToCreate": [
+    "src/memory/__tests__/unit/server/toolHandlers.test.ts",
+    "src/memory/__tests__/unit/server/toolDefinitions.test.ts",
+    "src/memory/__tests__/integration/server.test.ts",
+    "src/memory/__tests__/unit/utils/responseFormatter.test.ts",
+    "src/memory/__tests__/unit/core/TransactionManager.test.ts",
+    "src/memory/__tests__/unit/core/KnowledgeGraphManager.test.ts",
+    "src/memory/__tests__/unit/features/TagManager.test.ts",
+    "src/memory/__tests__/unit/features/BackupManager.test.ts",
+    "src/memory/__tests__/unit/features/ImportManager.test.ts",
+    "src/memory/__tests__/unit/features/ExportManager.test.ts",
+    "src/memory/__tests__/unit/search/SearchManager.test.ts",
+    "src/memory/__tests__/unit/search/SavedSearchManager.test.ts",
+    "src/memory/__tests__/unit/search/TFIDFIndexManager.test.ts",
+    "src/memory/__tests__/unit/search/SearchSuggestions.test.ts",
+    "src/memory/__tests__/unit/utils/entityUtils.test.ts",
+    "src/memory/__tests__/unit/utils/tagUtils.test.ts",
+    "src/memory/__tests__/unit/utils/validationHelper.test.ts",
+    "src/memory/__tests__/unit/utils/validationUtils.test.ts",
+    "src/memory/__tests__/unit/features/AnalyticsManager.test.ts",
+    "src/memory/__tests__/unit/features/ArchiveManager.test.ts",
+    "src/memory/__tests__/unit/search/SearchFilterChain.test.ts",
+    "src/memory/__tests__/unit/utils/errors.test.ts"
+  ],
+  "filesToExpand": [
+    "src/memory/__tests__/unit/core/EntityManager.test.ts",
+    "src/memory/__tests__/unit/core/GraphStorage.test.ts"
+  ],
+  "riskAssessment": [
+    { "risk": "Test flakiness", "probability": "Medium", "impact": "Medium", "mitigation": "Use deterministic test data and avoid timing-dependent tests" },
+    { "risk": "Incomplete mocking", "probability": "Medium", "impact": "Low", "mitigation": "Create shared test utilities and fixtures" },
+    { "risk": "Coverage regression", "probability": "Low", "impact": "High", "mitigation": "Run coverage after each sprint and maintain baseline" },
+    { "risk": "Test maintenance burden", "probability": "Low", "impact": "Medium", "mitigation": "Follow DRY principles with shared setup/teardown" }
+  ],
+  "agentDistribution": {
+    "sonnet": { "tasks": 8, "description": "Complex integration tests, mocking strategies, error handling" },
+    "haiku": { "tasks": 16, "description": "Unit tests, simple assertions, repetitive test patterns" }
+  },
+  "notes": "Sprint 1 is the critical path - server layer tests ensure all 47 MCP tools work correctly. Sprints 2 and 3 can run in parallel after Sprint 1. The plan adds ~431 new tests to achieve >90% overall coverage."
+}

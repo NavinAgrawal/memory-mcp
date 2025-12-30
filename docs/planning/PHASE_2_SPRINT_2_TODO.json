@@ -1,0 +1,129 @@
+{
+  "phase": 2,
+  "sprint": 2,
+  "title": "Core Manager Tests",
+  "priority": "HIGH",
+  "effort": "10 hours",
+  "status": "pending",
+  "impact": "Data integrity and transaction safety",
+  "targetCoverage": "95%",
+  "currentCoverage": "45%",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core Tests",
+      "description": "Create TransactionManager tests - Test transaction lifecycle (begin, commit, rollback, nested), batch operations (create, update, delete, atomicity), conflict resolution (concurrent modifications, optimistic locking, retry), and error handling (partial failure, data integrity, logging)",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/core/TransactionManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "90%",
+      "sourceLines": 468,
+      "testCategories": [
+        "Transaction Lifecycle (begin, commit, rollback, nested transactions)",
+        "Batch Operations (create, update, delete entities, atomicity)",
+        "Conflict Resolution (concurrent modifications, optimistic locking, retry)",
+        "Error Handling (rollback on partial failure, data integrity, logging)"
+      ],
+      "acceptanceCriteria": [
+        "Transaction lifecycle fully tested",
+        "Batch operations verified",
+        "Error scenarios covered",
+        "25+ tests",
+        "Coverage > 90%"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core Tests",
+      "description": "Expand EntityManager hierarchy tests - Test setEntityParent (set parent, detect cycles, throw CycleDetectedError, update lastModified), getChildren, getAncestors, getDescendants, and moveEntity operations",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/core/EntityManager.test.ts"],
+      "currentCoverage": "41%",
+      "targetCoverage": "90%",
+      "testCategories": [
+        "setEntityParent (set parent, detect cycles, CycleDetectedError, update lastModified)",
+        "getChildren (direct children, empty for leaf nodes)",
+        "getAncestors (all ancestors, deep hierarchies)",
+        "getDescendants (all descendants, wide hierarchies)",
+        "moveEntity (new parent, prevent moving to descendant)"
+      ],
+      "acceptanceCriteria": [
+        "All hierarchy methods tested",
+        "Cycle detection verified",
+        "Edge cases covered",
+        "20+ additional tests",
+        "Coverage > 90%"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core Tests",
+      "description": "Expand GraphStorage tests - Test index operations (NameIndex, TypeIndex, LowercaseCache build and update), append operations (entity append, pending tracking, compaction), and cache management (invalidation, concurrent access, persistence)",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/core/GraphStorage.test.ts"],
+      "currentCoverage": "76%",
+      "targetCoverage": "95%",
+      "testCategories": [
+        "Index Operations (NameIndex build, TypeIndex build, LowercaseCache, index updates)",
+        "Append Operations (append without rewrite, pending tracking, compact after threshold)",
+        "Cache Management (invalidation on external change, concurrent access, persistence)"
+      ],
+      "acceptanceCriteria": [
+        "Index integration tested",
+        "Append operations verified",
+        "Cache behavior tested",
+        "15+ additional tests",
+        "Coverage > 95%"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core Tests",
+      "description": "Create KnowledgeGraphManager facade tests - Test manager delegation (EntityManager, RelationManager, SearchManager, lazy-load), cross-manager operations (entity/relation coordination, consistency), and compression operations (find duplicates, merge entities, compress graph)",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/core/KnowledgeGraphManager.test.ts"],
+      "currentCoverage": "27%",
+      "targetCoverage": "85%",
+      "testCategories": [
+        "Manager Delegation (EntityManager, RelationManager, SearchManager, lazy-load)",
+        "Cross-Manager Operations (entity/relation coordination, consistency)",
+        "Compression Operations (find duplicates, merge entities, compress graph)"
+      ],
+      "acceptanceCriteria": [
+        "All delegation paths tested",
+        "Manager coordination verified",
+        "20+ tests",
+        "Coverage > 85%"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Core module coverage increases from 45% to 95%",
+    "TransactionManager fully tested",
+    "EntityManager hierarchy coverage complete",
+    "GraphStorage index/cache behavior verified",
+    "KnowledgeGraphManager delegation tested",
+    "80+ new tests added",
+    "All tests pass"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/unit/core/TransactionManager.test.ts",
+    "src/memory/__tests__/unit/core/KnowledgeGraphManager.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/__tests__/unit/core/EntityManager.test.ts",
+    "src/memory/__tests__/unit/core/GraphStorage.test.ts"
+  ],
+  "totalNewTests": 80,
+  "totalEstimatedHours": 10,
+  "dependencies": ["Sprint 1"],
+  "notes": "Core managers are the backbone of data integrity. TransactionManager has 0% coverage despite being critical for atomic operations. EntityManager hierarchy methods (merged from HierarchyManager in Phase 1) need comprehensive testing."
+}

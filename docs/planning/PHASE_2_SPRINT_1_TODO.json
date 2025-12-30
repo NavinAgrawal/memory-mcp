@@ -1,0 +1,125 @@
+{
+  "phase": 2,
+  "sprint": 1,
+  "title": "Server Layer Tests (Critical Path)",
+  "priority": "CRITICAL",
+  "effort": "8 hours",
+  "status": "pending",
+  "impact": "Tests entry point for all 47 MCP tools",
+  "targetCoverage": "85%",
+  "currentCoverage": "16%",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Server Tests",
+      "description": "Create toolHandlers unit tests - Test all 47 tool handler functions including entity operations, relation operations, observation operations, search operations, tag operations, hierarchy operations, and error handling",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/server/toolHandlers.test.ts"],
+      "currentCoverage": "1.75%",
+      "targetCoverage": "85%",
+      "testCategories": [
+        "Entity Operations (create_entities, delete_entities, open_nodes, read_graph)",
+        "Relation Operations (create_relations, delete_relations)",
+        "Observation Operations (add_observations, delete_observations)",
+        "Search Operations (search_nodes, boolean_search, fuzzy_search, search_nodes_ranked)",
+        "Tag Operations (add_tags, remove_tags, set_importance)",
+        "Hierarchy Operations (set_entity_parent, get_children, get_ancestors)",
+        "Error Handling (unknown tool, invalid input, error details)"
+      ],
+      "acceptanceCriteria": [
+        "40+ tests covering all 47 tool handlers",
+        "Error cases tested for each category",
+        "Coverage > 85%",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Server Tests",
+      "description": "Create toolDefinitions validation tests - Test schema validation for all tools, verify tool categories and naming conventions, validate input constraints",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/server/toolDefinitions.test.ts"],
+      "currentCoverage": "100%",
+      "targetCoverage": "100%",
+      "testCategories": [
+        "Schema Validation (valid JSON schema, mandatory fields, naming convention)",
+        "Tool Categories (47 tool definitions, category organization, unique names)",
+        "Input Schemas (entity name constraints, importance range 0-10, tag array format)"
+      ],
+      "acceptanceCriteria": [
+        "Schema validation tests for all tools",
+        "Category organization verified",
+        "Input constraint tests",
+        "15+ tests"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Integration Tests",
+      "description": "Create MCPServer integration tests - Test server initialization, tool registration, MCP protocol handling, response formatting, and concurrent requests",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/integration/server.test.ts"],
+      "currentCoverage": "72%",
+      "targetCoverage": "90%",
+      "testCategories": [
+        "Server Initialization (with KnowledgeGraphManager)",
+        "Tool Registration (all 47 tools)",
+        "MCP Protocol (handle tool calls)",
+        "Response Formatting (properly formatted responses)",
+        "Concurrency (concurrent requests)"
+      ],
+      "acceptanceCriteria": [
+        "Server initialization tested",
+        "Tool registration verified",
+        "MCP protocol compliance tested",
+        "10+ integration tests"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Utils Tests",
+      "description": "Create responseFormatter tests - Test formatToolResponse, formatTextResponse, and formatRawResponse functions with success/error cases and edge conditions",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/utils/responseFormatter.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "90%",
+      "testCategories": [
+        "formatToolResponse (successful responses, error responses, metadata)",
+        "formatTextResponse (text content, empty content)",
+        "formatRawResponse (pass through raw data, complex objects)"
+      ],
+      "acceptanceCriteria": [
+        "All formatter functions tested",
+        "Edge cases covered",
+        "Coverage > 90%",
+        "12+ tests"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Server module coverage increases from 16% to 85%",
+    "All 47 tool handlers have tests",
+    "Tool definitions validated",
+    "MCP protocol compliance verified",
+    "77+ new tests added",
+    "All tests pass"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/unit/server/toolHandlers.test.ts",
+    "src/memory/__tests__/unit/server/toolDefinitions.test.ts",
+    "src/memory/__tests__/integration/server.test.ts",
+    "src/memory/__tests__/unit/utils/responseFormatter.test.ts"
+  ],
+  "totalNewTests": 77,
+  "totalEstimatedHours": 8,
+  "dependencies": [],
+  "notes": "This is the critical path sprint. The server layer is the entry point for all MCP tools and has the lowest coverage (16%). Testing this layer ensures all 47 tools work correctly before testing the underlying managers."
+}

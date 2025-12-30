@@ -1,0 +1,124 @@
+{
+  "phase": 2,
+  "sprint": 5,
+  "title": "Utils Module Tests",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Foundation utilities used across codebase",
+  "targetCoverage": "90%",
+  "currentCoverage": "47%",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Utils Tests",
+      "description": "Create entityUtils tests - Test findEntityByName (exact match, missing, case-sensitive), filterEntities (by type, tags, importance, combined filters), and sortEntities (by name, date, importance)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/utils/entityUtils.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "90%",
+      "sourceLines": 152,
+      "testCategories": [
+        "findEntityByName (exact match, undefined for missing, case-sensitive)",
+        "filterEntities (by type, by tags, by importance, combined filters)",
+        "sortEntities (by name, by date, by importance)"
+      ],
+      "acceptanceCriteria": [
+        "All utility functions tested",
+        "Edge cases covered",
+        "15+ tests",
+        "Coverage > 90%"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Utils Tests",
+      "description": "Create tagUtils tests - Test normalizeTag (lowercase, trim whitespace, special characters), hasMatchingTag (exact match, normalized match, empty tags), and mergeTags (combine arrays, deduplicate, normalize result)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/utils/tagUtils.test.ts"],
+      "currentCoverage": "7.7%",
+      "targetCoverage": "90%",
+      "sourceLines": 128,
+      "testCategories": [
+        "normalizeTag (lowercase, trim whitespace, special characters)",
+        "hasMatchingTag (exact match, normalized match, empty tags)",
+        "mergeTags (combine arrays, deduplicate, normalize result)"
+      ],
+      "acceptanceCriteria": [
+        "Normalization tested",
+        "Matching logic verified",
+        "15+ tests",
+        "Coverage > 90%"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Utils Tests",
+      "description": "Create validationHelper tests - Test validateWithSchema (valid input, invalid input, detailed errors) and schema validation (entity schema, relation schema, search query schema)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/utils/validationHelper.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "85%",
+      "sourceLines": 117,
+      "testCategories": [
+        "validateWithSchema (valid input, invalid input, detailed errors)",
+        "Schema Validation (entity schema, relation schema, search query schema)"
+      ],
+      "acceptanceCriteria": [
+        "Zod schema validation tested",
+        "Error formatting verified",
+        "12+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Utils Tests",
+      "description": "Create validationUtils tests - Test validateEntity (valid entity, missing name, invalid importance, invalid tags), validateRelation (valid relation, missing from/to, missing type), validateImportance (0-10, negative, >10, non-integer), and validateTags (valid tags, empty tags, non-string tags)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/utils/validationUtils.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "90%",
+      "sourceLines": 134,
+      "testCategories": [
+        "validateEntity (valid, missing name, invalid importance, invalid tags)",
+        "validateRelation (valid, missing from/to, missing type)",
+        "validateImportance (0-10 accepted, negative rejected, >10 rejected, non-integer rejected)",
+        "validateTags (valid tags, empty tags rejected, non-string rejected)"
+      ],
+      "acceptanceCriteria": [
+        "All validation functions tested",
+        "Boundary conditions verified",
+        "20+ tests",
+        "Coverage > 90%"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Utils module coverage increases from 47% to 90%",
+    "entityUtils all functions tested",
+    "tagUtils normalization and matching tested",
+    "validationHelper schema validation tested",
+    "validationUtils all validators tested",
+    "62+ new tests added",
+    "All tests pass"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/unit/utils/entityUtils.test.ts",
+    "src/memory/__tests__/unit/utils/tagUtils.test.ts",
+    "src/memory/__tests__/unit/utils/validationHelper.test.ts",
+    "src/memory/__tests__/unit/utils/validationUtils.test.ts"
+  ],
+  "totalNewTests": 62,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 4"],
+  "notes": "Utils module provides foundational functions used across the codebase. Testing these ensures consistent behavior for entity filtering, tag normalization, and input validation. These are mostly pure functions making them easy to test."
+}

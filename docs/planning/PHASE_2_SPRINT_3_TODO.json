@@ -1,0 +1,134 @@
+{
+  "phase": 2,
+  "sprint": 3,
+  "title": "Features Module Tests",
+  "priority": "HIGH",
+  "effort": "10 hours",
+  "status": "pending",
+  "impact": "Key functionality for tags, backup, import/export",
+  "targetCoverage": "90%",
+  "currentCoverage": "21%",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Features Tests",
+      "description": "Create TagManager tests - Test tag aliases (add, resolve to canonical, list, remove), bulk tag operations (add to multiple entities, replace across entities, merge tags), alias resolution (nested aliases, circular references, normalization), and persistence (save to file, load on startup)",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/features/TagManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "90%",
+      "sourceLines": 225,
+      "testCategories": [
+        "Tag Aliases (add alias, resolve to canonical, list all, remove alias)",
+        "Bulk Tag Operations (add to multiple entities, replace across entities, merge two tags)",
+        "Alias Resolution (nested aliases, circular references, normalize on resolution)",
+        "Persistence (persist aliases to file, load on startup)"
+      ],
+      "acceptanceCriteria": [
+        "All alias operations tested",
+        "Bulk operations verified",
+        "Persistence tested",
+        "25+ tests",
+        "Coverage > 90%"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Features Tests",
+      "description": "Create BackupManager tests - Test backup creation (timestamp, include all data, metadata, large graphs), backup listing (list all, sort by date, include size), restore operations (restore from backup, validate integrity, handle missing), and backup rotation (delete old, keep minimum)",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/features/BackupManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "85%",
+      "sourceLines": 362,
+      "testCategories": [
+        "Backup Creation (timestamp, include all data, metadata, large graphs)",
+        "Backup Listing (list all, sort by date, include size)",
+        "Restore Operations (restore from backup, validate integrity, handle missing)",
+        "Backup Rotation (delete old backups, keep minimum)"
+      ],
+      "acceptanceCriteria": [
+        "Backup creation tested",
+        "Restore verified",
+        "Rotation logic tested",
+        "20+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Features Tests",
+      "description": "Create ImportManager tests - Test JSON import (valid JSON, malformed, merge with existing), CSV import (entities, relations, missing columns), GraphML import (format, preserve attributes), merge strategies (replace, skip, merge, fail), and validation (entity structure, relation references, import errors)",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/features/ImportManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "85%",
+      "sourceLines": 379,
+      "testCategories": [
+        "JSON Import (valid JSON, malformed JSON, merge with existing)",
+        "CSV Import (entities from CSV, relations from CSV, missing columns)",
+        "GraphML Import (format, preserve attributes)",
+        "Merge Strategies (replace existing, skip duplicates, merge observations, fail on conflict)",
+        "Validation (entity structure, relation references, import errors)"
+      ],
+      "acceptanceCriteria": [
+        "All formats tested (JSON, CSV, GraphML)",
+        "Merge strategies verified",
+        "Validation tested",
+        "25+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Features Tests",
+      "description": "Create ExportManager tests - Test JSON export (valid JSON, all entities, all relations), CSV export (entities, relations, escape special characters), GraphML export (valid format, node attributes, edge attributes), other formats (DOT, Markdown, Mermaid, GEXF), and filtering (by date, type, tags)",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/features/ExportManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "90%",
+      "sourceLines": 344,
+      "testCategories": [
+        "JSON Export (valid JSON, all entities, all relations)",
+        "CSV Export (entities, relations, escape special characters)",
+        "GraphML Export (valid format, node attributes, edge attributes)",
+        "Other Formats (DOT, Markdown, Mermaid, GEXF)",
+        "Filtering (by date, by type, by tags)"
+      ],
+      "acceptanceCriteria": [
+        "All 7 formats tested",
+        "Filtering verified",
+        "Output validated",
+        "25+ tests",
+        "Coverage > 90%"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Features module coverage increases from 21% to 90%",
+    "TagManager alias functionality tested",
+    "BackupManager create/restore/rotate tested",
+    "ImportManager all 3 formats tested",
+    "ExportManager all 7 formats tested",
+    "95+ new tests added",
+    "All tests pass"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/unit/features/TagManager.test.ts",
+    "src/memory/__tests__/unit/features/BackupManager.test.ts",
+    "src/memory/__tests__/unit/features/ImportManager.test.ts",
+    "src/memory/__tests__/unit/features/ExportManager.test.ts"
+  ],
+  "totalNewTests": 95,
+  "totalEstimatedHours": 10,
+  "dependencies": ["Sprint 1"],
+  "notes": "Features module has the lowest coverage (21%) among production code. These managers handle critical functionality for data portability (import/export) and data safety (backup). Can run in parallel with Sprint 2 after Sprint 1 completes."
+}

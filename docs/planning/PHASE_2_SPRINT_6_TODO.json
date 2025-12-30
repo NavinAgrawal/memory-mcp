@@ -1,0 +1,124 @@
+{
+  "phase": 2,
+  "sprint": 6,
+  "title": "Analytics and Archive Tests",
+  "priority": "LOW",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Read-only operations, lower risk",
+  "targetCoverage": "85%",
+  "currentCoverage": "~30%",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Features Tests",
+      "description": "Create AnalyticsManager tests - Test getGraphStats (count entities, count relations, count by type, calculate averages), validateGraph (orphan relations, duplicate entities, invalid references, validation report), and metrics (density, connectivity, identify hubs)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/features/AnalyticsManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "85%",
+      "sourceLines": 224,
+      "testCategories": [
+        "getGraphStats (count entities, count relations, count by type, calculate averages)",
+        "validateGraph (orphan relations, duplicate entities, invalid references, validation report)",
+        "Metrics (density, connectivity, identify hubs)"
+      ],
+      "acceptanceCriteria": [
+        "Stats calculation tested",
+        "Validation verified",
+        "15+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Features Tests",
+      "description": "Create ArchiveManager tests - Test archiveEntities (by age, by importance, by tags, dry run support), archive criteria (combine multiple, empty result handling), and archive result (report count, list archived)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/features/ArchiveManager.test.ts"],
+      "currentCoverage": "0%",
+      "targetCoverage": "85%",
+      "sourceLines": 107,
+      "testCategories": [
+        "archiveEntities (by age, by importance, by tags, dry run)",
+        "Archive Criteria (combine multiple, empty result handling)",
+        "Archive Result (report count, list archived entities)"
+      ],
+      "acceptanceCriteria": [
+        "Archive criteria tested",
+        "Dry run verified",
+        "12+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Search Tests",
+      "description": "Create SearchFilterChain tests - Test filter chaining (multiple filters, apply in order, short-circuit on empty), individual filters (importance range, date range, entity type, tags), and performance (optimize filter order, large datasets)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/search/SearchFilterChain.test.ts"],
+      "currentCoverage": "45%",
+      "targetCoverage": "90%",
+      "testCategories": [
+        "Filter Chaining (multiple filters, apply in order, short-circuit on empty)",
+        "Individual Filters (importance range, date range, entity type, tags)",
+        "Performance (optimize filter order, large datasets)"
+      ],
+      "acceptanceCriteria": [
+        "Chaining logic tested",
+        "All filter types verified",
+        "15+ tests",
+        "Coverage > 90%"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Utils Tests",
+      "description": "Create errors.test.ts tests - Test all error classes: EntityNotFoundError (include entity name, correct error code, instanceof KnowledgeGraphError), RelationNotFoundError (include from/to/type, format message), ValidationError (include details, support multiple), CycleDetectedError (include cycle path), and error inheritance (all extend KnowledgeGraphError, catchable by base class)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/utils/errors.test.ts"],
+      "currentCoverage": "41%",
+      "targetCoverage": "90%",
+      "testCategories": [
+        "EntityNotFoundError (entity name, error code, instanceof KnowledgeGraphError)",
+        "RelationNotFoundError (from/to/type, format message)",
+        "ValidationError (validation details, multiple errors)",
+        "CycleDetectedError (cycle path)",
+        "Error Inheritance (all extend KnowledgeGraphError, catchable by base)"
+      ],
+      "acceptanceCriteria": [
+        "All error classes tested",
+        "Inheritance verified",
+        "15+ tests",
+        "Coverage > 90%"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Analytics coverage > 85%",
+    "Archive coverage > 85%",
+    "SearchFilterChain coverage > 90%",
+    "Error classes coverage > 90%",
+    "57+ new tests added",
+    "All tests pass",
+    "Overall project coverage > 90%"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/unit/features/AnalyticsManager.test.ts",
+    "src/memory/__tests__/unit/features/ArchiveManager.test.ts",
+    "src/memory/__tests__/unit/search/SearchFilterChain.test.ts",
+    "src/memory/__tests__/unit/utils/errors.test.ts"
+  ],
+  "totalNewTests": 57,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 5"],
+  "notes": "This final sprint covers read-only operations (analytics, validation) and utility classes (errors, filters). These have lower risk as they don't modify data. After this sprint, overall coverage should exceed 90%."
+}

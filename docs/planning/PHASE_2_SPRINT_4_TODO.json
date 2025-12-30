@@ -1,0 +1,125 @@
+{
+  "phase": 2,
+  "sprint": 4,
+  "title": "Search Module Tests",
+  "priority": "MEDIUM",
+  "effort": "8 hours",
+  "status": "pending",
+  "impact": "Search orchestration and advanced features",
+  "targetCoverage": "85%",
+  "currentCoverage": "55%",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Search Tests",
+      "description": "Create SearchManager tests - Test search dispatch (basic, boolean, ranked, fuzzy), query detection (boolean operators, fuzzy markers, mixed queries), and result aggregation (combine results, deduplicate, sort by relevance)",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/search/SearchManager.test.ts"],
+      "currentCoverage": "42%",
+      "targetCoverage": "85%",
+      "testCategories": [
+        "Search Dispatch (basic search, boolean search, ranked search, fuzzy search)",
+        "Query Detection (boolean operators, fuzzy markers, mixed queries)",
+        "Result Aggregation (combine from multiple, deduplicate, sort by relevance)"
+      ],
+      "acceptanceCriteria": [
+        "All search types dispatched",
+        "Query detection tested",
+        "15+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Search Tests",
+      "description": "Create SavedSearchManager tests - Test save search (with name, parameters, prevent duplicates), execute saved search (by name, apply parameters, throw for unknown), manage saved searches (list, update, delete), and persistence (save to file, load on startup)",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/search/SavedSearchManager.test.ts"],
+      "currentCoverage": "4.65%",
+      "targetCoverage": "85%",
+      "sourceLines": 174,
+      "testCategories": [
+        "Save Search (with name, parameters, prevent duplicate names)",
+        "Execute Saved Search (by name, apply parameters, throw for unknown)",
+        "Manage Saved Searches (list all, update, delete)",
+        "Persistence (persist to file, load on startup)"
+      ],
+      "acceptanceCriteria": [
+        "CRUD operations tested",
+        "Persistence verified",
+        "15+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Search Tests",
+      "description": "Create TFIDFIndexManager tests - Test index building (from entities, term frequencies, document frequencies), incremental updates (add entity, remove entity, update entity), search scoring (TF-IDF score, rank rare terms higher, multi-term queries), and performance (lazy-load, cache, invalidate on changes)",
+      "status": "pending",
+      "estimatedHours": 2.5,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/search/TFIDFIndexManager.test.ts"],
+      "currentCoverage": "2.7%",
+      "targetCoverage": "85%",
+      "sourceLines": 261,
+      "testCategories": [
+        "Index Building (from entities, term frequencies, document frequencies)",
+        "Incremental Updates (add entity, remove entity, update entity)",
+        "Search Scoring (TF-IDF score, rank rare terms higher, multi-term queries)",
+        "Performance (lazy-load index, cache index, invalidate on changes)"
+      ],
+      "acceptanceCriteria": [
+        "Index operations tested",
+        "Scoring verified",
+        "Performance characteristics tested",
+        "20+ tests",
+        "Coverage > 85%"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Search Tests",
+      "description": "Create SearchSuggestions tests - Test getSuggestions (entity names, entity types, tags, limit results), and ranking (by frequency, by recency, boost exact matches)",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/search/SearchSuggestions.test.ts"],
+      "currentCoverage": "5%",
+      "targetCoverage": "85%",
+      "sourceLines": 70,
+      "testCategories": [
+        "getSuggestions (entity names, entity types, tags, limit results)",
+        "Ranking (by frequency, by recency, boost exact matches)"
+      ],
+      "acceptanceCriteria": [
+        "Suggestion sources tested",
+        "Ranking verified",
+        "10+ tests",
+        "Coverage > 85%"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Search module coverage increases from 55% to 85%",
+    "SearchManager dispatch logic tested",
+    "SavedSearchManager CRUD operations tested",
+    "TFIDFIndexManager scoring algorithm tested",
+    "SearchSuggestions ranking tested",
+    "60+ new tests added",
+    "All tests pass"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/unit/search/SearchManager.test.ts",
+    "src/memory/__tests__/unit/search/SavedSearchManager.test.ts",
+    "src/memory/__tests__/unit/search/TFIDFIndexManager.test.ts",
+    "src/memory/__tests__/unit/search/SearchSuggestions.test.ts"
+  ],
+  "totalNewTests": 60,
+  "totalEstimatedHours": 8,
+  "dependencies": ["Sprint 2", "Sprint 3"],
+  "notes": "Search module already has decent coverage (55%) from existing tests, but the orchestration layer (SearchManager) and persistence layer (SavedSearchManager, TFIDFIndexManager) need more testing. This sprint focuses on the untested parts."
+}
