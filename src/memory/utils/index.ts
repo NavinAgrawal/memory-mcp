@@ -21,9 +21,14 @@ export {
   InsufficientEntitiesError,
 } from './errors.js';
 
-// String utilities
-export { levenshteinDistance } from './levenshtein.js';
-export { calculateTF, calculateIDF, calculateTFIDF, tokenize } from './tfidf.js';
+// Search algorithms (Levenshtein + TF-IDF)
+export {
+  levenshteinDistance,
+  calculateTF,
+  calculateIDF,
+  calculateTFIDF,
+  tokenize,
+} from './searchAlgorithms.js';
 
 // Logging
 export { logger } from './logger.js';

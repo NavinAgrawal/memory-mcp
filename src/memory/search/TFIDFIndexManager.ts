@@ -10,7 +10,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { TFIDFIndex, DocumentVector, KnowledgeGraph, ReadonlyKnowledgeGraph } from '../types/index.js';
-import { calculateIDF, tokenize } from '../utils/tfidf.js';
+import { calculateIDF, tokenize } from '../utils/index.js';
 
 const INDEX_VERSION = '1.0';
 const INDEX_FILENAME = 'tfidf-index.json';

@@ -15,7 +15,7 @@ import { BooleanSearch } from './BooleanSearch.js';
 import { FuzzySearch } from './FuzzySearch.js';
 import { SearchSuggestions } from './SearchSuggestions.js';
 import { SavedSearchManager } from './SavedSearchManager.js';
-import { levenshteinDistance } from '../utils/levenshtein.js';
+import { levenshteinDistance } from '../utils/index.js';
 import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
 import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
 

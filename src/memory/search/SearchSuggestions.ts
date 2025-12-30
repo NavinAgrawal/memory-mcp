@@ -7,7 +7,7 @@
  */
 
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { levenshteinDistance } from '../utils/levenshtein.js';
+import { levenshteinDistance } from '../utils/index.js';
 
 /**
  * Internal suggestion with similarity score.

@@ -8,7 +8,7 @@
 
 import type { Entity, SearchResult, TFIDFIndex } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { calculateTFIDF, tokenize } from '../utils/tfidf.js';
+import { calculateTFIDF, tokenize } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { TFIDFIndexManager } from './TFIDFIndexManager.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';

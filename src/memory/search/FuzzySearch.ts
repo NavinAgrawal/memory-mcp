@@ -8,7 +8,7 @@
 
 import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { levenshteinDistance } from '../utils/levenshtein.js';
+import { levenshteinDistance } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 

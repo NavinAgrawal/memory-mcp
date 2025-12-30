@@ -5,6 +5,26 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.0] - 2025-12-30
+
+### Changed
+
+- **Phase 1 Sprint 14: Code Volume Reduction** - Pragmatic consolidation
+  - **Sprint 14.1**: Analysis determined search module consolidation would harm architecture
+    - SearchManager delegates to 4 specialized classes (BasicSearch, BooleanSearch, RankedSearch, FuzzySearch)
+    - Current delegation pattern is clean, testable, and maintainable
+    - Merging would create 1700+ line file - worse for maintainability
+    - Decision: Keep current well-organized search architecture
+  - **Sprint 14.2**: Consolidated search algorithm utilities
+    - Merged `levenshtein.ts` (67 lines) + `tfidf.ts` (87 lines) into `searchAlgorithms.ts`
+    - Updated all imports to use barrel exports from `utils/index.js`
+    - Deleted redundant files, reducing utils from 18 to 17 files
+
+### Removed
+
+- **utils/levenshtein.ts** - Merged into searchAlgorithms.ts
+- **utils/tfidf.ts** - Merged into searchAlgorithms.ts
+
 ## [0.57.0] - 2025-12-30
 
 ### Added
