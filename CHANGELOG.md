@@ -5,6 +5,35 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.52.0] - 2025-12-29
+
+### Added
+
+- **Phase 2 Test Plan** - Comprehensive test coverage expansion (1223 total tests)
+  - **Sprint 3: Features Module** (204 tests)
+    - `TagManager.test.ts` - Tag alias CRUD, concurrent writes, persistence
+    - `BackupManager.test.ts` - Backup creation, listing, restore, cleanup
+    - `ImportManager.test.ts` - JSON/CSV/GraphML import, merge strategies
+    - `ExportManager.test.ts` - All 7 export formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)
+  - **Sprint 4: Search Module** (315 tests)
+    - `SavedSearchManager.test.ts` - Saved search CRUD, usage tracking, persistence
+    - `SearchSuggestions.test.ts` - "Did you mean?" suggestions with Levenshtein
+    - `TFIDFIndexManager.test.ts` - TF-IDF index build, update, persist, needsRebuild
+    - `SearchFilterChain.test.ts` - Centralized filter logic (tags, importance, dates)
+  - **Sprint 5: Utils Module** (178 tests)
+    - `entityUtils.test.ts` - Entity lookup, manipulation, grouping functions
+    - `tagUtils.test.ts` - Tag normalization, matching, filtering
+    - `validationHelper.test.ts` - Zod schema validation helpers
+  - **Sprint 6: Analytics/Archive** (54 tests)
+    - `AnalyticsManager.test.ts` - Graph validation, statistics, date ranges
+    - `ArchiveManager.test.ts` - Archive by date/importance/tags, dry run mode
+
+### Fixed
+
+- Extended timeout for `BackupManager.test.ts` slow test (15000ms)
+- Added `createdAt` dates to AnalyticsManager tests requiring date ranges
+- Type-safe `isError` property checks in responseFormatter tests
+
 ## [0.51.0] - 2025-12-29
 
 ### Changed

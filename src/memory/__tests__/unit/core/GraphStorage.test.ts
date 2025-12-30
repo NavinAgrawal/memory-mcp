@@ -248,4 +248,341 @@ describe('GraphStorage', () => {
       expect(storage.getFilePath()).toBe(testFilePath);
     });
   });
+
+  describe('Append Operations', () => {
+    describe('appendEntity', () => {
+      it('should append entity to file', async () => {
+        const entity = {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['Engineer'],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+
+        await storage.appendEntity(entity);
+
+        const content = await fs.readFile(testFilePath, 'utf-8');
+        expect(content).toContain('Alice');
+      });
+
+      it('should update cache with new entity', async () => {
+        const entity = {
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+
+        await storage.appendEntity(entity);
+
+        const graph = await storage.loadGraph();
+        expect(graph.entities).toHaveLength(1);
+        expect(graph.entities[0].name).toBe('Alice');
+      });
+
+      it('should accumulate entities in cache (deduplication happens on reload)', async () => {
+        // First append
+        const entity1 = {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['v1'],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+        await storage.appendEntity(entity1);
+
+        // Append updated version (same name)
+        const entity2 = {
+          name: 'Alice',
+          entityType: 'person',
+          observations: ['v2'],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+        await storage.appendEntity(entity2);
+
+        // Cache has both entries (no deduplication)
+        const graph = await storage.loadGraph();
+        expect(graph.entities).toHaveLength(2);
+
+        // But fresh load from disk deduplicates
+        storage.clearCache();
+        const reloaded = await storage.loadGraph();
+        expect(reloaded.entities).toHaveLength(1);
+        expect(reloaded.entities[0].observations).toEqual(['v2']);
+      });
+
+      it('should track pending appends', async () => {
+        const entity = {
+          name: 'Test',
+          entityType: 'test',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+
+        expect(storage.getPendingAppends()).toBe(0);
+        await storage.appendEntity(entity);
+        expect(storage.getPendingAppends()).toBe(1);
+      });
+    });
+
+    describe('appendRelation', () => {
+      it('should append relation to file', async () => {
+        const relation = {
+          from: 'Alice',
+          to: 'Bob',
+          relationType: 'knows',
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+
+        await storage.appendRelation(relation);
+
+        const content = await fs.readFile(testFilePath, 'utf-8');
+        expect(content).toContain('"type":"relation"');
+      });
+
+      it('should update cache with new relation', async () => {
+        const relation = {
+          from: 'Alice',
+          to: 'Bob',
+          relationType: 'knows',
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+
+        await storage.appendRelation(relation);
+
+        const graph = await storage.loadGraph();
+        expect(graph.relations).toHaveLength(1);
+        expect(graph.relations[0].from).toBe('Alice');
+      });
+
+      it('should track pending appends', async () => {
+        const relation = {
+          from: 'A',
+          to: 'B',
+          relationType: 'test',
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        };
+
+        await storage.appendRelation(relation);
+        expect(storage.getPendingAppends()).toBe(1);
+      });
+    });
+  });
+
+  describe('updateEntity', () => {
+    it('should update entity in cache and append to file', async () => {
+      // First create an entity
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: [],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      const updated = await storage.updateEntity('Alice', { importance: 8 });
+      expect(updated).toBe(true);
+
+      const graph = await storage.loadGraph();
+      expect(graph.entities[0].importance).toBe(8);
+    });
+
+    it('should return false for non-existent entity', async () => {
+      const updated = await storage.updateEntity('NonExistent', { importance: 5 });
+      expect(updated).toBe(false);
+    });
+
+    it('should update lastModified timestamp', async () => {
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: [],
+        createdAt: '2024-01-01T00:00:00.000Z',
+        lastModified: '2024-01-01T00:00:00.000Z',
+      });
+
+      await storage.updateEntity('Alice', { importance: 5 });
+
+      const graph = await storage.loadGraph();
+      expect(graph.entities[0].lastModified).not.toBe('2024-01-01T00:00:00.000Z');
+    });
+  });
+
+  describe('Compaction', () => {
+    it('should write cache to file on compact (no in-memory dedup)', async () => {
+      // Append same entity multiple times
+      for (let i = 0; i < 3; i++) {
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [`v${i}`],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+      }
+
+      // File should have 3 lines
+      const beforeContent = await fs.readFile(testFilePath, 'utf-8');
+      const beforeLines = beforeContent.split('\n').filter(l => l.trim());
+      expect(beforeLines.length).toBe(3);
+
+      // compact() saves cache which has 3 entries
+      await storage.compact();
+
+      // File still has 3 lines (cache has duplicates)
+      const afterContent = await fs.readFile(testFilePath, 'utf-8');
+      const afterLines = afterContent.split('\n').filter(l => l.trim());
+      expect(afterLines.length).toBe(3);
+
+      // Deduplication happens on reload
+      storage.clearCache();
+      const graph = await storage.loadGraph();
+      expect(graph.entities).toHaveLength(1);
+      expect(graph.entities[0].observations).toEqual(['v2']);
+    });
+
+    it('should reset pending appends counter', async () => {
+      await storage.appendEntity({
+        name: 'Test',
+        entityType: 'test',
+        observations: [],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      expect(storage.getPendingAppends()).toBe(1);
+
+      await storage.compact();
+
+      expect(storage.getPendingAppends()).toBe(0);
+    });
+
+    it('should preserve latest version on reload (dedup via Map)', async () => {
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: ['old'],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: ['new'],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      // Cache has 2 entries (both versions)
+      const graphBeforeReload = await storage.loadGraph();
+      expect(graphBeforeReload.entities).toHaveLength(2);
+
+      // Clear cache and reload - Map deduplication kicks in
+      storage.clearCache();
+      const graph = await storage.loadGraph();
+      expect(graph.entities).toHaveLength(1);
+      expect(graph.entities[0].observations).toEqual(['new']);
+    });
+  });
+
+  describe('Index Operations', () => {
+    it('should build indexes on load', async () => {
+      // Create test data with multiple entities
+      const graph = {
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Company', entityType: 'organization', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      };
+      await storage.saveGraph(graph);
+
+      // Create new storage to trigger fresh load
+      const newStorage = new GraphStorage(testFilePath);
+      await newStorage.loadGraph();
+
+      // Indexes should allow fast lookups (tested indirectly through behavior)
+      const loaded = await newStorage.loadGraph();
+      expect(loaded.entities).toHaveLength(3);
+    });
+
+    it('should update indexes on append', async () => {
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: [],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      // Index should reflect new entity
+      const graph = await storage.loadGraph();
+      expect(graph.entities.find(e => e.name === 'Alice')).toBeDefined();
+    });
+  });
+
+  describe('getGraphForMutation', () => {
+    it('should return a deep copy of the graph', async () => {
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: ['original'],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      const mutableGraph = await storage.getGraphForMutation();
+      mutableGraph.entities[0].observations.push('modified');
+
+      // Original cache should be unaffected
+      const cached = await storage.loadGraph();
+      expect(cached.entities[0].observations).toEqual(['original']);
+    });
+
+    it('should return fresh copy each time', async () => {
+      await storage.appendEntity({
+        name: 'Test',
+        entityType: 'test',
+        observations: [],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      const copy1 = await storage.getGraphForMutation();
+      const copy2 = await storage.getGraphForMutation();
+
+      expect(copy1).not.toBe(copy2);
+    });
+  });
+
+  describe('Concurrent Access', () => {
+    it('should handle multiple concurrent reads', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      });
+
+      // Perform multiple concurrent reads
+      const results = await Promise.all([
+        storage.loadGraph(),
+        storage.loadGraph(),
+        storage.loadGraph(),
+      ]);
+
+      // All should return same cached data
+      expect(results[0]).toBe(results[1]);
+      expect(results[1]).toBe(results[2]);
+    });
+  });
 });

@@ -71,7 +71,7 @@ describe('responseFormatter', () => {
 
     it('should not include isError flag', () => {
       const result = formatToolResponse({ data: 'test' });
-      expect(result.isError).toBeUndefined();
+      expect((result as Record<string, unknown>).isError).toBeUndefined();
     });
 
     it('should handle special characters in strings', () => {
@@ -122,7 +122,7 @@ describe('responseFormatter', () => {
 
     it('should not include isError flag', () => {
       const result = formatTextResponse('message');
-      expect(result.isError).toBeUndefined();
+      expect((result as Record<string, unknown>).isError).toBeUndefined();
     });
   });
 
@@ -155,7 +155,7 @@ describe('responseFormatter', () => {
 
     it('should not include isError flag', () => {
       const result = formatRawResponse('content');
-      expect(result.isError).toBeUndefined();
+      expect((result as Record<string, unknown>).isError).toBeUndefined();
     });
   });
 

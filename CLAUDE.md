@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.51.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.52.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -125,7 +125,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (431 tests, 16 files):
+Tests are in `src/memory/__tests__/` (1223 tests, 35 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -138,13 +138,27 @@ Tests are in `src/memory/__tests__/` (431 tests, 16 files):
 | unit/core/EntityManager.test.ts | 31 | Entity CRUD |
 | unit/core/GraphStorage.test.ts | 10 | Storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
+| unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats |
+| unit/features/ArchiveManager.test.ts | 27 | Entity archival |
+| unit/features/BackupManager.test.ts | 27 | Backup/restore |
 | unit/features/CompressionManager.test.ts | 32 | Duplicate detection |
+| unit/features/ExportManager.test.ts | 84 | Export formats |
+| unit/features/ImportManager.test.ts | 26 | Import formats |
+| unit/features/TagManager.test.ts | 35 | Tag aliases |
 | unit/search/BasicSearch.test.ts | 37 | Basic search |
 | unit/search/BooleanSearch.test.ts | 52 | AND/OR/NOT queries |
 | unit/search/FuzzySearch.test.ts | 53 | Levenshtein matching |
 | unit/search/RankedSearch.test.ts | 35 | TF-IDF ranking |
-| unit/utils/indexes.test.ts | 24 | Search index tests |
+| unit/search/SavedSearchManager.test.ts | 29 | Saved searches |
+| unit/search/SearchFilterChain.test.ts | 48 | Filter logic |
+| unit/search/SearchSuggestions.test.ts | 24 | "Did you mean?" |
+| unit/search/TFIDFIndexManager.test.ts | 38 | TF-IDF indexing |
+| unit/utils/entityUtils.test.ts | 32 | Entity utilities |
+| unit/utils/indexes.test.ts | 24 | Search indexes |
 | unit/utils/levenshtein.test.ts | 12 | String distance |
+| unit/utils/responseFormatter.test.ts | 36 | Response formatting |
+| unit/utils/tagUtils.test.ts | 48 | Tag utilities |
+| unit/utils/validationHelper.test.ts | 26 | Zod validation |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 
