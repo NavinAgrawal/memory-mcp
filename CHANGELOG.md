@@ -23,7 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Supports bidirectional migration (JSONL ↔ SQLite)
   - Automatic format detection based on file extension
   - Verification step ensures data integrity after migration
-  - Usage: `bun run migrate-from-jsonl-to-sqlite.ts --from memory.jsonl --to memory.db`
+  - Compiled to standalone Windows executable using pkg (smaller than bun)
+  - Usage: `./migrate-from-jsonl-to-sqlite.exe --from memory.jsonl --to memory.db`
+
+- **Standardized Tools Build System** - All tools in `tools/` folder
+  - `chunking-for-files` - Split/merge large files for editing within context limits
+  - `compress-for-context` - CTON compression for LLM context windows
+  - `create-dependency-graph` - Generate TypeScript project dependency graphs
+  - `migrate-from-jsonl-to-sqlite` - Storage format migration
+  - All tools use pkg (not bun) for smaller Windows executables
+  - Standardized scripts: `build` (ts+exe), `build:ts` (tsc only), `build:exe` (pkg only)
 
 ### Changed
 

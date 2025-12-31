@@ -204,6 +204,24 @@ Tests are in `src/memory/__tests__/` (1515 tests, 42 files):
 - Vitest: ^4.0.13
 - @vitest/coverage-v8: ^4.0.13
 
+## Standalone Tools
+
+The `tools/` directory contains standalone utilities compiled to Windows executables using pkg:
+
+| Tool | Purpose |
+|------|---------|
+| `chunking-for-files` | Split/merge large files for editing within context limits |
+| `compress-for-context` | CTON compression for LLM context windows |
+| `create-dependency-graph` | Generate TypeScript project dependency graphs |
+| `migrate-from-jsonl-to-sqlite` | Convert between JSONL and SQLite storage formats |
+
+**Build commands** (in each tool directory):
+```bash
+npm run build      # Build TypeScript + create exe
+npm run build:ts   # TypeScript compilation only
+npm run build:exe  # Create exe only (requires dist/)
+```
+
 ## Documentation
 
 Comprehensive docs in `docs/` directory:
