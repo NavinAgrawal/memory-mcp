@@ -309,3 +309,4 @@ cython_debug/
 *.jsonl
 /.claude
 /.claude
+tools/migrate-from-jsonl-to-sqlite/migrate-from-jsonl-to-sqlite.exe
