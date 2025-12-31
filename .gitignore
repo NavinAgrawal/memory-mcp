@@ -307,3 +307,5 @@ cython_debug/
 
 # Memory data files
 *.jsonl
+/.claude
+/.claude
