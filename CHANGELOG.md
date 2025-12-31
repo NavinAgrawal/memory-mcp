@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configure via `MEMORY_STORAGE_TYPE=sqlite` environment variable
   - Default remains JSONL for backward compatibility
 
+- **Migration Tool** - Convert between JSONL and SQLite storage formats
+  - New `mcp-memory-migrate` CLI binary
+  - Supports bidirectional migration (JSONL ↔ SQLite)
+  - Automatic format detection based on file extension
+  - Verification step ensures data integrity after migration
+  - Usage: `npx mcp-memory-migrate --from memory.jsonl --to memory.db`
+
 ### Changed
 
 - **StorageFactory** now supports both 'jsonl' and 'sqlite' storage types

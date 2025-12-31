@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.58.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-0.59.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -32,7 +32,8 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 
 ### Core Memory Capabilities
 - **Knowledge Graph Storage**: Entity-Relation-Observation model for structured memory
-- **Persistent Memory**: Information persists across chat sessions with JSONL storage
+- **Persistent Memory**: Information persists across chat sessions with JSONL or SQLite storage
+- **Dual Storage Backends**: JSONL (human-readable) or SQLite (indexed, ACID transactions)
 - **Full CRUD Operations**: Create, read, update, delete entities and relations
 - **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
 
@@ -1475,8 +1476,59 @@ Comprehensive documentation organized by category:
 
 - **`MEMORY_FILE_PATH`**: Path to the main memory storage file
   - **Default**: `memory.jsonl` in the current working directory
-  - **Format**: JSONL (JSON Lines) format
   - Sets the location for the primary knowledge graph storage
+
+- **`MEMORY_STORAGE_TYPE`**: Storage backend to use
+  - **Values**: `jsonl` (default) or `sqlite`
+  - **JSONL**: Human-readable, line-based JSON format
+  - **SQLite**: Indexed database with ACID transactions (via sql.js WASM)
+
+### Storage Backends
+
+| Feature | JSONL (Default) | SQLite |
+|---------|-----------------|--------|
+| Format | Human-readable text | Binary database |
+| Transactions | Basic | Full ACID |
+| Indexing | In-memory | B-tree indexes |
+| Best For | Small graphs, debugging | Large graphs (10k+ entities) |
+| File Extension | `.jsonl` | `.db`, `.sqlite` |
+
+**Using SQLite Storage:**
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": ["/path/to/memory-mcp/src/memory/dist/index.js"],
+      "env": {
+        "MEMORY_STORAGE_TYPE": "sqlite",
+        "MEMORY_FILE_PATH": "/path/to/data/memory.db"
+      }
+    }
+  }
+}
+```
+
+### Migrating from JSONL to SQLite
+
+Use the included migration tool to convert your existing JSONL data to SQLite:
+
+```bash
+# Migrate JSONL to SQLite
+npx mcp-memory-migrate --from memory.jsonl --to memory.db
+
+# Migrate SQLite back to JSONL (if needed)
+npx mcp-memory-migrate --from memory.db --to memory.jsonl
+
+# Verbose output
+npx mcp-memory-migrate -f memory.jsonl -t memory.db -v
+```
+
+**Migration Notes:**
+- All entities, relations, and metadata are preserved
+- Saved searches and tag aliases are stored in separate files and are NOT migrated
+- The target file is created if it doesn't exist, or overwritten if it does
 
 ### Storage File Organization
 
@@ -1677,7 +1729,7 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and
 - **Fixed**: Bug fixes
 - **Security**: Security improvements
 
-**Current version**: v0.58.0 - [View full changelog →](CHANGELOG.md)
+**Current version**: v0.59.0 - [View full changelog →](CHANGELOG.md)
 
 ## License
 
