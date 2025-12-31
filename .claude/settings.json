@@ -1,12 +1,13 @@
 {
   "project": {
     "name": "MCP Servers Collection",
-    "description": "Collection of 13 specialized Model Context Protocol servers (9 local + 4 global packages)",
+    "description": "Collection of 14 specialized Model Context Protocol servers (10 local + 4 global packages)",
     "type": "multi-server-repository"
   },
   "defaultServer": "memory-mcp",
   "enabledServers": [
     "deepthinking-mcp",
+    "markitdown-mcp",
     "math-mcp",
     "memory-mcp",
     "fzf-mcp",
@@ -27,6 +28,7 @@
     "crossPlatform": [
       "deepthinking-mcp",
       "fzf-mcp",
+      "markitdown-mcp",
       "math-mcp",
       "memory-mcp",
       "fermat-mcp",
@@ -39,6 +41,7 @@
     "mathematics": ["math-mcp", "fermat-mcp"],
     "memory": ["memory-mcp", "remember-mcp"],
     "search": ["everything-mcp", "fzf-mcp"],
+    "conversion": ["markitdown-mcp"],
     "integration": ["substack-mcp"],
     "automation": ["playwright", "windows-mcp"],
     "utilities": ["time"]
@@ -55,10 +58,10 @@
       "entryPoint": "index.js"
     },
     "python": {
-      "servers": ["fermat-mcp", "remember-mcp", "time"],
+      "servers": ["fermat-mcp", "markitdown-mcp", "remember-mcp", "time"],
       "buildCommand": null,
       "entryPoint": "server.py",
-      "pythonVersion": "3.12+"
+      "pythonVersion": "3.10+"
     },
     "globalPackages": {
       "servers": ["sequential-thinking-mcp", "playwright", "windows-mcp"],
@@ -92,7 +95,12 @@
       "framework": "vitest",
       "coverage": true,
       "command": "npm test",
-      "testCount": "791+"
+      "testCount": "5148+"
+    },
+    "markitdown-mcp": {
+      "framework": "hatch",
+      "command": "hatch test",
+      "testLocation": "packages/markitdown"
     },
     "math-mcp": {
       "framework": "vitest",
@@ -101,7 +109,7 @@
     },
     "memory-mcp": {
       "framework": "vitest",
-      "tests": "396+",
+      "tests": "1515+",
       "coverage": true
     },
     "substack-mcp": {
@@ -119,26 +127,27 @@
       "optimization": "In-memory caching, 50x faster duplicate detection"
     },
     "deepthinking-mcp": {
-      "features": "LRU caching, rate limiting, input validation",
-      "modes": "33 reasoning modes (21 fully implemented + 12 experimental) including meta-reasoning"
+      "features": "LRU caching, rate limiting, input validation, ModeHandler architecture",
+      "modes": "34 reasoning modes (30 with dedicated types + 4 advanced runtime) including meta-reasoning and historical"
     }
   },
   "documentation": {
     "localCLAUDEmd": [
       "deepthinking-mcp",
+      "everything-mcp",
+      "markitdown-mcp",
       "math-mcp",
       "memory-mcp",
-      "substack-mcp"
+      "substack-mcp",
+      "Windows-mcp"
     ],
     "readmeOnly": [
-      "everything-mcp",
       "fermat-mcp",
       "fzf-mcp",
       "remember-mcp",
       "sequential-thinking-mcp",
       "playwright",
-      "time",
-      "windows-mcp"
+      "time"
     ]
   }
 }
