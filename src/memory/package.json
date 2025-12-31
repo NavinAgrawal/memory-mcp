@@ -56,8 +56,7 @@
     }
   },
   "bin": {
-    "mcp-server-memory": "dist/index.js",
-    "mcp-memory-migrate": "dist/tools/migrate.js"
+    "mcp-server-memory": "dist/index.js"
   },
   "files": [
     "dist"

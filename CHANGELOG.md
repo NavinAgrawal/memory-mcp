@@ -19,11 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Default remains JSONL for backward compatibility
 
 - **Migration Tool** - Convert between JSONL and SQLite storage formats
-  - New `mcp-memory-migrate` CLI binary
+  - Standalone tool in `tools/migrate-from-jsonl-to-sqlite/`
   - Supports bidirectional migration (JSONL ↔ SQLite)
   - Automatic format detection based on file extension
   - Verification step ensures data integrity after migration
-  - Usage: `npx mcp-memory-migrate --from memory.jsonl --to memory.db`
+  - Usage: `bun run migrate-from-jsonl-to-sqlite.ts --from memory.jsonl --to memory.db`
 
 ### Changed
 

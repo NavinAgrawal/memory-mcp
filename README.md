@@ -1515,15 +1515,21 @@ Comprehensive documentation organized by category:
 Use the included migration tool to convert your existing JSONL data to SQLite:
 
 ```bash
-# Migrate JSONL to SQLite
-npx mcp-memory-migrate --from memory.jsonl --to memory.db
+# Navigate to the migration tool
+cd tools/migrate-from-jsonl-to-sqlite
+npm install
+
+# Migrate JSONL to SQLite (using Bun)
+bun run migrate-from-jsonl-to-sqlite.ts --from /path/to/memory.jsonl --to /path/to/memory.db
 
 # Migrate SQLite back to JSONL (if needed)
-npx mcp-memory-migrate --from memory.db --to memory.jsonl
+bun run migrate-from-jsonl-to-sqlite.ts --from /path/to/memory.db --to /path/to/memory.jsonl
 
 # Verbose output
-npx mcp-memory-migrate -f memory.jsonl -t memory.db -v
+bun run migrate-from-jsonl-to-sqlite.ts -f memory.jsonl -t memory.db -v
 ```
+
+See [tools/migrate-from-jsonl-to-sqlite/README.md](tools/migrate-from-jsonl-to-sqlite/README.md) for complete documentation.
 
 **Migration Notes:**
 - All entities, relations, and metadata are preserved
