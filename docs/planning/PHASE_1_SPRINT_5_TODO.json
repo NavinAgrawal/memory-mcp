@@ -4,14 +4,14 @@
   "title": "Simplify Server Layer",
   "priority": "MEDIUM",
   "effort": "7-8 hours",
-  "status": "pending",
+  "status": "completed",
   "impact": "Cleaner code, easier maintenance",
   "tasks": [
     {
       "id": 1,
       "category": "Server Layer",
       "description": "Consolidate tool handlers into category files - Split toolHandlers.ts (301 lines) into handlers/entity.ts, handlers/search.ts, handlers/graph.ts, handlers/io.ts with single registry in handlers/index.ts",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [
@@ -33,7 +33,7 @@
       "id": 2,
       "category": "Server Layer",
       "description": "Reduce tool definition verbosity - Shorten descriptions to single line, remove redundant field descriptions in toolDefinitions.ts (760 lines)",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1.5,
       "agent": "haiku",
       "files": ["src/memory/server/toolDefinitions.ts"],
@@ -48,7 +48,7 @@
       "id": 3,
       "category": "Server Layer",
       "description": "Create shared schema builders - Extract common schema patterns (entityName, entityNames, importance, tags, pagination) to reduce duplication in tool definitions",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1,
       "agent": "haiku",
       "files": ["src/memory/server/schemaBuilders.ts"],
@@ -64,7 +64,7 @@
       "id": 4,
       "category": "Core Infrastructure",
       "description": "Remove async from synchronous operations - Make getEntity(), getRelation(), and search helper methods synchronous when reading from cache, add async wrappers for cold-start",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [

@@ -1,0 +1,116 @@
+{
+  "phase": 1,
+  "sprint": 14,
+  "title": "Code Volume Reduction (Remaining Critique)",
+  "priority": "LOW",
+  "effort": "3.5 hours",
+  "status": "completed",
+  "impact": "Reduce codebase from 11,131 lines to target ~6,000 lines",
+  "critiqueSource": "Comprehensive_Codebase_Review.md: 'Code volume - Slightly larger (+459 lines)'",
+  "currentState": {
+    "totalLines": 11131,
+    "sourceFiles": 53,
+    "breakdown": {
+      "core": "~1,500 lines (5 files)",
+      "features": "~1,800 lines (7 files)",
+      "search": "~2,500 lines (10 files)",
+      "server": "~1,200 lines (3 files)",
+      "types": "~800 lines (6 files)",
+      "utils": "~2,500 lines (18 files)"
+    }
+  },
+  "targetState": {
+    "totalLines": 6000,
+    "sourceFiles": 30,
+    "reduction": "~5,100 lines (46%)"
+  },
+  "priorReductions": {
+    "description": "Lines already removed by prior sprints",
+    "sprint4": "~1,500 lines (ObservationManager, TagManager, HierarchyManager merged)",
+    "sprint11": "~1,200 lines (6 manager files deleted)",
+    "sprint12": "~550 lines (KnowledgeGraphManager deleted/reduced)",
+    "subtotal": "~3,250 lines already removed"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Code Reduction",
+      "description": "Consolidate search modules - Merge BasicSearch, BooleanSearch, RankedSearch, FuzzySearch into SearchManager",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/search/SearchManager.ts",
+        "src/memory/search/BasicSearch.ts (merge into SearchManager)",
+        "src/memory/search/BooleanSearch.ts (merge into SearchManager)",
+        "src/memory/search/RankedSearch.ts (merge into SearchManager)",
+        "src/memory/search/FuzzySearch.ts (merge into SearchManager)"
+      ],
+      "estimatedLinesRemoved": 800,
+      "acceptanceCriteria": [
+        "4 search modules merged into SearchManager",
+        "No separate search class files",
+        "All search tests pass",
+        "Shared utilities extracted to avoid duplication"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Code Reduction",
+      "description": "Reduce utility file count - Consolidate 18 utility files into logical groups",
+      "status": "completed",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/utils/ (18 files → 6 files)"
+      ],
+      "targetStructure": {
+        "validation.ts": "All Zod schemas (merge 14 schema files)",
+        "search.ts": "levenshtein, tfidf utilities",
+        "formatting.ts": "responseFormatter, pagination",
+        "indexes.ts": "NameIndex, TypeIndex, LowercaseCache",
+        "errors.ts": "Error classes and handling",
+        "constants.ts": "All constants"
+      },
+      "estimatedLinesRemoved": 400,
+      "acceptanceCriteria": [
+        "Utils reduced from 18 to 6 files",
+        "All utility tests pass",
+        "No duplicate code"
+      ]
+    }
+  ],
+  "postSprintAnalysis": {
+    "description": "After completing Sprint 14, run full analysis to verify targets met",
+    "commands": [
+      "find src/memory -name '*.ts' | xargs wc -l",
+      "npm test",
+      "npm run typecheck"
+    ],
+    "expectedResults": {
+      "totalLines": "~6,000",
+      "fileCount": "~30",
+      "testsPassing": "1484+",
+      "typeErrors": 0
+    }
+  },
+  "lineReductionSummary": {
+    "sprint4": 1500,
+    "sprint11": 1200,
+    "sprint12": 550,
+    "sprint14_task1": 800,
+    "sprint14_task2": 400,
+    "total": 4450,
+    "note": "New files created offset some reductions; net target ~5,100 lines"
+  },
+  "successCriteria": [
+    "Total lines reduced from 11,131 to ~6,000",
+    "File count reduced from 53 to ~30",
+    "All 1484+ tests pass",
+    "No functionality removed",
+    "No breaking API changes"
+  ],
+  "totalEstimatedHours": 3.5,
+  "dependencies": ["Sprint 12", "Sprint 13"],
+  "notes": "This sprint is the final cleanup after Sprints 11-13. Note that Sprint 11 already deletes the 6 consolidated manager files, and Sprint 12 already removes/reduces KnowledgeGraphManager. This sprint focuses on the remaining consolidation: merging search modules and reducing utility file count."
+}

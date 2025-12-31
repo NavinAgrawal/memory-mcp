@@ -4,14 +4,14 @@
   "title": "Documentation and Testing Updates",
   "priority": "LOW",
   "effort": "5-6 hours",
-  "status": "pending",
+  "status": "completed",
   "impact": "Better maintainability",
   "tasks": [
     {
       "id": 1,
       "category": "Documentation",
       "description": "Update CLAUDE.md with new architecture - Reduce manager count (10 to 4), document new index system, update file count estimates, add performance characteristics",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1,
       "agent": "haiku",
       "files": ["CLAUDE.md"],
@@ -26,7 +26,7 @@
       "id": 2,
       "category": "Documentation",
       "description": "Add Architecture Decision Records - Create ADR-001-index-system.md documenting why indexes were added, design decisions, performance/memory tradeoffs, alternatives considered",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1,
       "agent": "haiku",
       "files": [
@@ -43,7 +43,7 @@
       "id": 3,
       "category": "Testing",
       "description": "Update test organization - Restructure __tests__/ into unit/core, unit/search, unit/utils, integration/, performance/ directories",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1.5,
       "agent": "haiku",
       "files": ["src/memory/__tests__/"],
@@ -64,7 +64,7 @@
       "id": 4,
       "category": "Testing",
       "description": "Add missing unit tests for new code - Create tests for indexes.ts (NameIndex, TypeIndex, LowercaseCache), dates.ts, validation.ts, and error factories",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [

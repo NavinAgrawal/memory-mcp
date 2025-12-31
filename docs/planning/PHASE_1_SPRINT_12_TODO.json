@@ -1,0 +1,138 @@
+{
+  "phase": 1,
+  "sprint": 12,
+  "title": "Reduce Abstraction Layers (Remaining Critique)",
+  "priority": "MEDIUM",
+  "effort": "7 hours",
+  "status": "completed",
+  "impact": "Simplify call stack from 6 layers to 3 layers for common operations",
+  "critiqueSource": "Comprehensive_Codebase_Review.md: 'Abstraction layers - Still 6 layers for operations'",
+  "currentState": {
+    "layers": 6,
+    "callStack": [
+      "1. toolHandlers.ts - routes to handler",
+      "2. handler calls KnowledgeGraphManager.method()",
+      "3. KGM delegates to specialized Manager",
+      "4. Manager calls GraphStorage.loadGraph()",
+      "5. GraphStorage reads from cache/file",
+      "6. Manager mutates and calls GraphStorage.saveGraph()"
+    ]
+  },
+  "targetState": {
+    "layers": 3,
+    "callStack": [
+      "1. toolHandlers.ts - routes to handler",
+      "2. handler calls Manager.method() directly",
+      "3. Manager uses GraphStorage for persistence"
+    ]
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Layer Reduction",
+      "description": "Bypass KnowledgeGraphManager for entity operations - Update toolHandlers to call EntityManager directly instead of going through KnowledgeGraphManager facade",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/server/toolHandlers.ts",
+        "src/memory/core/KnowledgeGraphManager.ts"
+      ],
+      "changes": [
+        "toolHandlers imports EntityManager directly",
+        "Entity tool handlers call EntityManager methods",
+        "Remove entity delegation from KnowledgeGraphManager"
+      ],
+      "acceptanceCriteria": [
+        "Entity tools bypass KGM facade",
+        "Call stack reduced by 1 layer",
+        "All entity tests pass",
+        "No API changes to tools"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Layer Reduction",
+      "description": "Bypass KnowledgeGraphManager for search operations - Update toolHandlers to call SearchManager directly",
+      "status": "completed",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/server/toolHandlers.ts",
+        "src/memory/core/KnowledgeGraphManager.ts"
+      ],
+      "changes": [
+        "toolHandlers imports SearchManager directly",
+        "Search tool handlers call SearchManager methods",
+        "Remove search delegation from KnowledgeGraphManager"
+      ],
+      "acceptanceCriteria": [
+        "Search tools bypass KGM facade",
+        "All search tests pass",
+        "No API changes to tools"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Layer Reduction",
+      "description": "Bypass KnowledgeGraphManager for I/O operations - Update toolHandlers to call IOManager directly",
+      "status": "completed",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/server/toolHandlers.ts",
+        "src/memory/core/KnowledgeGraphManager.ts"
+      ],
+      "changes": [
+        "toolHandlers imports IOManager directly",
+        "Import/export/backup handlers call IOManager",
+        "Remove I/O delegation from KnowledgeGraphManager"
+      ],
+      "acceptanceCriteria": [
+        "I/O tools bypass KGM facade",
+        "All import/export tests pass",
+        "No API changes to tools"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Layer Reduction",
+      "description": "Deprecate or simplify KnowledgeGraphManager - Either remove KGM entirely or reduce to simple factory/initialization role",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/KnowledgeGraphManager.ts",
+        "src/memory/index.ts"
+      ],
+      "options": [
+        {
+          "option": "A",
+          "description": "Delete KGM entirely - managers instantiated in toolHandlers",
+          "linesRemoved": "~550"
+        },
+        {
+          "option": "B",
+          "description": "Keep KGM as factory only - createManagers() returns all 4 managers",
+          "linesRemoved": "~400"
+        }
+      ],
+      "acceptanceCriteria": [
+        "KGM either deleted or reduced to <100 lines",
+        "No facade delegation pattern",
+        "All tests pass",
+        "Entry point (index.ts) still works"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Call stack reduced from 6 to 3 layers",
+    "KnowledgeGraphManager.ts < 100 lines or deleted",
+    "All 1484 tests pass",
+    "All 47 MCP tools work correctly",
+    "Response latency unchanged or improved"
+  ],
+  "totalEstimatedHours": 7,
+  "dependencies": ["Sprint 11"],
+  "notes": "This sprint addresses the critique about too many abstraction layers. The KnowledgeGraphManager facade pattern adds indirection without value. After this sprint, tool handlers will call managers directly, eliminating the unnecessary KGM layer."
+}

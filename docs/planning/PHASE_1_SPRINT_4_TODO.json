@@ -4,14 +4,14 @@
   "title": "Consolidate Manager Classes",
   "priority": "MEDIUM",
   "effort": "9-10 hours",
-  "status": "pending",
+  "status": "completed",
   "impact": "40% code reduction, simpler architecture",
   "tasks": [
     {
       "id": 1,
       "category": "Consolidation",
       "description": "Merge EntityManager and ObservationManager - Move addObservations() and deleteObservations() into EntityManager, update all imports, delete ObservationManager.ts",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [
@@ -30,7 +30,7 @@
       "id": 2,
       "category": "Consolidation",
       "description": "Merge TagManager into EntityManager - Move addTags(), removeTags(), setImportance(), addTagsToMultipleEntities(), replaceTag(), mergeTags() into EntityManager, keep TagAliasManager separate",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [
@@ -50,7 +50,7 @@
       "id": 3,
       "category": "Consolidation",
       "description": "Merge HierarchyManager into EntityManager - Move all 9 hierarchy methods (setEntityParent, getChildren, getParent, getAncestors, getDescendants, getSubtree, getRootEntities, getEntityDepth, moveEntity) into EntityManager",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [
@@ -69,7 +69,7 @@
       "id": 4,
       "category": "Consolidation",
       "description": "Create unified SearchManager facade - Inline BasicSearch, BooleanSearch, RankedSearch, FuzzySearch logic into single SearchManager class with intelligent dispatch",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 2,
       "agent": "sonnet",
       "files": [
@@ -96,7 +96,7 @@
       "id": 5,
       "category": "Consolidation",
       "description": "Update KnowledgeGraphManager to use consolidated classes - Reduce from 10 lazy-loaded managers to 4 (EntityManager, RelationManager, SearchManager, ExportManager)",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1.5,
       "agent": "haiku",
       "files": ["src/memory/core/KnowledgeGraphManager.ts"],

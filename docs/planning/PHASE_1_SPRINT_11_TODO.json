@@ -1,0 +1,150 @@
+{
+  "phase": 1,
+  "sprint": 11,
+  "title": "Further Manager Consolidation (Remaining Critique)",
+  "priority": "MEDIUM",
+  "effort": "8 hours",
+  "status": "completed",
+  "impact": "Reduce complexity from 9 managers to 4 managers as originally planned",
+  "critiqueSource": "Comprehensive_Codebase_Review.md: 'Still 9 managers - Could consolidate further'",
+  "currentState": {
+    "managers": 9,
+    "list": [
+      "EntityManager",
+      "RelationManager",
+      "SearchManager",
+      "CompressionManager",
+      "ExportManager",
+      "ImportManager",
+      "AnalyticsManager",
+      "TagManager (aliases only)",
+      "ArchiveManager"
+    ]
+  },
+  "targetState": {
+    "managers": 4,
+    "list": [
+      "EntityManager (entities, observations, tags, hierarchy, archive)",
+      "RelationManager (relations)",
+      "SearchManager (all search, analytics, compression/duplicates)",
+      "IOManager (import, export, backup)"
+    ]
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Manager Consolidation",
+      "description": "Merge CompressionManager into SearchManager - Move find_duplicates, merge_entities, compress_graph functionality into SearchManager since duplicate detection uses search indexes",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/search/SearchManager.ts",
+        "src/memory/features/CompressionManager.ts (delete after)"
+      ],
+      "methodsToMove": [
+        "findDuplicates()",
+        "mergeEntities()",
+        "compressGraph()"
+      ],
+      "acceptanceCriteria": [
+        "All compression methods in SearchManager",
+        "CompressionManager.ts deleted",
+        "All compression tests pass",
+        "find_duplicates tool works"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Manager Consolidation",
+      "description": "Merge AnalyticsManager into SearchManager - Move get_graph_stats, validate_graph functionality into SearchManager as they are read-only graph analysis operations",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/search/SearchManager.ts",
+        "src/memory/features/AnalyticsManager.ts (delete after)"
+      ],
+      "methodsToMove": [
+        "getGraphStats()",
+        "validateGraph()"
+      ],
+      "acceptanceCriteria": [
+        "All analytics methods in SearchManager",
+        "AnalyticsManager.ts deleted",
+        "All analytics tests pass",
+        "get_graph_stats tool works"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Manager Consolidation",
+      "description": "Merge ArchiveManager into EntityManager - Move archive_entities functionality into EntityManager since archiving is entity lifecycle management",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/core/EntityManager.ts",
+        "src/memory/features/ArchiveManager.ts (delete after)"
+      ],
+      "methodsToMove": [
+        "archiveEntities()"
+      ],
+      "acceptanceCriteria": [
+        "Archive methods in EntityManager",
+        "ArchiveManager.ts deleted",
+        "All archive tests pass",
+        "archive_entities tool works"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Manager Consolidation",
+      "description": "Create IOManager from ImportManager + ExportManager - Combine import and export into single IOManager for all file I/O operations including backup",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/features/IOManager.ts (new)",
+        "src/memory/features/ImportManager.ts (delete after)",
+        "src/memory/features/ExportManager.ts (delete after)",
+        "src/memory/features/BackupManager.ts (merge into IOManager)"
+      ],
+      "methodsToMove": [
+        "importGraph()",
+        "exportGraph()",
+        "createBackup()",
+        "restoreBackup()",
+        "listBackups()"
+      ],
+      "acceptanceCriteria": [
+        "Single IOManager with all I/O methods",
+        "ImportManager.ts deleted",
+        "ExportManager.ts deleted",
+        "BackupManager.ts deleted",
+        "All import/export/backup tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Manager count reduced from 9 to 4",
+    "All 1484 tests pass",
+    "All 47 MCP tools work correctly",
+    "~1,200 lines of code removed (6 manager files deleted)",
+    "No breaking API changes"
+  ],
+  "filesDeleted": [
+    "src/memory/features/CompressionManager.ts",
+    "src/memory/features/AnalyticsManager.ts",
+    "src/memory/features/ArchiveManager.ts",
+    "src/memory/features/ImportManager.ts",
+    "src/memory/features/ExportManager.ts",
+    "src/memory/features/BackupManager.ts"
+  ],
+  "filesCreated": [
+    "src/memory/features/IOManager.ts"
+  ],
+  "totalEstimatedHours": 8,
+  "dependencies": ["Sprint 10"],
+  "notes": "This sprint addresses the critique that 9 managers is still too many. The target is 4 focused managers: EntityManager (all entity operations), RelationManager (relations), SearchManager (search + analytics + compression), IOManager (import/export/backup)."
+}
