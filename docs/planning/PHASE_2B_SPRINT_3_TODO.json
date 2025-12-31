@@ -1,0 +1,126 @@
+{
+  "sprint": 3,
+  "phase": "2B",
+  "title": "Saved Search & Observation Tool Tests",
+  "description": "Persistent search and data management - saved searches, observations, and basic tag operations",
+  "priority": "HIGH",
+  "status": "pending",
+  "created": "2025-12-31",
+  "estimatedHours": 5,
+  "targetTests": 35,
+  "tools": ["save_search", "execute_saved_search", "list_saved_searches", "delete_saved_search", "update_saved_search", "add_observations", "delete_observations", "add_tags", "remove_tags", "set_importance", "add_tags_to_multiple_entities", "replace_tag", "merge_tags"],
+  "tasks": [
+    {
+      "id": "2B.3.1",
+      "title": "Saved Search CRUD Tools Tests",
+      "description": "Test all 5 saved search tools",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 1.5,
+      "targetTests": 15,
+      "testFile": "src/memory/__tests__/e2e/tools/saved-search-tools.test.ts",
+      "testCases": [
+        "save_search should save with name and query",
+        "save_search should require name parameter",
+        "save_search should require query parameter",
+        "save_search should accept tags filter",
+        "save_search should accept importance range",
+        "save_search should accept searchType",
+        "save_search should include createdAt",
+        "save_search should reject duplicate names",
+        "execute_saved_search should execute by name",
+        "execute_saved_search should apply saved parameters",
+        "execute_saved_search should increment useCount",
+        "list_saved_searches should return all",
+        "update_saved_search should update by name",
+        "update_saved_search should update query",
+        "delete_saved_search should delete by name"
+      ],
+      "acceptanceCriteria": [
+        "All CRUD operations tested",
+        "Usage tracking verified"
+      ]
+    },
+    {
+      "id": "2B.3.2",
+      "title": "Observation Tools Tests",
+      "description": "Test add_observations and delete_observations",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1,
+      "targetTests": 8,
+      "testFile": "src/memory/__tests__/e2e/tools/observation-tools.test.ts",
+      "testCases": [
+        "add_observations should add to entity",
+        "add_observations should require observations array",
+        "add_observations should require entityName",
+        "add_observations should require contents array",
+        "add_observations should add to multiple entities",
+        "add_observations should update lastModified",
+        "delete_observations should delete specific observations",
+        "delete_observations should handle non-existent gracefully"
+      ],
+      "acceptanceCriteria": [
+        "Observation CRUD tested",
+        "Timestamp updates verified"
+      ]
+    },
+    {
+      "id": "2B.3.3",
+      "title": "Tag Tools Tests (Part 1)",
+      "description": "Test add_tags, remove_tags, set_importance",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1,
+      "targetTests": 10,
+      "testFile": "src/memory/__tests__/e2e/tools/tag-tools.test.ts",
+      "testCases": [
+        "add_tags should add tags to entity",
+        "add_tags should require entityName",
+        "add_tags should require tags array",
+        "add_tags should normalize to lowercase",
+        "add_tags should not add duplicates",
+        "remove_tags should remove tags from entity",
+        "set_importance should set value",
+        "set_importance should require entityName",
+        "set_importance should reject < 0",
+        "set_importance should reject > 10"
+      ],
+      "acceptanceCriteria": [
+        "Tag operations validated",
+        "Importance constraints tested"
+      ]
+    },
+    {
+      "id": "2B.3.4",
+      "title": "Tag Tools Tests (Part 2)",
+      "description": "Test bulk tag operations - add_tags_to_multiple_entities, replace_tag, merge_tags",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1.5,
+      "targetTests": 8,
+      "testFile": "src/memory/__tests__/e2e/tools/tag-tools.test.ts",
+      "testCases": [
+        "add_tags_to_multiple_entities should add to multiple",
+        "add_tags_to_multiple_entities should require entityNames",
+        "add_tags_to_multiple_entities should require tags",
+        "add_tags_to_multiple_entities should handle mix existing/non-existing",
+        "replace_tag should replace across all entities",
+        "replace_tag should return affected count",
+        "merge_tags should merge two into target",
+        "merge_tags should require all three parameters"
+      ],
+      "acceptanceCriteria": [
+        "Bulk operations tested",
+        "Edge cases covered"
+      ]
+    }
+  ],
+  "dependencies": [1],
+  "deliverables": [
+    "src/memory/__tests__/e2e/tools/saved-search-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/observation-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/tag-tools.test.ts"
+  ],
+  "notes": "These tools manage persistent data in the knowledge graph. Testing ensures data integrity across operations."
+}

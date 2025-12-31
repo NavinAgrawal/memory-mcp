@@ -1,0 +1,141 @@
+{
+  "sprint": 6,
+  "phase": "2B",
+  "title": "Import/Export & Integration Tests",
+  "description": "Data portability and complete workflows - import/export in multiple formats plus multi-tool integration tests",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "created": "2025-12-31",
+  "estimatedHours": 7,
+  "targetTests": 50,
+  "tools": ["import_graph", "export_graph"],
+  "tasks": [
+    {
+      "id": "2B.6.1",
+      "title": "import_graph Tool Tests",
+      "description": "Test import from JSON, CSV, GraphML formats with merge strategies",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 15,
+      "testFile": "src/memory/__tests__/e2e/tools/import-export-tools.test.ts",
+      "testCases": [
+        "should require format parameter",
+        "should require data parameter",
+        "should import valid JSON",
+        "should import entities and relations",
+        "should reject invalid JSON",
+        "should import entity CSV",
+        "should handle missing columns gracefully",
+        "should import valid GraphML",
+        "should preserve node attributes",
+        "should preserve edge attributes",
+        "should replace with mergeStrategy=replace",
+        "should skip duplicates with mergeStrategy=skip",
+        "should merge data with mergeStrategy=merge",
+        "should fail on conflict with mergeStrategy=fail",
+        "dryRun should preview without changes"
+      ],
+      "acceptanceCriteria": [
+        "All 3 formats tested",
+        "All merge strategies validated",
+        "Dry run verified"
+      ]
+    },
+    {
+      "id": "2B.6.2",
+      "title": "export_graph Tool Tests",
+      "description": "Test export to all 7 formats with optional filtering",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 18,
+      "testFile": "src/memory/__tests__/e2e/tools/import-export-tools.test.ts",
+      "testCases": [
+        "should require format parameter",
+        "should export valid JSON",
+        "should include all entities",
+        "should include all relations",
+        "should export valid CSV",
+        "should escape special characters",
+        "should export valid GraphML XML",
+        "should include node attributes",
+        "should include edge attributes",
+        "should export valid GEXF XML",
+        "should export valid DOT graph",
+        "should export readable Markdown",
+        "should export valid Mermaid diagram",
+        "should filter by startDate",
+        "should filter by endDate",
+        "should filter by entityType",
+        "should filter by tags",
+        "should combine filters"
+      ],
+      "acceptanceCriteria": [
+        "All 7 export formats tested",
+        "Filter combinations validated"
+      ]
+    },
+    {
+      "id": "2B.6.3",
+      "title": "Multi-Tool Workflow Tests",
+      "description": "Test complete workflows that span multiple tools",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 12,
+      "testFile": "src/memory/__tests__/e2e/workflows/tool-workflows.test.ts",
+      "testCases": [
+        "CRUD Workflow: create, read, update, delete entity",
+        "CRUD Workflow: create entity, add relations, search, delete",
+        "Hierarchy Workflow: create parent-child structure",
+        "Hierarchy Workflow: navigate up and down",
+        "Hierarchy Workflow: move entities between parents",
+        "Search Workflow: save search, execute, update",
+        "Search Workflow: different search types on same data",
+        "Tag Workflow: add tags, create alias, resolve",
+        "Tag Workflow: replace and merge tags",
+        "Maintenance Workflow: find duplicates and merge",
+        "Maintenance Workflow: validate, fix, validate again",
+        "Import/Export Workflow: export, clear, import"
+      ],
+      "acceptanceCriteria": [
+        "All major workflows validated",
+        "Tool interactions verified"
+      ]
+    },
+    {
+      "id": "2B.6.4",
+      "title": "Error Response Format Tests",
+      "description": "Test MCP-compliant error responses across all tools",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1,
+      "targetTests": 10,
+      "testFile": "src/memory/__tests__/e2e/tools/error-handling.test.ts",
+      "testCases": [
+        "should return isError: true on error",
+        "should include error message in content",
+        "should use text content type",
+        "should report missing required parameters",
+        "should report invalid parameter types",
+        "should report constraint violations",
+        "should report entity not found",
+        "should report relation not found",
+        "should report cycle detected",
+        "should error for unknown tool name"
+      ],
+      "acceptanceCriteria": [
+        "MCP error format validated",
+        "All error categories tested"
+      ]
+    }
+  ],
+  "dependencies": [5],
+  "deliverables": [
+    "src/memory/__tests__/e2e/tools/import-export-tools.test.ts",
+    "src/memory/__tests__/e2e/workflows/tool-workflows.test.ts",
+    "src/memory/__tests__/e2e/tools/error-handling.test.ts"
+  ],
+  "notes": "This sprint completes Phase 2B. Import/export uses IOManager (consolidated from ExportManager + ImportManager + BackupManager)."
+}

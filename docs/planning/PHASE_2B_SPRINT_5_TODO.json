@@ -1,0 +1,124 @@
+{
+  "sprint": 5,
+  "phase": "2B",
+  "title": "Analytics & Compression Tool Tests",
+  "description": "Graph maintenance and analysis - statistics, validation, duplicate detection, and archival",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "created": "2025-12-31",
+  "estimatedHours": 5,
+  "targetTests": 30,
+  "tools": ["get_graph_stats", "validate_graph", "find_duplicates", "merge_entities", "compress_graph", "archive_entities"],
+  "tasks": [
+    {
+      "id": "2B.5.1",
+      "title": "Analytics Tools Tests",
+      "description": "Test get_graph_stats and validate_graph",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1.5,
+      "targetTests": 12,
+      "testFile": "src/memory/__tests__/e2e/tools/analytics-tools.test.ts",
+      "testCases": [
+        "get_graph_stats should return statistics",
+        "get_graph_stats should require no parameters",
+        "get_graph_stats should include totalEntities",
+        "get_graph_stats should include totalRelations",
+        "get_graph_stats should include entityTypesCounts",
+        "get_graph_stats should handle empty graph",
+        "validate_graph should validate integrity",
+        "validate_graph should detect orphaned relations",
+        "validate_graph should detect duplicate entities",
+        "validate_graph should warn isolated entities",
+        "validate_graph should return isValid boolean",
+        "validate_graph should return issues array"
+      ],
+      "acceptanceCriteria": [
+        "All stats fields verified",
+        "Validation issues detected"
+      ]
+    },
+    {
+      "id": "2B.5.2",
+      "title": "Compression Tools Tests (Find & Merge)",
+      "description": "Test find_duplicates and merge_entities",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 1.5,
+      "targetTests": 10,
+      "testFile": "src/memory/__tests__/e2e/tools/compression-tools.test.ts",
+      "testCases": [
+        "find_duplicates should find with default threshold",
+        "find_duplicates should accept threshold",
+        "find_duplicates should return duplicate groups",
+        "find_duplicates should include similarity scores",
+        "find_duplicates should detect name similarity",
+        "merge_entities should merge multiple entities",
+        "merge_entities should require 2+ entities",
+        "merge_entities should accept targetName",
+        "merge_entities should combine observations",
+        "merge_entities should redirect relations"
+      ],
+      "acceptanceCriteria": [
+        "Duplicate detection validated",
+        "Merge behavior verified"
+      ]
+    },
+    {
+      "id": "2B.5.3",
+      "title": "Compression Tools Tests (Compress & Archive)",
+      "description": "Test compress_graph and archive_entities with dry run support",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 1,
+      "targetTests": 10,
+      "testFile": "src/memory/__tests__/e2e/tools/compression-tools.test.ts",
+      "testCases": [
+        "compress_graph should compress with default threshold",
+        "compress_graph should accept threshold",
+        "compress_graph should accept dryRun",
+        "compress_graph dryRun should preview without changes",
+        "compress_graph should merge similar entities",
+        "archive_entities should archive by olderThan",
+        "archive_entities should archive by importanceLessThan",
+        "archive_entities should archive by tags",
+        "archive_entities should accept dryRun",
+        "archive_entities should remove related relations"
+      ],
+      "acceptanceCriteria": [
+        "Dry run mode validated",
+        "Archive criteria tested"
+      ]
+    },
+    {
+      "id": "2B.5.4",
+      "title": "Compression Edge Cases Tests",
+      "description": "Test edge cases for all compression tools",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1,
+      "targetTests": 8,
+      "testFile": "src/memory/__tests__/e2e/tools/compression-tools.test.ts",
+      "testCases": [
+        "find_duplicates should handle empty graph",
+        "find_duplicates should handle no duplicates",
+        "merge_entities should handle entities with no observations",
+        "merge_entities should handle entities with no tags",
+        "merge_entities should handle hierarchical entities",
+        "archive_entities should handle entities without lastModified",
+        "archive_entities should handle entities without importance",
+        "archive_entities should handle archiving all entities"
+      ],
+      "acceptanceCriteria": [
+        "All edge cases covered",
+        "No errors on boundary conditions"
+      ]
+    }
+  ],
+  "dependencies": [4],
+  "deliverables": [
+    "src/memory/__tests__/e2e/tools/analytics-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/compression-tools.test.ts"
+  ],
+  "notes": "These tools are used by SearchManager (compression + analytics) via the consolidated manager architecture."
+}

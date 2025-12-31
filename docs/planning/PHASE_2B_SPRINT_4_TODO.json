@@ -1,0 +1,137 @@
+{
+  "sprint": 4,
+  "phase": "2B",
+  "title": "Tag Alias & Hierarchy Tool Tests",
+  "description": "Advanced organization features - tag aliases for synonyms and 9 hierarchy navigation tools",
+  "priority": "MEDIUM",
+  "status": "pending",
+  "created": "2025-12-31",
+  "estimatedHours": 7,
+  "targetTests": 55,
+  "tools": ["add_tag_alias", "list_tag_aliases", "remove_tag_alias", "get_aliases_for_tag", "resolve_tag", "set_entity_parent", "get_children", "get_parent", "get_ancestors", "get_descendants", "get_subtree", "get_root_entities", "get_entity_depth", "move_entity"],
+  "tasks": [
+    {
+      "id": "2B.4.1",
+      "title": "Tag Alias Tools Tests",
+      "description": "Test all 5 tag alias tools",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1.5,
+      "targetTests": 15,
+      "testFile": "src/memory/__tests__/e2e/tools/tag-alias-tools.test.ts",
+      "testCases": [
+        "add_tag_alias should add alias mapping",
+        "add_tag_alias should require alias",
+        "add_tag_alias should require canonical",
+        "add_tag_alias should accept description",
+        "add_tag_alias should reject duplicate alias",
+        "list_tag_aliases should return all aliases",
+        "list_tag_aliases should return empty when none",
+        "remove_tag_alias should remove alias",
+        "remove_tag_alias should require alias parameter",
+        "get_aliases_for_tag should return aliases",
+        "get_aliases_for_tag should require canonicalTag",
+        "get_aliases_for_tag should return empty for no aliases",
+        "resolve_tag should resolve alias to canonical",
+        "resolve_tag should require tag parameter",
+        "resolve_tag should return same if not alias"
+      ],
+      "acceptanceCriteria": [
+        "All alias CRUD tested",
+        "Resolution chain validated"
+      ]
+    },
+    {
+      "id": "2B.4.2",
+      "title": "Hierarchy Tools Tests (Parent/Child)",
+      "description": "Test set_entity_parent, get_children, get_parent with cycle detection",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 15,
+      "testFile": "src/memory/__tests__/e2e/tools/hierarchy-tools.test.ts",
+      "testCases": [
+        "set_entity_parent should set parent",
+        "set_entity_parent should require entityName",
+        "set_entity_parent should require parentName",
+        "set_entity_parent should allow null to remove",
+        "set_entity_parent should reject self as parent",
+        "set_entity_parent should reject child as parent",
+        "set_entity_parent should reject descendant as parent",
+        "get_children should return direct children",
+        "get_children should require entityName",
+        "get_children should return empty for leaf",
+        "get_parent should return parent entity",
+        "get_parent should require entityName",
+        "get_parent should return null for root"
+      ],
+      "acceptanceCriteria": [
+        "Parent-child operations tested",
+        "Cycle detection verified"
+      ]
+    },
+    {
+      "id": "2B.4.3",
+      "title": "Hierarchy Tools Tests (Ancestors/Descendants)",
+      "description": "Test get_ancestors, get_descendants, get_subtree",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 1.5,
+      "targetTests": 12,
+      "testFile": "src/memory/__tests__/e2e/tools/hierarchy-tools.test.ts",
+      "testCases": [
+        "get_ancestors should return all ancestors",
+        "get_ancestors should require entityName",
+        "get_ancestors should return in order (parent first)",
+        "get_ancestors should return empty for root",
+        "get_descendants should return all descendants",
+        "get_descendants should require entityName",
+        "get_descendants should include all levels",
+        "get_descendants should return empty for leaf",
+        "get_subtree should return entity and descendants",
+        "get_subtree should require entityName",
+        "get_subtree should include root entity",
+        "get_subtree should include relations within"
+      ],
+      "acceptanceCriteria": [
+        "Tree traversal validated",
+        "Deep hierarchy tested"
+      ]
+    },
+    {
+      "id": "2B.4.4",
+      "title": "Hierarchy Tools Tests (Navigation)",
+      "description": "Test get_root_entities, get_entity_depth, move_entity",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 2,
+      "targetTests": 13,
+      "testFile": "src/memory/__tests__/e2e/tools/hierarchy-tools.test.ts",
+      "testCases": [
+        "get_root_entities should return entities without parents",
+        "get_root_entities should return all when no hierarchy",
+        "get_root_entities should require no parameters",
+        "get_entity_depth should return depth",
+        "get_entity_depth should require entityName",
+        "get_entity_depth should return 0 for root",
+        "get_entity_depth should return 1 for direct child",
+        "get_entity_depth should handle deep hierarchies",
+        "move_entity should move to new parent",
+        "move_entity should require entityName",
+        "move_entity should require newParentName",
+        "move_entity should allow null newParentName",
+        "move_entity should reject moving to descendant"
+      ],
+      "acceptanceCriteria": [
+        "Navigation tools tested",
+        "Move operation validated with cycle check"
+      ]
+    }
+  ],
+  "dependencies": [2, 3],
+  "deliverables": [
+    "src/memory/__tests__/e2e/tools/tag-alias-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/hierarchy-tools.test.ts"
+  ],
+  "notes": "Hierarchy tools are critical for organizing large knowledge graphs. Cycle detection is essential for data integrity."
+}

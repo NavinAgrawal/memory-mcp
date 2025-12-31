@@ -1,0 +1,141 @@
+{
+  "sprint": 1,
+  "phase": "2B",
+  "title": "Entity & Relation Tool Tests",
+  "description": "Core CRUD operations for the knowledge graph - testing all entity and relation tools via MCP protocol",
+  "priority": "CRITICAL",
+  "status": "pending",
+  "created": "2025-12-31",
+  "estimatedHours": 6,
+  "targetTests": 45,
+  "tools": ["create_entities", "delete_entities", "read_graph", "open_nodes", "create_relations", "delete_relations"],
+  "tasks": [
+    {
+      "id": "2B.1.1",
+      "title": "create_entities Tool Tests",
+      "description": "Test create_entities with all required/optional parameters, response format, and error handling",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 20,
+      "testFile": "src/memory/__tests__/e2e/tools/entity-tools.test.ts",
+      "testCases": [
+        "should create single entity with required fields",
+        "should create multiple entities in batch",
+        "should require entities array parameter",
+        "should require name field in each entity",
+        "should require entityType field in each entity",
+        "should require observations array in each entity",
+        "should accept tags array",
+        "should accept importance number (0-10)",
+        "should accept parentId for hierarchy",
+        "should return MCP-compliant content array",
+        "should include createdAt timestamp",
+        "should include lastModified timestamp",
+        "should reject empty entities array",
+        "should reject entity without name",
+        "should reject entity without entityType",
+        "should reject duplicate entity names",
+        "should reject importance outside 0-10",
+        "should handle unicode in entity name",
+        "should normalize tags to lowercase",
+        "should handle very long entity names"
+      ],
+      "acceptanceCriteria": [
+        "All required parameter tests pass",
+        "All optional parameter tests pass",
+        "All error cases verified",
+        "Response format validated"
+      ]
+    },
+    {
+      "id": "2B.1.2",
+      "title": "delete_entities Tool Tests",
+      "description": "Test delete_entities including side effects on relations and hierarchy",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 1,
+      "targetTests": 8,
+      "testFile": "src/memory/__tests__/e2e/tools/entity-tools.test.ts",
+      "testCases": [
+        "should delete single entity by name",
+        "should delete multiple entities in batch",
+        "should require entityNames array parameter",
+        "should return success response",
+        "should handle non-existent entity gracefully",
+        "should reject empty entityNames array",
+        "should delete relations involving deleted entity",
+        "should update children parentId to null"
+      ],
+      "acceptanceCriteria": [
+        "All delete operations verified",
+        "Side effects on relations tested",
+        "Side effects on hierarchy tested"
+      ]
+    },
+    {
+      "id": "2B.1.3",
+      "title": "read_graph & open_nodes Tool Tests",
+      "description": "Test graph reading operations",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1,
+      "targetTests": 10,
+      "testFile": "src/memory/__tests__/e2e/tools/entity-tools.test.ts",
+      "testCases": [
+        "read_graph should require no parameters",
+        "read_graph should return entities array",
+        "read_graph should return relations array",
+        "read_graph should return empty arrays for empty graph",
+        "open_nodes should open single node by name",
+        "open_nodes should open multiple nodes",
+        "open_nodes should require names array parameter",
+        "open_nodes should return matching entities",
+        "open_nodes should return relations between opened nodes",
+        "open_nodes should handle non-existent names"
+      ],
+      "acceptanceCriteria": [
+        "Both tools tested comprehensively",
+        "Empty graph edge case covered"
+      ]
+    },
+    {
+      "id": "2B.1.4",
+      "title": "Relation Tools Tests",
+      "description": "Test create_relations and delete_relations via MCP protocol",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 15,
+      "testFile": "src/memory/__tests__/e2e/tools/relation-tools.test.ts",
+      "testCases": [
+        "create_relations should create single relation",
+        "create_relations should create multiple relations",
+        "create_relations should require from field",
+        "create_relations should require to field",
+        "create_relations should require relationType field",
+        "create_relations should return created relations",
+        "create_relations should reject non-existent from entity",
+        "create_relations should reject non-existent to entity",
+        "create_relations should reject duplicate relations",
+        "create_relations should allow self-referencing relations",
+        "create_relations should handle unicode in relationType",
+        "delete_relations should delete single relation",
+        "delete_relations should delete multiple relations",
+        "delete_relations should require from, to, relationType",
+        "delete_relations should handle non-existent relation gracefully"
+      ],
+      "acceptanceCriteria": [
+        "All relation CRUD operations tested",
+        "Entity validation verified",
+        "Edge cases covered"
+      ]
+    }
+  ],
+  "dependencies": [],
+  "deliverables": [
+    "src/memory/__tests__/e2e/tools/entity-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/relation-tools.test.ts"
+  ],
+  "notes": "This sprint establishes the foundation for all other tool tests. Entity and relation tools are prerequisites for testing other features."
+}

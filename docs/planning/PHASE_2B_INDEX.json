@@ -1,0 +1,145 @@
+{
+  "phase": "2B",
+  "title": "MCP Client-Side Tool Testing",
+  "description": "End-to-end testing of all 47 MCP tools through the client interface, validating complete tool call lifecycle",
+  "version": "1.0.0",
+  "created": "2025-12-31",
+  "totalSprints": 6,
+  "totalTasks": 24,
+  "totalEstimatedHours": 38,
+  "totalNewTests": 270,
+  "status": "pending",
+  "targetMetrics": {
+    "toolsCovered": { "current": "6", "target": "47", "improvement": "+41 tools" },
+    "e2eTests": { "current": "~6", "target": "270+", "improvement": "+264 tests" },
+    "parameterCoverage": { "current": "partial", "target": "100%", "improvement": "full coverage" },
+    "errorCaseCoverage": { "current": "minimal", "target": "comprehensive", "improvement": "all error paths" }
+  },
+  "architecture": {
+    "testRunner": "Vitest",
+    "managers": [
+      "EntityManager (CRUD + hierarchy + archive)",
+      "RelationManager (relation CRUD)",
+      "SearchManager (search + compression + analytics)",
+      "IOManager (import + export + backup)",
+      "TagManager (tag aliases)"
+    ],
+    "contextClass": "ManagerContext",
+    "storageIsolation": "Temporary JSONL files per test"
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Entity & Relation Tool Tests",
+      "priority": "CRITICAL",
+      "focus": "Core CRUD operations - create_entities, delete_entities, read_graph, open_nodes, create_relations, delete_relations",
+      "tasks": 4,
+      "hours": 6,
+      "newTests": 45,
+      "file": "PHASE_2B_SPRINT_1_TODO.json",
+      "status": "pending",
+      "dependencies": [],
+      "tools": ["create_entities", "delete_entities", "read_graph", "open_nodes", "create_relations", "delete_relations"]
+    },
+    {
+      "sprint": 2,
+      "title": "Search Tool Tests",
+      "priority": "HIGH",
+      "focus": "All 6 search tools - search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions",
+      "tasks": 4,
+      "hours": 8,
+      "newTests": 55,
+      "file": "PHASE_2B_SPRINT_2_TODO.json",
+      "status": "pending",
+      "dependencies": [1],
+      "tools": ["search_nodes", "search_by_date_range", "search_nodes_ranked", "boolean_search", "fuzzy_search", "get_search_suggestions"]
+    },
+    {
+      "sprint": 3,
+      "title": "Saved Search & Observation Tool Tests",
+      "priority": "HIGH",
+      "focus": "Saved searches and observation management - 5 saved search tools + 2 observation tools + 6 tag tools",
+      "tasks": 4,
+      "hours": 5,
+      "newTests": 35,
+      "file": "PHASE_2B_SPRINT_3_TODO.json",
+      "status": "pending",
+      "dependencies": [1],
+      "tools": ["save_search", "execute_saved_search", "list_saved_searches", "delete_saved_search", "update_saved_search", "add_observations", "delete_observations", "add_tags", "remove_tags", "set_importance", "add_tags_to_multiple_entities", "replace_tag", "merge_tags"]
+    },
+    {
+      "sprint": 4,
+      "title": "Tag Alias & Hierarchy Tool Tests",
+      "priority": "MEDIUM",
+      "focus": "Advanced organization - 5 tag alias tools + 9 hierarchy tools",
+      "tasks": 4,
+      "hours": 7,
+      "newTests": 55,
+      "file": "PHASE_2B_SPRINT_4_TODO.json",
+      "status": "pending",
+      "dependencies": [2, 3],
+      "tools": ["add_tag_alias", "list_tag_aliases", "remove_tag_alias", "get_aliases_for_tag", "resolve_tag", "set_entity_parent", "get_children", "get_parent", "get_ancestors", "get_descendants", "get_subtree", "get_root_entities", "get_entity_depth", "move_entity"]
+    },
+    {
+      "sprint": 5,
+      "title": "Analytics & Compression Tool Tests",
+      "priority": "MEDIUM",
+      "focus": "Graph maintenance - 2 analytics tools + 4 compression tools",
+      "tasks": 4,
+      "hours": 5,
+      "newTests": 30,
+      "file": "PHASE_2B_SPRINT_5_TODO.json",
+      "status": "pending",
+      "dependencies": [4],
+      "tools": ["get_graph_stats", "validate_graph", "find_duplicates", "merge_entities", "compress_graph", "archive_entities"]
+    },
+    {
+      "sprint": 6,
+      "title": "Import/Export & Integration Tests",
+      "priority": "MEDIUM",
+      "focus": "Data portability and multi-tool workflows - 2 I/O tools + integration workflows",
+      "tasks": 4,
+      "hours": 7,
+      "newTests": 50,
+      "file": "PHASE_2B_SPRINT_6_TODO.json",
+      "status": "pending",
+      "dependencies": [5],
+      "tools": ["import_graph", "export_graph"]
+    }
+  ],
+  "dependencyGraph": {
+    "description": "Sprint dependency order",
+    "mermaid": "graph TD\n    S1[Sprint 1: Entity & Relation] --> S2[Sprint 2: Search]\n    S1 --> S3[Sprint 3: Saved Search & Observation]\n    S2 --> S4[Sprint 4: Tag Alias & Hierarchy]\n    S3 --> S4\n    S4 --> S5[Sprint 5: Analytics & Compression]\n    S5 --> S6[Sprint 6: Import/Export & Integration]"
+  },
+  "parallelExecutionGroups": [
+    { "group": 1, "sprints": [1], "description": "Must complete first - core CRUD" },
+    { "group": 2, "sprints": [2, 3], "description": "Can run in parallel after Sprint 1" },
+    { "group": 3, "sprints": [4], "description": "After Sprints 2 and 3" },
+    { "group": 4, "sprints": [5], "description": "After Sprint 4" },
+    { "group": 5, "sprints": [6], "description": "Final - after Sprint 5" }
+  ],
+  "testFilesToCreate": [
+    "src/memory/__tests__/e2e/tools/entity-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/relation-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/search-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/saved-search-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/observation-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/tag-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/tag-alias-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/hierarchy-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/analytics-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/compression-tools.test.ts",
+    "src/memory/__tests__/e2e/tools/import-export-tools.test.ts",
+    "src/memory/__tests__/e2e/workflows/tool-workflows.test.ts",
+    "src/memory/__tests__/e2e/tools/error-handling.test.ts"
+  ],
+  "successCriteria": [
+    "All 47 tools have client-side tests",
+    "All required parameters tested",
+    "All optional parameters tested",
+    "All error cases covered",
+    "Multi-tool workflows validated",
+    "Total e2e tests: 270+"
+  ],
+  "notes": "Phase 2B focuses on end-to-end testing via MCP protocol, complementing Phase 2A's unit tests. Uses ManagerContext (v0.58.0 architecture) with 5 consolidated managers."
+}

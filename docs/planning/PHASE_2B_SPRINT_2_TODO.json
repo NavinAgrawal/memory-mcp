@@ -1,0 +1,138 @@
+{
+  "sprint": 2,
+  "phase": "2B",
+  "title": "Search Tool Tests",
+  "description": "All 6 search tools - primary user-facing functionality for querying the knowledge graph",
+  "priority": "HIGH",
+  "status": "pending",
+  "created": "2025-12-31",
+  "estimatedHours": 8,
+  "targetTests": 55,
+  "tools": ["search_nodes", "search_by_date_range", "search_nodes_ranked", "boolean_search", "fuzzy_search", "get_search_suggestions"],
+  "tasks": [
+    {
+      "id": "2B.2.1",
+      "title": "search_nodes Tool Tests",
+      "description": "Test basic search with query string and optional filters",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 2,
+      "targetTests": 15,
+      "testFile": "src/memory/__tests__/e2e/tools/search-tools.test.ts",
+      "testCases": [
+        "should search by query string",
+        "should require query parameter",
+        "should filter by tags array",
+        "should filter by minImportance",
+        "should filter by maxImportance",
+        "should combine all filters",
+        "should match entity names",
+        "should match entity types",
+        "should match observations",
+        "should be case-insensitive",
+        "should return entities array",
+        "should return relations array",
+        "should handle empty query string",
+        "should handle special regex characters",
+        "should handle unicode queries"
+      ],
+      "acceptanceCriteria": [
+        "All filter combinations tested",
+        "Search behavior validated",
+        "Edge cases covered"
+      ]
+    },
+    {
+      "id": "2B.2.2",
+      "title": "Advanced Search Tools Tests",
+      "description": "Test search_nodes_ranked, boolean_search, and fuzzy_search",
+      "status": "pending",
+      "agent": "sonnet",
+      "estimatedHours": 3,
+      "targetTests": 25,
+      "testFile": "src/memory/__tests__/e2e/tools/search-tools.test.ts",
+      "testCases": [
+        "search_nodes_ranked should search with TF-IDF ranking",
+        "search_nodes_ranked should require query parameter",
+        "search_nodes_ranked should filter by tags",
+        "search_nodes_ranked should filter by importance range",
+        "search_nodes_ranked should limit results",
+        "search_nodes_ranked should return ranked results with scores",
+        "search_nodes_ranked should sort by score descending",
+        "boolean_search should handle AND operator",
+        "boolean_search should handle OR operator",
+        "boolean_search should handle NOT operator",
+        "boolean_search should handle parentheses grouping",
+        "boolean_search should handle complex expressions",
+        "boolean_search should combine with tag filter",
+        "boolean_search should combine with importance filter",
+        "fuzzy_search should search with typo tolerance",
+        "fuzzy_search should require query parameter",
+        "fuzzy_search should accept threshold (0.0-1.0)",
+        "fuzzy_search should use default threshold of 0.7",
+        "fuzzy_search should filter by tags",
+        "fuzzy_search should filter by importance",
+        "fuzzy_search should match with 1 typo",
+        "fuzzy_search should match with 2 typos",
+        "fuzzy_search should respect threshold strictness"
+      ],
+      "acceptanceCriteria": [
+        "TF-IDF ranking verified",
+        "Boolean operators validated",
+        "Fuzzy matching thresholds tested"
+      ]
+    },
+    {
+      "id": "2B.2.3",
+      "title": "search_by_date_range Tool Tests",
+      "description": "Test date-based filtering for entities",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1.5,
+      "targetTests": 10,
+      "testFile": "src/memory/__tests__/e2e/tools/search-tools.test.ts",
+      "testCases": [
+        "should filter by startDate only",
+        "should filter by endDate only",
+        "should filter by date range",
+        "should filter by entityType",
+        "should filter by tags",
+        "should combine all filters",
+        "should accept ISO 8601 dates",
+        "should handle timezone offsets",
+        "should return empty for no matches",
+        "should handle entities without createdAt"
+      ],
+      "acceptanceCriteria": [
+        "All date filter combinations tested",
+        "ISO 8601 format validated"
+      ]
+    },
+    {
+      "id": "2B.2.4",
+      "title": "get_search_suggestions Tool Tests",
+      "description": "Test search suggestion functionality",
+      "status": "pending",
+      "agent": "haiku",
+      "estimatedHours": 1.5,
+      "targetTests": 5,
+      "testFile": "src/memory/__tests__/e2e/tools/search-tools.test.ts",
+      "testCases": [
+        "should get suggestions for query",
+        "should require query parameter",
+        "should accept maxSuggestions",
+        "should default to reasonable limit",
+        "should return string array"
+      ],
+      "acceptanceCriteria": [
+        "Suggestion generation tested",
+        "Limit parameters validated"
+      ]
+    }
+  ],
+  "dependencies": [1],
+  "deliverables": [
+    "src/memory/__tests__/e2e/tools/search-tools.test.ts"
+  ],
+  "notes": "Search tools are the primary interface for querying the knowledge graph. Comprehensive testing ensures reliable search experiences."
+}

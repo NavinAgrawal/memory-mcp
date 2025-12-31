@@ -1,7 +1,8 @@
 # Phase 2B Test Plan: MCP Client-Side Tool Testing
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Created**: 2025-12-29
+**Updated**: 2025-12-31
 **Status**: Planned
 **Total Sprints**: 6
 **Total Tasks**: 24 tasks organized into sprints of 4 items
@@ -58,7 +59,12 @@ This plan covers end-to-end testing of all 47 MCP tools through the client inter
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
-│              KnowledgeGraphManager + Storage                 │
+│     ManagerContext (5 Consolidated Managers) + Storage       │
+│  - EntityManager (CRUD + hierarchy + archive)               │
+│  - RelationManager (relation CRUD)                          │
+│  - SearchManager (search + compression + analytics)         │
+│  - IOManager (import + export + backup)                     │
+│  - TagManager (tag aliases)                                 │
 │  - Temporary JSONL files per test                           │
 │  - Clean isolation between tests                            │
 └─────────────────────────────────────────────────────────────┘
@@ -1380,13 +1386,15 @@ describe('Error Response Format', () => {
 
 ```typescript
 // Suggested test helpers for e2e tests
+import { MCPServer } from '../../../server/MCPServer.js';
+import { ManagerContext } from '../../../core/index.js';
 
 /**
  * Create a fresh MCPServer instance with temporary storage
  */
 async function createTestServer(): Promise<{
   server: MCPServer;
-  manager: KnowledgeGraphManager;
+  context: ManagerContext;
   cleanup: () => Promise<void>;
 }>;
 
@@ -1403,10 +1411,10 @@ async function callTool(
 }>;
 
 /**
- * Seed the graph with test data
+ * Seed the graph with test data using ManagerContext
  */
 async function seedTestData(
-  manager: KnowledgeGraphManager,
+  context: ManagerContext,
   options?: {
     entityCount?: number;
     relationCount?: number;
@@ -1419,6 +1427,17 @@ async function seedTestData(
  * Assert MCP response format
  */
 function assertValidMCPResponse(response: unknown): void;
+
+/**
+ * Access managers directly for verification
+ */
+function getManagers(context: ManagerContext): {
+  entityManager: EntityManager;
+  relationManager: RelationManager;
+  searchManager: SearchManager;
+  ioManager: IOManager;
+  tagManager: TagManager;
+};
 ```
 
 ---
@@ -1464,4 +1483,5 @@ After all sprints complete:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2025-12-31 | 1.1.0 | Updated for v0.58.0 architecture (ManagerContext, 5 consolidated managers) |
 | 2025-12-29 | 1.0.0 | Initial client-side test plan |
