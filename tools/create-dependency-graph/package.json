@@ -4,8 +4,9 @@
   "description": "Generate dependency graph documentation for TypeScript projects",
   "type": "module",
   "scripts": {
-    "build": "npm run build:ts && pkg dist/create-dependency-graph.js --target node18-win-x64 --output create-dependency-graph.exe",
+    "build": "npm run build:ts && npm run build:exe",
     "build:ts": "tsc",
+    "build:exe": "pkg dist/create-dependency-graph.js --target node18-win-x64 --output create-dependency-graph.exe",
     "start": "node dist/create-dependency-graph.js"
   },
   "bin": {

@@ -8,8 +8,9 @@
     "chunking-for-files": "./dist/chunking-for-files.js"
   },
   "scripts": {
-    "build": "npm run build:ts && pkg dist/chunking-for-files.js --target node18-win-x64 --output chunking-for-files.exe",
+    "build": "npm run build:ts && npm run build:exe",
     "build:ts": "tsc",
+    "build:exe": "pkg dist/chunking-for-files.js --target node18-win-x64 --output chunking-for-files.exe",
     "start": "node dist/chunking-for-files.js"
   },
   "keywords": [

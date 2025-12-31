@@ -4,8 +4,9 @@
   "description": "Compress files for LLM context windows",
   "type": "module",
   "scripts": {
-    "build": "npm run build:ts && pkg dist/compress-for-context.js --target node18-win-x64 --output compress-for-context.exe",
+    "build": "npm run build:ts && npm run build:exe",
     "build:ts": "tsc",
+    "build:exe": "pkg dist/compress-for-context.js --target node18-win-x64 --output compress-for-context.exe",
     "start": "node dist/compress-for-context.js"
   },
   "bin": {
