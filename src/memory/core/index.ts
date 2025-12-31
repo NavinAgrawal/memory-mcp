@@ -3,6 +3,7 @@
  */
 
 export { GraphStorage } from './GraphStorage.js';
+export { SQLiteStorage } from './SQLiteStorage.js';
 export { EntityManager, type ArchiveCriteria, type ArchiveResult } from './EntityManager.js';
 export { RelationManager } from './RelationManager.js';
 export { ManagerContext } from './ManagerContext.js';

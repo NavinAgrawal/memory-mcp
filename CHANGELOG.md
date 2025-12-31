@@ -5,6 +5,31 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.59.0] - 2025-12-31
+
+### Added
+
+- **SQLite Storage Backend** - Alternative storage using sql.js (WASM-based SQLite)
+  - New `SQLiteStorage` class implementing `IGraphStorage` interface
+  - Uses sql.js for cross-platform compatibility (no native compilation required)
+  - ACID transactions for data integrity
+  - Built-in indexes for efficient lookups
+  - 31 new unit tests for SQLite storage
+  - Configure via `MEMORY_STORAGE_TYPE=sqlite` environment variable
+  - Default remains JSONL for backward compatibility
+
+### Changed
+
+- **StorageFactory** now supports both 'jsonl' and 'sqlite' storage types
+  - `createStorage({ type: 'sqlite', path: './memory.db' })` for SQLite
+  - `createStorage({ type: 'jsonl', path: './memory.jsonl' })` for JSONL (default)
+  - Environment variable override: `MEMORY_STORAGE_TYPE`
+
+### Dependencies
+
+- Added `sql.js` ^1.13.0 (WASM-based SQLite)
+- Added `@types/sql.js` for TypeScript support
+
 ## [0.58.0] - 2025-12-30
 
 ### Changed

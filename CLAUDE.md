@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1484 tests)
+npm test              # Run tests with coverage (1515 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.58.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 0.59.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -46,14 +46,16 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ┌──────────────────┴──────────────────────┐
 │  Layer 3: Storage Layer                 │
 │  core/GraphStorage.ts (JSONL + cache)   │
+│  core/SQLiteStorage.ts (sql.js WASM)    │
+│  core/StorageFactory.ts (backend select)│
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 49 TypeScript files
+### Source Structure (src/memory/) - 50 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 7 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, TransactionManager, StorageFactory, index |
+| **core/** | 8 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, index |
 | **features/** | 3 | TagManager (tag aliases), IOManager (import/export/backup), index |
 | **search/** | 10 | SearchManager (orchestrator + compression + analytics), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
@@ -93,11 +95,17 @@ interface Relation {
 }
 ```
 
-### Storage Files
+### Storage Options
 
+**JSONL (Default):**
 - `memory.jsonl` - Main graph (entities + relations)
 - `memory-saved-searches.jsonl` - Saved search queries
 - `memory-tag-aliases.jsonl` - Tag synonym mappings
+
+**SQLite (Optional):**
+- `memory.db` - SQLite database with all data
+- Configure via `MEMORY_STORAGE_TYPE=sqlite` environment variable
+- Uses sql.js (WASM-based) for cross-platform compatibility
 
 ## Entry Points
 
@@ -107,7 +115,8 @@ interface Relation {
 
 ## Environment Variables
 
-- `MEMORY_FILE_PATH` - Custom path to memory.jsonl (defaults to current directory)
+- `MEMORY_FILE_PATH` - Custom path to storage file (defaults to current directory)
+- `MEMORY_STORAGE_TYPE` - Storage backend: 'jsonl' (default) or 'sqlite'
 
 ## Tool Categories (47 Total)
 
@@ -127,7 +136,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1484 tests, 38 files):
+Tests are in `src/memory/__tests__/` (1515 tests, 42 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -138,7 +147,8 @@ Tests are in `src/memory/__tests__/` (1484 tests, 38 files):
 | performance/benchmarks.test.ts | 18 | Performance validation |
 | performance/write-performance.test.ts | 17 | Write optimization tests |
 | unit/core/EntityManager.test.ts | 31 | Entity CRUD |
-| unit/core/GraphStorage.test.ts | 10 | Storage layer |
+| unit/core/GraphStorage.test.ts | 10 | JSONL storage layer |
+| unit/core/SQLiteStorage.test.ts | 31 | SQLite storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
 | unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
 | unit/features/ArchiveManager.test.ts | 27 | Entity archival (via EntityManager) |

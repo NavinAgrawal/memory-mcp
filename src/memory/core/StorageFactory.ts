@@ -4,16 +4,15 @@
  * Factory for creating IGraphStorage implementations.
  * Supports different storage backends based on configuration.
  *
- * Currently supported:
- * - 'jsonl': JSONL file-based storage (default)
- *
- * Future support planned:
- * - 'sqlite': SQLite database storage
+ * Supported storage types:
+ * - 'jsonl': JSONL file-based storage (default) - simple, human-readable
+ * - 'sqlite': SQLite database storage (sql.js WASM) - indexed, ACID transactions
  *
  * @module core/StorageFactory
  */
 
 import { GraphStorage } from './GraphStorage.js';
+import { SQLiteStorage } from './SQLiteStorage.js';
 import type { IGraphStorage, StorageConfig } from '../types/index.js';
 
 /**
@@ -35,7 +34,10 @@ const DEFAULT_STORAGE_TYPE = 'jsonl';
  * // Create default JSONL storage
  * const storage = createStorage({ type: 'jsonl', path: './memory.jsonl' });
  *
- * // Or use path-only shorthand (assumes jsonl type)
+ * // Create SQLite storage
+ * const storage = createStorage({ type: 'sqlite', path: './memory.db' });
+ *
+ * // Or use path-only shorthand (uses MEMORY_STORAGE_TYPE env var or defaults to jsonl)
  * const storage = createStorageFromPath('./memory.jsonl');
  * ```
  */
@@ -48,17 +50,12 @@ export function createStorage(config: StorageConfig): IGraphStorage {
       return new GraphStorage(config.path);
 
     case 'sqlite':
-      // SQLite support planned for future implementation
-      // Will require: npm install better-sqlite3
-      throw new Error(
-        'SQLite storage is not yet implemented. ' +
-        'Use MEMORY_STORAGE_TYPE=jsonl or omit the environment variable.'
-      );
+      return new SQLiteStorage(config.path);
 
     default:
       throw new Error(
         `Unknown storage type: ${storageType}. ` +
-        `Supported types: jsonl (sqlite planned)`
+        `Supported types: jsonl, sqlite`
       );
   }
 }

@@ -36,10 +36,12 @@
     "docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/server-memory": "file:src/memory"
+    "@modelcontextprotocol/server-memory": "file:src/memory",
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
+    "@types/sql.js": "^1.4.9",
     "js-yaml": "^4.1.1"
   }
 }
