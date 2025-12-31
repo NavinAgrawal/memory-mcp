@@ -1,7 +1,7 @@
 # Memory MCP - Data Flow Documentation
 
-**Version**: 0.47.1
-**Last Updated**: 2025-12-02
+**Version**: 0.58.0
+**Last Updated**: 2025-12-30
 
 ---
 
@@ -41,9 +41,11 @@ Data flows through Memory MCP in a layered pattern:
 ┌─────────────────────────────────────────────────────────────────┐
 │  Layer 2: Manager Layer                                         │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │              KnowledgeGraphManager (facade)              │   │
+│  │    ManagerContext (aliased as KnowledgeGraphManager)     │   │
 │  │  ┌───────────────┐  ┌───────────────┐  ┌─────────────┐  │   │
-│  │  │ EntityManager │  │ SearchManager │  │  ...others  │  │   │
+│  │  │ EntityManager │  │ SearchManager │  │  IOManager  │  │   │
+│  │  │ (+hierarchy   │  │ (+compression │  │ (import/    │  │   │
+│  │  │  +archive)    │  │  +analytics)  │  │  export)    │  │   │
 │  │  └───────┬───────┘  └───────┬───────┘  └──────┬──────┘  │   │
 │  └──────────┼──────────────────┼─────────────────┼─────────┘   │
 └─────────────┼──────────────────┼─────────────────┼──────────────┘
@@ -860,6 +862,6 @@ import_graph(format, data, mergeStrategy='skip', dryRun=false)
 
 ---
 
-**Document Version**: 1.1
-**Last Updated**: 2025-12-02
+**Document Version**: 1.2
+**Last Updated**: 2025-12-30
 **Maintained By**: Daniel Simon Jr.

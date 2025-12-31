@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 0.47.1
-**Last Updated**: 2025-12-02
+**Version**: 0.58.0
+**Last Updated**: 2025-12-30
 
 ---
 
@@ -50,7 +50,7 @@ Memory MCP follows a layered architecture with specialized components:
 
 ```typescript
 export class MCPServer {
-  constructor(manager: KnowledgeGraphManager)
+  constructor(ctx: ManagerContext)
   async start(): Promise<void>
 }
 ```
@@ -61,7 +61,7 @@ export class MCPServer {
 - Register tool call handler (delegates to `toolHandlers`)
 - Start stdio transport
 
-**Dependencies**: `toolDefinitions`, `toolHandlers`, `KnowledgeGraphManager`
+**Dependencies**: `toolDefinitions`, `toolHandlers`, `ManagerContext`
 
 ---
 
@@ -107,11 +107,11 @@ export const toolDefinitions: ToolDefinition[]
 
 **Purpose**: Handler implementations for all 47 tools
 
-**Lines**: ~200
+**Lines**: ~301
 
 ```typescript
 export type ToolHandler = (
-  manager: KnowledgeGraphManager,
+  ctx: ManagerContext,
   args: Record<string, unknown>
 ) => Promise<ToolResponse>;
 
@@ -120,7 +120,7 @@ export const toolHandlers: Record<string, ToolHandler>
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,
-  manager: KnowledgeGraphManager
+  ctx: ManagerContext
 ): Promise<ToolResponse>
 ```
 
@@ -132,87 +132,88 @@ export async function handleToolCall(
 
 ## Core Components
 
-### KnowledgeGraphManager (`core/KnowledgeGraphManager.ts`)
+### ManagerContext (`core/ManagerContext.ts`)
 
-**Purpose**: Central facade coordinating all graph operations
+**Purpose**: Central context holding all managers with lazy initialization
 
-**Pattern**: Facade Pattern with Lazy Initialization
+**Pattern**: Context Pattern with Lazy Initialization
+
+**Alias**: Exported as `KnowledgeGraphManager` for backward compatibility
 
 ```typescript
-export class KnowledgeGraphManager {
+export class ManagerContext {
   constructor(memoryFilePath: string)
 
-  // Entity operations
-  async createEntities(entities: Entity[]): Promise<Entity[]>
-  async deleteEntities(entityNames: string[]): Promise<void>
-  async addObservations(...): Promise<...>
-  async deleteObservations(...): Promise<void>
+  // Manager accessors (lazy-initialized via getters)
+  get entityManager(): EntityManager
+  get relationManager(): RelationManager
+  get searchManager(): SearchManager
+  get ioManager(): IOManager
+  get tagManager(): TagManager
 
-  // Relation operations
-  async createRelations(relations: Relation[]): Promise<Relation[]>
-  async deleteRelations(relations: Relation[]): Promise<void>
-
-  // Search operations
-  async searchNodes(query, tags?, minImportance?, maxImportance?): Promise<KnowledgeGraph>
-  async searchNodesRanked(...): Promise<SearchResult[]>
-  async booleanSearch(...): Promise<KnowledgeGraph>
-  async fuzzySearch(...): Promise<KnowledgeGraph>
-
-  // Hierarchy operations
-  async setEntityParent(entityName, parentName): Promise<Entity>
-  async getChildren(entityName): Promise<Entity[]>
-  async getAncestors(entityName): Promise<Entity[]>
-  async getDescendants(entityName): Promise<Entity[]>
-
-  // Compression operations
-  async findDuplicates(threshold?): Promise<string[][]>
-  async mergeEntities(entityNames, targetName?): Promise<Entity>
-  async compressGraph(threshold?, dryRun?): Promise<CompressionResult>
-
-  // Import/Export
-  async exportGraph(format, filter?): Promise<string>
-  async importGraph(format, data, mergeStrategy?, dryRun?): Promise<ImportResult>
-
-  // Analytics
-  async getGraphStats(): Promise<GraphStats>
-  async validateGraph(): Promise<ValidationReport>
+  // Direct storage access
+  get storage(): GraphStorage
 }
+
+// Backward compatibility alias
+export { ManagerContext as KnowledgeGraphManager }
 ```
 
 **Lazy Initialization**:
 ```typescript
 // Managers created on first access using ??= operator
-private get entityManager(): EntityManager {
+private _entityManager?: EntityManager;
+get entityManager(): EntityManager {
   return (this._entityManager ??= new EntityManager(this.storage));
 }
 ```
 
-**Managed Components** (10 total):
-- EntityManager, RelationManager
-- SearchManager, CompressionManager
-- HierarchyManager, ExportManager, ImportManager
-- AnalyticsManager, TagManager, ArchiveManager
+**Managed Components** (5 total, consolidated from 10):
+- **EntityManager**: Entity CRUD + hierarchy + archive functionality
+- **RelationManager**: Relation CRUD operations
+- **SearchManager**: Search + compression + analytics functionality
+- **IOManager**: Import + export + backup functionality
+- **TagManager**: Tag aliases and management
 
 ---
 
 ### EntityManager (`core/EntityManager.ts`)
 
-**Purpose**: Entity CRUD operations with validation
+**Purpose**: Entity CRUD operations with validation, hierarchy, and archive functionality
+
+**Note**: Consolidated from EntityManager + HierarchyManager + ArchiveManager in Sprint 11
 
 ```typescript
 export class EntityManager {
   constructor(storage: GraphStorage)
 
+  // Entity CRUD
   async createEntities(entities: Entity[]): Promise<Entity[]>
   async deleteEntities(entityNames: string[]): Promise<void>
   async addObservations(observations: {...}[]): Promise<{...}[]>
   async deleteObservations(deletions: {...}[]): Promise<void>
+
+  // Tag operations
   async addTags(entityName, tags): Promise<{...}>
   async removeTags(entityName, tags): Promise<{...}>
   async setImportance(entityName, importance): Promise<{...}>
   async addTagsToMultipleEntities(entityNames, tags): Promise<{...}[]>
   async replaceTag(oldTag, newTag): Promise<{...}>
   async mergeTags(tag1, tag2, targetTag): Promise<{...}>
+
+  // Hierarchy operations (merged from HierarchyManager)
+  async setEntityParent(entityName, parentName): Promise<Entity>
+  async getChildren(entityName): Promise<Entity[]>
+  async getParent(entityName): Promise<Entity | null>
+  async getAncestors(entityName): Promise<Entity[]>
+  async getDescendants(entityName): Promise<Entity[]>
+  async getSubtree(entityName): Promise<KnowledgeGraph>
+  async getRootEntities(): Promise<Entity[]>
+  async getEntityDepth(entityName): Promise<number>
+  async moveEntity(entityName, newParentName): Promise<Entity>
+
+  // Archive operations (merged from ArchiveManager)
+  async archiveEntities(criteria: ArchiveCriteria, dryRun?): Promise<ArchiveResult>
 }
 ```
 
@@ -222,6 +223,8 @@ export class EntityManager {
 - Importance validation (0-10 range)
 - Batch operations (single I/O)
 - Zod schema validation
+- Cycle detection for hierarchy operations
+- Cascading delete for children (optional)
 
 **Constants**:
 - `MIN_IMPORTANCE = 0`
@@ -280,7 +283,9 @@ export class GraphStorage {
 
 ### SearchManager (`search/SearchManager.ts`)
 
-**Purpose**: Orchestrates all search types
+**Purpose**: Orchestrates all search types + compression + analytics
+
+**Note**: Consolidated from SearchManager + CompressionManager + AnalyticsManager in Sprint 11
 
 ```typescript
 export class SearchManager {
@@ -304,12 +309,23 @@ export class SearchManager {
   async listSavedSearches(): Promise<SavedSearch[]>
   async executeSavedSearch(name): Promise<KnowledgeGraph>
   async deleteSavedSearch(name): Promise<boolean>
+  async updateSavedSearch(name, updates): Promise<SavedSearch>
+
+  // Compression operations (merged from CompressionManager)
+  async findDuplicates(threshold?): Promise<string[][]>
+  async mergeEntities(entityNames, targetName?): Promise<Entity>
+  async compressGraph(threshold?, dryRun?): Promise<CompressionResult>
+
+  // Analytics operations (merged from AnalyticsManager)
+  async getGraphStats(): Promise<GraphStats>
+  async validateGraph(): Promise<ValidationReport>
 }
 ```
 
 **Composed Components**:
 - BasicSearch, RankedSearch, BooleanSearch, FuzzySearch
-- SearchSuggestions, SavedSearchManager
+- SearchSuggestions, SavedSearchManager, TFIDFIndexManager
+- SearchFilterChain (unified filter logic)
 
 ---
 
@@ -442,67 +458,38 @@ export class SearchFilterChain {
 
 ## Feature Components
 
-### HierarchyManager (`features/HierarchyManager.ts`)
+### IOManager (`features/IOManager.ts`)
 
-**Purpose**: Parent-child relationships and tree navigation
+**Purpose**: Import, export, and backup functionality (consolidated)
+
+**Note**: Consolidated from ExportManager + ImportManager + BackupManager in Sprint 11
 
 ```typescript
-export class HierarchyManager {
-  constructor(storage: GraphStorage)
+export class IOManager {
+  constructor(storage: GraphStorage, backupDir?: string)
 
-  async setEntityParent(entityName, parentName): Promise<Entity>
-  async getChildren(entityName): Promise<Entity[]>
-  async getParent(entityName): Promise<Entity | null>
-  async getAncestors(entityName): Promise<Entity[]>
-  async getDescendants(entityName): Promise<Entity[]>
-  async getSubtree(entityName): Promise<KnowledgeGraph>
-  async getRootEntities(): Promise<Entity[]>
-  async getEntityDepth(entityName): Promise<number>
-  async moveEntity(entityName, newParentName): Promise<Entity>
+  // Export operations (from ExportManager)
+  async exportGraph(format: ExportFormat, filter?): Promise<string>
+
+  // Import operations (from ImportManager)
+  async importGraph(
+    format: 'json' | 'csv' | 'graphml',
+    data: string,
+    mergeStrategy?: 'replace' | 'skip' | 'merge' | 'fail',
+    dryRun?: boolean
+  ): Promise<ImportResult>
+
+  // Backup operations (from BackupManager)
+  async createBackup(): Promise<BackupInfo>
+  async restoreBackup(backupId: string): Promise<void>
+  async listBackups(): Promise<BackupInfo[]>
+  async deleteBackup(backupId: string): Promise<void>
 }
-```
 
-**Safety**: Cycle detection prevents invalid parent assignments
-
----
-
-### CompressionManager (`features/CompressionManager.ts`)
-
-**Purpose**: Duplicate detection and entity merging
-
-```typescript
-export class CompressionManager {
-  constructor(storage: GraphStorage)
-
-  async findDuplicates(threshold?: number): Promise<string[][]>
-  async mergeEntities(entityNames, targetName?): Promise<Entity>
-  async compressGraph(threshold?, dryRun?): Promise<CompressionResult>
-}
-```
-
-**Similarity Algorithm**:
-- **Name**: Levenshtein distance (weight: 0.4)
-- **Type**: Exact match (weight: 0.3)
-- **Observations**: Jaccard similarity (weight: 0.2)
-- **Tags**: Jaccard similarity (weight: 0.1)
-
-**Optimization**: Two-level bucketing by entityType reduces O(n²) to O(n²/k)
-
----
-
-### ExportManager (`features/ExportManager.ts`)
-
-**Purpose**: Multi-format graph export
-
-```typescript
 export type ExportFormat = 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid';
-
-export class ExportManager {
-  exportGraph(graph: KnowledgeGraph, format: ExportFormat): string
-}
 ```
 
-**Supported Formats**:
+**Supported Export Formats**:
 | Format | Description |
 |--------|-------------|
 | json | Pretty-printed JSON |
@@ -513,58 +500,11 @@ export class ExportManager {
 | markdown | Human-readable markdown |
 | mermaid | Mermaid diagram syntax |
 
----
-
-### ImportManager (`features/ImportManager.ts`)
-
-**Purpose**: Multi-format graph import with merge strategies
-
-```typescript
-export class ImportManager {
-  constructor(storage: GraphStorage)
-
-  async importGraph(
-    format: 'json' | 'csv' | 'graphml',
-    data: string,
-    mergeStrategy?: 'replace' | 'skip' | 'merge' | 'fail',
-    dryRun?: boolean
-  ): Promise<ImportResult>
-}
-```
-
-**Merge Strategies**:
+**Merge Strategies** (for import):
 - `replace`: Overwrite existing entities
 - `skip`: Skip entities that exist
 - `merge`: Combine observations and tags
 - `fail`: Error if any conflicts
-
----
-
-### AnalyticsManager (`features/AnalyticsManager.ts`)
-
-**Purpose**: Graph statistics and validation
-
-```typescript
-export class AnalyticsManager {
-  constructor(storage: GraphStorage)
-
-  async getGraphStats(): Promise<GraphStats>
-  async validateGraph(): Promise<ValidationReport>
-}
-```
-
-**GraphStats** includes:
-- Entity/relation counts
-- Entity types distribution
-- Tag usage statistics
-- Importance distribution
-- Date range of content
-
-**ValidationReport** checks:
-- Orphaned relations (references to non-existent entities)
-- Duplicate entity names
-- Invalid importance values
-- Circular hierarchy references
 
 ---
 
@@ -588,24 +528,16 @@ export class TagManager {
 
 ---
 
-### ArchiveManager (`features/ArchiveManager.ts`)
+### Merged Managers (Historical Reference)
 
-**Purpose**: Archive old/low-importance entities
-
-```typescript
-export class ArchiveManager {
-  constructor(storage: GraphStorage)
-
-  async archiveEntities(
-    criteria: {
-      olderThan?: string;      // ISO date
-      importanceLessThan?: number;
-      tags?: string[];
-    },
-    dryRun?: boolean
-  ): Promise<{ archived: number; entityNames: string[] }>
-}
-```
+The following managers have been consolidated in Sprint 11:
+- **HierarchyManager** → merged into EntityManager
+- **ArchiveManager** → merged into EntityManager
+- **CompressionManager** → merged into SearchManager
+- **AnalyticsManager** → merged into SearchManager
+- **ExportManager** → merged into IOManager
+- **ImportManager** → merged into IOManager
+- **BackupManager** → merged into IOManager
 
 ---
 
@@ -663,24 +595,19 @@ export function formatRawResponse(content: unknown): ToolResponse
 
 ---
 
-### levenshtein (`utils/levenshtein.ts`)
+### searchAlgorithms (`utils/searchAlgorithms.ts`)
 
-**Purpose**: Levenshtein distance calculation for fuzzy matching
+**Purpose**: Search algorithms (consolidated from levenshtein.ts + tfidf.ts in Sprint 14)
 
 ```typescript
+// Levenshtein distance for fuzzy matching
 export function levenshteinDistance(s1: string, s2: string): number
-```
 
----
-
-### tfidf (`utils/tfidf.ts`)
-
-**Purpose**: TF-IDF scoring for ranked search
-
-```typescript
+// TF-IDF scoring for ranked search
 export function calculateTF(term: string, document: string): number
 export function calculateIDF(term: string, documents: string[]): number
 export function calculateTFIDF(term: string, document: string, documents: string[]): number
+export function tokenize(text: string): string[]
 ```
 
 ---
@@ -760,22 +687,20 @@ interface ValidationReport {
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  MCPServer                                                   │
-│    └── KnowledgeGraphManager (facade)                        │
-│          ├── EntityManager ────────┐                         │
+│    └── ManagerContext (aliased as KnowledgeGraphManager)     │
+│          ├── EntityManager ────────┐  (CRUD + hierarchy +    │
+│          │                         │   archive)              │
 │          ├── RelationManager ──────┤                         │
-│          ├── SearchManager ────────┤                         │
-│          │     ├── BasicSearch ────┤                         │
+│          ├── SearchManager ────────┤  (search + compression  │
+│          │     ├── BasicSearch ────┤   + analytics)          │
 │          │     ├── RankedSearch ───┤                         │
 │          │     ├── BooleanSearch ──┼──► GraphStorage         │
 │          │     ├── FuzzySearch ────┤        │                │
-│          │     └── SavedSearchMgr ─┤        ▼                │
-│          ├── HierarchyManager ─────┤   memory.jsonl          │
-│          ├── CompressionManager ───┤                         │
-│          ├── ExportManager ────────┘                         │
-│          ├── ImportManager ────────► GraphStorage            │
-│          ├── AnalyticsManager ─────► GraphStorage            │
-│          ├── TagManager ───────────► tag-aliases.jsonl       │
-│          └── ArchiveManager ───────► GraphStorage            │
+│          │     ├── SavedSearchMgr ─┤        ▼                │
+│          │     └── TFIDFIndexMgr ──┤   memory.jsonl          │
+│          ├── IOManager ────────────┤  (import + export +     │
+│          │                         │   backup)               │
+│          └── TagManager ───────────► tag-aliases.jsonl       │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -783,10 +708,11 @@ interface ValidationReport {
 - All managers receive `GraphStorage` via dependency injection
 - `SearchFilterChain` used by all search implementations
 - `utils/schemas.ts` used for input validation across managers
-- `utils/constants.ts` provides shared configuration
+- `utils/constants.ts` provides shared configuration (SIMILARITY_WEIGHTS)
+- `utils/searchAlgorithms.ts` provides Levenshtein + TF-IDF algorithms
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-26
+**Document Version**: 2.0
+**Last Updated**: 2025-12-30
 **Maintained By**: Daniel Simon Jr.

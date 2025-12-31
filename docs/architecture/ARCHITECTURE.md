@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
-**Version**: 0.47.1
-**Last Updated**: 2025-12-02
+**Version**: 0.58.0
+**Last Updated**: 2025-12-30
 
 ---
 
@@ -32,14 +32,14 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 - **Timestamps**: Automatic tracking of creation and modification times
 - **Batch Operations**: Efficient bulk updates
 
-### Key Statistics (v0.47.1)
+### Key Statistics (v0.58.0)
 
-- **396+ Tests**: 100% passing (unit, integration, edge cases, performance)
+- **1484 Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
 - **Test Coverage**: 98%+ across core managers
 - **Performance**: Handles 2000+ entities, 5000+ total elements efficiently
-- **TypeScript**: Strict mode, full type safety
-- **Modular Server**: MCPServer split into 3 files (67 lines main, ~400 lines definitions, ~200 lines handlers)
-- **Lazy Initialization**: 10 managers instantiated on-demand
+- **TypeScript**: Strict mode, full type safety (49 source files)
+- **Modular Server**: MCPServer split into 3 files (67 lines main, ~760 lines definitions, ~301 lines handlers)
+- **Lazy Initialization**: 5 managers instantiated on-demand (consolidated from 10)
 
 ---
 
@@ -86,22 +86,23 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 │  │  Layer 1: MCP Protocol Layer (server/)                 │ │
 │  │  ┌──────────────┬─────────────────┬─────────────────┐  │ │
 │  │  │ MCPServer.ts │ toolDefinitions │  toolHandlers   │  │ │
-│  │  │   (67 LOC)   │   (47 schemas)  │ (handler reg.)  │  │ │
+│  │  │   (67 LOC)   │   (47 schemas)  │ (301 lines)     │  │ │
 │  │  └──────────────┴─────────────────┴─────────────────┘  │ │
 │  └────────────────────────────┬───────────────────────────┘ │
-│                               │                              │
+│                               │ (direct manager access)     │
 │  ┌────────────────────────────┴───────────────────────────┐ │
-│  │  Layer 2: Manager Layer (Facade Pattern)               │ │
-│  │  KnowledgeGraphManager (lazy initialization)           │ │
+│  │  Layer 2: Manager Layer (Context + Lazy Init)          │ │
+│  │  ManagerContext (aliased as KnowledgeGraphManager)     │ │
 │  │  ┌──────────────┬────────────────┬──────────────────┐  │ │
 │  │  │ core/        │ search/        │ features/        │  │ │
-│  │  │ EntityMgr    │ SearchMgr      │ HierarchyMgr     │  │ │
-│  │  │ RelationMgr  │ BasicSearch    │ CompressionMgr   │  │ │
-│  │  │ ObservMgr    │ RankedSearch   │ ExportMgr        │  │ │
-│  │  │ TransactMgr  │ BooleanSearch  │ ImportMgr        │  │ │
-│  │  │              │ FuzzySearch    │ AnalyticsMgr     │  │ │
-│  │  │              │ FilterChain    │ TagMgr           │  │ │
-│  │  │              │                │ ArchiveMgr       │  │ │
+│  │  │ EntityMgr    │ SearchMgr      │ IOManager        │  │ │
+│  │  │ (+hierarchy  │ (+compression  │ (import/export/  │  │ │
+│  │  │  +archive)   │  +analytics)   │  backup)         │  │ │
+│  │  │ RelationMgr  │ BasicSearch    │ TagMgr           │  │ │
+│  │  │ TransactMgr  │ RankedSearch   │                  │  │ │
+│  │  │ StorageFact. │ BooleanSearch  │                  │  │ │
+│  │  │              │ FuzzySearch    │                  │  │ │
+│  │  │              │ FilterChain    │                  │  │ │
 │  │  └──────────────┴────────────────┴──────────────────┘  │ │
 │  └────────────────────────────┬───────────────────────────┘ │
 │                               │                              │
@@ -205,25 +206,22 @@ export async function handleToolCall(
 
 ### Layer 2: Manager Layer
 
-#### KnowledgeGraphManager (core/KnowledgeGraphManager.ts)
+#### ManagerContext (core/ManagerContext.ts)
 
-**Responsibility**: Central facade coordinating all operations
+**Responsibility**: Central context holding all managers with lazy initialization
+
+**Alias**: Exported as `KnowledgeGraphManager` for backward compatibility
 
 ```typescript
-export class KnowledgeGraphManager {
+export class ManagerContext {
   private readonly storage: GraphStorage;
 
   // Lazy-initialized managers (instantiated on first access)
   private _entityManager?: EntityManager;
   private _relationManager?: RelationManager;
   private _searchManager?: SearchManager;
-  private _compressionManager?: CompressionManager;
-  private _hierarchyManager?: HierarchyManager;
-  private _exportManager?: ExportManager;
-  private _importManager?: ImportManager;
-  private _analyticsManager?: AnalyticsManager;
+  private _ioManager?: IOManager;
   private _tagManager?: TagManager;
-  private _archiveManager?: ArchiveManager;
 
   constructor(memoryFilePath: string) {
     this.storage = new GraphStorage(memoryFilePath);
@@ -231,17 +229,25 @@ export class KnowledgeGraphManager {
   }
 
   // Lazy getter example
-  private get entityManager(): EntityManager {
+  get entityManager(): EntityManager {
     return (this._entityManager ??= new EntityManager(this.storage));
   }
 }
+
+// Backward compatibility alias
+export { ManagerContext as KnowledgeGraphManager }
 ```
 
 **Key Features**:
-- **Facade Pattern**: Single entry point for all graph operations
+- **Context Pattern**: Single holder for all manager instances
 - **Lazy Initialization**: Managers created on-demand using `??=` (nullish coalescing assignment)
 - **Dependency Injection**: GraphStorage injected into all managers
-- **10 Specialized Managers**: Each handling a specific domain
+- **5 Specialized Managers** (consolidated from 10):
+  - EntityManager (CRUD + hierarchy + archive)
+  - RelationManager (relation CRUD)
+  - SearchManager (search + compression + analytics)
+  - IOManager (import + export + backup)
+  - TagManager (tag aliases)
 
 **Lazy Initialization Benefits**:
 - Faster startup (no upfront manager creation)
@@ -729,16 +735,18 @@ MCP Response to Client
 6. **Unified Filter Logic**: SearchFilterChain eliminates duplicate code
 7. **Modular Server**: 92.6% reduction in MCPServer.ts (907→67 lines)
 
-### Context Optimization (v0.42.0 - v0.47.0)
+### Context Optimization (v0.42.0 - v0.58.0)
 
-Recent refactoring reduced token/context usage:
+Refactoring reduced token/context usage significantly:
 
 | Component | Before | After | Reduction |
 |-----------|--------|-------|-----------|
 | MCPServer.ts | 907 lines | 67 lines | 92.6% |
+| Managers | 10 separate | 5 consolidated | 50% fewer |
 | JSON.stringify patterns | 41 duplicates | centralized | ~41 patterns |
 | Filter logic | ~65 lines x 4 | SearchFilterChain | ~260 lines |
-| Manager initialization | Eager (10 managers) | Lazy on-demand | Faster startup |
+| Manager initialization | Eager (10 managers) | Lazy on-demand (5) | Faster startup |
+| Search algorithms | 2 files | 1 file (searchAlgorithms.ts) | Consolidated |
 | Constants | Duplicated | Unified in constants.ts | Single source |
 
 ### Scalability Limits
@@ -920,6 +928,6 @@ This architecture serves the current use case well and provides a solid foundati
 
 ---
 
-**Document Version**: 2.0
-**Last Updated**: 2025-11-26
+**Document Version**: 3.0
+**Last Updated**: 2025-12-30
 **Maintained By**: Daniel Simon Jr.

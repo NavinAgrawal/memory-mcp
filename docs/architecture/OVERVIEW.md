@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 0.48.0
-**Last Updated**: 2025-12-09
+**Version**: 0.58.0
+**Last Updated**: 2025-12-30
 
 ## What Is This?
 
@@ -33,15 +33,15 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 │  │ MCPServer.ts → toolDefinitions + toolHandlers│  │
 │  └──────────────────────────────────────────────┘  │
 └───────────────────────┬────────────────────────────┘
-                        │
+                        │ (direct manager access)
 ┌───────────────────────┴────────────────────────────┐
-│  Layer 2: Manager Layer (Facade Pattern)           │
-│  KnowledgeGraphManager delegates to:               │
-│  • EntityManager    • RelationManager              │
-│  • SearchManager    • CompressionManager           │
-│  • HierarchyManager • ExportManager                │
-│  • ImportManager    • AnalyticsManager             │
-│  • TagManager       • ArchiveManager               │
+│  Layer 2: Managers + Context (Lazy Initialization) │
+│  ManagerContext (aliased as KnowledgeGraphManager) │
+│  • EntityManager   (CRUD + hierarchy + archive)    │
+│  • RelationManager (relation CRUD)                 │
+│  • SearchManager   (search + compression + stats)  │
+│  • IOManager       (import + export + backup)      │
+│  • TagManager      (tag aliases)                   │
 └───────────────────────┬────────────────────────────┘
                         │
 ┌───────────────────────┴────────────────────────────┐
@@ -78,48 +78,61 @@ interface Relation {
 ## Directory Structure
 
 ```
-src/memory/
+src/memory/ (49 TypeScript files)
 ├── index.ts              # Entry point, main() function
-├── core/                 # Core managers
-│   ├── KnowledgeGraphManager.ts  # Central facade
-│   ├── EntityManager.ts          # Entity CRUD
+├── vitest.config.ts      # Test configuration
+├── core/ (7 files)       # Core managers
+│   ├── ManagerContext.ts         # Context holder (lazy init)
+│   ├── EntityManager.ts          # Entity CRUD + hierarchy + archive
 │   ├── RelationManager.ts        # Relation CRUD
 │   ├── GraphStorage.ts           # File I/O, caching
-│   └── index.ts                  # Barrel export
-├── server/               # MCP protocol layer
+│   ├── TransactionManager.ts     # Batch operations
+│   ├── StorageFactory.ts         # Storage backend factory
+│   └── index.ts                  # Barrel export (+ KnowledgeGraphManager alias)
+├── server/ (3 files)     # MCP protocol layer
 │   ├── MCPServer.ts              # Server initialization (67 lines)
 │   ├── toolDefinitions.ts        # 47 tool schemas
 │   └── toolHandlers.ts           # Tool implementation registry
-├── search/               # Search implementations
-│   ├── SearchManager.ts          # Search orchestrator
+├── search/ (10 files)    # Search implementations
+│   ├── SearchManager.ts          # Search orchestrator + compression + analytics
 │   ├── BasicSearch.ts            # Text matching
 │   ├── RankedSearch.ts           # TF-IDF scoring
 │   ├── BooleanSearch.ts          # AND/OR/NOT logic
 │   ├── FuzzySearch.ts            # Typo tolerance
 │   ├── SearchFilterChain.ts      # Unified filter logic
+│   ├── SavedSearchManager.ts     # Saved search persistence
+│   ├── TFIDFIndexManager.ts      # TF-IDF index management
+│   ├── SearchSuggestions.ts      # "Did you mean?" suggestions
 │   └── index.ts
-├── features/             # Advanced capabilities
-│   ├── HierarchyManager.ts       # Parent-child ops
-│   ├── CompressionManager.ts     # Duplicate merging
-│   ├── ArchiveManager.ts         # Entity archiving
+├── features/ (3 files)   # Advanced capabilities
 │   ├── TagManager.ts             # Tag aliases
-│   ├── ExportManager.ts          # 7 export formats
-│   ├── ImportManager.ts          # 3 import formats
-│   ├── AnalyticsManager.ts       # Stats & validation
+│   ├── IOManager.ts              # Import + export + backup (consolidated)
 │   └── index.ts
-├── types/                # TypeScript definitions
+├── types/ (7 files)      # TypeScript definitions
 │   ├── entity.types.ts
 │   ├── search.types.ts
 │   ├── analytics.types.ts
 │   ├── import-export.types.ts
 │   ├── tag.types.ts
+│   ├── storage.types.ts          # IGraphStorage interface
 │   └── index.ts
-└── utils/                # Shared utilities
-    ├── schemas.ts                # Zod validation schemas
-    ├── constants.ts              # Shared constants
+└── utils/ (17 files)     # Shared utilities
+    ├── schemas.ts                # Zod validation schemas (14 validators)
+    ├── constants.ts              # Shared constants (SIMILARITY_WEIGHTS)
     ├── responseFormatter.ts      # Tool response helpers
-    ├── levenshtein.ts            # Fuzzy match algorithm
-    ├── tfidf.ts                  # Ranking algorithm
+    ├── searchAlgorithms.ts       # Levenshtein + TF-IDF (consolidated)
+    ├── entityUtils.ts            # Entity helper functions
+    ├── tagUtils.ts               # Tag normalization/validation
+    ├── filterUtils.ts            # Date range filtering
+    ├── validationUtils.ts        # Validation helpers
+    ├── validationHelper.ts       # Zod validation wrappers
+    ├── paginationUtils.ts        # Pagination helpers
+    ├── searchCache.ts            # Search result caching
+    ├── indexes.ts                # Search index utilities
+    ├── dateUtils.ts              # Date manipulation
+    ├── pathUtils.ts              # Path handling
+    ├── errors.ts                 # Custom error classes
+    ├── logger.ts                 # Logging utility
     └── index.ts
 ```
 
@@ -141,11 +154,11 @@ src/memory/
 
 ## Key Design Principles
 
-1. **Facade Pattern**: `KnowledgeGraphManager` provides a unified interface, delegating to specialized managers
-2. **Lazy Initialization**: Managers are instantiated on-demand for faster startup
-3. **Single Responsibility**: Each manager handles one domain (entities, search, compression, etc.)
+1. **Context Pattern**: `ManagerContext` holds all managers with lazy-initialized getters
+2. **Lazy Initialization**: 5 managers instantiated on-demand using `??=` operator
+3. **Manager Consolidation**: Functionality merged (e.g., SearchManager includes compression + analytics)
 4. **Dependency Injection**: `GraphStorage` injected into managers for testability
-5. **Barrel Exports**: Each module exports through `index.ts` for clean imports
+5. **Barrel Exports**: Each module exports through `index.ts` (includes `KnowledgeGraphManager` alias)
 
 ## Performance Characteristics
 
@@ -172,7 +185,7 @@ npm install
 # Build
 npm run build
 
-# Run tests (396+ tests)
+# Run tests (1484 tests)
 npm test
 
 # Run server

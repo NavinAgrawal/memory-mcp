@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Documentation Update** - Synchronized all docs with v0.58.0 architecture
+  - Updated README.md: version badge, architecture diagram, project structure (49 files, 5 managers, 1484 tests)
+  - Updated docs/architecture/OVERVIEW.md: consolidated managers diagram, test count
+  - Updated docs/architecture/COMPONENTS.md: ManagerContext section, IOManager, merged managers reference
+  - Updated docs/architecture/ARCHITECTURE.md: Key Statistics, System Context diagram
+  - Updated docs/architecture/DATAFLOW.md: Overview diagram with consolidated managers
+  - Updated docs/architecture/API.md: version headers
+
 - **Phase 1 Sprint 14: Code Volume Reduction** - Pragmatic consolidation
   - **Sprint 14.1**: Analysis determined search module consolidation would harm architecture
     - SearchManager delegates to 4 specialized classes (BasicSearch, BooleanSearch, RankedSearch, FuzzySearch)

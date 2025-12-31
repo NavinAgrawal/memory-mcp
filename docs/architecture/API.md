@@ -1,7 +1,7 @@
 # Memory MCP - API Reference
 
-**Version**: 0.47.1
-**Last Updated**: 2025-12-02
+**Version**: 0.58.0
+**Last Updated**: 2025-12-30
 
 Complete reference for all 47 MCP tools provided by the Memory MCP server.
 
@@ -1601,7 +1601,7 @@ All tools return errors in this format:
 
 ---
 
-**Document Version**: 2.0
-**Last Updated**: 2025-12-02
+**Document Version**: 2.1
+**Last Updated**: 2025-12-30
 **Total Tools**: 47
 **Maintained By**: Daniel Simon Jr.

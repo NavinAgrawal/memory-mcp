@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.48.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-0.58.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -81,7 +81,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Reliability** | Basic | ✅ Backups & Transactions |
 | **Performance** | Basic | ✅ Caching & Optimizations |
 | **Total Tools** | 11 | **47** (+327%) |
-| **Code Structure** | Monolithic | **Modular** (54 files, ~10.7K lines) |
+| **Code Structure** | Monolithic | **Modular** (49 files, ~8.5K lines) |
 
 ## Key Features
 
@@ -99,10 +99,10 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - **Efficient Storage**: JSONL format with modular architecture for better tree-shaking
 
 **🏗️ Architecture**
-- **Modular Design**: Clean separation of concerns across 40+ focused modules
+- **Modular Design**: Clean separation of concerns across 49 focused modules with 5 consolidated managers
 - **Type Safety**: Full TypeScript strict mode with comprehensive type definitions
-- **Dependency Injection**: Flexible, testable design with clear module boundaries
-- **Developer Experience**: Barrel exports, JSDoc documentation, and comprehensive test coverage
+- **Lazy Initialization**: Context pattern with on-demand manager instantiation
+- **Developer Experience**: Barrel exports, 1484 tests, and comprehensive documentation
 
 ## Quick Start
 
@@ -1551,44 +1551,49 @@ npm run typecheck # TypeScript type checking
 ### Architecture Overview
 
 ```
-┌─────────────────────────────────────────┐
-│  Layer 1: MCP Protocol Layer            │
-│  server/MCPServer.ts + toolDefinitions  │
-│  + toolHandlers (47 tools)              │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────┴──────────────────────┐
-│  Layer 2: Managers (Facade Pattern)     │
-│  core/KnowledgeGraphManager.ts          │
-│  + 10 specialized managers (lazy init)  │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────┴──────────────────────┐
-│  Layer 3: Storage Layer                 │
-│  core/GraphStorage.ts (JSONL + cache)   │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│  Layer 1: MCP Protocol Layer                        │
+│  server/MCPServer.ts + toolDefinitions              │
+│  + toolHandlers (47 tools)                          │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────┴──────────────────────────────┐
+│  Layer 2: Managers + Context (Lazy Initialization)  │
+│  ManagerContext (aliased as KnowledgeGraphManager)  │
+│  • EntityManager   (CRUD + hierarchy + archive)     │
+│  • RelationManager (relation CRUD)                  │
+│  • SearchManager   (search + compression + stats)   │
+│  • IOManager       (import + export + backup)       │
+│  • TagManager      (tag aliases)                    │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────┴──────────────────────────────┐
+│  Layer 3: Storage Layer                             │
+│  core/GraphStorage.ts (JSONL + in-memory cache)     │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### Project Structure
 
 ```
 memory-mcp/
-├── src/memory/                     # Main source (54 TypeScript files)
+├── src/memory/                     # Main source (49 TypeScript files)
 │   ├── index.ts                    # Entry point
+│   ├── vitest.config.ts            # Test configuration
 │   ├── core/                       # Core managers (7 files)
-│   │   ├── KnowledgeGraphManager.ts    # Central facade
-│   │   ├── EntityManager.ts            # Entity CRUD
+│   │   ├── ManagerContext.ts           # Context holder (lazy init)
+│   │   ├── EntityManager.ts            # Entity CRUD + hierarchy + archive
 │   │   ├── RelationManager.ts          # Relation CRUD
-│   │   ├── ObservationManager.ts       # Observation ops
 │   │   ├── GraphStorage.ts             # JSONL I/O + caching
 │   │   ├── TransactionManager.ts       # ACID transactions
-│   │   └── index.ts
+│   │   ├── StorageFactory.ts           # Storage backend factory
+│   │   └── index.ts                    # Barrel export (+ KnowledgeGraphManager alias)
 │   ├── server/                     # MCP protocol layer (3 files)
 │   │   ├── MCPServer.ts                # Server setup (67 lines)
 │   │   ├── toolDefinitions.ts          # 47 tool schemas
 │   │   └── toolHandlers.ts             # Handler registry
 │   ├── search/                     # Search implementations (10 files)
-│   │   ├── SearchManager.ts            # Search orchestrator
+│   │   ├── SearchManager.ts            # Search orchestrator + compression + analytics
 │   │   ├── BasicSearch.ts              # Text matching
 │   │   ├── RankedSearch.ts             # TF-IDF scoring
 │   │   ├── BooleanSearch.ts            # AND/OR/NOT logic
@@ -1598,32 +1603,29 @@ memory-mcp/
 │   │   ├── TFIDFIndexManager.ts        # TF-IDF index
 │   │   ├── SearchFilterChain.ts        # Unified filters
 │   │   └── index.ts
-│   ├── features/                   # Advanced capabilities (9 files)
-│   │   ├── HierarchyManager.ts         # Parent-child ops
-│   │   ├── CompressionManager.ts       # Duplicate merging
-│   │   ├── ArchiveManager.ts           # Entity archiving
+│   ├── features/                   # Advanced capabilities (3 files)
+│   │   ├── IOManager.ts                # Import + export + backup (consolidated)
 │   │   ├── TagManager.ts               # Tag aliases
-│   │   ├── AnalyticsManager.ts         # Stats & validation
-│   │   ├── ExportManager.ts            # 7 export formats
-│   │   ├── ImportManager.ts            # 3 import formats
-│   │   ├── BackupManager.ts            # Backup & restore
 │   │   └── index.ts
-│   ├── types/                      # TypeScript definitions (6 files)
+│   ├── types/                      # TypeScript definitions (7 files)
 │   │   ├── entity.types.ts
 │   │   ├── search.types.ts
 │   │   ├── analytics.types.ts
 │   │   ├── import-export.types.ts
 │   │   ├── tag.types.ts
+│   │   ├── storage.types.ts            # IGraphStorage interface
 │   │   └── index.ts
-│   ├── utils/                      # Shared utilities (18 files)
+│   ├── utils/                      # Shared utilities (17 files)
 │   │   ├── schemas.ts                  # Zod validation (14 schemas)
-│   │   ├── constants.ts                # Shared constants
+│   │   ├── constants.ts                # Shared constants (SIMILARITY_WEIGHTS)
 │   │   ├── errors.ts                   # Custom error types
-│   │   ├── levenshtein.ts              # Fuzzy match algorithm
-│   │   ├── tfidf.ts                    # TF-IDF ranking
+│   │   ├── searchAlgorithms.ts         # Levenshtein + TF-IDF (consolidated)
+│   │   ├── responseFormatter.ts        # Tool response helpers
+│   │   ├── entityUtils.ts              # Entity helper functions
+│   │   ├── tagUtils.ts                 # Tag normalization/validation
 │   │   ├── searchCache.ts              # Result caching
 │   │   └── ... (more utilities)
-│   ├── __tests__/                  # Test suite (396 tests)
+│   ├── __tests__/                  # Test suite (1484 tests)
 │   └── dist/                       # Compiled output
 ├── docs/                           # Documentation
 │   ├── architecture/               # Architecture docs
@@ -1640,7 +1642,7 @@ memory-mcp/
 ```bash
 npm run build      # Build TypeScript to JavaScript
 npm run watch      # Watch mode for development
-npm test           # Run 396 tests with coverage
+npm test           # Run 1484 tests with coverage
 npm run typecheck  # TypeScript strict type checking
 npm run clean      # Clean dist/ directories
 npm run docs:deps  # Generate dependency graph
@@ -1675,7 +1677,7 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and
 - **Fixed**: Bug fixes
 - **Security**: Security improvements
 
-**Current version**: v0.48.0 - [View full changelog →](CHANGELOG.md)
+**Current version**: v0.58.0 - [View full changelog →](CHANGELOG.md)
 
 ## License
 
