@@ -1518,15 +1518,17 @@ Use the included migration tool to convert your existing JSONL data to SQLite:
 # Navigate to the migration tool
 cd tools/migrate-from-jsonl-to-sqlite
 npm install
+npm run build:ts
 
-# Migrate JSONL to SQLite (using Bun)
-bun run migrate-from-jsonl-to-sqlite.ts --from /path/to/memory.jsonl --to /path/to/memory.db
+# Migrate JSONL to SQLite
+node dist/migrate-from-jsonl-to-sqlite.js --from /path/to/memory.jsonl --to /path/to/memory.db
 
 # Migrate SQLite back to JSONL (if needed)
-bun run migrate-from-jsonl-to-sqlite.ts --from /path/to/memory.db --to /path/to/memory.jsonl
+node dist/migrate-from-jsonl-to-sqlite.js --from /path/to/memory.db --to /path/to/memory.jsonl
 
-# Verbose output
-bun run migrate-from-jsonl-to-sqlite.ts -f memory.jsonl -t memory.db -v
+# Or build standalone executable
+npm run build
+./migrate-from-jsonl-to-sqlite.exe --from memory.jsonl --to memory.db
 ```
 
 See [tools/migrate-from-jsonl-to-sqlite/README.md](tools/migrate-from-jsonl-to-sqlite/README.md) for complete documentation.

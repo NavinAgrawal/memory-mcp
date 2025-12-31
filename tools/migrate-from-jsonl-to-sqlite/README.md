@@ -15,33 +15,23 @@ npm install
 
 ## Usage
 
-### Using Bun (Recommended)
-
-```bash
-# Migrate JSONL to SQLite
-bun run migrate-from-jsonl-to-sqlite.ts --from memory.jsonl --to memory.db
-
-# Migrate SQLite to JSONL
-bun run migrate-from-jsonl-to-sqlite.ts --from memory.db --to memory.jsonl
-
-# Verbose output
-bun run migrate-from-jsonl-to-sqlite.ts -f memory.jsonl -t memory.db -v
-```
-
 ### Using Node.js
 
 ```bash
-# Build first
+# Build TypeScript first
 npm run build:ts
 
-# Run
+# Run with Node.js
 node dist/migrate-from-jsonl-to-sqlite.js --from memory.jsonl --to memory.db
+
+# Or use npm start
+npm start -- --from memory.jsonl --to memory.db
 ```
 
 ### Build Executable
 
 ```bash
-# Requires Bun
+# Build executable using pkg (smaller binary than bun)
 npm run build
 
 # Creates migrate-from-jsonl-to-sqlite.exe
@@ -137,12 +127,12 @@ After migrating, configure the Memory MCP server to use SQLite:
 # Install dependencies
 npm install
 
-# Run directly with Bun
-bun run migrate-from-jsonl-to-sqlite.ts --help
-
 # Build TypeScript
 npm run build:ts
 
-# Build executable (requires Bun)
+# Run with Node.js
+node dist/migrate-from-jsonl-to-sqlite.js --help
+
+# Build executable (uses pkg for smaller binaries)
 npm run build
 ```

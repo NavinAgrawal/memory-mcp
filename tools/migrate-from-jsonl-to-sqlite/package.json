@@ -2,11 +2,10 @@
   "name": "migrate-from-jsonl-to-sqlite",
   "version": "1.0.0",
   "description": "Migration tool for Memory MCP - converts between JSONL and SQLite storage formats",
-  "type": "module",
   "scripts": {
-    "build": "bun build migrate-from-jsonl-to-sqlite.ts --compile --outfile migrate-from-jsonl-to-sqlite.exe",
+    "build": "npm run build:ts && pkg dist/migrate-from-jsonl-to-sqlite.js --target node18-win-x64 --output migrate-from-jsonl-to-sqlite.exe",
     "build:ts": "tsc",
-    "start": "bun run migrate-from-jsonl-to-sqlite.ts"
+    "start": "node dist/migrate-from-jsonl-to-sqlite.js"
   },
   "bin": {
     "migrate-from-jsonl-to-sqlite": "./dist/migrate-from-jsonl-to-sqlite.js"
@@ -16,6 +15,7 @@
   },
   "devDependencies": {
     "@types/node": "^22",
+    "pkg": "^5.8.1",
     "typescript": "^5.6.2"
   },
   "engines": {

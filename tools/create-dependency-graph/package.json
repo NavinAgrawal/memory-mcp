@@ -1,19 +1,19 @@
 {
-  "name": "@mcp-servers/tools",
+  "name": "create-dependency-graph",
   "version": "1.0.0",
-  "description": "Shared tools for MCP servers",
+  "description": "Generate dependency graph documentation for TypeScript projects",
   "type": "module",
-   "scripts": {
-    "build": "bun build create-dependency-graph.ts --compile --outfile create-dependency-graph.exe",
+  "scripts": {
+    "build": "npm run build:ts && pkg dist/create-dependency-graph.js --target node18-win-x64 --output create-dependency-graph.exe",
     "build:ts": "tsc",
-    "build:exe": "npm run build:ts && pkg dist/create-dependency-graph.js --target node18-win-x64 --output create-dependency-graph.exe",
-    "start": "bun run create-dependency-graph.ts"
+    "start": "node dist/create-dependency-graph.js"
   },
   "bin": {
     "create-dependency-graph": "./dist/create-dependency-graph.js"
   },
   "devDependencies": {
     "@types/node": "^25.0.2",
+    "pkg": "^5.8.1",
     "typescript": "^5.3.0"
   },
   "engines": {

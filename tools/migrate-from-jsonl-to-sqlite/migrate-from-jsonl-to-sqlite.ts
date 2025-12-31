@@ -12,11 +12,9 @@
  * @module tools/migrate-from-jsonl-to-sqlite
  */
 
-import { resolve, extname } from 'path';
+import { resolve, extname, dirname, join } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { readFile } from 'fs/promises';
-import { createRequire } from 'module';
-import { dirname, join } from 'path';
 
 // ============================================================================
 // Types (inline to avoid external dependencies)
@@ -154,10 +152,10 @@ let SQL: any = null;
 async function initSqlJs(): Promise<any> {
   if (SQL) return SQL;
 
-  const initSqlJs = (await import('sql.js')).default;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const initSqlJsFn = require('sql.js');
 
   // Load WASM binary from node_modules
-  const require = createRequire(import.meta.url);
   const sqlJsPath = require.resolve('sql.js');
   const sqlJsDir = dirname(sqlJsPath);
   const wasmPath = join(sqlJsDir, 'sql-wasm.wasm');
@@ -168,7 +166,7 @@ async function initSqlJs(): Promise<any> {
     wasmBuffer.byteOffset + wasmBuffer.byteLength
   );
 
-  SQL = await initSqlJs({ wasmBinary });
+  SQL = await initSqlJsFn({ wasmBinary });
   return SQL;
 }
 
