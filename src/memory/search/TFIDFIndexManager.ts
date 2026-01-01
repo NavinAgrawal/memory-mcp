@@ -10,7 +10,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { TFIDFIndex, DocumentVector, KnowledgeGraph, ReadonlyKnowledgeGraph } from '../types/index.js';
-import { calculateIDF, tokenize } from '../utils/index.js';
+import { calculateIDFFromTokenSets, tokenize } from '../utils/index.js';
 
 const INDEX_VERSION = '1.0';
 const INDEX_FILENAME = 'tfidf-index.json';
@@ -44,10 +44,9 @@ export class TFIDFIndexManager {
    */
   async buildIndex(graph: ReadonlyKnowledgeGraph): Promise<TFIDFIndex> {
     const documents = new Map<string, DocumentVector>();
-    const allDocumentTexts: string[] = [];
-    const allTokens: string[][] = [];
+    const allTokenSets: Set<string>[] = [];
 
-    // Build document vectors
+    // Build document vectors - tokenize once per document
     for (const entity of graph.entities) {
       const documentText = [
         entity.name,
@@ -55,9 +54,9 @@ export class TFIDFIndexManager {
         ...entity.observations,
       ].join(' ');
 
-      allDocumentTexts.push(documentText);
       const tokens = tokenize(documentText);
-      allTokens.push(tokens);
+      const tokenSet = new Set(tokens);
+      allTokenSets.push(tokenSet);
 
       // Calculate term frequencies
       const termFreq: Record<string, number> = {};
@@ -72,12 +71,12 @@ export class TFIDFIndexManager {
       });
     }
 
-    // Calculate IDF for all terms
+    // Calculate IDF for all terms using pre-tokenized sets (O(1) lookup per document)
     const idf = new Map<string, number>();
-    const allTerms = new Set(allTokens.flat());
+    const allTerms = new Set(allTokenSets.flatMap(s => Array.from(s)));
 
     for (const term of allTerms) {
-      const idfScore = calculateIDF(term, allDocumentTexts);
+      const idfScore = calculateIDFFromTokenSets(term, allTokenSets);
       idf.set(term, idfScore);
     }
 
@@ -106,8 +105,7 @@ export class TFIDFIndexManager {
     }
 
     // Rebuild document vectors for changed entities
-    const allDocumentTexts: string[] = [];
-    const allTokens: string[][] = [];
+    const allTokenSets: Set<string>[] = [];
     const updatedDocuments = new Map(this.index.documents);
 
     // Remove deleted entities
@@ -118,7 +116,7 @@ export class TFIDFIndexManager {
       }
     }
 
-    // Update/add changed entities
+    // Update/add changed entities - tokenize once per document
     for (const entity of graph.entities) {
       const documentText = [
         entity.name,
@@ -126,9 +124,9 @@ export class TFIDFIndexManager {
         ...entity.observations,
       ].join(' ');
 
-      allDocumentTexts.push(documentText);
       const tokens = tokenize(documentText);
-      allTokens.push(tokens);
+      const tokenSet = new Set(tokens);
+      allTokenSets.push(tokenSet);
 
       if (changedEntityNames.has(entity.name)) {
         // Calculate term frequencies for changed entity
@@ -145,12 +143,12 @@ export class TFIDFIndexManager {
       }
     }
 
-    // Recalculate IDF (need all documents for accurate IDF)
+    // Recalculate IDF using pre-tokenized sets (O(1) lookup per document)
     const idf = new Map<string, number>();
-    const allTerms = new Set(allTokens.flat());
+    const allTerms = new Set(allTokenSets.flatMap(s => Array.from(s)));
 
     for (const term of allTerms) {
-      const idfScore = calculateIDF(term, allDocumentTexts);
+      const idfScore = calculateIDFFromTokenSets(term, allTokenSets);
       idf.set(term, idfScore);
     }
 
