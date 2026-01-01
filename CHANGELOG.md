@@ -17,12 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `brotli-compression-integration.md` - Analysis document
   - Target: 70% reduction in backup/export sizes using Node.js built-in zlib brotli
 
-- **Native SQLite with better-sqlite3** (PR #70, #71, #72)
+- **Phase 8 Native SQLite with better-sqlite3** (PR #70, #71, #72)
   - Replaced sql.js (WASM) with better-sqlite3 for 3-10x performance improvement
-  - FTS5 full-text search support
-  - WAL mode for concurrent read/write
-  - O(1) entity lookups via indexed name column
-  - Updated migration tool to use better-sqlite3
+  - FTS5 full-text search with BM25 ranking for relevance scoring
+  - WAL mode for concurrent read/write operations
+  - Referential integrity constraints (ON DELETE CASCADE for relations)
+  - O(1) entity lookups via NameIndex and TypeIndex
+  - Updated migration tool to use better-sqlite3 with sync API
+  - Proper ACID transactions with durability guarantees
 
 - **Phase 2 Concurrency Control** (PR #74)
   - Thread-safe storage operations with async-mutex
