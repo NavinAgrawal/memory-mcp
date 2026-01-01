@@ -6,26 +6,24 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SearchManager } from '../../../search/SearchManager.js';
+import { AnalyticsManager } from '../../../features/AnalyticsManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('SearchManager Analytics Operations', () => {
+describe('AnalyticsManager', () => {
   let storage: GraphStorage;
-  let manager: SearchManager;
+  let analyticsManager: AnalyticsManager;
   let testDir: string;
   let testFilePath: string;
-  let savedSearchesPath: string;
 
   beforeEach(async () => {
     testDir = join(tmpdir(), `analytics-manager-test-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-memory.jsonl');
-    savedSearchesPath = join(testDir, 'saved-searches.jsonl');
     storage = new GraphStorage(testFilePath);
-    manager = new SearchManager(storage, savedSearchesPath);
+    analyticsManager = new AnalyticsManager(storage);
   });
 
   afterEach(async () => {
@@ -40,7 +38,7 @@ describe('SearchManager Analytics Operations', () => {
     it('should return valid for empty graph', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
 
-      const report = await manager.validateGraph();
+      const report = await analyticsManager.validateGraph();
 
       expect(report.isValid).toBe(true);
       expect(report.issues).toHaveLength(0);
@@ -67,7 +65,7 @@ describe('SearchManager Analytics Operations', () => {
         relations: [{ from: 'Alice', to: 'Bob', relationType: 'knows' }],
       });
 
-      const report = await manager.validateGraph();
+      const report = await analyticsManager.validateGraph();
 
       expect(report.isValid).toBe(true);
       expect(report.issues).toHaveLength(0);
@@ -80,7 +78,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [{ from: 'Alice', to: 'Bob', relationType: 'knows' }],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.isValid).toBe(false);
         expect(report.issues.some(i => i.type === 'orphaned_relation')).toBe(true);
@@ -93,7 +91,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [{ from: 'Alice', to: 'Bob', relationType: 'knows' }],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.isValid).toBe(false);
         expect(report.issues.some(i => i.type === 'orphaned_relation')).toBe(true);
@@ -108,7 +106,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.isValid).toBe(false);
         expect(report.issues.some(i => i.type === 'duplicate_entity')).toBe(true);
@@ -120,7 +118,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.isValid).toBe(false);
         expect(report.issues.some(i => i.type === 'invalid_data')).toBe(true);
@@ -132,7 +130,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.isValid).toBe(false);
         expect(report.issues.some(i => i.type === 'invalid_data')).toBe(true);
@@ -149,7 +147,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [{ from: 'Connected', to: 'Connected', relationType: 'self' }],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.warnings.some(w => w.type === 'isolated_entity')).toBe(true);
         expect(report.summary.entitiesWithoutRelationsCount).toBeGreaterThan(0);
@@ -161,7 +159,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.warnings.some(w => w.type === 'empty_observations')).toBe(true);
       });
@@ -172,7 +170,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.warnings.some(w => w.type === 'missing_metadata')).toBe(true);
       });
@@ -190,7 +188,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(
           report.warnings.some(
@@ -207,7 +205,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [{ from: 'Missing1', to: 'Missing2', relationType: 'test' }],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.summary.totalErrors).toBeGreaterThan(0);
       });
@@ -218,7 +216,7 @@ describe('SearchManager Analytics Operations', () => {
           relations: [],
         });
 
-        const report = await manager.validateGraph();
+        const report = await analyticsManager.validateGraph();
 
         expect(report.summary.totalWarnings).toBeGreaterThan(0);
       });
@@ -229,7 +227,7 @@ describe('SearchManager Analytics Operations', () => {
     it('should return stats for empty graph', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.totalEntities).toBe(0);
       expect(stats.totalRelations).toBe(0);
@@ -245,7 +243,7 @@ describe('SearchManager Analytics Operations', () => {
         relations: [],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.totalEntities).toBe(3);
     });
@@ -262,7 +260,7 @@ describe('SearchManager Analytics Operations', () => {
         ],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.totalRelations).toBe(2);
     });
@@ -277,7 +275,7 @@ describe('SearchManager Analytics Operations', () => {
         relations: [],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.entityTypesCounts['person']).toBe(2);
       expect(stats.entityTypesCounts['project']).toBe(1);
@@ -296,7 +294,7 @@ describe('SearchManager Analytics Operations', () => {
         ],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.relationTypesCounts['knows']).toBe(2);
       expect(stats.relationTypesCounts['works_with']).toBe(1);
@@ -312,7 +310,7 @@ describe('SearchManager Analytics Operations', () => {
         relations: [],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.oldestEntity?.name).toBe('Old');
     });
@@ -326,7 +324,7 @@ describe('SearchManager Analytics Operations', () => {
         relations: [],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.newestEntity?.name).toBe('New');
     });
@@ -343,7 +341,7 @@ describe('SearchManager Analytics Operations', () => {
         ],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.oldestRelation?.relationType).toBe('old');
     });
@@ -360,7 +358,7 @@ describe('SearchManager Analytics Operations', () => {
         ],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.newestRelation?.relationType).toBe('new');
     });
@@ -374,7 +372,7 @@ describe('SearchManager Analytics Operations', () => {
         relations: [],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.entityDateRange).toBeDefined();
       expect(stats.entityDateRange?.earliest).toContain('2024-01-01');
@@ -393,7 +391,7 @@ describe('SearchManager Analytics Operations', () => {
         ],
       });
 
-      const stats = await manager.getGraphStats();
+      const stats = await analyticsManager.getGraphStats();
 
       expect(stats.relationDateRange).toBeDefined();
     });

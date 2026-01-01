@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EntityManager } from '../../../core/EntityManager.js';
+import { HierarchyManager } from '../../../core/HierarchyManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { EntityNotFoundError, ValidationError } from '../../../utils/errors.js';
 import { promises as fs } from 'fs';
@@ -419,7 +420,12 @@ describe('EntityManager', () => {
   });
 
   describe('Hierarchy Operations', () => {
+    let hierarchyManager: HierarchyManager;
+
     beforeEach(async () => {
+      // Create hierarchy manager with same storage
+      hierarchyManager = new HierarchyManager(storage);
+
       // Create a hierarchy: Root -> Parent -> Child -> Grandchild
       await manager.createEntities([
         { name: 'Root', entityType: 'folder', observations: [] },
@@ -432,73 +438,73 @@ describe('EntityManager', () => {
 
     describe('setEntityParent', () => {
       it('should set parent for entity', async () => {
-        const result = await manager.setEntityParent('Child', 'Parent');
+        const result = await hierarchyManager.setEntityParent('Child', 'Parent');
         expect(result.parentId).toBe('Parent');
       });
 
       it('should update lastModified timestamp', async () => {
         const before = await manager.getEntity('Child');
         await new Promise(r => setTimeout(r, 10));
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
         const after = await manager.getEntity('Child');
         expect(after!.lastModified).not.toBe(before!.lastModified);
       });
 
       it('should remove parent when setting to null', async () => {
-        await manager.setEntityParent('Child', 'Parent');
-        const result = await manager.setEntityParent('Child', null);
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        const result = await hierarchyManager.setEntityParent('Child', null);
         expect(result.parentId).toBeUndefined();
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.setEntityParent('NonExistent', 'Parent'))
+        await expect(hierarchyManager.setEntityParent('NonExistent', 'Parent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
 
       it('should throw error for non-existent parent', async () => {
-        await expect(manager.setEntityParent('Child', 'NonExistent'))
+        await expect(hierarchyManager.setEntityParent('Child', 'NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
 
       it('should detect direct cycle (self-reference)', async () => {
-        await expect(manager.setEntityParent('Parent', 'Parent'))
+        await expect(hierarchyManager.setEntityParent('Parent', 'Parent'))
           .rejects.toThrow();
       });
 
       it('should detect indirect cycle', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
         // Trying to set Root's parent to Child would create a cycle
-        await expect(manager.setEntityParent('Root', 'Child'))
+        await expect(hierarchyManager.setEntityParent('Root', 'Child'))
           .rejects.toThrow();
       });
     });
 
     describe('getChildren', () => {
       it('should return direct children of entity', async () => {
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.setEntityParent('Sibling', 'Parent');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Sibling', 'Parent');
 
-        const children = await manager.getChildren('Parent');
+        const children = await hierarchyManager.getChildren('Parent');
         expect(children).toHaveLength(2);
         expect(children.map(c => c.name).sort()).toEqual(['Child', 'Sibling']);
       });
 
       it('should return empty array for leaf nodes', async () => {
-        const children = await manager.getChildren('Grandchild');
+        const children = await hierarchyManager.getChildren('Grandchild');
         expect(children).toHaveLength(0);
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.getChildren('NonExistent'))
+        await expect(hierarchyManager.getChildren('NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
 
       it('should only return direct children, not grandchildren', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
 
-        const children = await manager.getChildren('Root');
+        const children = await hierarchyManager.getChildren('Root');
         expect(children).toHaveLength(1);
         expect(children[0].name).toBe('Parent');
       });
@@ -506,30 +512,30 @@ describe('EntityManager', () => {
 
     describe('getParent', () => {
       it('should return parent entity', async () => {
-        await manager.setEntityParent('Child', 'Parent');
-        const parent = await manager.getParent('Child');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        const parent = await hierarchyManager.getParent('Child');
         expect(parent).not.toBeNull();
         expect(parent!.name).toBe('Parent');
       });
 
       it('should return null for root entities', async () => {
-        const parent = await manager.getParent('Root');
+        const parent = await hierarchyManager.getParent('Root');
         expect(parent).toBeNull();
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.getParent('NonExistent'))
+        await expect(hierarchyManager.getParent('NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
     });
 
     describe('getAncestors', () => {
       it('should return all ancestors in order', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.setEntityParent('Grandchild', 'Child');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Grandchild', 'Child');
 
-        const ancestors = await manager.getAncestors('Grandchild');
+        const ancestors = await hierarchyManager.getAncestors('Grandchild');
         expect(ancestors).toHaveLength(3);
         // Order: immediate parent first
         expect(ancestors[0].name).toBe('Child');
@@ -538,64 +544,64 @@ describe('EntityManager', () => {
       });
 
       it('should return empty array for root entities', async () => {
-        const ancestors = await manager.getAncestors('Root');
+        const ancestors = await hierarchyManager.getAncestors('Root');
         expect(ancestors).toHaveLength(0);
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.getAncestors('NonExistent'))
+        await expect(hierarchyManager.getAncestors('NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
     });
 
     describe('getDescendants', () => {
       it('should return all descendants', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.setEntityParent('Grandchild', 'Child');
-        await manager.setEntityParent('Sibling', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Grandchild', 'Child');
+        await hierarchyManager.setEntityParent('Sibling', 'Parent');
 
-        const descendants = await manager.getDescendants('Root');
+        const descendants = await hierarchyManager.getDescendants('Root');
         expect(descendants).toHaveLength(4);
         expect(descendants.map(d => d.name).sort())
           .toEqual(['Child', 'Grandchild', 'Parent', 'Sibling']);
       });
 
       it('should return empty array for leaf nodes', async () => {
-        const descendants = await manager.getDescendants('Grandchild');
+        const descendants = await hierarchyManager.getDescendants('Grandchild');
         expect(descendants).toHaveLength(0);
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.getDescendants('NonExistent'))
+        await expect(hierarchyManager.getDescendants('NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
     });
 
     describe('getSubtree', () => {
       it('should return entity and all descendants', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
 
-        const subtree = await manager.getSubtree('Parent');
+        const subtree = await hierarchyManager.getSubtree('Parent');
         expect(subtree.entities).toHaveLength(2);
         expect(subtree.entities.map(e => e.name).sort()).toEqual(['Child', 'Parent']);
       });
 
       it('should return only entity for leaf nodes', async () => {
-        const subtree = await manager.getSubtree('Grandchild');
+        const subtree = await hierarchyManager.getSubtree('Grandchild');
         expect(subtree.entities).toHaveLength(1);
         expect(subtree.entities[0].name).toBe('Grandchild');
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.getSubtree('NonExistent'))
+        await expect(hierarchyManager.getSubtree('NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
 
       it('should include relations within subtree', async () => {
         // Create relations between entities
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
         const graph = await storage.getGraphForMutation();
         graph.relations.push({
           from: 'Parent',
@@ -606,7 +612,7 @@ describe('EntityManager', () => {
         });
         await storage.saveGraph(graph);
 
-        const subtree = await manager.getSubtree('Parent');
+        const subtree = await hierarchyManager.getSubtree('Parent');
         expect(subtree.relations).toHaveLength(1);
         expect(subtree.relations[0].from).toBe('Parent');
       });
@@ -614,10 +620,10 @@ describe('EntityManager', () => {
 
     describe('getRootEntities', () => {
       it('should return entities without parents', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
 
-        const roots = await manager.getRootEntities();
+        const roots = await hierarchyManager.getRootEntities();
         // Root, Grandchild, and Sibling have no parent
         const rootNames = roots.map(r => r.name);
         expect(rootNames).toContain('Root');
@@ -626,18 +632,18 @@ describe('EntityManager', () => {
       });
 
       it('should return all entities when none have parents', async () => {
-        const roots = await manager.getRootEntities();
+        const roots = await hierarchyManager.getRootEntities();
         expect(roots).toHaveLength(5); // All 5 entities from beforeEach
       });
 
       it('should return empty array when all entities have parents', async () => {
         // Create single root and make all others children
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.setEntityParent('Grandchild', 'Child');
-        await manager.setEntityParent('Sibling', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Grandchild', 'Child');
+        await hierarchyManager.setEntityParent('Sibling', 'Parent');
 
-        const roots = await manager.getRootEntities();
+        const roots = await hierarchyManager.getRootEntities();
         expect(roots).toHaveLength(1);
         expect(roots[0].name).toBe('Root');
       });
@@ -645,55 +651,55 @@ describe('EntityManager', () => {
 
     describe('getEntityDepth', () => {
       it('should return 0 for root entities', async () => {
-        const depth = await manager.getEntityDepth('Root');
+        const depth = await hierarchyManager.getEntityDepth('Root');
         expect(depth).toBe(0);
       });
 
       it('should return correct depth for nested entities', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.setEntityParent('Grandchild', 'Child');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Grandchild', 'Child');
 
-        expect(await manager.getEntityDepth('Root')).toBe(0);
-        expect(await manager.getEntityDepth('Parent')).toBe(1);
-        expect(await manager.getEntityDepth('Child')).toBe(2);
-        expect(await manager.getEntityDepth('Grandchild')).toBe(3);
+        expect(await hierarchyManager.getEntityDepth('Root')).toBe(0);
+        expect(await hierarchyManager.getEntityDepth('Parent')).toBe(1);
+        expect(await hierarchyManager.getEntityDepth('Child')).toBe(2);
+        expect(await hierarchyManager.getEntityDepth('Grandchild')).toBe(3);
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.getEntityDepth('NonExistent'))
+        await expect(hierarchyManager.getEntityDepth('NonExistent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
     });
 
     describe('moveEntity', () => {
       it('should move entity to new parent', async () => {
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.moveEntity('Child', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.moveEntity('Child', 'Root');
 
         const child = await manager.getEntity('Child');
         expect(child!.parentId).toBe('Root');
       });
 
       it('should move entity to root (null parent)', async () => {
-        await manager.setEntityParent('Child', 'Parent');
-        await manager.moveEntity('Child', null);
+        await hierarchyManager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.moveEntity('Child', null);
 
         const child = await manager.getEntity('Child');
         expect(child!.parentId).toBeUndefined();
       });
 
       it('should detect cycles when moving', async () => {
-        await manager.setEntityParent('Parent', 'Root');
-        await manager.setEntityParent('Child', 'Parent');
+        await hierarchyManager.setEntityParent('Parent', 'Root');
+        await hierarchyManager.setEntityParent('Child', 'Parent');
 
         // Cannot move Root to Child (would create cycle)
-        await expect(manager.moveEntity('Root', 'Child'))
+        await expect(hierarchyManager.moveEntity('Root', 'Child'))
           .rejects.toThrow();
       });
 
       it('should throw error for non-existent entity', async () => {
-        await expect(manager.moveEntity('NonExistent', 'Parent'))
+        await expect(hierarchyManager.moveEntity('NonExistent', 'Parent'))
           .rejects.toThrow('Entity "NonExistent" not found');
       });
     });

@@ -6,25 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { GraphStorage } from '../../core/GraphStorage.js';
-import { EntityManager } from '../../core/EntityManager.js';
-import { RelationManager } from '../../core/RelationManager.js';
-import { BasicSearch } from '../../search/BasicSearch.js';
-import { RankedSearch } from '../../search/RankedSearch.js';
-import { BooleanSearch } from '../../search/BooleanSearch.js';
-import { FuzzySearch } from '../../search/FuzzySearch.js';
+import { ManagerContext } from '../../core/ManagerContext.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
 describe('Edge Cases', () => {
-  let storage: GraphStorage;
-  let entityManager: EntityManager;
-  let relationManager: RelationManager;
-  let basicSearch: BasicSearch;
-  let rankedSearch: RankedSearch;
-  let booleanSearch: BooleanSearch;
-  let fuzzySearch: FuzzySearch;
+  let manager: ManagerContext;
   let testDir: string;
   let testFilePath: string;
 
@@ -33,13 +21,7 @@ describe('Edge Cases', () => {
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-graph.jsonl');
 
-    storage = new GraphStorage(testFilePath);
-    entityManager = new EntityManager(storage);
-    relationManager = new RelationManager(storage);
-    basicSearch = new BasicSearch(storage);
-    rankedSearch = new RankedSearch(storage);
-    booleanSearch = new BooleanSearch(storage);
-    fuzzySearch = new FuzzySearch(storage);
+    manager = new ManagerContext(testFilePath);
   });
 
   afterEach(async () => {
@@ -52,20 +34,20 @@ describe('Edge Cases', () => {
 
   describe('Unicode and Special Characters', () => {
     it('should handle entity names with emoji', async () => {
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: 'User 👤', entityType: 'person', observations: ['Has emoji in name'] },
         { name: 'Project 🚀', entityType: 'project', observations: ['Rocket project'] },
       ]);
 
       expect(entities).toHaveLength(2);
 
-      const results = await basicSearch.searchNodes('User');
+      const results = await manager.searchManager.searchNodes('User');
       expect(results.entities.length).toBeGreaterThanOrEqual(1);
       expect(results.entities[0].name).toBe('User 👤');
     });
 
     it('should handle observations with mixed scripts (Latin, Cyrillic, CJK)', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         {
           name: 'International',
           entityType: 'document',
@@ -73,22 +55,22 @@ describe('Edge Cases', () => {
         },
       ]);
 
-      const results = await basicSearch.searchNodes('International');
+      const results = await manager.searchManager.searchNodes('International');
       expect(results.entities).toHaveLength(1);
       expect(results.entities[0].observations).toHaveLength(5);
     });
 
     it('should handle right-to-left text', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'RTL_Text', entityType: 'text', observations: ['שלום', 'مرحبا'] },
       ]);
 
-      const results = await basicSearch.searchNodes('RTL');
+      const results = await manager.searchManager.searchNodes('RTL');
       expect(results.entities).toHaveLength(1);
     });
 
     it('should handle zero-width characters', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         {
           name: 'Test\u200BZero\u200CWidth',
           entityType: 'test',
@@ -96,7 +78,7 @@ describe('Edge Cases', () => {
         },
       ]);
 
-      const results = await basicSearch.searchNodes('Zero');
+      const results = await manager.searchManager.searchNodes('Zero');
       expect(results.entities.length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -105,20 +87,20 @@ describe('Edge Cases', () => {
     it('should handle entity with maximum observations (array limit)', async () => {
       const manyObservations = Array.from({ length: 100 }, (_, i) => `Observation ${i}`);
 
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: 'ManyObs', entityType: 'test', observations: manyObservations },
       ]);
 
       expect(entities[0].observations).toHaveLength(100);
 
-      const results = await basicSearch.searchNodes('Observation 50');
+      const results = await manager.searchManager.searchNodes('Observation 50');
       expect(results.entities).toHaveLength(1);
     });
 
     it('should handle entity with maximum tags (array limit)', async () => {
       const manyTags = Array.from({ length: 50 }, (_, i) => `tag${i}`);
 
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: 'ManyTags', entityType: 'test', observations: ['Test'], tags: manyTags },
       ]);
 
@@ -126,16 +108,16 @@ describe('Edge Cases', () => {
     });
 
     it('should handle importance at exact boundaries (0 and 10)', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'MinImportance', entityType: 'test', observations: ['Test'], importance: 0 },
         { name: 'MaxImportance', entityType: 'test', observations: ['Test'], importance: 10 },
       ]);
 
-      const minResults = await basicSearch.searchNodes('', undefined, 0, 0);
+      const minResults = await manager.searchManager.searchNodes('', undefined, 0, 0);
       expect(minResults.entities).toHaveLength(1);
       expect(minResults.entities[0].importance).toBe(0);
 
-      const maxResults = await basicSearch.searchNodes('', undefined, 10, 10);
+      const maxResults = await manager.searchManager.searchNodes('', undefined, 10, 10);
       expect(maxResults.entities).toHaveLength(1);
       expect(maxResults.entities[0].importance).toBe(10);
     });
@@ -143,24 +125,24 @@ describe('Edge Cases', () => {
     it('should handle very long entity names (200+ characters)', async () => {
       const longName = 'A'.repeat(250);
 
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: longName, entityType: 'test', observations: ['Long name entity'] },
       ]);
 
       expect(entities[0].name).toHaveLength(250);
 
-      const results = await basicSearch.searchNodes(longName.substring(0, 10));
+      const results = await manager.searchManager.searchNodes(longName.substring(0, 10));
       expect(results.entities).toHaveLength(1);
     });
 
     it('should handle very long observations (500+ characters)', async () => {
       const longObservation = 'This is a very long observation. '.repeat(20);
 
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'LongObs', entityType: 'test', observations: [longObservation] },
       ]);
 
-      const results = await basicSearch.searchNodes('long observation');
+      const results = await manager.searchManager.searchNodes('long observation');
       expect(results.entities).toHaveLength(1);
     });
   });
@@ -169,13 +151,13 @@ describe('Edge Cases', () => {
     it('should handle entity with empty string name (if allowed by validation)', async () => {
       // This should fail validation
       await expect(
-        entityManager.createEntities([{ name: '', entityType: 'test', observations: ['Test'] }])
+        manager.entityManager.createEntities([{ name: '', entityType: 'test', observations: ['Test'] }])
       ).rejects.toThrow();
     });
 
     it('should handle entity with whitespace-only name', async () => {
       // System allows whitespace-only names
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: '   ', entityType: 'test', observations: ['Test'] }
       ]);
 
@@ -184,18 +166,18 @@ describe('Edge Cases', () => {
     });
 
     it('should handle entity with empty observations array', async () => {
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: 'EmptyObs', entityType: 'test', observations: [] },
       ]);
 
       expect(entities[0].observations).toHaveLength(0);
 
-      const results = await basicSearch.searchNodes('EmptyObs');
+      const results = await manager.searchManager.searchNodes('EmptyObs');
       expect(results.entities).toHaveLength(1);
     });
 
     it('should handle entity with empty tags array', async () => {
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: 'NoTags', entityType: 'test', observations: ['Test'], tags: [] },
       ]);
 
@@ -203,7 +185,7 @@ describe('Edge Cases', () => {
     });
 
     it('should handle entity without optional fields', async () => {
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: 'Minimal', entityType: 'test', observations: ['Test'] },
       ]);
 
@@ -214,56 +196,56 @@ describe('Edge Cases', () => {
 
   describe('Search Edge Cases', () => {
     it('should handle search with very long query string', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Test', entityType: 'test', observations: ['Short observation'] },
       ]);
 
       const longQuery = 'test '.repeat(100);
-      const results = await basicSearch.searchNodes(longQuery);
+      const results = await manager.searchManager.searchNodes(longQuery);
 
       expect(Array.isArray(results.entities)).toBe(true);
     });
 
     it('should handle ranked search with empty query', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Test', entityType: 'test', observations: ['Test'] },
       ]);
 
-      const results = await rankedSearch.searchNodesRanked('');
+      const results = await manager.searchManager.searchNodesRanked('');
       expect(results).toHaveLength(0);
     });
 
     it('should handle boolean search with deeply nested parentheses', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Test', entityType: 'test', observations: ['Deep nesting'] },
       ]);
 
-      const results = await booleanSearch.booleanSearch('((((Test))))');
+      const results = await manager.searchManager.booleanSearch('((((Test))))');
       expect(results.entities).toHaveLength(1);
     });
 
     it('should handle fuzzy search with threshold at boundaries (0 and 1)', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Alice', entityType: 'person', observations: ['Test'] },
       ]);
 
       // Threshold 0 should match everything
-      const results0 = await fuzzySearch.fuzzySearch('xyz', 0);
+      const results0 = await manager.searchManager.fuzzySearch('xyz', 0);
       expect(results0.entities.length).toBeGreaterThan(0);
 
       // Threshold 1 should only match exact
-      const results1 = await fuzzySearch.fuzzySearch('Alice', 1);
+      const results1 = await manager.searchManager.fuzzySearch('Alice', 1);
       expect(results1.entities).toHaveLength(1);
     });
 
     it('should handle search by date range with same start and end date', async () => {
       const now = new Date().toISOString();
 
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Test', entityType: 'test', observations: ['Test'] },
       ]);
 
-      const results = await basicSearch.searchByDateRange(now, now);
+      const results = await manager.searchManager.searchByDateRange(now, now);
       expect(Array.isArray(results.entities)).toBe(true);
     });
 
@@ -272,23 +254,23 @@ describe('Edge Cases', () => {
       const future = new Date(now.getTime() + 86400000).toISOString();
       const past = new Date(now.getTime() - 86400000).toISOString();
 
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Test', entityType: 'test', observations: ['Test'] },
       ]);
 
       // End before start should return empty results
-      const results = await basicSearch.searchByDateRange(future, past);
+      const results = await manager.searchManager.searchByDateRange(future, past);
       expect(results.entities).toHaveLength(0);
     });
   });
 
   describe('Relation Edge Cases', () => {
     it('should handle self-referencing relation', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'SelfRef', entityType: 'test', observations: ['Test'] },
       ]);
 
-      const relations = await relationManager.createRelations([
+      const relations = await manager.relationManager.createRelations([
         { from: 'SelfRef', to: 'SelfRef', relationType: 'relates_to' },
       ]);
 
@@ -298,25 +280,25 @@ describe('Edge Cases', () => {
     });
 
     it('should handle circular relations (A->B->C->A)', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'A', entityType: 'test', observations: ['Test'] },
         { name: 'B', entityType: 'test', observations: ['Test'] },
         { name: 'C', entityType: 'test', observations: ['Test'] },
       ]);
 
-      await relationManager.createRelations([
+      await manager.relationManager.createRelations([
         { from: 'A', to: 'B', relationType: 'links' },
         { from: 'B', to: 'C', relationType: 'links' },
         { from: 'C', to: 'A', relationType: 'links' },
       ]);
 
-      const results = await basicSearch.searchNodes('');
+      const results = await manager.searchManager.searchNodes('');
       expect(results.entities).toHaveLength(3);
       expect(results.relations).toHaveLength(3);
     });
 
     it('should handle very long relation type names (up to 100 chars)', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Entity1', entityType: 'test', observations: ['Test'] },
         { name: 'Entity2', entityType: 'test', observations: ['Test'] },
       ]);
@@ -324,7 +306,7 @@ describe('Edge Cases', () => {
       // Max length is 100 characters, use 90 to be safe
       const longRelationType = 'a'.repeat(90);
 
-      const relations = await relationManager.createRelations([
+      const relations = await manager.relationManager.createRelations([
         { from: 'Entity1', to: 'Entity2', relationType: longRelationType },
       ]);
 
@@ -333,18 +315,18 @@ describe('Edge Cases', () => {
     });
 
     it('should handle multiple relations between same entities', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Person1', entityType: 'person', observations: ['Test'] },
         { name: 'Person2', entityType: 'person', observations: ['Test'] },
       ]);
 
-      await relationManager.createRelations([
+      await manager.relationManager.createRelations([
         { from: 'Person1', to: 'Person2', relationType: 'knows' },
         { from: 'Person1', to: 'Person2', relationType: 'collaborates_with' },
         { from: 'Person1', to: 'Person2', relationType: 'mentors' },
       ]);
 
-      const results = await basicSearch.searchNodes('Person');
+      const results = await manager.searchManager.searchNodes('Person');
       expect(results.relations.length).toBeGreaterThanOrEqual(3);
     });
   });
@@ -352,7 +334,7 @@ describe('Edge Cases', () => {
   describe('Concurrent Operations', () => {
     it('should handle multiple simultaneous entity creations', async () => {
       const promises = Array.from({ length: 10 }, (_, i) =>
-        entityManager.createEntities([
+        manager.entityManager.createEntities([
           { name: `Concurrent${i}`, entityType: 'test', observations: ['Test'] },
         ])
       );
@@ -367,23 +349,23 @@ describe('Edge Cases', () => {
       });
 
       // Search should find all created entities (may be less if concurrent writes interfered)
-      const searchResults = await basicSearch.searchNodes('Concurrent');
+      const searchResults = await manager.searchManager.searchNodes('Concurrent');
       expect(searchResults.entities.length).toBeGreaterThan(0);
       expect(searchResults.entities.length).toBeLessThanOrEqual(10);
     });
 
     it('should handle concurrent reads and writes', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Initial', entityType: 'test', observations: ['Test'] },
       ]);
 
       const operations = [
-        basicSearch.searchNodes('Initial'),
-        entityManager.createEntities([
+        manager.searchManager.searchNodes('Initial'),
+        manager.entityManager.createEntities([
           { name: 'New1', entityType: 'test', observations: ['Test'] },
         ]),
-        basicSearch.searchNodes(''),
-        entityManager.createEntities([
+        manager.searchManager.searchNodes(''),
+        manager.entityManager.createEntities([
           { name: 'New2', entityType: 'test', observations: ['Test'] },
         ]),
       ];
@@ -396,7 +378,7 @@ describe('Edge Cases', () => {
   describe('Validation Edge Cases', () => {
     it('should reject entity with invalid importance (negative)', async () => {
       await expect(
-        entityManager.createEntities([
+        manager.entityManager.createEntities([
           { name: 'Invalid', entityType: 'test', observations: ['Test'], importance: -1 },
         ])
       ).rejects.toThrow();
@@ -404,7 +386,7 @@ describe('Edge Cases', () => {
 
     it('should reject entity with invalid importance (> 10)', async () => {
       await expect(
-        entityManager.createEntities([
+        manager.entityManager.createEntities([
           { name: 'Invalid', entityType: 'test', observations: ['Test'], importance: 11 },
         ])
       ).rejects.toThrow();
@@ -412,7 +394,7 @@ describe('Edge Cases', () => {
 
     it('should reject entity with invalid importance (non-integer)', async () => {
       await expect(
-        entityManager.createEntities([
+        manager.entityManager.createEntities([
           { name: 'Invalid', entityType: 'test', observations: ['Test'], importance: 5.5 },
         ])
       ).rejects.toThrow();
@@ -420,7 +402,7 @@ describe('Edge Cases', () => {
 
     it('should handle entity names with leading/trailing whitespace', async () => {
       // System allows names with leading/trailing whitespace
-      const entities = await entityManager.createEntities([
+      const entities = await manager.entityManager.createEntities([
         { name: ' LeadingSpace', entityType: 'test', observations: ['Test'] },
         { name: 'TrailingSpace ', entityType: 'test', observations: ['Test'] },
       ]);
@@ -433,7 +415,7 @@ describe('Edge Cases', () => {
 
   describe('Large Graph Operations', () => {
     it('should handle entity with 100+ relations', async () => {
-      await entityManager.createEntities([{ name: 'Hub', entityType: 'hub', observations: ['Central hub'] }]);
+      await manager.entityManager.createEntities([{ name: 'Hub', entityType: 'hub', observations: ['Central hub'] }]);
 
       // Create 100 spoke entities
       const spokes = Array.from({ length: 100 }, (_, i) => ({
@@ -441,7 +423,7 @@ describe('Edge Cases', () => {
         entityType: 'spoke',
         observations: ['Spoke'],
       }));
-      await entityManager.createEntities(spokes);
+      await manager.entityManager.createEntities(spokes);
 
       // Create relations from hub to all spokes
       const relations = Array.from({ length: 100 }, (_, i) => ({
@@ -449,11 +431,11 @@ describe('Edge Cases', () => {
         to: `Spoke${i}`,
         relationType: 'connects',
       }));
-      await relationManager.createRelations(relations);
+      await manager.relationManager.createRelations(relations);
 
       // Verify relations exist by opening all nodes
       const allNodeNames = ['Hub', ...Array.from({ length: 100 }, (_, i) => `Spoke${i}`)];
-      const results = await basicSearch.openNodes(allNodeNames);
+      const results = await manager.searchManager.openNodes(allNodeNames);
 
       // Should have Hub + 100 Spokes
       expect(results.entities.length).toBe(101);
@@ -471,10 +453,10 @@ describe('Edge Cases', () => {
         importance: (i % 10) + 1,
       }));
 
-      await entityManager.createEntities(entities);
+      await manager.entityManager.createEntities(entities);
 
       const startTime = Date.now();
-      const results = await basicSearch.searchNodes('Entity', undefined, 5);
+      const results = await manager.searchManager.searchNodes('Entity', undefined, 5);
       const duration = Date.now() - startTime;
 
       expect(results.entities.length).toBeGreaterThan(0);
@@ -484,29 +466,29 @@ describe('Edge Cases', () => {
 
   describe('Special Query Characters', () => {
     it('should handle boolean search with special regex characters', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: 'Test.*Special', entityType: 'test', observations: ['Has special chars'] },
       ]);
 
-      const results = await booleanSearch.booleanSearch('name:Test');
+      const results = await manager.searchManager.booleanSearch('name:Test');
       expect(results.entities.length).toBeGreaterThanOrEqual(1);
     });
 
     it('should handle search with SQL injection-like patterns', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: "Test'; DROP TABLE entities;--", entityType: 'test', observations: ['SQL injection test'] },
       ]);
 
-      const results = await basicSearch.searchNodes("Test'; DROP");
+      const results = await manager.searchManager.searchNodes("Test'; DROP");
       expect(results.entities).toHaveLength(1);
     });
 
     it('should handle search with XSS-like patterns', async () => {
-      await entityManager.createEntities([
+      await manager.entityManager.createEntities([
         { name: '<script>alert("xss")</script>', entityType: 'test', observations: ['XSS test'] },
       ]);
 
-      const results = await basicSearch.searchNodes('script');
+      const results = await manager.searchManager.searchNodes('script');
       expect(results.entities).toHaveLength(1);
     });
   });

@@ -1,11 +1,14 @@
 /**
  * Core Module Barrel Export
+ * Phase 4: Added ObservationManager and HierarchyManager exports
  */
 
 export { GraphStorage } from './GraphStorage.js';
 export { SQLiteStorage } from './SQLiteStorage.js';
-export { EntityManager, type ArchiveCriteria, type ArchiveResult } from './EntityManager.js';
+export { EntityManager } from './EntityManager.js';
 export { RelationManager } from './RelationManager.js';
+export { ObservationManager } from './ObservationManager.js';
+export { HierarchyManager } from './HierarchyManager.js';
 export { ManagerContext } from './ManagerContext.js';
 // Backward compatibility alias
 export { ManagerContext as KnowledgeGraphManager } from './ManagerContext.js';

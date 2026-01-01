@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphStorage } from '../../core/GraphStorage.js';
 import { EntityManager } from '../../core/EntityManager.js';
 import { RelationManager } from '../../core/RelationManager.js';
-import { SearchManager } from '../../search/SearchManager.js';
+import { CompressionManager } from '../../features/CompressionManager.js';
 import { BasicSearch } from '../../search/BasicSearch.js';
 import { RankedSearch } from '../../search/RankedSearch.js';
 import { BooleanSearch } from '../../search/BooleanSearch.js';
@@ -38,25 +38,23 @@ describe('Performance Benchmarks', () => {
   let storage: GraphStorage;
   let entityManager: EntityManager;
   let relationManager: RelationManager;
-  let searchManager: SearchManager;
+  let compressionManager: CompressionManager;
   let basicSearch: BasicSearch;
   let rankedSearch: RankedSearch;
   let booleanSearch: BooleanSearch;
   let fuzzySearch: FuzzySearch;
   let testDir: string;
   let testFilePath: string;
-  let savedSearchesPath: string;
 
   beforeEach(async () => {
     testDir = join(tmpdir(), `perf-test-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-graph.jsonl');
-    savedSearchesPath = join(testDir, 'saved-searches.jsonl');
 
     storage = new GraphStorage(testFilePath);
     entityManager = new EntityManager(storage);
     relationManager = new RelationManager(storage);
-    searchManager = new SearchManager(storage, savedSearchesPath);
+    compressionManager = new CompressionManager(storage);
     basicSearch = new BasicSearch(storage);
     rankedSearch = new RankedSearch(storage);
     booleanSearch = new BooleanSearch(storage);
@@ -261,7 +259,7 @@ describe('Performance Benchmarks', () => {
       await entityManager.createEntities(smallEntities);
 
       const startSmall = Date.now();
-      await searchManager.findDuplicates(0.8);
+      await compressionManager.findDuplicates(0.8);
       const smallDuration = Date.now() - startSmall;
 
       // Larger set: 200 entities (4x more, but O(n²) comparison so expect ~16x time)
@@ -273,7 +271,7 @@ describe('Performance Benchmarks', () => {
       await entityManager.createEntities(largeEntities);
 
       const startLarge = Date.now();
-      await searchManager.findDuplicates(0.8);
+      await compressionManager.findDuplicates(0.8);
       const largeDuration = Date.now() - startLarge;
 
       // Allow generous multiplier for O(n²) algorithm
@@ -289,7 +287,7 @@ describe('Performance Benchmarks', () => {
       await entityManager.createEntities(entities);
 
       const startTime = Date.now();
-      await searchManager.compressGraph(0.8, false);
+      await compressionManager.compressGraph(0.8, false);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);

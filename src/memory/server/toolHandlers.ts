@@ -2,7 +2,8 @@
  * MCP Tool Handlers
  *
  * Contains handler functions for all 47 Knowledge Graph tools.
- * Handlers call managers directly via ManagerContext (bypassing facade pattern).
+ * Handlers call managers directly via ManagerContext.
+ * Phase 4: Updated to use specialized managers for single responsibility.
  *
  * @module server/toolHandlers
  */
@@ -54,10 +55,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
 
   // ==================== OBSERVATION HANDLERS ====================
   add_observations: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.addObservations(args.observations as any[])),
+    formatToolResponse(await ctx.observationManager.addObservations(args.observations as any[])),
 
   delete_observations: async (ctx, args) => {
-    await ctx.entityManager.deleteObservations(args.deletions as any[]);
+    await ctx.observationManager.deleteObservations(args.deletions as any[]);
     return formatTextResponse('Observations deleted successfully');
   },
 
@@ -198,59 +199,59 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // ==================== HIERARCHY HANDLERS ====================
   set_entity_parent: async (ctx, args) =>
     formatToolResponse(
-      await ctx.entityManager.setEntityParent(args.entityName as string, args.parentName as string | null)
+      await ctx.hierarchyManager.setEntityParent(args.entityName as string, args.parentName as string | null)
     ),
 
   get_children: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.getChildren(args.entityName as string)),
+    formatToolResponse(await ctx.hierarchyManager.getChildren(args.entityName as string)),
 
   get_parent: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.getParent(args.entityName as string)),
+    formatToolResponse(await ctx.hierarchyManager.getParent(args.entityName as string)),
 
   get_ancestors: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.getAncestors(args.entityName as string)),
+    formatToolResponse(await ctx.hierarchyManager.getAncestors(args.entityName as string)),
 
   get_descendants: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.getDescendants(args.entityName as string)),
+    formatToolResponse(await ctx.hierarchyManager.getDescendants(args.entityName as string)),
 
   get_subtree: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.getSubtree(args.entityName as string)),
+    formatToolResponse(await ctx.hierarchyManager.getSubtree(args.entityName as string)),
 
-  get_root_entities: async (ctx) => formatToolResponse(await ctx.entityManager.getRootEntities()),
+  get_root_entities: async (ctx) => formatToolResponse(await ctx.hierarchyManager.getRootEntities()),
 
   get_entity_depth: async (ctx, args) =>
     formatToolResponse({
       entityName: args.entityName,
-      depth: await ctx.entityManager.getEntityDepth(args.entityName as string),
+      depth: await ctx.hierarchyManager.getEntityDepth(args.entityName as string),
     }),
 
   move_entity: async (ctx, args) =>
     formatToolResponse(
-      await ctx.entityManager.moveEntity(args.entityName as string, args.newParentName as string | null)
+      await ctx.hierarchyManager.moveEntity(args.entityName as string, args.newParentName as string | null)
     ),
 
   // ==================== ANALYTICS HANDLERS ====================
-  get_graph_stats: async (ctx) => formatToolResponse(await ctx.searchManager.getGraphStats()),
+  get_graph_stats: async (ctx) => formatToolResponse(await ctx.analyticsManager.getGraphStats()),
 
-  validate_graph: async (ctx) => formatToolResponse(await ctx.searchManager.validateGraph()),
+  validate_graph: async (ctx) => formatToolResponse(await ctx.analyticsManager.validateGraph()),
 
   // ==================== COMPRESSION HANDLERS ====================
   find_duplicates: async (ctx, args) =>
-    formatToolResponse(await ctx.searchManager.findDuplicates(args.threshold as number | undefined)),
+    formatToolResponse(await ctx.compressionManager.findDuplicates(args.threshold as number | undefined)),
 
   merge_entities: async (ctx, args) =>
     formatToolResponse(
-      await ctx.searchManager.mergeEntities(args.entityNames as string[], args.targetName as string | undefined)
+      await ctx.compressionManager.mergeEntities(args.entityNames as string[], args.targetName as string | undefined)
     ),
 
   compress_graph: async (ctx, args) =>
     formatToolResponse(
-      await ctx.searchManager.compressGraph(args.threshold as number | undefined, args.dryRun as boolean | undefined)
+      await ctx.compressionManager.compressGraph(args.threshold as number | undefined, args.dryRun as boolean | undefined)
     ),
 
   archive_entities: async (ctx, args) =>
     formatToolResponse(
-      await ctx.entityManager.archiveEntities(
+      await ctx.archiveManager.archiveEntities(
         {
           olderThan: args.olderThan as string | undefined,
           importanceLessThan: args.importanceLessThan as number | undefined,
