@@ -24,6 +24,7 @@ import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
+import { NameIndex, TypeIndex } from '../utils/indexes.js';
 
 /**
  * SQLiteStorage manages persistence of the knowledge graph using native SQLite.
@@ -54,6 +55,16 @@ export class SQLiteStorage implements IGraphStorage {
    * Synchronized with SQLite on writes.
    */
   private cache: KnowledgeGraph | null = null;
+
+  /**
+   * O(1) entity lookup by name.
+   */
+  private nameIndex: NameIndex = new NameIndex();
+
+  /**
+   * O(1) entity lookup by type.
+   */
+  private typeIndex: TypeIndex = new TypeIndex();
 
   /**
    * Pre-computed lowercase data for search optimization.
@@ -195,6 +206,10 @@ export class SQLiteStorage implements IGraphStorage {
     }
 
     this.cache = { entities, relations };
+
+    // Build indexes for O(1) lookups
+    this.nameIndex.build(entities);
+    this.typeIndex.build(entities);
   }
 
   /**
@@ -348,6 +363,10 @@ export class SQLiteStorage implements IGraphStorage {
       this.updateLowercaseCache(entity);
     }
 
+    // Rebuild indexes
+    this.nameIndex.build(graph.entities);
+    this.typeIndex.build(graph.entities);
+
     this.pendingChanges = 0;
 
     // Clear search caches
@@ -390,6 +409,9 @@ export class SQLiteStorage implements IGraphStorage {
       this.cache!.entities.push(entity);
     }
 
+    // Update indexes
+    this.nameIndex.add(entity);
+    this.typeIndex.add(entity);
     this.updateLowercaseCache(entity);
     clearAllSearchCaches();
 
@@ -448,14 +470,16 @@ export class SQLiteStorage implements IGraphStorage {
 
     if (!this.db) throw new Error('Database not initialized');
 
-    // Find entity in cache
-    const entityIndex = this.cache!.entities.findIndex(e => e.name === entityName);
-    if (entityIndex === -1) {
+    // Find entity in cache using index (O(1))
+    const entity = this.nameIndex.get(entityName);
+    if (!entity) {
       return false;
     }
 
+    // Track old type for index update
+    const oldType = entity.entityType;
+
     // Apply updates to cached entity
-    const entity = this.cache!.entities[entityIndex];
     Object.assign(entity, updates);
     entity.lastModified = new Date().toISOString();
 
@@ -481,6 +505,11 @@ export class SQLiteStorage implements IGraphStorage {
       entityName,
     );
 
+    // Update indexes
+    this.nameIndex.add(entity); // Update reference
+    if (updates.entityType && updates.entityType !== oldType) {
+      this.typeIndex.updateType(entityName, oldType, updates.entityType);
+    }
     this.updateLowercaseCache(entity);
     clearAllSearchCaches();
 
@@ -513,6 +542,8 @@ export class SQLiteStorage implements IGraphStorage {
    */
   clearCache(): void {
     this.cache = null;
+    this.nameIndex.clear();
+    this.typeIndex.clear();
     this.lowercaseCache.clear();
     this.initialized = false;
     if (this.db) {
@@ -526,48 +557,53 @@ export class SQLiteStorage implements IGraphStorage {
   /**
    * Get an entity by name in O(1) time.
    *
+   * OPTIMIZED: Uses NameIndex for constant-time lookup.
+   *
    * @param name - Entity name to look up
    * @returns Entity if found, undefined otherwise
    */
   getEntityByName(name: string): Entity | undefined {
-    if (!this.cache) return undefined;
-    return this.cache.entities.find(e => e.name === name);
+    return this.nameIndex.get(name);
   }
 
   /**
-   * Check if an entity exists by name.
+   * Check if an entity exists by name in O(1) time.
    *
    * @param name - Entity name to check
    * @returns True if entity exists
    */
   hasEntity(name: string): boolean {
-    return this.getEntityByName(name) !== undefined;
+    return this.nameIndex.has(name);
   }
 
   /**
-   * Get all entities of a given type.
+   * Get all entities of a given type in O(1) time.
    *
-   * @param entityType - Entity type to filter by
+   * OPTIMIZED: Uses TypeIndex for constant-time lookup of entity names,
+   * then uses NameIndex for O(1) entity retrieval.
+   *
+   * @param entityType - Entity type to filter by (case-insensitive)
    * @returns Array of entities with the given type
    */
   getEntitiesByType(entityType: string): Entity[] {
-    if (!this.cache) return [];
-    const typeLower = entityType.toLowerCase();
-    return this.cache.entities.filter(e => e.entityType.toLowerCase() === typeLower);
+    const names = this.typeIndex.getNames(entityType);
+    const entities: Entity[] = [];
+    for (const name of names) {
+      const entity = this.nameIndex.get(name);
+      if (entity) {
+        entities.push(entity);
+      }
+    }
+    return entities;
   }
 
   /**
-   * Get all unique entity types in the storage.
+   * Get all unique entity types in the graph.
    *
-   * @returns Array of unique entity types
+   * @returns Array of unique entity types (lowercase)
    */
   getEntityTypes(): string[] {
-    if (!this.cache) return [];
-    const types = new Set<string>();
-    for (const entity of this.cache.entities) {
-      types.add(entity.entityType.toLowerCase());
-    }
-    return Array.from(types);
+    return this.typeIndex.getTypes();
   }
 
   /**

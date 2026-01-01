@@ -245,6 +245,9 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
     db.pragma('journal_mode = WAL');
 
     // Create tables with schema matching SQLiteStorage.ts
+    // Enable foreign keys for referential integrity
+    db.pragma('foreign_keys = ON');
+
     db.exec(`
       CREATE TABLE IF NOT EXISTS entities (
         name TEXT PRIMARY KEY,
@@ -252,7 +255,7 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
         observations TEXT NOT NULL,
         tags TEXT,
         importance INTEGER,
-        parentId TEXT,
+        parentId TEXT REFERENCES entities(name) ON DELETE SET NULL,
         createdAt TEXT NOT NULL,
         lastModified TEXT NOT NULL
       )
@@ -260,8 +263,8 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
 
     db.exec(`
       CREATE TABLE IF NOT EXISTS relations (
-        fromEntity TEXT NOT NULL,
-        toEntity TEXT NOT NULL,
+        fromEntity TEXT NOT NULL REFERENCES entities(name) ON DELETE CASCADE,
+        toEntity TEXT NOT NULL REFERENCES entities(name) ON DELETE CASCADE,
         relationType TEXT NOT NULL,
         createdAt TEXT NOT NULL,
         lastModified TEXT NOT NULL,
@@ -311,6 +314,10 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
       END
     `);
 
+    // Disable foreign keys during data insertion to allow dangling references
+    // (matches JSONL behavior where parentId/relations may reference non-existent entities)
+    db.pragma('foreign_keys = OFF');
+
     // Use transaction for atomicity
     const insertEntities = db.transaction((entities: Entity[]) => {
       const insertEntity = db.prepare(`
@@ -352,6 +359,9 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
     // Insert data
     insertEntities(graph.entities);
     insertRelations(graph.relations);
+
+    // Re-enable foreign keys for future operations
+    db.pragma('foreign_keys = ON');
 
     // Checkpoint WAL to ensure all data is written
     db.pragma('wal_checkpoint(TRUNCATE)');
