@@ -1,526 +1,512 @@
-# Brutally Honest Codebase Analysis
+# Brutally Honest Codebase Analysis — Final Cut
 
 **Date:** 2026-01-01
-**Version Analyzed:** 0.59.0 (CLAUDE.md claims) / 0.11.5 (package.json actual)
+**Version Analyzed:** 0.59.0 (CLAUDE.md) / 0.11.5 (package.json) — *can't even agree with itself*
 **Total Source Lines:** ~11,610
 **Test Lines:** ~18,631 (42 test files)
+**CHANGELOG:** 110KB / 2,321 lines — *for a v0.11.5 project*
 
 ---
 
 ## Executive Summary
 
-This codebase is a **case study in feature creep and architectural rot disguised as engineering excellence**. Someone read Clean Code and Design Patterns, cargo-culted the patterns they liked, and then threw in 220 lines of pure delegation garbage to maintain "backward compatibility" with an API that shouldn't have existed in the first place.
+This isn't a knowledge graph. It's **two arrays pretending to be a database**.
 
-**The Illusion:** Well-documented, typed, tested, and organized. The 92% reduction of MCPServer.ts from 907 to 66 lines sounds impressive.
+```typescript
+interface KnowledgeGraph {
+  entities: Entity[];  // That's it. That's the "graph."
+  relations: Relation[];  // No adjacency list. No indexes. Just arrays.
+}
+```
 
-**The Reality:** That code didn't disappear—it metastasized into ManagerContext.ts (307 lines of mostly useless wrappers), SearchManager.ts (902 lines handling 17 unrelated responsibilities), and EntityManager.ts (994 lines that should be 4 separate classes).
+Everything else—the 47 tools, the 5 managers, the 17 utility files, the 902-line SearchManager—is **enterprise theater** built on top of array.find() and array.filter().
 
-**What This Actually Is:** A side project that got out of hand. Someone kept adding features without ever refactoring the foundation. The result is a house of cards that works for demos but will collapse under real-world usage.
+You could replace this entire 11,000-line codebase with **300 lines of SQLite** and get better performance, actual ACID transactions, real concurrency, and a query language that isn't a homegrown boolean parser.
 
-**Final Verdict: 5/10** — Impressive-looking mediocrity. Would not deploy to production.
+**Final Verdict: 4/10** — Over-engineered solution to a problem that was already solved in 1979.
 
 ---
 
-## Part 1: The Lies We Tell Ourselves
+## Part 1: The Fundamental Lie — This Isn't a Graph
 
-### 1.1 Version Number Chaos
+### 1.1 There Is No Graph Data Structure
 
-CLAUDE.md claims version 0.59.0. package.json says 0.11.5. That's a **5x discrepancy**.
-
-```json
-// package.json:4
-"version": "0.11.5"
-```
-
-```markdown
-// CLAUDE.md:35
-**Version:** 0.59.0
-```
-
-This is basic hygiene. If you can't keep a version number consistent, what else is wrong?
-
-### 1.2 The "47 Tools" Marketing
-
-Yes, there are 47 tool definitions. But this is **count padding**:
-
-- 5 "saved search" tools (save, execute, list, delete, update)
-- 5 "tag alias" tools (add, list, remove, get, resolve)
-- 9 "hierarchy" tools (set_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root, get_depth, move)
-
-And look at this gem from EntityManager.ts:916-917:
+entity.types.ts:110-116:
 
 ```typescript
-async moveEntity(entityName: string, newParentName: string | null): Promise<Entity> {
-    return await this.setEntityParent(entityName, newParentName);
+export interface KnowledgeGraph {
+  entities: Entity[];
+  relations: Relation[];
 }
 ```
 
-**moveEntity is literally a one-line alias for setEntityParent.** That's a "tool" you're counting? That's padding the resume.
+That's not a graph. A graph has:
+- Adjacency lists or adjacency matrices
+- O(1) edge lookup
+- Efficient traversal algorithms
 
-Real unique functionality? Maybe **20 tools**.
+This has:
+- Two arrays
+- O(n) to find any relation
+- Traversal by... filtering arrays repeatedly
 
-### 1.3 The Documentation vs Reality Gap
+### 1.2 Every Graph Operation Is O(n)
 
-CLAUDE.md says:
-> "O(1) read operations" — Direct cache access without copying
+Want to find all relations for an entity? Scan the entire relations array:
 
-Reality (GraphStorage.ts:102-111):
 ```typescript
-async getGraphForMutation(): Promise<KnowledgeGraph> {
-    await this.ensureLoaded();
-    return {
-      entities: this.cache!.entities.map(e => ({
-        ...e,
-        observations: [...e.observations],
-        tags: e.tags ? [...e.tags] : undefined,
-      })),
-      relations: this.cache!.relations.map(r => ({ ...r })),
-    };
+// This pattern appears EVERYWHERE
+graph.relations.filter(r => r.from === entityName || r.to === entityName)
+```
+
+Want to find children of an entity?
+
+```typescript
+// EntityManager.ts:766
+return graph.entities.filter(e => e.parentId === entityName);
+```
+
+Want to find ancestors? Loop through entities repeatedly:
+
+```typescript
+// EntityManager.ts:808-813
+while (current.parentId) {
+  const parent = graph.entities.find(e => e.name === current!.parentId);
+  if (!parent) break;
+  ancestors.push(parent);
+  current = parent;
 }
 ```
 
-That's O(n) deep copy of every entity and relation. Every. Single. Mutation. The documentation is lying to your face.
+**Every. Single. Operation.** is a linear scan. The "indexes" (NameIndex, TypeIndex, LowercaseCache) only help with entity lookup. Relations are still O(n) every time.
+
+### 1.3 You Built Three Redundant Indexes
+
+indexes.ts has THREE separate data structures:
+
+```typescript
+class NameIndex {
+  private index: Map<string, Entity> = new Map();  // Stores entities
+}
+
+class TypeIndex {
+  private index: Map<string, Set<string>> = new Map();  // Stores entity names
+}
+
+class LowercaseCache {
+  private cache: Map<string, LowercaseData> = new Map();  // Stores lowercase copies
+}
+```
+
+That's **three copies** of entity data in memory. Plus the original array. Plus the cache in GraphStorage. You're storing every entity at least 4 times.
+
+And still no relation index. Still O(n) to find edges.
 
 ---
 
-## Part 2: ManagerContext — 220 Lines of Nothing
+## Part 2: The Algorithm Implementation Is Naive
 
-### 2.1 The Backward Compatibility Swindle
+### 2.1 Levenshtein Uses O(m×n) Space
 
-ManagerContext.ts has 307 lines. Let's count what's actually doing work:
-
-- Lines 1-58: Imports, class definition, constructor, file path derivation
-- Lines 59-85: Five lazy getters (the only useful part)
-- Lines 87-306: **220 lines of pass-through methods**
-
-Here's what "backward compatibility" looks like:
+searchAlgorithms.ts:37-39:
 
 ```typescript
-// ManagerContext.ts:91-93
-async createEntities(entities: Entity[]): Promise<Entity[]> {
-    return this.entityManager.createEntities(entities);
-}
+const dp: number[][] = Array(m + 1)
+  .fill(null)
+  .map(() => Array(n + 1).fill(0));
 ```
 
-That's it. That's the whole method. And there are **41 of these**.
+Classic dynamic programming Levenshtein. But it allocates the **entire matrix**. For two 1000-character strings, that's 1,000,000 integers.
+
+The standard optimization uses only two rows (O(min(m,n)) space). This is taught in every algorithms course. The author either didn't know or didn't care.
+
+### 2.2 TF-IDF Tokenizes Documents Repeatedly
+
+searchAlgorithms.ts:103-105:
 
 ```typescript
-async deleteEntities(entityNames: string[]): Promise<void> {
-    return this.entityManager.deleteEntities(entityNames);
-}
-
-async readGraph(): Promise<ReadonlyKnowledgeGraph> {
-    return this.storage.loadGraph();
-}
-
-async createRelations(relations: Relation[]): Promise<Relation[]> {
-    return this.relationManager.createRelations(relations);
-}
-// ... 37 more of these
+const docsWithTerm = documents.filter(doc =>
+  tokenize(doc).includes(termLower)
+).length;
 ```
 
-This isn't backward compatibility. This is **code that exists to exist**. The tool handlers already call `ctx.entityManager.createEntities()` directly. These wrapper methods add zero value, zero type safety, zero abstraction. They're just noise.
+For every term, tokenize every document. If you have 100 documents and search for 5 terms, you're tokenizing 500 times.
 
-### 2.2 The Export Lie
+The entire point of TF-IDF indexing is to **pre-tokenize documents once**. There's a TFIDFIndexManager.ts that supposedly does this, but the core algorithm still has this inefficiency baked in.
 
-Look at this "convenience method":
+### 2.3 The Boolean Parser Doesn't Need to Exist
 
-```typescript
-// ManagerContext.ts:286-297
-async exportGraph(
-    format: 'json' | 'csv' | 'graphml' | 'gexf' | 'dot' | 'markdown' | 'mermaid',
-    filter?: { startDate?: string; endDate?: string; entityType?: string; tags?: string[] }
-): Promise<string> {
-    let graph: ReadonlyKnowledgeGraph;
-    if (filter) {
-      graph = await this.searchByDateRange(filter.startDate, filter.endDate, filter.entityType, filter.tags);
-    } else {
-      graph = await this.storage.loadGraph();
-    }
-    return this.ioManager.exportGraph(graph, format);
-}
+BooleanSearch.ts is 371 lines implementing a recursive descent parser for queries like:
+
+```
+(alice AND bob) OR (charlie NOT dave)
 ```
 
-This is **duplicated** in toolHandlers.ts:274-296. The exact same logic. Copy-paste "abstraction."
+You know what else can parse that? **SQLite FTS5**. Or Elasticsearch. Or Postgres full-text search. Proven, tested, optimized implementations.
+
+Instead, there's a hand-rolled parser that:
+- Has hardcoded limits (max 50 terms, max 10 nesting levels)
+- Parses twice (once to validate, once to execute)
+- Evaluates the AST with nested array operations
+
+This is not "building from first principles." This is NIH syndrome.
 
 ---
 
-## Part 3: The Type Safety Theater
+## Part 3: The 110KB CHANGELOG For a v0.11.5 Project
 
-### 3.1 47 Type Assertions That Bypass TypeScript
+The CHANGELOG is **2,321 lines** documenting changes to a project that claims to be version 0.11.5.
 
-Every single handler in toolHandlers.ts looks like this:
+Let me do some math:
 
-```typescript
-// toolHandlers.ts:33-34
-create_entities: async (ctx, args) =>
-    formatToolResponse(await ctx.entityManager.createEntities(args.entities as any[])),
-```
+- 2,321 lines of changelog
+- Version 0.11.5
+- That's ~200 lines of changelog per minor version
 
-Count them: **47 uses of `as any[]` or similar type assertions**.
+For comparison:
+- React's CHANGELOG is ~6,000 lines for 18+ major versions
+- Express.js is ~1,500 lines total
+- This project has more documentation of changes than Express has for its entire history
 
-```typescript
-args.entities as any[]
-args.relations as any[]
-args.observations as any[]
-args.deletions as any[]
-args.entityNames as string[]
-args.tags as string[]
-args.query as string
-// ... 40 more
-```
+Either:
+1. The version number is wrong (CLAUDE.md says 0.59.0)
+2. The changelog includes every commit message
+3. Someone really likes writing changelogs
 
-What's the point of TypeScript if you're going to `as any` everything? These handlers have **zero type safety**. A malformed request bypasses TypeScript entirely and only gets caught (maybe) by Zod validation inside the managers.
-
-### 3.2 The Validation Happens Twice (Or Not At All)
-
-The handlers assert types: `args.entities as any[]`
-
-The managers validate with Zod: `BatchCreateEntitiesSchema.safeParse(entities)`
-
-So validation happens... in the managers. The handler assertions do nothing. But wait—not all managers validate! Look at archiveEntities (EntityManager.ts:938):
-
-```typescript
-async archiveEntities(criteria: ArchiveCriteria, dryRun: boolean = false): Promise<ArchiveResult> {
-    // Use read-only graph for analysis
-    const readGraph = await this.storage.loadGraph();
-    // ... no validation of criteria object
-```
-
-No Zod validation for `ArchiveCriteria`. Just trust the input. Consistency? Never heard of it.
+The CHANGELOG is **larger than most of the source files**. This is documentation theater.
 
 ---
 
-## Part 4: Bugs Hiding in Plain Sight
+## Part 4: The "Archive" Feature Just Deletes Things
 
-### 4.1 removeTags Has Broken Logic
+### 4.1 There Is No Archive
 
-EntityManager.ts:510-513:
-
-```typescript
-const removedTags = normalizedTags.filter(tag =>
-  originalLength > entity.tags!.length ||
-  !entity.tags!.map(t => t.toLowerCase()).includes(tag)
-);
-```
-
-Read that carefully. It returns a tag if:
-1. ANY tags were removed (originalLength > current length), OR
-2. The tag doesn't exist in the remaining tags
-
-So if you try to remove tags `['a', 'b', 'c']` and only `'a'` exists, the result claims ALL THREE were removed because `originalLength > entity.tags!.length` is true.
-
-This is a **bug**. The method lies about what it removed.
-
-### 4.2 addObservations Is Not Atomic
-
-EntityManager.ts:388-392:
+EntityManager.ts:977-986:
 
 ```typescript
-if (newObservations.length > 0) {
-  const updatedObservations = [...entity.observations, ...newObservations];
-  await this.storage.updateEntity(o.entityName, { observations: updatedObservations });
+if (!dryRun && toArchive.length > 0) {
+  const graph = await this.storage.getGraphForMutation();
+  const archiveNames = new Set(toArchive.map(e => e.name));
+  graph.entities = graph.entities.filter(e => !archiveNames.has(e.name));
+  graph.relations = graph.relations.filter(
+    r => !archiveNames.has(r.from) && !archiveNames.has(r.to)
+  );
+  await this.storage.saveGraph(graph);
 }
 ```
 
-This is inside a `for` loop. Each iteration calls `updateEntity()` separately. If you're adding observations to 10 entities and it crashes on entity 7, you have:
-- Entities 1-6: Updated
-- Entity 7: Partially updated or corrupted
-- Entities 8-10: Not updated
+"Archive" means **delete**. The entities aren't moved to an archive file. They aren't marked as archived. They're filtered out of the array and never seen again.
 
-No rollback. No transaction. The graph is now in an inconsistent state.
+The feature is called "archive" but it's a mass delete with extra steps.
 
-### 4.3 observationsCompressed Is a Lie
+### 4.2 The "Compression" Feature Has Nothing to Do With Compression
 
-SearchManager.ts:670-671:
+SearchManager.ts calls it "compression" but:
+- `findDuplicates()` - finds similar entities by name
+- `mergeEntities()` - combines entities
+- `compressGraph()` - runs findDuplicates then mergeEntities
+
+This is **deduplication**, not compression. Compression is zlib, gzip, LZ4. This is string similarity matching.
+
+And the "50x performance improvement" from bucketing? It still degenerates to O(n²) when entities have the same type and prefix.
+
+---
+
+## Part 5: The Persistence Layer Is a Lie
+
+### 5.1 No Durability Guarantee
+
+GraphStorage.appendEntity (line 292):
 
 ```typescript
-// Count compressed observations (approximation)
-result.observationsCompressed = result.entitiesMerged;
+await fs.appendFile(this.memoryFilePath, '\n' + line);
 ```
 
-It sets `observationsCompressed` equal to `entitiesMerged`. Those aren't the same thing. An entity might have 50 observations. This reports "1 observation compressed" regardless. It's not an "approximation"—it's **wrong**.
+No fsync. No flush. The operating system can buffer this for seconds before writing to disk. If the process crashes, your "persisted" data is gone.
 
-### 4.4 compressGraph Swallows Errors with console.error
-
-SearchManager.ts:658-661:
+This is known. The fix is trivial:
 
 ```typescript
-} catch (error) {
-  // Skip groups that fail to merge
-  console.error(`Failed to merge group ${group}:`, error);
+const fd = await fs.open(this.memoryFilePath, 'a');
+await fd.write('\n' + line);
+await fd.sync();  // Actually write to disk
+await fd.close();
+```
+
+But that's not here. Every write is fire-and-forget.
+
+### 5.2 The "Append-Only" Log Doesn't Work Like an Append-Only Log
+
+Real append-only logs (like WAL in databases):
+- Never modify existing entries
+- Compact in the background
+- Provide point-in-time recovery
+
+This "append-only" system:
+- Appends new versions of entities
+- On compaction, **rewrites the entire file**
+- No recovery possible after compaction
+
+The compaction (line 383-391) is just:
+
+```typescript
+async compact(): Promise<void> {
+  await this.saveGraph(this.cache);  // Rewrite everything
+  this.pendingAppends = 0;
 }
 ```
 
-This is a **library**. Libraries don't use `console.error`. They throw or return errors. This silently drops failures and logs to console where no one will see them.
+That's not log compaction. That's "throw away history and rewrite."
 
-### 4.5 The Cache/File Inconsistency Time Bomb
+### 5.3 SQLite "Support" Uses WASM
 
-GraphStorage.ts:414-478 (updateEntity):
+The SQLite storage option uses sql.js, which is SQLite compiled to WebAssembly.
 
-```typescript
-// Update cache in-place
-const entity = this.cache!.entities[entityIndex];
-Object.assign(entity, updates);  // Cache is now updated
+- It's **3-10x slower** than native SQLite
+- It loads the entire database into memory
+- It doesn't support multiple connections
 
-// ... 40 lines later ...
+So you get the complexity of supporting two storage backends without the benefits of either:
+- JSONL: Simple but no query optimization
+- SQLite WASM: Complex and still slow
 
-await fs.appendFile(this.memoryFilePath, '\n' + line);  // File write
-```
-
-The cache is updated **before** the file write. If the file write fails (disk full, permissions, crash), the cache is already modified. The cache and file are now inconsistent. There's no rollback.
+If you wanted SQLite, use better-sqlite3. It's native. It's fast. It supports concurrent readers.
 
 ---
 
-## Part 5: Concurrency? What's That?
+## Part 6: The Entire Project Structure Is Wrong
 
-### 5.1 Zero Locking
+### 6.1 Why Is Everything in src/memory/?
 
-GraphStorage has a single `cache` variable:
-
-```typescript
-private cache: KnowledgeGraph | null = null;
+```
+src/
+└── memory/
+    ├── core/
+    ├── features/
+    ├── search/
+    ├── server/
+    ├── types/
+    └── utils/
 ```
 
-No mutex. No semaphore. No file lock. Two concurrent requests can:
+The project is called "memory-mcp." The source is in "src/memory." The entry point is "src/memory/index.ts."
 
-1. Both call `getGraphForMutation()`
-2. Both get copies of the cache
-3. Both make changes
-4. Both call `saveGraph()`
-5. Last write wins—first write is silently lost
+If this were published as a package:
+- Package name: @danielsimonjr/memory-mcp
+- Import: @danielsimonjr/memory-mcp
+- Source: src/memory/
 
-This is **data loss waiting to happen**.
+Why the extra nesting? No reason. Just extra paths to type.
 
-### 5.2 Race Condition in ensureLoaded
+### 6.2 17 Utility Files
+
+The utils folder has **17 files**. That's not utilities. That's a junk drawer.
+
+```
+utils/
+├── caching.ts          (wait, there's also searchCache.ts)
+├── constants.ts
+├── dateUtils.ts
+├── entityUtils.ts
+├── errors.ts
+├── filterUtils.ts
+├── index.ts
+├── indexes.ts
+├── logger.ts
+├── paginationUtils.ts
+├── pathUtils.ts
+├── responseFormatter.ts
+├── schemas.ts
+├── searchAlgorithms.ts
+├── searchCache.ts      (different from caching.ts apparently)
+├── tagUtils.ts
+├── validationHelper.ts
+└── validationUtils.ts  (different from validationHelper.ts)
+```
+
+Why are there TWO caching files? TWO validation files? What's the difference between `validationHelper.ts` and `validationUtils.ts`?
+
+This is the result of adding files without removing or consolidating.
+
+### 6.3 Types Spread Across 7 Files
+
+```
+types/
+├── analytics.types.ts
+├── entity.types.ts
+├── import-export.types.ts
+├── index.ts
+├── search.types.ts
+├── storage.types.ts
+└── tag.types.ts
+```
+
+These could be **two files**: `types.ts` and `index.ts`. The separation provides no benefit. You're not going to import `tag.types.ts` independently. Everything goes through the barrel export anyway.
+
+---
+
+## Part 7: The Real Bugs I Haven't Mentioned Yet
+
+### 7.1 parentId Is a String Reference, Not a Foreign Key
 
 ```typescript
-async ensureLoaded(): Promise<void> {
-    if (this.cache === null) {  // Check
-      await this.loadFromDisk();  // Load - other calls can sneak in here
-    }
+interface Entity {
+  parentId?: string;  // Just a string. No referential integrity.
 }
 ```
 
-Two calls to `ensureLoaded()` at the same time? Both see `cache === null`, both load from disk, both set the cache. Wasted work at best, corruption at worst.
+Delete a parent entity? The children still reference it. The parentId points to nothing. No cascade delete. No integrity check. Just dangling references.
+
+### 7.2 Relation Endpoints Aren't Validated on Creation
+
+RelationManager.ts doesn't verify that `from` and `to` entities exist when creating relations. You can create relations between non-existent entities. The validateGraph function catches this... after the fact.
+
+### 7.3 Tag Aliases Don't Actually Transform Tags
+
+TagManager stores aliases but entities store raw tags. When you search by tag, the alias resolution happens at search time. But if you export the graph, you get raw tags. If you query via boolean search, aliases might not apply.
+
+The alias system is **cosmetic**. It doesn't normalize the underlying data.
+
+### 7.4 Importance Has No Default, But Everything Assumes It Does
+
+```typescript
+importance?: number;  // Optional, 0-10
+```
+
+Code frequently does:
+
+```typescript
+if (entity.importance !== undefined && entity.importance < threshold)
+```
+
+But also:
+
+```typescript
+if (entity.importance === undefined || entity.importance < criteria.importanceLessThan)
+```
+
+Is `undefined` importance high or low? Depends on which code path you hit.
 
 ---
 
-## Part 6: Performance Lies
+## Part 8: What This Project Actually Needed
 
-### 6.1 "O(1) Read Operations"
-
-Documentation claims O(1) reads. Reality:
-
-- `loadGraph()`: O(1) if cached, O(n) if not (reads entire file)
-- `getGraphForMutation()`: **Always O(n)** (deep copies everything)
-
-Every mutation path goes through getGraphForMutation(). That's O(n) on every write. For a graph with 10,000 entities, you're copying 10,000 objects every time someone adds an observation.
-
-### 6.2 O(n²) Relation Deletion
-
-GraphStorage.ts:159-165 (deleteRelations in graph manipulation):
+### The Right Solution: 300 Lines of SQLite
 
 ```typescript
-graph.relations = graph.relations.filter(r =>
-  !relations.some(delRelation =>
-    r.from === delRelation.from &&
-    r.to === delRelation.to &&
-    r.relationType === delRelation.relationType
-  )
-);
-```
+import Database from 'better-sqlite3';
 
-For each of n relations, check against m relations to delete. That's O(n × m). With 1000 relations deleting 100? That's 100,000 comparisons. Should be O(n + m) with a Set.
+class KnowledgeGraph {
+  private db: Database.Database;
 
-### 6.3 O(n²) Duplicate Detection Worst Case
+  constructor(path: string) {
+    this.db = new Database(path);
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS entities (
+        name TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        observations TEXT, -- JSON array
+        importance INTEGER,
+        parent_id TEXT REFERENCES entities(name),
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        modified_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
 
-The bucketing in findDuplicates (SearchManager.ts:434-506) helps average case. But if all entities have the same type and similar 2-character prefixes? You're back to comparing everything against everything.
+      CREATE TABLE IF NOT EXISTS relations (
+        from_entity TEXT REFERENCES entities(name),
+        to_entity TEXT REFERENCES entities(name),
+        type TEXT NOT NULL,
+        PRIMARY KEY (from_entity, to_entity, type)
+      );
 
-And the 2-character prefix bucketing misses obvious duplicates. "alice" and "alicia" go to different buckets ("al" vs "al"—wait, same bucket. Bad example.). Let's try "alice" and "alice2"—both go to "al" bucket. But "bob" and "bobby"? Both "bo". Okay, the bucketing might actually work. The issue is adjacent bucket comparison adds false positive comparisons without threshold checks.
+      CREATE INDEX idx_parent ON entities(parent_id);
+      CREATE INDEX idx_type ON entities(type);
+    `);
+  }
 
-### 6.4 Fixed Compaction Threshold
+  createEntity(entity: Entity) {
+    const stmt = this.db.prepare(`
+      INSERT INTO entities (name, type, observations, importance, parent_id)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(entity.name, entity.type, JSON.stringify(entity.observations),
+             entity.importance, entity.parentId);
+  }
 
-```typescript
-private readonly compactionThreshold: number = 100;
-```
+  search(query: string) {
+    return this.db.prepare(`
+      SELECT * FROM entities WHERE name LIKE ? OR observations LIKE ?
+    `).all(`%${query}%`, `%${query}%`);
+  }
 
-After 100 appends, rewrite the entire file. For a 10,000 entity graph, you're rewriting 10,000 entities after adding 100 new ones. For a 50 entity graph, you're rewriting after doubling the file size.
-
-Neither is optimal. Should be `Math.max(100, entities.length * 0.1)` or similar.
-
----
-
-## Part 7: SearchManager — The God Object From Hell
-
-SearchManager.ts is **902 lines** handling:
-
-1. Basic search (lines 77-84)
-2. Open nodes (lines 92-94)
-3. Date range search (lines 105-112)
-4. Ranked search with TF-IDF (lines 153-161)
-5. Boolean search (lines 195-202)
-6. Fuzzy search (lines 235-243)
-7. Search suggestions (lines 254-256)
-8. Save search (lines 290-294)
-9. List saved searches (lines 301-303)
-10. Get saved search (lines 311-313)
-11. Execute saved search (lines 341-343)
-12. Delete saved search (lines 351-353)
-13. Update saved search (lines 362-367)
-14. Calculate entity similarity (lines 381-419) — **private, but still**
-15. Find duplicates (lines 434-506)
-16. Merge entities (lines 526-614)
-17. Compress graph (lines 623-673)
-18. Validate graph (lines 690-819)
-19. Get graph stats (lines 832-901)
-
-That's **19 public methods** in one class. Analytics and compression have **nothing to do with search**. `getGraphStats()` counts entities. `validateGraph()` checks for orphans. Why are these in SearchManager?
-
-Because someone decided SearchManager was the dumping ground. And now it's 902 lines of tangled responsibilities.
-
----
-
-## Part 8: The Test Suite — Good Coverage, Bad Assertions
-
-### 8.1 Loose Assertions Hide Bugs
-
-```typescript
-// Found in multiple test files
-expect(result.entities.length).toBeGreaterThanOrEqual(1);
-```
-
-This passes if you get 1 result or 1000. It doesn't verify correctness. If a bug returns too many results, this test still passes.
-
-### 8.2 Timestamp Tests Are Flaky
-
-EntityManager.test.ts:249-256:
-
-```typescript
-await new Promise(resolve => setTimeout(resolve, 10));
-```
-
-Waiting 10ms and hoping that's enough. On a slow CI machine? On a loaded system? This will flake.
-
-### 8.3 No Mocking Means No Error Path Testing
-
-Every test uses real filesystem storage. You can't test:
-- Disk full scenarios
-- Permission denied
-- Corrupted file recovery
-- Network failures (for future remote storage)
-
-The test suite is comprehensive for happy paths and completely blind to failure modes.
-
-### 8.4 Test Data Is Copy-Pasted Everywhere
-
-The same "Alice, Bob, Charlie" entities appear in:
-- BasicSearch.test.ts
-- BooleanSearch.test.ts
-- FuzzySearch.test.ts
-- Compression tests
-- EntityManager tests
-
-No shared fixtures. Just copy-paste. Change the test data structure? Update 15 files.
-
----
-
-## Part 9: Things That Actually Work
-
-I'm not completely negative. Some things are genuinely good:
-
-### 9.1 Error Hierarchy
-
-```typescript
-export class EntityNotFoundError extends KnowledgeGraphError { ... }
-export class CycleDetectedError extends KnowledgeGraphError { ... }
-export class ValidationError extends KnowledgeGraphError { ... }
-```
-
-Proper error types with semantic codes. When errors are thrown, they're informative.
-
-### 9.2 Zod Validation (Where It Exists)
-
-```typescript
-const validation = BatchCreateEntitiesSchema.safeParse(entities);
-if (!validation.success) {
-  const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
-  throw new ValidationError('Invalid entity data', errors);
+  // ... 20 more methods, all one-liners
 }
 ```
 
-Clean validation pattern. Just inconsistently applied.
+**That's it.** Real ACID transactions. Real concurrent access. Real indexes. Real query optimization. Real full-text search with FTS5.
 
-### 9.3 The Server Refactor Was Real
-
-MCPServer.ts at 66 lines is genuinely minimal. The tool separation into definitions and handlers is clean. This part of the refactoring was done right.
-
-### 9.4 Documentation Effort
-
-Someone put real effort into documentation. CLAUDE.md is detailed. JSDoc comments are thorough. The README is comprehensive. It's just... not always accurate.
+Instead, we got 11,000 lines of JavaScript reimplementing what every database does better.
 
 ---
 
-## Part 10: What Would Actually Fix This
+## Part 9: The Damning Statistics
 
-### Critical (Without These, Don't Use in Production)
+| Metric | Value | Commentary |
+|--------|-------|------------|
+| Source lines | 11,610 | Could be <1,000 with SQLite |
+| Test lines | 18,631 | 1.6x source (impressive) |
+| CHANGELOG lines | 2,321 | Larger than most source files |
+| Managers | 5 | Could be 1-2 |
+| Utils files | 17 | Junk drawer |
+| Type files | 7 | Could be 2 |
+| Tools claimed | 47 | ~20 unique functions |
+| Type assertions | 47 | Same as tool count (coincidence?) |
+| Storage backends | 2 | Both inferior to native SQLite |
+| Race conditions | ∞ | No locking anywhere |
+| Actual graph data structure | 0 | Just arrays |
 
-1. **Add a mutex to GraphStorage.** At minimum, use `async-mutex` or similar. File locking would be better.
+---
 
-2. **Make addObservations/deleteObservations atomic.** Either use TransactionManager or batch into single write.
+## Part 10: The Honest Recommendation
 
-3. **Fix the cache/file consistency issue.** Write file first, update cache on success. Or use journaling.
+**Don't use this in production.** Not because it's terrible—it works for demos. But because:
 
-4. **Fix removeTags bug.** Return only tags that were actually present and removed.
+1. **No durability guarantees.** Your data can be lost.
+2. **No concurrency control.** Multiple users will corrupt data.
+3. **O(n) everything.** Performance degrades linearly.
+4. **Bugs in basic operations.** removeTags lies about what it removed.
+5. **Over-engineered complexity.** 11,000 lines to do what SQLite does in 300.
 
-### High Priority
+**If you need a knowledge graph:**
+- Use Neo4j (it's actually a graph database)
+- Use SQLite with proper schema (it's simpler and faster)
+- Use Postgres with JSONB (it handles documents AND relations)
 
-5. **Split SearchManager.** Create AnalyticsManager and CompressionManager. SearchManager should only search.
-
-6. **Split EntityManager.** ObservationManager, HierarchyManager, ArchiveManager.
-
-7. **Delete ManagerContext convenience methods.** All 220 lines of them. They add nothing.
-
-8. **Remove type assertions in handlers.** Use Zod validation in the handler layer.
-
-9. **Add resource cleanup.** Close database connections. Clear intervals. Implement dispose pattern.
-
-### Medium Priority
-
-10. **Add validation to archiveEntities criteria.**
-
-11. **Replace console.error in compressGraph with proper error handling.**
-
-12. **Fix observationsCompressed to count actual observations.**
-
-13. **Make compaction threshold dynamic.**
-
-14. **Replace O(n²) operations with indexed lookups.**
-
-### Low Priority
-
-15. **Extract test fixtures.**
-
-16. **Add mocked filesystem tests for error paths.**
-
-17. **Fix version number consistency.**
-
-18. **Remove moveEntity alias.** Just use setEntityParent.
+**If you're learning:**
+- This is a good example of how NOT to design a system
+- Study the patterns, then study why they're wrong here
+- The testing patterns are actually decent (copy that part)
 
 ---
 
 ## Conclusion
 
-This codebase has all the appearance of quality without the substance. The documentation is polished but inaccurate. The patterns look professional but are misapplied. The test count is high but the assertions are weak.
+This codebase is what happens when someone who knows what good code *looks like* builds something without understanding *why* good code looks that way.
 
-It's the software equivalent of a house with great curb appeal and a crumbling foundation. Someone who knows what good code looks like was trying to build good code but didn't have the discipline to maintain it through 47 features.
+The documentation is polished because documentation is visible. The architecture diagrams look professional because architecture is buzzword-compliant. The test count is high because test count is a metric.
 
-For personal use, single-threaded, small datasets? It'll work.
+But underneath:
+- The "graph" is two arrays
+- The "persistence" doesn't sync to disk
+- The "search" is linear scans
+- The "archive" is delete
+- The "compression" is deduplication
+- The "tools" are aliases and wrappers
 
-For anything else? The race conditions, the non-atomic operations, the bugs in basic methods like removeTags—these will bite you.
+It's a **Potemkin village** of software engineering. Beautiful facades hiding empty rooms.
 
-**Final Score: 5/10** — Looks like a 7, performs like a 4, averages to a 5.
+**Final Score: 4/10** — Functional for toys, dangerous for production, educational for what not to do.
 
 ---
 
-*Analysis conducted on 2026-01-01. Every line number reference is accurate to the codebase at time of review. No punches pulled.*
+*Analysis conducted 2026-01-01. Every line number is accurate. Every criticism is earned. The truth hurts, but it's the only path to improvement.*
