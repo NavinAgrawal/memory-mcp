@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 0.59.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.50.24 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -104,11 +104,14 @@ interface Relation {
 - `memory-saved-searches.jsonl` - Saved search queries
 - `memory-tag-aliases.jsonl` - Tag synonym mappings
 
-**SQLite (Optional):**
+**SQLite (Optional - Phase 8):**
 - `memory.db` - SQLite database with all data
 - Configure via `MEMORY_STORAGE_TYPE=sqlite` environment variable
 - Uses better-sqlite3 (native SQLite) for 3-10x faster performance
-- Features: FTS5 full-text search, referential integrity (CASCADE), WAL mode
+- Features: FTS5 full-text search with BM25 ranking, referential integrity (ON DELETE CASCADE), WAL mode
+- O(1) entity lookups via NameIndex and TypeIndex
+- Thread-safe with async-mutex concurrency control
+- ACID transactions with durability guarantees
 
 ## Entry Points
 
