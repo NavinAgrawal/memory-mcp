@@ -504,13 +504,14 @@ export class EntityManager {
     const normalizedTags = tags.map(tag => tag.toLowerCase());
     const originalLength = entity.tags.length;
 
+    // Capture existing tags (lowercase) BEFORE filtering to accurately track removals
+    const existingTagsLower = entity.tags.map(t => t.toLowerCase());
+
     // Filter out the tags to remove
     entity.tags = entity.tags.filter(tag => !normalizedTags.includes(tag.toLowerCase()));
 
-    const removedTags = normalizedTags.filter(tag =>
-      originalLength > entity.tags!.length ||
-      !entity.tags!.map(t => t.toLowerCase()).includes(tag)
-    );
+    // A tag was removed if it existed in the original tags
+    const removedTags = normalizedTags.filter(tag => existingTagsLower.includes(tag));
 
     // Update lastModified timestamp if tags were removed
     if (entity.tags.length < originalLength) {

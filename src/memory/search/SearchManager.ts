@@ -649,7 +649,24 @@ export class SearchManager {
     // Actually merge duplicates
     for (const group of duplicateGroups) {
       try {
-        await this.mergeEntities(group);
+        // Count total observations across all entities in group BEFORE merging
+        const preGraph = await this.storage.loadGraph();
+        let totalObservationsBefore = 0;
+        for (const name of group) {
+          const entity = preGraph.entities.find(e => e.name === name);
+          if (entity) {
+            totalObservationsBefore += entity.observations.length;
+          }
+        }
+
+        const mergedEntity = await this.mergeEntities(group);
+
+        // Count unique observations AFTER merging (deduplicated)
+        const observationsAfter = mergedEntity.observations.length;
+
+        // The difference is the number of duplicate observations removed
+        result.observationsCompressed += totalObservationsBefore - observationsAfter;
+
         result.mergedEntities.push({
           kept: group[0],
           merged: group.slice(1),
@@ -665,9 +682,6 @@ export class SearchManager {
     const finalGraph = await this.storage.loadGraph();
     const finalSize = JSON.stringify(finalGraph).length;
     result.spaceFreed = initialSize - finalSize;
-
-    // Count compressed observations (approximation)
-    result.observationsCompressed = result.entitiesMerged;
 
     return result;
   }
