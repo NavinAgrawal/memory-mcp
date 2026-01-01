@@ -11,7 +11,7 @@ import { promises as fs } from 'fs';
 import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
-import { NameIndex, TypeIndex, LowercaseCache } from '../utils/indexes.js';
+import { NameIndex, TypeIndex, LowercaseCache, RelationIndex } from '../utils/indexes.js';
 
 /**
  * GraphStorage manages persistence of the knowledge graph to disk.
@@ -69,6 +69,11 @@ export class GraphStorage implements IGraphStorage {
    * Pre-computed lowercase strings for search optimization.
    */
   private lowercaseCache: LowercaseCache = new LowercaseCache();
+
+  /**
+   * O(1) relation lookup by entity name.
+   */
+  private relationIndex: RelationIndex = new RelationIndex();
 
   /**
    * Create a new GraphStorage instance.
@@ -210,8 +215,9 @@ export class GraphStorage implements IGraphStorage {
       // Populate cache
       this.cache = graph;
 
-      // Build indexes from loaded entities
-      this.buildIndexes(graph.entities);
+      // Build indexes from loaded data
+      this.buildEntityIndexes(graph.entities);
+      this.buildRelationIndex(graph.relations);
     } catch (error) {
       // File doesn't exist - create empty graph
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
@@ -224,12 +230,19 @@ export class GraphStorage implements IGraphStorage {
   }
 
   /**
-   * Build all indexes from entity array.
+   * Build all entity indexes from entity array.
    */
-  private buildIndexes(entities: Entity[]): void {
+  private buildEntityIndexes(entities: Entity[]): void {
     this.nameIndex.build(entities);
     this.typeIndex.build(entities);
     this.lowercaseCache.build(entities);
+  }
+
+  /**
+   * Build relation index from relation array.
+   */
+  private buildRelationIndex(relations: Relation[]): void {
+    this.relationIndex.build(relations);
   }
 
   /**
@@ -239,6 +252,7 @@ export class GraphStorage implements IGraphStorage {
     this.nameIndex.clear();
     this.typeIndex.clear();
     this.lowercaseCache.clear();
+    this.relationIndex.clear();
   }
 
   /**
@@ -360,6 +374,10 @@ export class GraphStorage implements IGraphStorage {
 
       // Update cache in-place (after successful file write)
       this.cache!.relations.push(relation);
+
+      // Update relation index
+      this.relationIndex.add(relation);
+
       this.pendingAppends++;
 
       // Clear search caches
@@ -445,7 +463,8 @@ export class GraphStorage implements IGraphStorage {
     this.cache = graph;
 
     // Rebuild indexes with new graph data
-    this.buildIndexes(graph.entities);
+    this.buildEntityIndexes(graph.entities);
+    this.buildRelationIndex(graph.relations);
 
     // Reset pending appends since file is now clean
     this.pendingAppends = 0;
@@ -634,5 +653,53 @@ export class GraphStorage implements IGraphStorage {
    */
   getEntityTypes(): string[] {
     return this.typeIndex.getTypes();
+  }
+
+  // ==================== Relation Index Accessors ====================
+
+  /**
+   * Get all relations where the entity is the source (outgoing relations) in O(1) time.
+   *
+   * OPTIMIZED: Uses RelationIndex for constant-time lookup.
+   *
+   * @param entityName - Entity name to look up outgoing relations for
+   * @returns Array of relations where entity is the source
+   */
+  getRelationsFrom(entityName: string): Relation[] {
+    return this.relationIndex.getRelationsFrom(entityName);
+  }
+
+  /**
+   * Get all relations where the entity is the target (incoming relations) in O(1) time.
+   *
+   * OPTIMIZED: Uses RelationIndex for constant-time lookup.
+   *
+   * @param entityName - Entity name to look up incoming relations for
+   * @returns Array of relations where entity is the target
+   */
+  getRelationsTo(entityName: string): Relation[] {
+    return this.relationIndex.getRelationsTo(entityName);
+  }
+
+  /**
+   * Get all relations involving the entity (both incoming and outgoing) in O(1) time.
+   *
+   * OPTIMIZED: Uses RelationIndex for constant-time lookup.
+   *
+   * @param entityName - Entity name to look up all relations for
+   * @returns Array of all relations involving the entity
+   */
+  getRelationsFor(entityName: string): Relation[] {
+    return this.relationIndex.getRelationsFor(entityName);
+  }
+
+  /**
+   * Check if an entity has any relations.
+   *
+   * @param entityName - Entity name to check
+   * @returns True if entity has any relations
+   */
+  hasRelations(entityName: string): boolean {
+    return this.relationIndex.hasRelations(entityName);
   }
 }

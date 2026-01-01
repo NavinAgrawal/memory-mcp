@@ -207,9 +207,8 @@ export class RelationManager {
    * ```
    */
   async getRelations(entityName: string): Promise<Relation[]> {
-    const graph = await this.storage.loadGraph();
-    return graph.relations.filter(
-      r => r.from === entityName || r.to === entityName
-    );
+    // OPTIMIZED: Uses RelationIndex for O(1) lookup instead of O(n) array scan
+    await this.storage.ensureLoaded();
+    return this.storage.getRelationsFor(entityName);
   }
 }

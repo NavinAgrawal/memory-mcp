@@ -739,6 +739,116 @@ export class SQLiteStorage implements IGraphStorage {
     }
     this.initialized = false;
   }
+
+  // ==================== Relation Index Operations ====================
+
+  /**
+   * Get all relations where the entity is the source (outgoing relations).
+   *
+   * OPTIMIZED: Uses SQLite index on fromEntity for O(log n) lookup.
+   *
+   * @param entityName - Entity name to look up outgoing relations for
+   * @returns Array of relations where entity is the source
+   */
+  getRelationsFrom(entityName: string): Relation[] {
+    // Check cache first
+    if (this.cache) {
+      return this.cache.relations.filter(r => r.from === entityName);
+    }
+
+    // Fall back to database query
+    if (!this.db || !this.initialized) return [];
+    const stmt = this.db.prepare(
+      'SELECT fromEntity, toEntity, relationType, createdAt, lastModified FROM relations WHERE fromEntity = ?'
+    );
+    const rows = stmt.all(entityName) as RelationRow[];
+    return rows.map(row => ({
+      from: row.fromEntity,
+      to: row.toEntity,
+      relationType: row.relationType,
+      createdAt: row.createdAt,
+      lastModified: row.lastModified,
+    }));
+  }
+
+  /**
+   * Get all relations where the entity is the target (incoming relations).
+   *
+   * OPTIMIZED: Uses SQLite index on toEntity for O(log n) lookup.
+   *
+   * @param entityName - Entity name to look up incoming relations for
+   * @returns Array of relations where entity is the target
+   */
+  getRelationsTo(entityName: string): Relation[] {
+    // Check cache first
+    if (this.cache) {
+      return this.cache.relations.filter(r => r.to === entityName);
+    }
+
+    // Fall back to database query
+    if (!this.db || !this.initialized) return [];
+    const stmt = this.db.prepare(
+      'SELECT fromEntity, toEntity, relationType, createdAt, lastModified FROM relations WHERE toEntity = ?'
+    );
+    const rows = stmt.all(entityName) as RelationRow[];
+    return rows.map(row => ({
+      from: row.fromEntity,
+      to: row.toEntity,
+      relationType: row.relationType,
+      createdAt: row.createdAt,
+      lastModified: row.lastModified,
+    }));
+  }
+
+  /**
+   * Get all relations involving the entity (both incoming and outgoing).
+   *
+   * OPTIMIZED: Uses SQLite indexes for efficient lookup.
+   *
+   * @param entityName - Entity name to look up all relations for
+   * @returns Array of all relations involving the entity
+   */
+  getRelationsFor(entityName: string): Relation[] {
+    // Check cache first
+    if (this.cache) {
+      return this.cache.relations.filter(r => r.from === entityName || r.to === entityName);
+    }
+
+    // Fall back to database query
+    if (!this.db || !this.initialized) return [];
+    const stmt = this.db.prepare(
+      'SELECT fromEntity, toEntity, relationType, createdAt, lastModified FROM relations WHERE fromEntity = ? OR toEntity = ?'
+    );
+    const rows = stmt.all(entityName, entityName) as RelationRow[];
+    return rows.map(row => ({
+      from: row.fromEntity,
+      to: row.toEntity,
+      relationType: row.relationType,
+      createdAt: row.createdAt,
+      lastModified: row.lastModified,
+    }));
+  }
+
+  /**
+   * Check if an entity has any relations.
+   *
+   * @param entityName - Entity name to check
+   * @returns True if entity has any relations
+   */
+  hasRelations(entityName: string): boolean {
+    // Check cache first
+    if (this.cache) {
+      return this.cache.relations.some(r => r.from === entityName || r.to === entityName);
+    }
+
+    // Fall back to database query
+    if (!this.db || !this.initialized) return false;
+    const stmt = this.db.prepare(
+      'SELECT 1 FROM relations WHERE fromEntity = ? OR toEntity = ? LIMIT 1'
+    );
+    const row = stmt.get(entityName, entityName);
+    return row !== undefined;
+  }
 }
 
 // ==================== Type Definitions for Database Rows ====================

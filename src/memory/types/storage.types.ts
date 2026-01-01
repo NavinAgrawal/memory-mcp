@@ -157,6 +157,40 @@ export interface IGraphStorage {
    */
   getLowercased(entityName: string): LowercaseData | undefined;
 
+  // ==================== Relation Index Operations ====================
+
+  /**
+   * Get all relations where the entity is the source (outgoing relations) in O(1) time.
+   *
+   * @param entityName - Entity name to look up outgoing relations for
+   * @returns Array of relations where entity is the source
+   */
+  getRelationsFrom(entityName: string): Relation[];
+
+  /**
+   * Get all relations where the entity is the target (incoming relations) in O(1) time.
+   *
+   * @param entityName - Entity name to look up incoming relations for
+   * @returns Array of relations where entity is the target
+   */
+  getRelationsTo(entityName: string): Relation[];
+
+  /**
+   * Get all relations involving the entity (both incoming and outgoing) in O(1) time.
+   *
+   * @param entityName - Entity name to look up all relations for
+   * @returns Array of all relations involving the entity
+   */
+  getRelationsFor(entityName: string): Relation[];
+
+  /**
+   * Check if an entity has any relations.
+   *
+   * @param entityName - Entity name to check
+   * @returns True if entity has any relations
+   */
+  hasRelations(entityName: string): boolean;
+
   // ==================== Utility Operations ====================
 
   /**

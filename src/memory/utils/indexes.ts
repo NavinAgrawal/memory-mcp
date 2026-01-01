@@ -5,11 +5,12 @@
  * - NameIndex: O(1) entity lookup by name
  * - TypeIndex: O(1) entities by type
  * - LowercaseCache: Pre-computed lowercase strings to avoid repeated toLowerCase()
+ * - RelationIndex: O(1) relation lookup by entity name (from/to)
  *
  * @module utils/indexes
  */
 
-import type { Entity, LowercaseData } from '../types/index.js';
+import type { Entity, LowercaseData, Relation } from '../types/index.js';
 
 /**
  * NameIndex provides O(1) entity lookup by name.
@@ -227,5 +228,221 @@ export class LowercaseCache {
       observations: entity.observations.map(o => o.toLowerCase()),
       tags: entity.tags?.map(t => t.toLowerCase()) ?? [],
     };
+  }
+}
+
+/**
+ * RelationIndex provides O(1) lookup of relations by entity name.
+ *
+ * Maintains two separate indexes for efficient directional queries:
+ * - fromIndex: Map from source entity name to its outgoing relations
+ * - toIndex: Map from target entity name to its incoming relations
+ *
+ * This eliminates O(n) array scans when looking up relations for an entity.
+ */
+export class RelationIndex {
+  /** Index of relations by source (from) entity */
+  private fromIndex: Map<string, Set<Relation>> = new Map();
+
+  /** Index of relations by target (to) entity */
+  private toIndex: Map<string, Set<Relation>> = new Map();
+
+  /**
+   * Build the index from an array of relations.
+   * Clears any existing index data first.
+   */
+  build(relations: Relation[]): void {
+    this.fromIndex.clear();
+    this.toIndex.clear();
+    for (const relation of relations) {
+      this.addToIndexes(relation);
+    }
+  }
+
+  /**
+   * Get all relations where the entity is the source (outgoing relations).
+   * Returns empty array if no relations found.
+   */
+  getRelationsFrom(entityName: string): Relation[] {
+    const relations = this.fromIndex.get(entityName);
+    return relations ? Array.from(relations) : [];
+  }
+
+  /**
+   * Get all relations where the entity is the target (incoming relations).
+   * Returns empty array if no relations found.
+   */
+  getRelationsTo(entityName: string): Relation[] {
+    const relations = this.toIndex.get(entityName);
+    return relations ? Array.from(relations) : [];
+  }
+
+  /**
+   * Get all relations involving the entity (both incoming and outgoing).
+   * Returns empty array if no relations found.
+   */
+  getRelationsFor(entityName: string): Relation[] {
+    const fromRelations = this.fromIndex.get(entityName);
+    const toRelations = this.toIndex.get(entityName);
+
+    // Combine sets to handle self-referential relations correctly
+    const combined = new Set<Relation>();
+    if (fromRelations) {
+      for (const r of fromRelations) {
+        combined.add(r);
+      }
+    }
+    if (toRelations) {
+      for (const r of toRelations) {
+        combined.add(r);
+      }
+    }
+    return Array.from(combined);
+  }
+
+  /**
+   * Add a single relation to the index.
+   */
+  add(relation: Relation): void {
+    this.addToIndexes(relation);
+  }
+
+  /**
+   * Remove a relation from the index.
+   * Matches by from, to, and relationType.
+   */
+  remove(relation: Relation): void {
+    // Remove from fromIndex
+    const fromRelations = this.fromIndex.get(relation.from);
+    if (fromRelations) {
+      for (const r of fromRelations) {
+        if (r.from === relation.from && r.to === relation.to && r.relationType === relation.relationType) {
+          fromRelations.delete(r);
+          break;
+        }
+      }
+      if (fromRelations.size === 0) {
+        this.fromIndex.delete(relation.from);
+      }
+    }
+
+    // Remove from toIndex
+    const toRelations = this.toIndex.get(relation.to);
+    if (toRelations) {
+      for (const r of toRelations) {
+        if (r.from === relation.from && r.to === relation.to && r.relationType === relation.relationType) {
+          toRelations.delete(r);
+          break;
+        }
+      }
+      if (toRelations.size === 0) {
+        this.toIndex.delete(relation.to);
+      }
+    }
+  }
+
+  /**
+   * Remove all relations involving a specific entity.
+   * Returns the relations that were removed.
+   */
+  removeAllForEntity(entityName: string): Relation[] {
+    const removed: Relation[] = [];
+
+    // Remove outgoing relations
+    const fromRelations = this.fromIndex.get(entityName);
+    if (fromRelations) {
+      for (const r of fromRelations) {
+        removed.push(r);
+        // Also remove from toIndex
+        const toRels = this.toIndex.get(r.to);
+        if (toRels) {
+          toRels.delete(r);
+          if (toRels.size === 0) {
+            this.toIndex.delete(r.to);
+          }
+        }
+      }
+      this.fromIndex.delete(entityName);
+    }
+
+    // Remove incoming relations
+    const toRelations = this.toIndex.get(entityName);
+    if (toRelations) {
+      for (const r of toRelations) {
+        // Skip self-referential relations (already handled above)
+        if (r.from === entityName) continue;
+        removed.push(r);
+        // Also remove from fromIndex
+        const fromRels = this.fromIndex.get(r.from);
+        if (fromRels) {
+          fromRels.delete(r);
+          if (fromRels.size === 0) {
+            this.fromIndex.delete(r.from);
+          }
+        }
+      }
+      this.toIndex.delete(entityName);
+    }
+
+    return removed;
+  }
+
+  /**
+   * Check if any relations exist for an entity.
+   */
+  hasRelations(entityName: string): boolean {
+    return this.fromIndex.has(entityName) || this.toIndex.has(entityName);
+  }
+
+  /**
+   * Get count of outgoing relations for an entity.
+   */
+  getOutgoingCount(entityName: string): number {
+    return this.fromIndex.get(entityName)?.size ?? 0;
+  }
+
+  /**
+   * Get count of incoming relations for an entity.
+   */
+  getIncomingCount(entityName: string): number {
+    return this.toIndex.get(entityName)?.size ?? 0;
+  }
+
+  /**
+   * Get total count of unique relations in the index.
+   */
+  get size(): number {
+    // Count all relations in fromIndex (each relation appears exactly once there)
+    let count = 0;
+    for (const relations of this.fromIndex.values()) {
+      count += relations.size;
+    }
+    return count;
+  }
+
+  /**
+   * Clear all entries from the index.
+   */
+  clear(): void {
+    this.fromIndex.clear();
+    this.toIndex.clear();
+  }
+
+  private addToIndexes(relation: Relation): void {
+    // Add to fromIndex
+    let fromSet = this.fromIndex.get(relation.from);
+    if (!fromSet) {
+      fromSet = new Set();
+      this.fromIndex.set(relation.from, fromSet);
+    }
+    fromSet.add(relation);
+
+    // Add to toIndex
+    let toSet = this.toIndex.get(relation.to);
+    if (!toSet) {
+      toSet = new Set();
+      this.toIndex.set(relation.to, toSet);
+    }
+    toSet.add(relation);
   }
 }
