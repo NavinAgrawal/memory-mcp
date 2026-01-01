@@ -8,6 +8,7 @@
  */
 
 import { promises as fs } from 'fs';
+import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 import { NameIndex, TypeIndex, LowercaseCache } from '../utils/indexes.js';
@@ -30,6 +31,12 @@ import { NameIndex, TypeIndex, LowercaseCache } from '../utils/indexes.js';
  * ```
  */
 export class GraphStorage implements IGraphStorage {
+  /**
+   * Mutex for thread-safe access to storage operations.
+   * Prevents concurrent writes from corrupting the file or cache.
+   */
+  private mutex = new Mutex();
+
   /**
    * In-memory cache of the knowledge graph.
    * Null when cache is empty or invalidated.
@@ -238,6 +245,7 @@ export class GraphStorage implements IGraphStorage {
    * Save the knowledge graph to disk.
    *
    * OPTIMIZED: Updates cache directly after write to avoid re-reading.
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
    *
    * Writes the graph to JSONL format, with one JSON object per line.
    *
@@ -246,9 +254,164 @@ export class GraphStorage implements IGraphStorage {
    * @throws Error if file cannot be written
    */
   async saveGraph(graph: KnowledgeGraph): Promise<void> {
+    return this.mutex.runExclusive(async () => {
+      await this.saveGraphInternal(graph);
+    });
+  }
+
+  /**
+   * Append a single entity to the file (O(1) write operation).
+   *
+   * OPTIMIZED: Uses file append instead of full rewrite.
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
+   * Updates cache in-place and triggers compaction when threshold is reached.
+   *
+   * @param entity - The entity to append
+   * @returns Promise resolving when append is complete
+   */
+  async appendEntity(entity: Entity): Promise<void> {
+    await this.ensureLoaded();
+
+    return this.mutex.runExclusive(async () => {
+      const entityData: Record<string, unknown> = {
+        type: 'entity',
+        name: entity.name,
+        entityType: entity.entityType,
+        observations: entity.observations,
+        createdAt: entity.createdAt,
+        lastModified: entity.lastModified,
+      };
+
+      // Only include optional fields if they exist
+      if (entity.tags !== undefined) entityData.tags = entity.tags;
+      if (entity.importance !== undefined) entityData.importance = entity.importance;
+      if (entity.parentId !== undefined) entityData.parentId = entity.parentId;
+
+      const line = JSON.stringify(entityData);
+
+      // Append to file with fsync for durability (write FIRST, then update cache)
+      try {
+        const stat = await fs.stat(this.memoryFilePath);
+        await this.durableAppendFile(line, stat.size > 0);
+      } catch (error) {
+        // File doesn't exist - create it
+        if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+          await this.durableWriteFile(line);
+        } else {
+          throw error;
+        }
+      }
+
+      // Update cache in-place (after successful file write)
+      this.cache!.entities.push(entity);
+
+      // Update indexes
+      this.nameIndex.add(entity);
+      this.typeIndex.add(entity);
+      this.lowercaseCache.set(entity);
+
+      this.pendingAppends++;
+
+      // Clear search caches
+      clearAllSearchCaches();
+
+      // Trigger compaction if threshold reached
+      if (this.pendingAppends >= this.compactionThreshold) {
+        await this.compactInternal();
+      }
+    });
+  }
+
+  /**
+   * Append a single relation to the file (O(1) write operation).
+   *
+   * OPTIMIZED: Uses file append instead of full rewrite.
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
+   * Updates cache in-place and triggers compaction when threshold is reached.
+   *
+   * @param relation - The relation to append
+   * @returns Promise resolving when append is complete
+   */
+  async appendRelation(relation: Relation): Promise<void> {
+    await this.ensureLoaded();
+
+    return this.mutex.runExclusive(async () => {
+      const line = JSON.stringify({
+        type: 'relation',
+        from: relation.from,
+        to: relation.to,
+        relationType: relation.relationType,
+        createdAt: relation.createdAt,
+        lastModified: relation.lastModified,
+      });
+
+      // Append to file with fsync for durability (write FIRST, then update cache)
+      try {
+        const stat = await fs.stat(this.memoryFilePath);
+        await this.durableAppendFile(line, stat.size > 0);
+      } catch (error) {
+        // File doesn't exist - create it
+        if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+          await this.durableWriteFile(line);
+        } else {
+          throw error;
+        }
+      }
+
+      // Update cache in-place (after successful file write)
+      this.cache!.relations.push(relation);
+      this.pendingAppends++;
+
+      // Clear search caches
+      clearAllSearchCaches();
+
+      // Trigger compaction if threshold reached
+      if (this.pendingAppends >= this.compactionThreshold) {
+        await this.compactInternal();
+      }
+    });
+  }
+
+  /**
+   * Compact the file by rewriting it with only current cache contents.
+   *
+   * THREAD-SAFE: Uses mutex to prevent concurrent operations.
+   * Removes duplicate entries and cleans up the file.
+   * Resets pending appends counter.
+   *
+   * @returns Promise resolving when compaction is complete
+   */
+  async compact(): Promise<void> {
+    return this.mutex.runExclusive(async () => {
+      await this.compactInternal();
+    });
+  }
+
+  /**
+   * Internal compact implementation (must be called within mutex).
+   *
+   * @returns Promise resolving when compaction is complete
+   */
+  private async compactInternal(): Promise<void> {
+    if (this.cache === null) {
+      return;
+    }
+
+    // Rewrite file with current cache (removes duplicates/updates)
+    await this.saveGraphInternal(this.cache);
+    this.pendingAppends = 0;
+  }
+
+  /**
+   * Internal saveGraph implementation (must be called within mutex).
+   *
+   * @param graph - The knowledge graph to save
+   * @returns Promise resolving when save is complete
+   */
+  private async saveGraphInternal(graph: KnowledgeGraph): Promise<void> {
     const lines = [
       ...graph.entities.map(e => {
-        const entityData: any = {
+        const entityData: Record<string, unknown> = {
           type: 'entity',
           name: e.name,
           entityType: e.entityType,
@@ -292,131 +455,6 @@ export class GraphStorage implements IGraphStorage {
   }
 
   /**
-   * Append a single entity to the file (O(1) write operation).
-   *
-   * OPTIMIZED: Uses file append instead of full rewrite.
-   * Updates cache in-place and triggers compaction when threshold is reached.
-   *
-   * @param entity - The entity to append
-   * @returns Promise resolving when append is complete
-   */
-  async appendEntity(entity: Entity): Promise<void> {
-    await this.ensureLoaded();
-
-    const entityData: Record<string, unknown> = {
-      type: 'entity',
-      name: entity.name,
-      entityType: entity.entityType,
-      observations: entity.observations,
-      createdAt: entity.createdAt,
-      lastModified: entity.lastModified,
-    };
-
-    // Only include optional fields if they exist
-    if (entity.tags !== undefined) entityData.tags = entity.tags;
-    if (entity.importance !== undefined) entityData.importance = entity.importance;
-    if (entity.parentId !== undefined) entityData.parentId = entity.parentId;
-
-    const line = JSON.stringify(entityData);
-
-    // Append to file with fsync for durability (write FIRST, then update cache)
-    try {
-      const stat = await fs.stat(this.memoryFilePath);
-      await this.durableAppendFile(line, stat.size > 0);
-    } catch (error) {
-      // File doesn't exist - create it
-      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        await this.durableWriteFile(line);
-      } else {
-        throw error;
-      }
-    }
-
-    // Update cache in-place (after successful file write)
-    this.cache!.entities.push(entity);
-
-    // Update indexes
-    this.nameIndex.add(entity);
-    this.typeIndex.add(entity);
-    this.lowercaseCache.set(entity);
-
-    this.pendingAppends++;
-
-    // Clear search caches
-    clearAllSearchCaches();
-
-    // Trigger compaction if threshold reached
-    if (this.pendingAppends >= this.compactionThreshold) {
-      await this.compact();
-    }
-  }
-
-  /**
-   * Append a single relation to the file (O(1) write operation).
-   *
-   * OPTIMIZED: Uses file append instead of full rewrite.
-   * Updates cache in-place and triggers compaction when threshold is reached.
-   *
-   * @param relation - The relation to append
-   * @returns Promise resolving when append is complete
-   */
-  async appendRelation(relation: Relation): Promise<void> {
-    await this.ensureLoaded();
-
-    const line = JSON.stringify({
-      type: 'relation',
-      from: relation.from,
-      to: relation.to,
-      relationType: relation.relationType,
-      createdAt: relation.createdAt,
-      lastModified: relation.lastModified,
-    });
-
-    // Append to file with fsync for durability (write FIRST, then update cache)
-    try {
-      const stat = await fs.stat(this.memoryFilePath);
-      await this.durableAppendFile(line, stat.size > 0);
-    } catch (error) {
-      // File doesn't exist - create it
-      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        await this.durableWriteFile(line);
-      } else {
-        throw error;
-      }
-    }
-
-    // Update cache in-place (after successful file write)
-    this.cache!.relations.push(relation);
-    this.pendingAppends++;
-
-    // Clear search caches
-    clearAllSearchCaches();
-
-    // Trigger compaction if threshold reached
-    if (this.pendingAppends >= this.compactionThreshold) {
-      await this.compact();
-    }
-  }
-
-  /**
-   * Compact the file by rewriting it with only current cache contents.
-   *
-   * Removes duplicate entries and cleans up the file.
-   * Resets pending appends counter.
-   *
-   * @returns Promise resolving when compaction is complete
-   */
-  async compact(): Promise<void> {
-    if (this.cache === null) {
-      return;
-    }
-
-    // Rewrite file with current cache (removes duplicates/updates)
-    await this.saveGraph(this.cache);
-    this.pendingAppends = 0;
-  }
-
-  /**
    * Get the current pending appends count.
    *
    * Useful for testing compaction behavior.
@@ -431,6 +469,7 @@ export class GraphStorage implements IGraphStorage {
    * Update an entity in-place in the cache and append to file.
    *
    * OPTIMIZED: Modifies cache directly and appends updated version to file.
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
    * Does not rewrite the entire file - compaction handles deduplication later.
    *
    * @param entityName - Name of the entity to update
@@ -440,72 +479,74 @@ export class GraphStorage implements IGraphStorage {
   async updateEntity(entityName: string, updates: Partial<Entity>): Promise<boolean> {
     await this.ensureLoaded();
 
-    const entityIndex = this.cache!.entities.findIndex(e => e.name === entityName);
-    if (entityIndex === -1) {
-      return false;
-    }
-
-    const entity = this.cache!.entities[entityIndex];
-    const oldType = entity.entityType;
-    const timestamp = new Date().toISOString();
-
-    // Build the updated entity data for file write BEFORE modifying cache
-    // This ensures cache consistency if file write fails
-    const updatedEntity = {
-      ...entity,
-      ...updates,
-      lastModified: timestamp,
-    };
-
-    const entityData: Record<string, unknown> = {
-      type: 'entity',
-      name: updatedEntity.name,
-      entityType: updatedEntity.entityType,
-      observations: updatedEntity.observations,
-      createdAt: updatedEntity.createdAt,
-      lastModified: updatedEntity.lastModified,
-    };
-
-    if (updatedEntity.tags !== undefined) entityData.tags = updatedEntity.tags;
-    if (updatedEntity.importance !== undefined) entityData.importance = updatedEntity.importance;
-    if (updatedEntity.parentId !== undefined) entityData.parentId = updatedEntity.parentId;
-
-    const line = JSON.stringify(entityData);
-
-    // Write to file FIRST with durability - if this fails, cache remains consistent
-    try {
-      const stat = await fs.stat(this.memoryFilePath);
-      await this.durableAppendFile(line, stat.size > 0);
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        await this.durableWriteFile(line);
-      } else {
-        throw error;
+    return this.mutex.runExclusive(async () => {
+      const entityIndex = this.cache!.entities.findIndex(e => e.name === entityName);
+      if (entityIndex === -1) {
+        return false;
       }
-    }
 
-    // File write succeeded - NOW update cache in-place
-    Object.assign(entity, updates);
-    entity.lastModified = timestamp;
+      const entity = this.cache!.entities[entityIndex];
+      const oldType = entity.entityType;
+      const timestamp = new Date().toISOString();
 
-    // Update indexes
-    this.nameIndex.add(entity); // Update reference
-    if (updates.entityType && updates.entityType !== oldType) {
-      this.typeIndex.updateType(entityName, oldType, updates.entityType);
-    }
-    this.lowercaseCache.set(entity); // Recompute lowercase
+      // Build the updated entity data for file write BEFORE modifying cache
+      // This ensures cache consistency if file write fails
+      const updatedEntity = {
+        ...entity,
+        ...updates,
+        lastModified: timestamp,
+      };
 
-    this.pendingAppends++;
+      const entityData: Record<string, unknown> = {
+        type: 'entity',
+        name: updatedEntity.name,
+        entityType: updatedEntity.entityType,
+        observations: updatedEntity.observations,
+        createdAt: updatedEntity.createdAt,
+        lastModified: updatedEntity.lastModified,
+      };
 
-    // Clear search caches
-    clearAllSearchCaches();
+      if (updatedEntity.tags !== undefined) entityData.tags = updatedEntity.tags;
+      if (updatedEntity.importance !== undefined) entityData.importance = updatedEntity.importance;
+      if (updatedEntity.parentId !== undefined) entityData.parentId = updatedEntity.parentId;
 
-    // Trigger compaction if threshold reached
-    if (this.pendingAppends >= this.compactionThreshold) {
-      await this.compact();
-    }
+      const line = JSON.stringify(entityData);
 
-    return true;
+      // Write to file FIRST with durability - if this fails, cache remains consistent
+      try {
+        const stat = await fs.stat(this.memoryFilePath);
+        await this.durableAppendFile(line, stat.size > 0);
+      } catch (error) {
+        if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+          await this.durableWriteFile(line);
+        } else {
+          throw error;
+        }
+      }
+
+      // File write succeeded - NOW update cache in-place
+      Object.assign(entity, updates);
+      entity.lastModified = timestamp;
+
+      // Update indexes
+      this.nameIndex.add(entity); // Update reference
+      if (updates.entityType && updates.entityType !== oldType) {
+        this.typeIndex.updateType(entityName, oldType, updates.entityType);
+      }
+      this.lowercaseCache.set(entity); // Recompute lowercase
+
+      this.pendingAppends++;
+
+      // Clear search caches
+      clearAllSearchCaches();
+
+      // Trigger compaction if threshold reached
+      if (this.pendingAppends >= this.compactionThreshold) {
+        await this.compactInternal();
+      }
+
+      return true;
+    });
   }
 
   /**

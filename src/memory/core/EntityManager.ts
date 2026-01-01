@@ -349,6 +349,7 @@ export class EntityManager {
    * - Adds new observations to specified entities
    * - Filters out duplicate observations (already present)
    * - Updates lastModified timestamp only if new observations were added
+   * - ATOMIC: All updates are saved in a single operation
    *
    * @param observations - Array of entity names and observations to add
    * @returns Promise resolving to array of results showing which observations were added
@@ -373,12 +374,14 @@ export class EntityManager {
   async addObservations(
     observations: { entityName: string; contents: string[] }[]
   ): Promise<{ entityName: string; addedObservations: string[] }[]> {
-    // Use read-only graph for validation
-    const readGraph = await this.storage.loadGraph();
+    // Get mutable graph for atomic update
+    const graph = await this.storage.getGraphForMutation();
+    const timestamp = new Date().toISOString();
     const results: { entityName: string; addedObservations: string[] }[] = [];
+    let hasChanges = false;
 
     for (const o of observations) {
-      const entity = readGraph.entities.find(e => e.name === o.entityName);
+      const entity = graph.entities.find(e => e.name === o.entityName);
       if (!entity) {
         throw new EntityNotFoundError(o.entityName);
       }
@@ -386,12 +389,18 @@ export class EntityManager {
       const newObservations = o.contents.filter(content => !entity.observations.includes(content));
 
       if (newObservations.length > 0) {
-        // OPTIMIZED: Use updateEntity for in-place update + append
-        const updatedObservations = [...entity.observations, ...newObservations];
-        await this.storage.updateEntity(o.entityName, { observations: updatedObservations });
+        // Add new observations directly to the entity
+        entity.observations.push(...newObservations);
+        entity.lastModified = timestamp;
+        hasChanges = true;
       }
 
       results.push({ entityName: o.entityName, addedObservations: newObservations });
+    }
+
+    // Save all changes in a single atomic operation
+    if (hasChanges) {
+      await this.storage.saveGraph(graph);
     }
 
     return results;
@@ -404,6 +413,7 @@ export class EntityManager {
    * - Removes specified observations from entities
    * - Updates lastModified timestamp only if observations were deleted
    * - Silently ignores entities that don't exist (no error thrown)
+   * - ATOMIC: All deletions are saved in a single operation
    *
    * @param deletions - Array of entity names and observations to delete
    * @returns Promise that resolves when deletion is complete
@@ -427,8 +437,10 @@ export class EntityManager {
   async deleteObservations(
     deletions: { entityName: string; observations: string[] }[]
   ): Promise<void> {
+    // Get mutable graph for atomic update
     const graph = await this.storage.getGraphForMutation();
     const timestamp = new Date().toISOString();
+    let hasChanges = false;
 
     deletions.forEach(d => {
       const entity = graph.entities.find(e => e.name === d.entityName);
@@ -439,11 +451,15 @@ export class EntityManager {
         // Update lastModified timestamp if observations were deleted
         if (entity.observations.length < originalLength) {
           entity.lastModified = timestamp;
+          hasChanges = true;
         }
       }
     });
 
-    await this.storage.saveGraph(graph);
+    // Save all changes in a single atomic operation
+    if (hasChanges) {
+      await this.storage.saveGraph(graph);
+    }
   }
 
   /**
