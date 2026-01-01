@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.59.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-8.50.24-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -33,7 +33,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 ### Core Memory Capabilities
 - **Knowledge Graph Storage**: Entity-Relation-Observation model for structured memory
 - **Persistent Memory**: Information persists across chat sessions with JSONL or SQLite storage
-- **Dual Storage Backends**: JSONL (human-readable) or SQLite (indexed, ACID transactions)
+- **Dual Storage Backends**: JSONL (human-readable) or SQLite with better-sqlite3 (3-10x faster, FTS5 search)
 - **Full CRUD Operations**: Create, read, update, delete entities and relations
 - **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
 
@@ -81,8 +81,11 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Security** | Basic | ✅ Input validation |
 | **Reliability** | Basic | ✅ Backups & Transactions |
 | **Performance** | Basic | ✅ Caching & Optimizations |
+| **SQLite Backend** | ❌ | ✅ better-sqlite3 (3-10x faster) |
+| **Full-Text Search** | ❌ | ✅ FTS5 with BM25 ranking |
+| **Concurrency Control** | ❌ | ✅ Thread-safe with async-mutex |
 | **Total Tools** | 11 | **47** (+327%) |
-| **Code Structure** | Monolithic | **Modular** (49 files, ~8.5K lines) |
+| **Code Structure** | Monolithic | **Modular** (43 files, ~10.7K lines) |
 
 ## Key Features
 
@@ -1481,15 +1484,18 @@ Comprehensive documentation organized by category:
 - **`MEMORY_STORAGE_TYPE`**: Storage backend to use
   - **Values**: `jsonl` (default) or `sqlite`
   - **JSONL**: Human-readable, line-based JSON format
-  - **SQLite**: Indexed database with ACID transactions (via sql.js WASM)
+  - **SQLite**: Native database with better-sqlite3 (3-10x faster, FTS5 full-text search, WAL mode)
 
 ### Storage Backends
 
-| Feature | JSONL (Default) | SQLite |
-|---------|-----------------|--------|
-| Format | Human-readable text | Binary database |
-| Transactions | Basic | Full ACID |
-| Indexing | In-memory | B-tree indexes |
+| Feature | JSONL (Default) | SQLite (better-sqlite3) |
+|---------|-----------------|-------------------------|
+| Format | Human-readable text | Native binary database |
+| Transactions | Basic | Full ACID with WAL mode |
+| Indexing | In-memory | B-tree + FTS5 full-text |
+| Full-Text Search | Basic | FTS5 with BM25 ranking |
+| Performance | Good | 3-10x faster |
+| Concurrency | Single-threaded | Thread-safe with async-mutex |
 | Best For | Small graphs, debugging | Large graphs (10k+ entities) |
 | File Extension | `.jsonl` | `.db`, `.sqlite` |
 
@@ -1630,6 +1636,8 @@ npm run typecheck # TypeScript type checking
 ┌──────────────────────┴──────────────────────────────┐
 │  Layer 3: Storage Layer                             │
 │  core/GraphStorage.ts (JSONL + in-memory cache)     │
+│  core/SQLiteStorage.ts (better-sqlite3 + FTS5)      │
+│  core/StorageFactory.ts (backend selection)         │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -1637,16 +1645,19 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/memory/                     # Main source (49 TypeScript files)
+├── src/memory/                     # Main source (43 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── vitest.config.ts            # Test configuration
-│   ├── core/                       # Core managers (7 files)
+│   ├── core/                       # Core managers (10 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
 │   │   ├── EntityManager.ts            # Entity CRUD + hierarchy + archive
 │   │   ├── RelationManager.ts          # Relation CRUD
 │   │   ├── GraphStorage.ts             # JSONL I/O + caching
+│   │   ├── SQLiteStorage.ts            # SQLite with better-sqlite3
 │   │   ├── TransactionManager.ts       # ACID transactions
 │   │   ├── StorageFactory.ts           # Storage backend factory
+│   │   ├── HierarchyManager.ts         # Tree operations
+│   │   ├── ObservationManager.ts       # Observation CRUD
 │   │   └── index.ts                    # Barrel export (+ KnowledgeGraphManager alias)
 │   ├── server/                     # MCP protocol layer (3 files)
 │   │   ├── MCPServer.ts                # Server setup (67 lines)
@@ -1663,29 +1674,26 @@ memory-mcp/
 │   │   ├── TFIDFIndexManager.ts        # TF-IDF index
 │   │   ├── SearchFilterChain.ts        # Unified filters
 │   │   └── index.ts
-│   ├── features/                   # Advanced capabilities (3 files)
+│   ├── features/                   # Advanced capabilities (6 files)
 │   │   ├── IOManager.ts                # Import + export + backup (consolidated)
 │   │   ├── TagManager.ts               # Tag aliases
+│   │   ├── AnalyticsManager.ts         # Graph stats/validation
+│   │   ├── ArchiveManager.ts           # Entity archival
+│   │   ├── CompressionManager.ts       # Duplicate detection/merging
 │   │   └── index.ts
-│   ├── types/                      # TypeScript definitions (7 files)
-│   │   ├── entity.types.ts
-│   │   ├── search.types.ts
-│   │   ├── analytics.types.ts
-│   │   ├── import-export.types.ts
-│   │   ├── tag.types.ts
-│   │   ├── storage.types.ts            # IGraphStorage interface
+│   ├── types/                      # TypeScript definitions (2 files)
+│   │   ├── types.ts                    # All type definitions (consolidated)
 │   │   └── index.ts
-│   ├── utils/                      # Shared utilities (17 files)
+│   ├── utils/                      # Shared utilities (10 files)
 │   │   ├── schemas.ts                  # Zod validation (14 schemas)
 │   │   ├── constants.ts                # Shared constants (SIMILARITY_WEIGHTS)
 │   │   ├── errors.ts                   # Custom error types
 │   │   ├── searchAlgorithms.ts         # Levenshtein + TF-IDF (consolidated)
-│   │   ├── responseFormatter.ts        # Tool response helpers
-│   │   ├── entityUtils.ts              # Entity helper functions
-│   │   ├── tagUtils.ts                 # Tag normalization/validation
-│   │   ├── searchCache.ts              # Result caching
-│   │   └── ... (more utilities)
-│   ├── __tests__/                  # Test suite (1484 tests)
+│   │   ├── entityUtils.ts              # Entity/tag/date/filter/path utilities
+│   │   ├── formatters.ts               # Response formatting + pagination
+│   │   ├── indexes.ts                  # NameIndex, TypeIndex, RelationIndex
+│   │   └── index.ts
+│   ├── __tests__/                  # Test suite (1537 tests)
 │   └── dist/                       # Compiled output
 ├── docs/                           # Documentation
 │   ├── architecture/               # Architecture docs
@@ -1702,7 +1710,7 @@ memory-mcp/
 ```bash
 npm run build      # Build TypeScript to JavaScript
 npm run watch      # Watch mode for development
-npm test           # Run 1484 tests with coverage
+npm test           # Run 1537 tests with coverage
 npm run typecheck  # TypeScript strict type checking
 npm run clean      # Clean dist/ directories
 npm run docs:deps  # Generate dependency graph
