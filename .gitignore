@@ -307,6 +307,10 @@ cython_debug/
 
 # Memory data files
 *.jsonl
+memory.db
 /.claude
 /.claude
 tools/migrate-from-jsonl-to-sqlite/migrate-from-jsonl-to-sqlite.exe
+
+# Windows null device artifact
+nul
