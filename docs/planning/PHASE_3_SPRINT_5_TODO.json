@@ -1,0 +1,149 @@
+{
+  "phase": 3,
+  "sprint": 5,
+  "title": "Archive & Cache Compression + Documentation",
+  "priority": "LOW",
+  "effort": "8 hours",
+  "status": "planned",
+  "impact": "Efficient long-term storage, reduced RAM for large graphs, comprehensive documentation",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Implement Archive Compression in EntityManager - Modify archiveEntities() to compress archive files with BROTLI_QUALITY_ARCHIVE (11), save as .jsonl.br in .archives/ directory",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/EntityManager.ts"],
+      "testCategories": [
+        "Archive compression",
+        "File naming (.jsonl.br)",
+        "Compression metadata"
+      ],
+      "acceptanceCriteria": [
+        "Archives compressed with maximum quality",
+        "Archive metadata included",
+        "Entities removed after archiving",
+        "Dry run option works",
+        "All archive tests pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Utils",
+      "description": "Implement Cache Layer Compression - Create CompressedCache class with LRU eviction and automatic compression of old entries using sync brotli",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/utils/compressedCache.ts", "src/memory/__tests__/unit/utils/compressedCache.test.ts"],
+      "testCategories": [
+        "LRU eviction",
+        "Automatic compression",
+        "Decompression on access",
+        "Stats reporting"
+      ],
+      "acceptanceCriteria": [
+        "LRU cache with compression for old entries",
+        "Automatic decompression on access",
+        "Configurable thresholds (maxUncompressed, compressionThresholdMs)",
+        "Stats reporting (total, compressed, uncompressed)",
+        "Sync operations for cache speed",
+        "15+ unit tests for CompressedCache"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Search",
+      "description": "Add Compression Stats to Analytics - Optionally integrate CompressedCache stats into get_graph_stats output",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/search/SearchManager.ts"],
+      "testCategories": [
+        "Cache stats integration"
+      ],
+      "acceptanceCriteria": [
+        "Cache compression stats available if enabled",
+        "Backward compatible output"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Documentation",
+      "description": "Create COMPRESSION.md Guide - Comprehensive guide covering all compression features, configuration, migration, troubleshooting, and performance tuning",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["docs/guides/COMPRESSION.md"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "All compression features documented",
+        "Quality level recommendations",
+        "Migration steps from uncompressed to compressed",
+        "Mixed backup handling explained",
+        "Rollback procedure included",
+        "Client-side decompression examples (Node.js, browser)",
+        "Troubleshooting section",
+        "Performance tuning guidance"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Documentation",
+      "description": "Update CLAUDE.md - Add compression guidance, environment variables, and configuration options",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["CLAUDE.md"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "Compression features documented",
+        "Configuration options listed",
+        "Environment variables if any"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Performance",
+      "description": "Performance Benchmarking - Create benchmark tests comparing compression overhead, ratio by quality level, and memory usage",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/performance/compression-benchmarks.test.ts"],
+      "testCategories": [
+        "Compression overhead by quality",
+        "Decompression speed",
+        "Memory usage",
+        "Real-world graph benchmarks"
+      ],
+      "acceptanceCriteria": [
+        "Baseline performance established",
+        "Quality level comparison",
+        "Memory overhead measured",
+        "Results documented"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Archive compression implemented",
+    "CompressedCache class created with tests",
+    "Comprehensive documentation complete",
+    "Performance benchmarks passing",
+    "All Phase 3 features documented"
+  ],
+  "filesCreated": [
+    "src/memory/utils/compressedCache.ts",
+    "src/memory/__tests__/unit/utils/compressedCache.test.ts",
+    "src/memory/__tests__/performance/compression-benchmarks.test.ts",
+    "docs/guides/COMPRESSION.md"
+  ],
+  "filesModified": [
+    "src/memory/core/EntityManager.ts",
+    "src/memory/search/SearchManager.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 25,
+  "totalEstimatedHours": 7.5,
+  "dependencies": ["Sprint 2", "Sprint 3", "Sprint 4"],
+  "notes": "Final sprint - depends on all other sprints completing. Cache compression is optional and primarily benefits very large graphs (50k+ entities). Documentation is critical for adoption. Reduced from 7 tasks to 6 by consolidating COMPRESSION.md documentation tasks."
+}

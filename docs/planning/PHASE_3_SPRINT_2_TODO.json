@@ -1,0 +1,119 @@
+{
+  "phase": 3,
+  "sprint": 2,
+  "title": "Backup Compression",
+  "priority": "HIGH",
+  "effort": "6 hours",
+  "status": "planned",
+  "impact": "Immediate 50-70% backup space reduction with zero runtime impact",
+  "targetMetrics": {
+    "backupSize5K": { "current": "~1.25 MB", "target": "~375 KB" },
+    "backupSize50K": { "current": "~12.5 MB", "target": "~3.75 MB" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Features",
+      "description": "Implement Compressed Backup Creation - Modify IOManager.createBackup() to compress backup data with BROTLI_QUALITY_ARCHIVE (11), save as .jsonl.br, and write metadata file",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/features/IOManager.ts"],
+      "testCategories": [
+        "Backup creation with compression",
+        "Metadata file generation",
+        "Correct file naming (.jsonl.br)",
+        "Compression ratio verification"
+      ],
+      "acceptanceCriteria": [
+        "Backups compressed with quality level 11",
+        "Backup files saved as .jsonl.br",
+        "Metadata file (.meta.json) includes compression info",
+        "50-70% size reduction achieved",
+        "All existing backup tests still pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Features",
+      "description": "Implement Compressed Backup Restoration - Modify IOManager.restoreBackup() to detect .br extension and decompress before parsing, maintain backward compatibility with uncompressed backups",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/features/IOManager.ts"],
+      "testCategories": [
+        "Restore compressed backup",
+        "Restore uncompressed backup (backward compat)",
+        "Extension-based detection",
+        "Graph validation after restore"
+      ],
+      "acceptanceCriteria": [
+        "Detects compression via .br file extension",
+        "Decompresses brotli backups correctly",
+        "Maintains backward compatibility with old backups",
+        "Validates graph structure after decompression",
+        "All restore tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Features",
+      "description": "Update listBackups to Show Compression Info - Add extractTimestamp() helper, show compressed flag, original size, and compression ratio when metadata available",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/features/IOManager.ts"],
+      "testCategories": [
+        "List compressed and uncompressed backups",
+        "Show compression ratio",
+        "Metadata parsing"
+      ],
+      "acceptanceCriteria": [
+        "Lists both compressed and uncompressed backups",
+        "Shows compression ratio when metadata available",
+        "Handles missing metadata gracefully",
+        "Sorted by timestamp (newest first)"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Backup Compression Integration Tests - Test end-to-end backup/restore with compression, backward compatibility, and space savings verification",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/integration/backup-compression.test.ts"],
+      "testCategories": [
+        "Create compressed backup",
+        "Restore compressed backup",
+        "Restore old uncompressed backup",
+        "Verify compression ratio",
+        "Metadata file contents"
+      ],
+      "acceptanceCriteria": [
+        "End-to-end backup/restore works",
+        "Backward compatibility verified",
+        "Compression ratio meets targets",
+        "15+ integration tests",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Backups automatically compressed with brotli",
+    "50-70% space reduction achieved",
+    "Backward compatible with existing backups",
+    "listBackups shows compression info",
+    "All backup-related tests pass"
+  ],
+  "filesModified": [
+    "src/memory/features/IOManager.ts"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/integration/backup-compression.test.ts"
+  ],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 1"],
+  "notes": "This is the highest ROI sprint - backup compression provides immediate 50-70% space savings with zero impact on runtime operations. Backups are infrequently accessed, so compression overhead is negligible."
+}

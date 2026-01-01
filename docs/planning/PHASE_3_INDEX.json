@@ -1,0 +1,132 @@
+{
+  "phase": 3,
+  "title": "Brotli Compression Integration",
+  "description": "Integrate brotli compression into the memory-mcp knowledge graph system for 50-70% space reduction on backups, exports, and MCP responses",
+  "version": "1.0.2",
+  "created": "2026-01-01",
+  "totalSprints": 5,
+  "totalTasks": 24,
+  "totalEstimatedHours": 31,
+  "totalNewTests": 105,
+  "status": "planned",
+  "prerequisites": ["Phase 1 Sprint 11.4 (IOManager consolidation)"],
+  "targetMetrics": {
+    "backupSize5K": { "current": "~1.25 MB", "target": "~375 KB", "improvement": "70% reduction" },
+    "backupSize50K": { "current": "~12.5 MB", "target": "~3.75 MB", "improvement": "70% reduction" },
+    "exportPayload100K": { "current": "~25 MB", "target": "~7.5 MB", "improvement": "70% reduction" },
+    "mcpResponseLarge": { "current": "Uncompressed", "target": "Auto-compressed", "improvement": "60-75% reduction" },
+    "entityWriteOverhead": { "current": "1-2ms", "target": "2-4ms", "impact": "+1-2ms" },
+    "graphLoadOverhead": { "current": "50ms", "target": "+10-15ms", "impact": "Acceptable" }
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Foundation & Utility Setup",
+      "priority": "CRITICAL",
+      "focus": "Create compression utility module and constants using Node.js built-in zlib brotli",
+      "tasks": 4,
+      "hours": 5,
+      "newTests": 25,
+      "file": "PHASE_3_SPRINT_1_TODO.json",
+      "status": "planned",
+      "dependencies": []
+    },
+    {
+      "sprint": 2,
+      "title": "Backup Compression",
+      "priority": "HIGH",
+      "focus": "Compress backup files for 50-70% space reduction with zero runtime impact",
+      "tasks": 4,
+      "hours": 6,
+      "newTests": 15,
+      "file": "PHASE_3_SPRINT_2_TODO.json",
+      "status": "planned",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 3,
+      "title": "Export Compression",
+      "priority": "MEDIUM",
+      "focus": "Auto-compress large exports (>100KB) across all 7 formats",
+      "tasks": 5,
+      "hours": 6,
+      "newTests": 20,
+      "file": "PHASE_3_SPRINT_3_TODO.json",
+      "status": "planned",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 4,
+      "title": "MCP Response Compression",
+      "priority": "MEDIUM",
+      "focus": "Auto-compress large MCP tool responses for reduced bandwidth",
+      "tasks": 5,
+      "hours": 7,
+      "newTests": 20,
+      "file": "PHASE_3_SPRINT_4_TODO.json",
+      "status": "planned",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 5,
+      "title": "Archive & Cache Compression + Documentation",
+      "priority": "LOW",
+      "focus": "Compress archives, optional cache compression, and comprehensive documentation",
+      "tasks": 6,
+      "hours": 7.5,
+      "newTests": 25,
+      "file": "PHASE_3_SPRINT_5_TODO.json",
+      "status": "planned",
+      "dependencies": [2, 3, 4]
+    }
+  ],
+  "dependencyGraph": {
+    "description": "Sprint dependency order",
+    "mermaid": "graph TD\n    S1[Sprint 1: Foundation] --> S2[Sprint 2: Backup Compression]\n    S1 --> S3[Sprint 3: Export Compression]\n    S1 --> S4[Sprint 4: MCP Response Compression]\n    S2 --> S5[Sprint 5: Archive & Docs]\n    S3 --> S5\n    S4 --> S5"
+  },
+  "parallelExecutionGroups": [
+    { "group": 1, "sprints": [1], "description": "Foundation - must complete first" },
+    { "group": 2, "sprints": [2, 3, 4], "description": "Can run in parallel after Sprint 1" },
+    { "group": 3, "sprints": [5], "description": "Final - after Sprints 2, 3, and 4" }
+  ],
+  "filesToCreate": [
+    "src/memory/utils/compressionUtil.ts",
+    "src/memory/utils/compressedCache.ts",
+    "src/memory/server/responseCompressor.ts",
+    "src/memory/__tests__/unit/utils/compressionUtil.test.ts",
+    "src/memory/__tests__/unit/utils/compressedCache.test.ts",
+    "src/memory/__tests__/unit/server/responseCompressor.test.ts",
+    "src/memory/__tests__/integration/backup-compression.test.ts",
+    "src/memory/__tests__/performance/compression-benchmarks.test.ts",
+    "docs/guides/COMPRESSION.md"
+  ],
+  "filesToModify": [
+    "src/memory/package.json",
+    "src/memory/utils/constants.ts",
+    "src/memory/utils/index.ts",
+    "src/memory/types/import-export.types.ts",
+    "src/memory/features/IOManager.ts",
+    "src/memory/core/EntityManager.ts",
+    "src/memory/server/toolDefinitions.ts",
+    "src/memory/server/toolHandlers.ts",
+    "src/memory/search/SearchManager.ts"
+  ],
+  "riskAssessment": [
+    { "risk": "Corrupt compressed files", "probability": "Low", "impact": "High", "mitigation": "Verify checksums; graceful fallback to uncompressed" },
+    { "risk": "Decompression failures", "probability": "Low", "impact": "Medium", "mitigation": "Error handling with retry logic" },
+    { "risk": "Out-of-memory on large decompress", "probability": "Medium", "impact": "Medium", "mitigation": "Stream decompression for files >100MB" },
+    { "risk": "Backward compatibility issues", "probability": "Low", "impact": "High", "mitigation": "File extension detection (.br); extensive testing" },
+    { "risk": "Performance regression", "probability": "Low", "impact": "Medium", "mitigation": "Comprehensive benchmarking in Sprint 5" }
+  ],
+  "agentDistribution": {
+    "sonnet": { "tasks": 12, "description": "Compression utilities, integration logic, complex test scenarios" },
+    "haiku": { "tasks": 13, "description": "Constants, simple tests, documentation, configuration" }
+  },
+  "technicalNotes": [
+    "Uses Node.js built-in zlib brotli (no npm package needed)",
+    "Brotli detection via file extension (.br) not magic bytes",
+    "Quality levels: 4 (realtime), 6 (batch), 11 (archive), 5 (cache)",
+    "Auto-compress threshold: 100KB exports, 256KB responses"
+  ],
+  "notes": "Sprint 1 is the critical path - all other sprints depend on the compression utility module. Sprints 2, 3, and 4 can run in parallel after Sprint 1. Biggest ROI is Sprint 2 (backup compression) with immediate 50-70% space savings."
+}
