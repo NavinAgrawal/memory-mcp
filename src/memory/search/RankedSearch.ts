@@ -8,7 +8,7 @@
 
 import type { Entity, SearchResult, TFIDFIndex } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { calculateTFIDF, tokenize } from '../utils/index.js';
+import { calculateTF, calculateIDFFromTokenSets, tokenize } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { TFIDFIndexManager } from './TFIDFIndexManager.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
@@ -186,6 +186,9 @@ export class RankedSearch {
 
   /**
    * Search without index (on-the-fly calculation, slow path).
+   *
+   * OPTIMIZED: Pre-tokenizes all documents once and uses calculateIDFFromTokenSets
+   * for O(1) lookup per document instead of re-tokenizing for each term.
    */
   private searchWithoutIndex(
     entities: Entity[],
@@ -193,20 +196,38 @@ export class RankedSearch {
     limit: number
   ): SearchResult[] {
     const results: SearchResult[] = [];
-    const documents = entities.map(e =>
-      [e.name, e.entityType, ...e.observations].join(' ')
-    );
 
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
-      const document = documents[i];
+    // Pre-tokenize all documents once (optimization from Phase 7)
+    const documentData = entities.map(e => {
+      const text = [e.name, e.entityType, ...e.observations].join(' ');
+      const tokens = tokenize(text);
+      return {
+        entity: e,
+        text,
+        tokens,
+        tokenSet: new Set(tokens),
+      };
+    });
+
+    // Pre-compute token sets for IDF calculation (O(1) lookup per document)
+    const tokenSets = documentData.map(d => d.tokenSet);
+
+    for (const docData of documentData) {
+      const { entity, text, tokens } = docData;
 
       // Calculate score for each query term
       let totalScore = 0;
       const matchedFields: SearchResult['matchedFields'] = {};
 
       for (const term of queryTerms) {
-        const score = calculateTFIDF(term, document, documents);
+        // Calculate TF using pre-tokenized tokens
+        const tf = calculateTF(term, text);
+
+        // Calculate IDF using pre-computed token sets (O(1) per document)
+        const idf = calculateIDFFromTokenSets(term, tokenSets);
+
+        // TF-IDF score
+        const score = tf * idf;
         totalScore += score;
 
         // Track which fields matched
