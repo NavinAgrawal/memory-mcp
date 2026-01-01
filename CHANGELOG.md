@@ -5,6 +5,94 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.60.0] - 2026-01-01
+
+### Added
+
+- **Phase 3 Brotli Compression Planning** (PR #82)
+  - Comprehensive planning documents for brotli compression integration
+  - `PHASE_3_REFACTORING_PLAN.md` - Detailed implementation plan with code examples
+  - `PHASE_3_INDEX.json` - Master index with 5 sprints, 24 tasks, 105 new tests
+  - `PHASE_3_SPRINT_1-5_TODO.json` - Individual sprint task files
+  - `brotli-compression-integration.md` - Analysis document
+  - Target: 70% reduction in backup/export sizes using Node.js built-in zlib brotli
+
+- **Native SQLite with better-sqlite3** (PR #70, #71, #72)
+  - Replaced sql.js (WASM) with better-sqlite3 for 3-10x performance improvement
+  - FTS5 full-text search support
+  - WAL mode for concurrent read/write
+  - O(1) entity lookups via indexed name column
+  - Updated migration tool to use better-sqlite3
+
+- **Phase 2 Concurrency Control** (PR #74)
+  - Thread-safe storage operations with async-mutex
+  - Prevents race conditions in concurrent entity/relation operations
+  - `ConcurrencyControl.test.ts` with comprehensive test coverage
+
+- **Phase 3 RelationIndex** (PR #75)
+  - O(1) relation lookups by source/target entity
+  - `RelationIndex` class with `fromIndex` and `toIndex` maps
+  - Improves performance of `get_children`, `get_ancestors`, `get_descendants`
+
+- **Phase 4 Manager Decomposition** (PR #76)
+  - Extracted focused managers from god objects:
+    - `HierarchyManager` - Tree operations (from EntityManager)
+    - `ObservationManager` - Observation CRUD (from EntityManager)
+    - `AnalyticsManager` - Graph stats/validation (from SearchManager)
+    - `ArchiveManager` - Entity archival (from EntityManager)
+    - `CompressionManager` - Duplicate detection/merging (from SearchManager)
+  - Cleaner separation of concerns, easier testing
+
+- **Phase 5 Module Consolidation** (PR #77)
+  - Consolidated utils/ from 17 → 10 files
+  - Consolidated types/ from 7 → 2 files
+  - `entityUtils.ts` now contains entity, tag, date, filter, path utilities
+  - `formatters.ts` combines response formatting and pagination
+  - `types.ts` single source of truth for all type definitions
+
+- **Phase 6 Type Safety with Zod** (PR #78)
+  - Fixed `DeleteObservationInputSchema` to require `entityName`
+  - Added strict Zod validation at runtime boundaries
+  - Consolidated Zod schemas in `schemas.ts`
+
+- **Phase 7 Algorithm Improvements** (PR #80)
+  - Optimized TF-IDF index with lazy loading
+  - Improved search filter chain performance
+  - Better ranked search scoring
+
+### Fixed
+
+- **Critical Bug Fixes from Brutally Honest Analysis** (PR #73, #79, #81)
+  - Fixed observation deletion requiring proper entity context
+  - Corrected relation cascade on entity deletion
+  - Fixed hierarchy cycle detection edge cases
+  - Improved error messages for validation failures
+
+### Changed
+
+- **Source Structure** - Now 43 TypeScript files (down from 50)
+  - core/: 10 files (added HierarchyManager, ObservationManager)
+  - features/: 6 files (added AnalyticsManager, ArchiveManager, CompressionManager)
+  - types/: 2 files (consolidated from 7)
+  - utils/: 10 files (consolidated from 17)
+
+- **Test Count** - 1537 tests (up from 1515)
+  - Added ConcurrencyControl tests
+  - Added better-sqlite3 storage tests
+  - Expanded index tests for RelationIndex
+
+### Documentation
+
+- **Brutally Honest Codebase Analysis** (PR #66, #67, #68)
+  - Comprehensive analysis identifying technical debt
+  - Prioritized refactoring roadmap
+  - No punches pulled assessment
+
+- **Detailed Refactoring Roadmap** (PR #69)
+  - Phase-by-phase implementation plan with code examples
+  - Dependency graph for refactoring order
+  - Risk assessment and mitigation strategies
+
 ## [0.59.0] - 2025-12-31
 
 ### Added
