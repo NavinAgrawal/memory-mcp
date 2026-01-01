@@ -1,0 +1,132 @@
+{
+  "phase": 3,
+  "sprint": 4,
+  "title": "MCP Response Compression",
+  "priority": "MEDIUM",
+  "effort": "7 hours",
+  "status": "planned",
+  "impact": "Reduced bandwidth between Claude and MCP server for large responses",
+  "targetMetrics": {
+    "compressionThreshold": "256KB",
+    "targetReduction": "60-75%"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Server",
+      "description": "Create Response Compression Wrapper - Create responseCompressor.ts with maybeCompressResponse() and decompressResponse() functions that handle threshold-based auto-compression",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/server/responseCompressor.ts"],
+      "testCategories": [
+        "Auto-compress responses >256KB",
+        "Skip compression for small responses",
+        "Base64 encoding for transport",
+        "Decompression utility"
+      ],
+      "acceptanceCriteria": [
+        "maybeCompressResponse() auto-compresses large responses",
+        "Threshold configurable (default 256KB)",
+        "Returns CompressedResponse with metadata",
+        "decompressResponse() reverses compression",
+        "Force compression option available"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Server",
+      "description": "Integrate Response Compression in Tool Handlers - Create withCompression() wrapper function and apply to large-response handlers (read_graph, export_graph, search_nodes, get_subtree)",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Large response compression",
+        "Small response pass-through",
+        "Handler wrapping pattern"
+      ],
+      "acceptanceCriteria": [
+        "Large responses auto-compressed",
+        "Compression handled transparently",
+        "Small responses unchanged",
+        "No breaking changes to MCP protocol"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Server",
+      "description": "Verify Large Response Tools Use Compression Wrapper - Ensure read_graph, export_graph, search_nodes, get_subtree, and open_nodes are wrapped correctly",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Handler verification",
+        "Integration testing"
+      ],
+      "acceptanceCriteria": [
+        "All large payload tools wrapped with compression",
+        "Compression applied after serialization",
+        "Response format consistent",
+        "Integration tests verify compression triggers at threshold"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Response Compression Tests - Test maybeCompressResponse, decompressResponse, threshold behavior, and tool handler integration",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/server/responseCompressor.test.ts"],
+      "testCategories": [
+        "Compression threshold (>256KB)",
+        "Small response passthrough",
+        "Roundtrip compression/decompression",
+        "Base64 encoding",
+        "Force compression option"
+      ],
+      "acceptanceCriteria": [
+        "Threshold behavior tested",
+        "Roundtrip verified",
+        "Edge cases covered",
+        "20+ tests",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Documentation",
+      "description": "Document Client-Side Decompression - Add inline documentation for response format, note that full guide will be in Sprint 5's COMPRESSION.md",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/server/responseCompressor.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "Response format documented in JSDoc",
+        "Client decompression example in code comments",
+        "References COMPRESSION.md for full guide"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Response compression wrapper created",
+    "Large-response tools wrapped",
+    "60-75% compression for large responses",
+    "No breaking changes to MCP protocol",
+    "Client decompression documented"
+  ],
+  "filesCreated": [
+    "src/memory/server/responseCompressor.ts",
+    "src/memory/__tests__/unit/server/responseCompressor.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/server/toolHandlers.ts"
+  ],
+  "totalNewTests": 20,
+  "totalEstimatedHours": 6.5,
+  "dependencies": ["Sprint 1"],
+  "notes": "Can run in parallel with Sprint 2 and Sprint 3 after Sprint 1 completes. Essential for cloud deployments where bandwidth costs are critical. Compression is transparent to clients that don't handle it."
+}

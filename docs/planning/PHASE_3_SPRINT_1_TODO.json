@@ -1,0 +1,109 @@
+{
+  "phase": 3,
+  "sprint": 1,
+  "title": "Foundation & Utility Setup",
+  "priority": "CRITICAL",
+  "effort": "5 hours",
+  "status": "planned",
+  "impact": "Enables all subsequent compression features",
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Configuration",
+      "description": "Verify Node.js Brotli Support - Confirm Node.js version >=18 in package.json engines, verify built-in zlib brotli functions available, no external dependencies needed",
+      "status": "planned",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/memory/package.json"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "Node.js version >=18 confirmed in package.json engines",
+        "No additional dependencies needed",
+        "TypeScript types available via @types/node"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Utils",
+      "description": "Create Compression Utility Module - Implement compress(), decompress(), hasBrotliExtension(), compressFile(), decompressFile(), createMetadata() using Node.js built-in zlib brotli",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/utils/compressionUtil.ts"],
+      "testCategories": [
+        "compress/decompress with Buffer and string",
+        "File extension detection (.br)",
+        "File I/O operations",
+        "Metadata creation"
+      ],
+      "acceptanceCriteria": [
+        "compress() and decompress() functions work correctly",
+        "hasBrotliExtension() reliably detects .br files",
+        "compressFile() and decompressFile() handle file I/O",
+        "All functions have proper error handling",
+        "JSDoc documentation for public API"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Utils",
+      "description": "Add Compression Constants - Add COMPRESSION_CONFIG to constants.ts with quality levels (4, 5, 6, 11), thresholds (100KB, 256KB), and file extension (.br)",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/utils/constants.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "COMPRESSION_CONFIG object exported",
+        "Quality levels defined (REALTIME=4, BATCH=6, ARCHIVE=11, CACHE=5)",
+        "Thresholds defined (EXPORT=100KB, RESPONSE=256KB)",
+        "BROTLI_EXTENSION='.br' defined",
+        "Type exports for quality levels"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Create Compression Unit Tests - Test compress/decompress roundtrip, hasBrotliExtension(), quality levels, file operations, error handling, and compression ratios",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/utils/compressionUtil.test.ts"],
+      "testCategories": [
+        "compress/decompress roundtrip (string, Buffer, empty, large 1MB+)",
+        "hasBrotliExtension (.br, .json, .jsonl, paths with dots)",
+        "Quality levels (speed vs ratio tradeoffs)",
+        "File operations (compressFile, decompressFile)",
+        "Error handling (corrupt data, missing files)",
+        "Compression ratios (JSON data benchmarks)"
+      ],
+      "acceptanceCriteria": [
+        "Roundtrip tests for string and Buffer data",
+        "Extension detection tests",
+        "Quality level comparison tests",
+        "File I/O tests with temp files",
+        "Error handling tests",
+        "25+ tests total"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "compressionUtil.ts module created and functional",
+    "COMPRESSION_CONFIG constants added",
+    "All compression utility tests pass",
+    "No external npm dependencies added",
+    "JSDoc documentation complete"
+  ],
+  "filesCreated": [
+    "src/memory/utils/compressionUtil.ts",
+    "src/memory/__tests__/unit/utils/compressionUtil.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/utils/constants.ts",
+    "src/memory/utils/index.ts"
+  ],
+  "totalNewTests": 25,
+  "totalEstimatedHours": 5,
+  "dependencies": [],
+  "notes": "This is the critical path sprint. All other sprints depend on the compression utility module. Uses Node.js built-in zlib brotli - no npm packages needed. Detection uses file extension (.br) not magic bytes."
+}

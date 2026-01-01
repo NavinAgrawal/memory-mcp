@@ -1,0 +1,126 @@
+{
+  "phase": 3,
+  "sprint": 3,
+  "title": "Export Compression",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "planned",
+  "impact": "60-75% compression on large exports across all 7 formats",
+  "targetMetrics": {
+    "exportPayload100K": { "current": "~25 MB", "target": "~7.5 MB" },
+    "compressionThreshold": "100KB"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Add Compression Option to Export Types - Add ExportOptions interface with compress flag and quality, add ExportResult interface with compression metadata",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/types/import-export.types.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "ExportOptions interface with compress?: boolean and quality?: number",
+        "ExportResult interface with compression metadata",
+        "Types exported from index.ts"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Features",
+      "description": "Implement Auto-Compression for Large Exports - Modify IOManager.exportGraph() to auto-compress when output >100KB, return ExportResult with compression metadata",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/features/IOManager.ts"],
+      "testCategories": [
+        "Auto-compress large exports (>100KB)",
+        "Skip compression for small exports",
+        "All 7 formats supported",
+        "Compression metadata returned"
+      ],
+      "acceptanceCriteria": [
+        "Auto-compresses exports >100KB by default",
+        "Works with all 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid)",
+        "Returns compression metadata (original size, compressed size, ratio)",
+        "Compression can be disabled via options",
+        "60-75% compression ratio for JSON/GraphML"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Server",
+      "description": "Update export_graph Tool Definition - Add optional compress parameter to export_graph tool schema with description and default behavior",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/server/toolDefinitions.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "compress parameter added to export_graph schema",
+        "Parameter description explains auto-compression",
+        "Default behavior documented"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Export Compression Tests - Test auto-compression threshold, all 7 formats, compression ratios, and metadata accuracy",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": [
+        "src/memory/__tests__/unit/features/IOManager.test.ts"
+      ],
+      "testCategories": [
+        "Auto-compression threshold (>100KB)",
+        "All 7 export formats",
+        "Compression ratio verification",
+        "Metadata accuracy",
+        "Disable compression option"
+      ],
+      "acceptanceCriteria": [
+        "Threshold-based compression tested",
+        "All formats tested with compression",
+        "Compression ratios verified",
+        "20+ additional tests",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Documentation",
+      "description": "Update Export Tool Documentation - Document compression behavior in tool definitions and update any export examples",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/memory/server/toolDefinitions.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "Compression behavior documented",
+        "Examples show compressed output format",
+        "API changes noted"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Exports >100KB automatically compressed",
+    "All 7 export formats support compression",
+    "60-75% compression ratio achieved",
+    "Compression metadata returned",
+    "Export tests updated and passing"
+  ],
+  "filesModified": [
+    "src/memory/types/import-export.types.ts",
+    "src/memory/features/IOManager.ts",
+    "src/memory/server/toolDefinitions.ts"
+  ],
+  "filesExpanded": [
+    "src/memory/__tests__/unit/features/IOManager.test.ts"
+  ],
+  "totalNewTests": 20,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 1"],
+  "notes": "Can run in parallel with Sprint 2 and Sprint 4 after Sprint 1 completes. All 7 export formats benefit from compression, especially JSON and GraphML which have high redundancy."
+}
