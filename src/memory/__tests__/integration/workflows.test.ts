@@ -390,25 +390,23 @@ describe('Integration: Complete Workflows', () => {
   });
 
   describe('Error Handling in Workflows', () => {
-    it('should handle entity not found in relation workflow', async () => {
+    it('should reject relations to non-existent entities', async () => {
       await entityManager.createEntities([
         { name: 'TestEntity', entityType: 'person', observations: ['Test'] },
       ]);
 
-      // RelationManager allows relations to non-existent entities (deferred integrity)
-      // So create a relation and verify it exists
-      const relations = await relationManager.createRelations([
+      // RelationManager validates that referenced entities exist (prevents dangling relations)
+      // Creating a relation to a non-existent entity should throw an error
+      await expect(relationManager.createRelations([
         { from: 'TestEntity', to: 'Future_Entity', relationType: 'knows' },
-      ]);
-
-      expect(relations).toHaveLength(1);
+      ])).rejects.toThrow('Relations reference non-existent entities');
 
       // Verify TestEntity still exists and can be searched
       const results = await basicSearch.searchNodes('TestEntity');
       expect(results.entities).toHaveLength(1);
 
-      // Verify relation appears in search results
-      expect(results.relations.length).toBeGreaterThanOrEqual(0);
+      // No relations should exist
+      expect(results.relations).toHaveLength(0);
     });
 
     it('should handle batch update with partial failures gracefully', async () => {

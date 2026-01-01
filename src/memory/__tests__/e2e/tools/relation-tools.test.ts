@@ -186,21 +186,18 @@ describe('Relation Tools E2E', () => {
         }, manager)).rejects.toThrow();
       });
 
-      it('should handle relation with non-existent from entity gracefully', async () => {
-        // System creates relations even if entities don't exist (orphan relations)
-        const result = await handleToolCall('create_relations', {
+      it('should reject relation with non-existent from entity', async () => {
+        // System validates that referenced entities exist (prevents dangling relations)
+        await expect(handleToolCall('create_relations', {
           relations: [{ from: 'NonExistent', to: 'EntityB', relationType: 'test' }]
-        }, manager);
-        // Should complete without error
-        expect(result.content).toBeDefined();
+        }, manager)).rejects.toThrow('Relations reference non-existent entities');
       });
 
-      it('should handle relation with non-existent to entity gracefully', async () => {
-        // System creates relations even if entities don't exist
-        const result = await handleToolCall('create_relations', {
+      it('should reject relation with non-existent to entity', async () => {
+        // System validates that referenced entities exist (prevents dangling relations)
+        await expect(handleToolCall('create_relations', {
           relations: [{ from: 'EntityA', to: 'NonExistent', relationType: 'test' }]
-        }, manager);
-        expect(result.content).toBeDefined();
+        }, manager)).rejects.toThrow('Relations reference non-existent entities');
       });
 
       it('should handle duplicate relations gracefully', async () => {

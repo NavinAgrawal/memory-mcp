@@ -22,9 +22,9 @@ export class RelationManager {
    * Create multiple relations in a single batch operation.
    *
    * This method performs the following operations:
+   * - Validates that all referenced entities exist (prevents dangling relations)
    * - Filters out duplicate relations (same from, to, and relationType)
    * - Automatically adds createdAt and lastModified timestamps
-   * - Validates that entities referenced in relations exist (should be done by caller)
    *
    * A relation is considered duplicate if another relation exists with the same:
    * - from entity name
@@ -33,6 +33,7 @@ export class RelationManager {
    *
    * @param relations - Array of relations to create
    * @returns Promise resolving to array of newly created relations (excludes duplicates)
+   * @throws {ValidationError} If any relation references non-existent entities
    *
    * @example
    * ```typescript
@@ -66,9 +67,33 @@ export class RelationManager {
       throw new ValidationError('Invalid relation data', errors);
     }
 
-    // Use read-only graph for checking existing relations
+    // Use read-only graph for checking existing relations and entity existence
     const readGraph = await this.storage.loadGraph();
     const timestamp = new Date().toISOString();
+
+    // Build set of existing entity names for O(1) lookup
+    const existingEntityNames = new Set(readGraph.entities.map(e => e.name));
+
+    // Validate that all referenced entities exist (fixes bug 7.2 from analysis)
+    const danglingRelations: string[] = [];
+    for (const relation of relations) {
+      const missingEntities: string[] = [];
+      if (!existingEntityNames.has(relation.from)) {
+        missingEntities.push(relation.from);
+      }
+      if (!existingEntityNames.has(relation.to)) {
+        missingEntities.push(relation.to);
+      }
+      if (missingEntities.length > 0) {
+        danglingRelations.push(
+          `Relation from "${relation.from}" to "${relation.to}" references non-existent entities: ${missingEntities.join(', ')}`
+        );
+      }
+    }
+
+    if (danglingRelations.length > 0) {
+      throw new ValidationError('Relations reference non-existent entities', danglingRelations);
+    }
 
     // Check graph size limits
     const relationsToAdd = relations.filter(r => !readGraph.relations.some(existing =>
