@@ -8,9 +8,7 @@
 
 import type { KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { isWithinDateRange } from '../utils/dateUtils.js';
-import { SEARCH_LIMITS } from '../utils/constants.js';
-import { searchCaches } from '../utils/searchCache.js';
+import { isWithinDateRange, SEARCH_LIMITS, searchCaches } from '../utils/index.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 
 /**

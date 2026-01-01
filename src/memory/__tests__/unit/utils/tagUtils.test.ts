@@ -13,7 +13,7 @@ import {
   filterByTags,
   addUniqueTags,
   removeTags,
-} from '../../../utils/tagUtils.js';
+} from '../../../utils/index.js';
 
 describe('tagUtils', () => {
   describe('normalizeTag', () => {

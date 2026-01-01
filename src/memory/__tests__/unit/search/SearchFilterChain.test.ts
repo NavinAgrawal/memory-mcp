@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { SearchFilterChain, type SearchFilters } from '../../../search/SearchFilterChain.js';
-import type { Entity } from '../../../types/entity.types.js';
+import type { Entity } from '../../../types/index.js';
 
 describe('SearchFilterChain', () => {
   const sampleEntities: Entity[] = [

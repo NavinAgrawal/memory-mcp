@@ -10,7 +10,7 @@ import {
   validateRelation,
   validateImportance,
   validateTags,
-} from '../../../utils/validationUtils.js';
+} from '../../../utils/index.js';
 
 describe('validationUtils', () => {
   describe('validateEntity', () => {

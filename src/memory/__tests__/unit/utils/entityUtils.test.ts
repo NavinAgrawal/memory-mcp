@@ -14,9 +14,9 @@ import {
   getEntityNameSet,
   groupEntitiesByType,
   touchEntity,
-} from '../../../utils/entityUtils.js';
-import { EntityNotFoundError } from '../../../utils/errors.js';
-import type { KnowledgeGraph, Entity } from '../../../types/entity.types.js';
+  EntityNotFoundError,
+} from '../../../utils/index.js';
+import type { KnowledgeGraph, Entity } from '../../../types/index.js';
 
 describe('entityUtils', () => {
   const createSampleGraph = (): KnowledgeGraph => ({

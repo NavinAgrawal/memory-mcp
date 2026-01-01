@@ -8,7 +8,7 @@
  * @module server/toolHandlers
  */
 
-import { formatToolResponse, formatTextResponse, formatRawResponse } from '../utils/responseFormatter.js';
+import { formatToolResponse, formatTextResponse, formatRawResponse } from '../utils/index.js';
 import type { ManagerContext } from '../core/ManagerContext.js';
 import type { SavedSearch } from '../types/index.js';
 

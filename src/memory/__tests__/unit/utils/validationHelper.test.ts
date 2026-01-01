@@ -11,8 +11,8 @@ import {
   validateWithSchema,
   validateSafe,
   validateArrayWithSchema,
-} from '../../../utils/validationHelper.js';
-import { ValidationError } from '../../../utils/errors.js';
+  ValidationError,
+} from '../../../utils/index.js';
 
 describe('validationHelper', () => {
   // Sample schemas for testing
