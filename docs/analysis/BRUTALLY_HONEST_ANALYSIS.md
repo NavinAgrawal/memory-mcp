@@ -467,25 +467,254 @@ Instead, we got 11,000 lines of JavaScript reimplementing what every database do
 
 ---
 
-## Part 10: The Honest Recommendation
+## Part 10: Refactoring Roadmap
 
-**Don't use this in production.** Not because it's terrible—it works for demos. But because:
+### Phase 1: Fix Critical Bugs (Do First)
 
-1. **No durability guarantees.** Your data can be lost.
-2. **No concurrency control.** Multiple users will corrupt data.
-3. **O(n) everything.** Performance degrades linearly.
-4. **Bugs in basic operations.** removeTags lies about what it removed.
-5. **Over-engineered complexity.** 11,000 lines to do what SQLite does in 300.
+These are correctness issues that affect users right now.
 
-**If you need a knowledge graph:**
-- Use Neo4j (it's actually a graph database)
-- Use SQLite with proper schema (it's simpler and faster)
-- Use Postgres with JSONB (it handles documents AND relations)
+**1.1 Fix removeTags logic (EntityManager.ts:510-513)**
+```typescript
+// BEFORE (broken):
+const removedTags = normalizedTags.filter(tag =>
+  originalLength > entity.tags!.length ||
+  !entity.tags!.map(t => t.toLowerCase()).includes(tag)
+);
 
-**If you're learning:**
-- This is a good example of how NOT to design a system
-- Study the patterns, then study why they're wrong here
-- The testing patterns are actually decent (copy that part)
+// AFTER (correct):
+const removedTags = normalizedTags.filter(tag =>
+  existingTagsLower.includes(tag) && !entity.tags!.map(t => t.toLowerCase()).includes(tag)
+);
+```
+
+**1.2 Add fsync to file writes (GraphStorage.ts)**
+```typescript
+// Replace appendFile with:
+const fd = await fs.open(this.memoryFilePath, 'a');
+await fd.write('\n' + line);
+await fd.sync();
+await fd.close();
+```
+
+**1.3 Fix cache/file ordering (GraphStorage.ts:414-478)**
+Write to file FIRST, update cache on success. If write fails, cache stays consistent.
+
+**1.4 Fix observationsCompressed metric (SearchManager.ts:670)**
+Actually count observations merged, not just entities.
+
+---
+
+### Phase 2: Add Concurrency Control
+
+Without this, multi-user scenarios corrupt data.
+
+**2.1 Add mutex to GraphStorage**
+```typescript
+import { Mutex } from 'async-mutex';
+
+class GraphStorage {
+  private mutex = new Mutex();
+
+  async getGraphForMutation(): Promise<KnowledgeGraph> {
+    return this.mutex.runExclusive(async () => {
+      // existing logic
+    });
+  }
+
+  async saveGraph(graph: KnowledgeGraph): Promise<void> {
+    return this.mutex.runExclusive(async () => {
+      // existing logic
+    });
+  }
+}
+```
+
+**2.2 Make batch operations atomic**
+- `addObservations`: Collect all updates, single saveGraph call
+- `deleteObservations`: Same pattern
+- `addTagsToMultipleEntities`: Already does this correctly (use as model)
+
+---
+
+### Phase 3: Add Relation Index
+
+Currently O(n) for every relation lookup. This is the biggest performance win.
+
+**3.1 Create RelationIndex (new file: utils/relationIndex.ts)**
+```typescript
+class RelationIndex {
+  private fromIndex: Map<string, Set<Relation>> = new Map();
+  private toIndex: Map<string, Set<Relation>> = new Map();
+
+  getRelationsFrom(entityName: string): Relation[] { ... }
+  getRelationsTo(entityName: string): Relation[] { ... }
+  getRelationsFor(entityName: string): Relation[] { ... }
+}
+```
+
+**3.2 Integrate into GraphStorage**
+Build index on load, update on relation add/delete.
+
+---
+
+### Phase 4: Consolidate God Objects
+
+**4.1 Split SearchManager (902 lines → 3 files)**
+
+| New File | Methods | Lines |
+|----------|---------|-------|
+| SearchManager.ts | searchNodes, searchNodesRanked, booleanSearch, fuzzySearch, getSearchSuggestions, openNodes, searchByDateRange | ~300 |
+| AnalyticsManager.ts | getGraphStats, validateGraph | ~200 |
+| CompressionManager.ts | findDuplicates, mergeEntities, compressGraph, calculateEntitySimilarity | ~300 |
+
+**4.2 Split EntityManager (994 lines → 4 files)**
+
+| New File | Methods | Lines |
+|----------|---------|-------|
+| EntityManager.ts | createEntities, deleteEntities, getEntity, updateEntity, batchUpdate | ~250 |
+| ObservationManager.ts | addObservations, deleteObservations | ~100 |
+| HierarchyManager.ts | setEntityParent, getChildren, getParent, getAncestors, getDescendants, getSubtree, getRootEntities, getEntityDepth, moveEntity | ~250 |
+| ArchiveManager.ts | archiveEntities | ~100 |
+
+**4.3 Delete ManagerContext convenience methods**
+Lines 91-306 are pure delegation. Delete them. Tool handlers already use `ctx.entityManager.method()` directly.
+
+---
+
+### Phase 5: Clean Up Structure
+
+**5.1 Consolidate utils/ (17 files → 8 files)**
+
+| Keep | Merge Into It |
+|------|---------------|
+| errors.ts | (standalone) |
+| constants.ts | (standalone) |
+| schemas.ts | validationHelper.ts, validationUtils.ts |
+| indexes.ts | (standalone, add RelationIndex) |
+| searchAlgorithms.ts | (standalone) |
+| searchCache.ts | caching.ts |
+| formatters.ts | responseFormatter.ts, paginationUtils.ts |
+| entityUtils.ts | tagUtils.ts, dateUtils.ts, filterUtils.ts, pathUtils.ts |
+
+**5.2 Consolidate types/ (7 files → 2 files)**
+- `types.ts`: All type definitions
+- `index.ts`: Re-exports
+
+**5.3 Fix version number**
+Pick 0.59.0 or 0.11.5. Update package.json AND CLAUDE.md to match.
+
+---
+
+### Phase 6: Fix Type Safety
+
+**6.1 Replace type assertions in toolHandlers.ts**
+
+```typescript
+// BEFORE:
+create_entities: async (ctx, args) =>
+  formatToolResponse(await ctx.entityManager.createEntities(args.entities as any[])),
+
+// AFTER:
+create_entities: async (ctx, args) => {
+  const validated = BatchCreateEntitiesSchema.parse(args.entities);
+  return formatToolResponse(await ctx.entityManager.createEntities(validated));
+},
+```
+
+**6.2 Add validation to archiveEntities**
+Create `ArchiveCriteriaSchema` in schemas.ts, validate in handler.
+
+---
+
+### Phase 7: Algorithm Improvements
+
+**7.1 Optimize Levenshtein to O(min(m,n)) space**
+```typescript
+export function levenshteinDistance(str1: string, str2: string): number {
+  if (str1.length > str2.length) [str1, str2] = [str2, str1];
+  let prev = Array.from({ length: str1.length + 1 }, (_, i) => i);
+  let curr = new Array(str1.length + 1);
+
+  for (let j = 1; j <= str2.length; j++) {
+    curr[0] = j;
+    for (let i = 1; i <= str1.length; i++) {
+      curr[i] = str1[i-1] === str2[j-1]
+        ? prev[i-1]
+        : 1 + Math.min(prev[i-1], prev[i], curr[i-1]);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[str1.length];
+}
+```
+
+**7.2 Fix TF-IDF to tokenize once**
+Pre-tokenize in TFIDFIndexManager, pass token arrays to calculateIDF.
+
+**7.3 Make compaction threshold dynamic**
+```typescript
+private get compactionThreshold(): number {
+  return Math.max(100, Math.floor((this.cache?.entities.length ?? 0) * 0.1));
+}
+```
+
+---
+
+### Phase 8: Consider Native SQLite (Optional but Recommended)
+
+If you want real durability, concurrency, and performance:
+
+**8.1 Replace sql.js with better-sqlite3**
+```bash
+npm uninstall sql.js
+npm install better-sqlite3
+npm install -D @types/better-sqlite3
+```
+
+**8.2 Add referential integrity**
+```sql
+CREATE TABLE entities (
+  name TEXT PRIMARY KEY,
+  ...
+);
+
+CREATE TABLE relations (
+  from_entity TEXT REFERENCES entities(name) ON DELETE CASCADE,
+  to_entity TEXT REFERENCES entities(name) ON DELETE CASCADE,
+  ...
+);
+```
+
+**8.3 Add FTS5 for search**
+```sql
+CREATE VIRTUAL TABLE entities_fts USING fts5(name, observations, content=entities);
+```
+
+This replaces BasicSearch, BooleanSearch, and FuzzySearch with one SQL query.
+
+---
+
+### Refactoring Order
+
+```
+Week 1: Phase 1 (Critical bugs)
+Week 2: Phase 2 (Concurrency) + Phase 3 (Relation index)
+Week 3: Phase 4 (Split managers)
+Week 4: Phase 5 (Structure) + Phase 6 (Type safety)
+Week 5: Phase 7 (Algorithms)
+Optional: Phase 8 (Native SQLite)
+```
+
+After each phase, run the full test suite. The 1,500+ tests should catch regressions.
+
+---
+
+### What NOT to Do
+
+1. **Don't add features until Phase 1-3 are done.** You'll just build on a broken foundation.
+2. **Don't rewrite from scratch.** The test suite is valuable. Refactor incrementally.
+3. **Don't keep the convenience methods "for compatibility."** No one uses them. Delete them.
+4. **Don't add more indexes without fixing the architecture.** Three redundant indexes is enough.
 
 ---
 
