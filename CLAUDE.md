@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1515 tests)
+npm test              # Run tests with coverage (1537 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -51,17 +51,19 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 50 TypeScript files
+### Source Structure (src/memory/) - 43 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 8 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, index |
-| **features/** | 3 | TagManager (tag aliases), IOManager (import/export/backup), index |
-| **search/** | 10 | SearchManager (orchestrator + compression + analytics), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions |
+| **core/** | 10 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, index |
+| **features/** | 6 | TagManager (tag aliases), IOManager (import/export/backup), AnalyticsManager, ArchiveManager, CompressionManager, index |
+| **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, index |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
-| **types/** | 7 | Entity, relation, search, analytics, tag, import-export, storage type definitions |
-| **utils/** | 17 | Zod schemas (14 validators), constants, errors, searchAlgorithms (levenshtein + tfidf), logger, pagination, caching, indexes |
+| **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
+| **utils/** | 10 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
 | **root** | 2 | index.ts (entry point), vitest.config.ts |
+
+> **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files
 
 ### Key Design Patterns
 
@@ -137,7 +139,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1515 tests, 42 files):
+Tests are in `src/memory/__tests__/` (1537 tests, 43 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|

@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
-import { logger } from './utils/logger.js';
+import { logger, defaultMemoryPath, ensureMemoryFilePath } from './utils/index.js';
 import { ManagerContext } from './core/ManagerContext.js';
 import { MCPServer } from './server/MCPServer.js';
-// Import path utilities from canonical location (has path traversal protection)
-import { defaultMemoryPath, ensureMemoryFilePath } from './utils/pathUtils.js';
 import type {
   Entity,
   Relation,

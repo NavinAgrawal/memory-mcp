@@ -2,7 +2,7 @@
  * Types Module - Barrel Export
  *
  * Central export point for all type definitions used throughout the
- * Memory MCP Server. Import from this file to access any type.
+ * Memory MCP Server. All types are consolidated in types.ts (Phase 5 cleanup).
  *
  * @example
  * ```typescript
@@ -10,46 +10,31 @@
  * ```
  */
 
-// Entity types
 export type {
+  // Entity types
   Entity,
   Relation,
   KnowledgeGraph,
   ReadonlyKnowledgeGraph,
-} from './entity.types.js';
-
-// Search types
-export type {
+  // Search types
   SearchResult,
   SavedSearch,
   BooleanQueryNode,
   DocumentVector,
   TFIDFIndex,
-} from './search.types.js';
-
-// Analytics types
-export type {
+  // Analytics types
   GraphStats,
   ValidationReport,
   ValidationIssue,
   ValidationWarning,
-} from './analytics.types.js';
-
-// Import/Export types
-export type {
+  // Import/Export types
   ExportFilter,
   ImportResult,
   CompressionResult,
-} from './import-export.types.js';
-
-// Tag types
-export type {
+  // Tag types
   TagAlias,
-} from './tag.types.js';
-
-// Storage types
-export type {
+  // Storage types
   IGraphStorage,
   StorageConfig,
   LowercaseData,
-} from './storage.types.js';
+} from './types.js';

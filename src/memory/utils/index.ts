@@ -2,11 +2,12 @@
  * Utilities Module Barrel Export
  *
  * Centralizes all utility exports for convenient importing.
- * Sprint 1 additions: responseFormatter, tagUtils, entityUtils,
- * validationHelper, paginationUtils, filterUtils
+ * Consolidated from 17 files to 9 focused modules (Phase 5 cleanup).
+ *
+ * @module utils
  */
 
-// Error types
+// ==================== Error Types ====================
 export {
   KnowledgeGraphError,
   EntityNotFoundError,
@@ -21,28 +22,7 @@ export {
   InsufficientEntitiesError,
 } from './errors.js';
 
-// Search algorithms (Levenshtein + TF-IDF)
-export {
-  levenshteinDistance,
-  calculateTF,
-  calculateIDF,
-  calculateTFIDF,
-  tokenize,
-} from './searchAlgorithms.js';
-
-// Logging
-export { logger } from './logger.js';
-
-// Date utilities
-export { isWithinDateRange, parseDateRange, isValidISODate, getCurrentTimestamp } from './dateUtils.js';
-
-// Validation utilities
-export { validateEntity, validateRelation, validateImportance, validateTags, type ValidationResult } from './validationUtils.js';
-
-// Path utilities
-export { defaultMemoryPath, ensureMemoryFilePath, validateFilePath } from './pathUtils.js';
-
-// Constants
+// ==================== Constants ====================
 export {
   FILE_EXTENSIONS,
   FILE_SUFFIXES,
@@ -54,10 +34,44 @@ export {
   DEFAULT_DUPLICATE_THRESHOLD,
   SEARCH_LIMITS,
   IMPORTANCE_RANGE,
+  GRAPH_LIMITS,
+  QUERY_LIMITS,
 } from './constants.js';
 
-// Zod schemas
+// ==================== Logger ====================
+export { logger } from './logger.js';
+
+// ==================== Search Algorithms ====================
 export {
+  levenshteinDistance,
+  calculateTF,
+  calculateIDF,
+  calculateTFIDF,
+  tokenize,
+} from './searchAlgorithms.js';
+
+// ==================== Indexes ====================
+export {
+  NameIndex,
+  TypeIndex,
+  LowercaseCache,
+  RelationIndex,
+} from './indexes.js';
+
+// ==================== Search Cache ====================
+export {
+  SearchCache,
+  searchCaches,
+  clearAllSearchCaches,
+  getAllCacheStats,
+  cleanupAllCaches,
+  type CacheStats,
+} from './searchCache.js';
+
+// ==================== Schemas and Validation ====================
+// Consolidated from: schemas.ts, validationHelper.ts, validationUtils.ts
+export {
+  // Zod schemas
   EntitySchema,
   CreateEntitySchema,
   UpdateEntitySchema,
@@ -71,6 +85,7 @@ export {
   BatchCreateRelationsSchema,
   EntityNamesSchema,
   DeleteRelationsSchema,
+  // Schema types
   type EntityInput,
   type CreateEntityInput,
   type UpdateEntityInput,
@@ -80,42 +95,41 @@ export {
   type DateRange,
   type TagAlias,
   type ExportFormat,
+  // Validation result type
+  type ValidationResult,
+  // Zod helpers
+  formatZodErrors,
+  validateWithSchema,
+  validateSafe,
+  validateArrayWithSchema,
+  // Manual validation functions
+  validateEntity,
+  validateRelation,
+  validateImportance,
+  validateTags,
 } from './schemas.js';
 
-// Search cache
+// ==================== Formatters ====================
+// Consolidated from: responseFormatter.ts, paginationUtils.ts
 export {
-  SearchCache,
-  searchCaches,
-  clearAllSearchCaches,
-  getAllCacheStats,
-  cleanupAllCaches,
-  type CacheStats,
-} from './searchCache.js';
-
-// === Sprint 1: New Utility Exports ===
-
-// MCP Response formatting (Task 1.1)
-export {
+  // Response formatting
   formatToolResponse,
   formatTextResponse,
   formatRawResponse,
   formatErrorResponse,
   type ToolResponse,
-} from './responseFormatter.js';
+  // Pagination utilities
+  validatePagination,
+  applyPagination,
+  paginateArray,
+  getPaginationMeta,
+  type ValidatedPagination,
+} from './formatters.js';
 
-// Tag utilities (Task 1.2)
+// ==================== Entity Utilities ====================
+// Consolidated from: entityUtils.ts, tagUtils.ts, dateUtils.ts, filterUtils.ts, pathUtils.ts
 export {
-  normalizeTag,
-  normalizeTags,
-  hasMatchingTag,
-  hasAllTags,
-  filterByTags,
-  addUniqueTags,
-  removeTags,
-} from './tagUtils.js';
-
-// Entity utilities (Task 1.3)
-export {
+  // Entity lookup
   findEntityByName,
   findEntitiesByNames,
   entityExists,
@@ -124,27 +138,20 @@ export {
   getEntityNameSet,
   groupEntitiesByType,
   touchEntity,
-} from './entityUtils.js';
-
-// Zod validation helpers (Task 1.4)
-export {
-  formatZodErrors,
-  validateWithSchema,
-  validateSafe,
-  validateArrayWithSchema,
-} from './validationHelper.js';
-
-// Pagination utilities (Task 1.5)
-export {
-  validatePagination,
-  applyPagination,
-  paginateArray,
-  getPaginationMeta,
-  type ValidatedPagination,
-} from './paginationUtils.js';
-
-// Filter utilities (Task 1.6)
-export {
+  // Tag utilities
+  normalizeTag,
+  normalizeTags,
+  hasMatchingTag,
+  hasAllTags,
+  filterByTags,
+  addUniqueTags,
+  removeTags,
+  // Date utilities
+  isWithinDateRange,
+  parseDateRange,
+  isValidISODate,
+  getCurrentTimestamp,
+  // Filter utilities
   isWithinImportanceRange,
   filterByImportance,
   filterByCreatedDate,
@@ -152,4 +159,8 @@ export {
   filterByEntityType,
   entityPassesFilters,
   type CommonSearchFilters,
-} from './filterUtils.js';
+  // Path utilities
+  validateFilePath,
+  defaultMemoryPath,
+  ensureMemoryFilePath,
+} from './entityUtils.js';

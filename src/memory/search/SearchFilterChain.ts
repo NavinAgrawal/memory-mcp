@@ -8,10 +8,15 @@
  * @module search/SearchFilterChain
  */
 
-import type { Entity } from '../types/entity.types.js';
-import { normalizeTags, hasMatchingTag } from '../utils/tagUtils.js';
-import { isWithinImportanceRange } from '../utils/filterUtils.js';
-import { validatePagination, applyPagination, type ValidatedPagination } from '../utils/paginationUtils.js';
+import type { Entity } from '../types/index.js';
+import {
+  normalizeTags,
+  hasMatchingTag,
+  isWithinImportanceRange,
+  validatePagination,
+  applyPagination,
+  type ValidatedPagination,
+} from '../utils/index.js';
 
 /**
  * Search filter configuration options.

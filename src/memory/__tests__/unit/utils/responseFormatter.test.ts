@@ -11,7 +11,7 @@ import {
   formatRawResponse,
   formatErrorResponse,
   ToolResponse
-} from '../../../utils/responseFormatter.js';
+} from '../../../utils/index.js';
 
 describe('responseFormatter', () => {
   describe('formatToolResponse', () => {
