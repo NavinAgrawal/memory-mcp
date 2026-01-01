@@ -3,7 +3,7 @@
  * Memory MCP Migration Tool
  *
  * Migrates knowledge graph data between JSONL and SQLite storage formats.
- * This is a standalone tool that uses the @danielsimonjr/memory-mcp package.
+ * This is a standalone tool that uses better-sqlite3 for native SQLite support.
  *
  * Usage:
  *   npx migrate-from-jsonl-to-sqlite --from memory.jsonl --to memory.db
@@ -12,9 +12,10 @@
  * @module tools/migrate-from-jsonl-to-sqlite
  */
 
-import { resolve, extname, dirname, join } from 'path';
+import { resolve, extname, dirname } from 'path';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { readFile } from 'fs/promises';
+import Database from 'better-sqlite3';
+import type { Database as DatabaseType } from 'better-sqlite3';
 
 // ============================================================================
 // Types (inline to avoid external dependencies)
@@ -50,11 +51,30 @@ interface MigrationOptions {
   verbose?: boolean;
 }
 
+interface EntityRow {
+  name: string;
+  entityType: string;
+  observations: string;
+  createdAt: string | null;
+  lastModified: string | null;
+  tags: string | null;
+  importance: number | null;
+  parentId: string | null;
+}
+
+interface RelationRow {
+  fromEntity: string;
+  toEntity: string;
+  relationType: string;
+  createdAt: string | null;
+  lastModified: string | null;
+}
+
 // ============================================================================
 // JSONL Storage (inline implementation)
 // ============================================================================
 
-async function loadFromJsonl(filePath: string): Promise<KnowledgeGraph> {
+function loadFromJsonl(filePath: string): KnowledgeGraph {
   const absolutePath = resolve(filePath);
 
   if (!existsSync(absolutePath)) {
@@ -144,98 +164,58 @@ function saveToJsonl(filePath: string, graph: KnowledgeGraph): void {
 }
 
 // ============================================================================
-// SQLite Storage (using sql.js)
+// SQLite Storage (using better-sqlite3)
 // ============================================================================
 
-let SQL: any = null;
-
-async function initSqlJs(): Promise<any> {
-  if (SQL) return SQL;
-
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const initSqlJsFn = require('sql.js');
-
-  // Load WASM binary from node_modules
-  const sqlJsPath = require.resolve('sql.js');
-  const sqlJsDir = dirname(sqlJsPath);
-  const wasmPath = join(sqlJsDir, 'sql-wasm.wasm');
-
-  const wasmBuffer = await readFile(wasmPath);
-  const wasmBinary = wasmBuffer.buffer.slice(
-    wasmBuffer.byteOffset,
-    wasmBuffer.byteOffset + wasmBuffer.byteLength
-  );
-
-  SQL = await initSqlJsFn({ wasmBinary });
-  return SQL;
-}
-
-async function loadFromSqlite(filePath: string): Promise<KnowledgeGraph> {
+function loadFromSqlite(filePath: string): KnowledgeGraph {
   const absolutePath = resolve(filePath);
-  const SQL = await initSqlJs();
 
-  let db: any;
-
-  if (existsSync(absolutePath)) {
-    const buffer = readFileSync(absolutePath);
-    db = new SQL.Database(buffer);
-  } else {
+  if (!existsSync(absolutePath)) {
     return { entities: [], relations: [] };
   }
+
+  const db: DatabaseType = new Database(absolutePath, { readonly: true });
 
   try {
     const entities: Entity[] = [];
     const relations: Relation[] = [];
 
     // Check if tables exist
-    const tableCheck = db.exec(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('entities', 'relations')"
-    );
-    if (tableCheck.length === 0 || tableCheck[0].values.length === 0) {
+    const tableCheck = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('entities', 'relations')"
+      )
+      .all();
+
+    if (tableCheck.length === 0) {
       return { entities: [], relations: [] };
     }
 
     // Load entities
-    const entityResults = db.exec('SELECT * FROM entities');
-    if (entityResults.length > 0) {
-      const columns = entityResults[0].columns;
-      for (const row of entityResults[0].values) {
-        const entity: any = {};
-        columns.forEach((col: string, i: number) => {
-          entity[col] = row[i];
-        });
-
-        entities.push({
-          name: entity.name,
-          entityType: entity.entityType,
-          observations: entity.observations ? JSON.parse(entity.observations) : [],
-          createdAt: entity.createdAt,
-          lastModified: entity.lastModified,
-          tags: entity.tags ? JSON.parse(entity.tags) : undefined,
-          importance: entity.importance,
-          parentId: entity.parentId,
-        });
-      }
+    const entityRows = db.prepare('SELECT * FROM entities').all() as EntityRow[];
+    for (const row of entityRows) {
+      entities.push({
+        name: row.name,
+        entityType: row.entityType,
+        observations: row.observations ? JSON.parse(row.observations) : [],
+        createdAt: row.createdAt ?? undefined,
+        lastModified: row.lastModified ?? undefined,
+        tags: row.tags ? JSON.parse(row.tags) : undefined,
+        importance: row.importance ?? undefined,
+        parentId: row.parentId ?? undefined,
+      });
     }
 
     // Load relations
-    const relationResults = db.exec('SELECT * FROM relations');
-    if (relationResults.length > 0) {
-      const columns = relationResults[0].columns;
-      for (const row of relationResults[0].values) {
-        const relation: any = {};
-        columns.forEach((col: string, i: number) => {
-          relation[col] = row[i];
-        });
-
-        relations.push({
-          from: relation.fromEntity,
-          to: relation.toEntity,
-          relationType: relation.relationType,
-          createdAt: relation.createdAt,
-          lastModified: relation.lastModified,
-        });
-      }
+    const relationRows = db.prepare('SELECT * FROM relations').all() as RelationRow[];
+    for (const row of relationRows) {
+      relations.push({
+        from: row.fromEntity,
+        to: row.toEntity,
+        relationType: row.relationType,
+        createdAt: row.createdAt ?? undefined,
+        lastModified: row.lastModified ?? undefined,
+      });
     }
 
     return { entities, relations };
@@ -244,93 +224,137 @@ async function loadFromSqlite(filePath: string): Promise<KnowledgeGraph> {
   }
 }
 
-async function saveToSqlite(filePath: string, graph: KnowledgeGraph): Promise<void> {
+function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
   const absolutePath = resolve(filePath);
-  const SQL = await initSqlJs();
   const dir = dirname(absolutePath);
 
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
 
-  const db = new SQL.Database();
+  // Remove existing file if present (we're doing a full migration)
+  if (existsSync(absolutePath)) {
+    const fs = require('fs');
+    fs.unlinkSync(absolutePath);
+  }
+
+  const db: DatabaseType = new Database(absolutePath);
 
   try {
-    // Create tables
-    db.run(`
+    // Enable WAL mode for better performance
+    db.pragma('journal_mode = WAL');
+
+    // Create tables with schema matching SQLiteStorage.ts
+    db.exec(`
       CREATE TABLE IF NOT EXISTS entities (
         name TEXT PRIMARY KEY,
         entityType TEXT NOT NULL,
         observations TEXT NOT NULL,
-        createdAt TEXT,
-        lastModified TEXT,
         tags TEXT,
-        importance REAL,
-        parentId TEXT
+        importance INTEGER,
+        parentId TEXT,
+        createdAt TEXT NOT NULL,
+        lastModified TEXT NOT NULL
       )
     `);
 
-    db.run(`
+    db.exec(`
       CREATE TABLE IF NOT EXISTS relations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
         fromEntity TEXT NOT NULL,
         toEntity TEXT NOT NULL,
         relationType TEXT NOT NULL,
-        createdAt TEXT,
-        lastModified TEXT,
-        UNIQUE(fromEntity, toEntity, relationType)
+        createdAt TEXT NOT NULL,
+        lastModified TEXT NOT NULL,
+        PRIMARY KEY (fromEntity, toEntity, relationType)
       )
     `);
 
     // Create indexes
-    db.run('CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(entityType)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_entities_parent ON entities(parentId)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_relations_from ON relations(fromEntity)');
-    db.run('CREATE INDEX IF NOT EXISTS idx_relations_to ON relations(toEntity)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_entity_type ON entities(entityType)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_entity_parent ON entities(parentId)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_relation_from ON relations(fromEntity)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_relation_to ON relations(toEntity)');
 
-    // Insert entities
-    const insertEntity = db.prepare(`
-      INSERT OR REPLACE INTO entities
-      (name, entityType, observations, createdAt, lastModified, tags, importance, parentId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    // Create FTS5 virtual table for full-text search
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
+        name,
+        entityType,
+        observations,
+        tags,
+        content='entities',
+        content_rowid='rowid'
+      )
     `);
 
-    for (const entity of graph.entities) {
-      insertEntity.run([
-        entity.name,
-        entity.entityType,
-        JSON.stringify(entity.observations),
-        entity.createdAt || null,
-        entity.lastModified || null,
-        entity.tags ? JSON.stringify(entity.tags) : null,
-        entity.importance ?? null,
-        entity.parentId || null,
-      ]);
-    }
-    insertEntity.free();
-
-    // Insert relations
-    const insertRelation = db.prepare(`
-      INSERT OR REPLACE INTO relations
-      (fromEntity, toEntity, relationType, createdAt, lastModified)
-      VALUES (?, ?, ?, ?, ?)
+    // Create triggers to keep FTS5 index in sync
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
+        INSERT INTO entities_fts(rowid, name, entityType, observations, tags)
+        VALUES (NEW.rowid, NEW.name, NEW.entityType, NEW.observations, NEW.tags);
+      END
     `);
 
-    for (const relation of graph.relations) {
-      insertRelation.run([
-        relation.from,
-        relation.to,
-        relation.relationType,
-        relation.createdAt || null,
-        relation.lastModified || null,
-      ]);
-    }
-    insertRelation.free();
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
+        INSERT INTO entities_fts(entities_fts, rowid, name, entityType, observations, tags)
+        VALUES ('delete', OLD.rowid, OLD.name, OLD.entityType, OLD.observations, OLD.tags);
+      END
+    `);
 
-    // Save to file
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    writeFileSync(absolutePath, buffer);
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
+        INSERT INTO entities_fts(entities_fts, rowid, name, entityType, observations, tags)
+        VALUES ('delete', OLD.rowid, OLD.name, OLD.entityType, OLD.observations, OLD.tags);
+        INSERT INTO entities_fts(rowid, name, entityType, observations, tags)
+        VALUES (NEW.rowid, NEW.name, NEW.entityType, NEW.observations, NEW.tags);
+      END
+    `);
+
+    // Use transaction for atomicity
+    const insertEntities = db.transaction((entities: Entity[]) => {
+      const insertEntity = db.prepare(`
+        INSERT INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const entity of entities) {
+        insertEntity.run(
+          entity.name,
+          entity.entityType,
+          JSON.stringify(entity.observations),
+          entity.tags ? JSON.stringify(entity.tags) : null,
+          entity.importance ?? null,
+          entity.parentId ?? null,
+          entity.createdAt || new Date().toISOString(),
+          entity.lastModified || new Date().toISOString()
+        );
+      }
+    });
+
+    const insertRelations = db.transaction((relations: Relation[]) => {
+      const insertRelation = db.prepare(`
+        INSERT INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+
+      for (const relation of relations) {
+        insertRelation.run(
+          relation.from,
+          relation.to,
+          relation.relationType,
+          relation.createdAt || new Date().toISOString(),
+          relation.lastModified || new Date().toISOString()
+        );
+      }
+    });
+
+    // Insert data
+    insertEntities(graph.entities);
+    insertRelations(graph.relations);
+
+    // Checkpoint WAL to ensure all data is written
+    db.pragma('wal_checkpoint(TRUNCATE)');
   } finally {
     db.close();
   }
@@ -352,7 +376,7 @@ function detectStorageType(filePath: string): 'jsonl' | 'sqlite' {
   return 'jsonl';
 }
 
-async function migrate(options: MigrationOptions): Promise<void> {
+function migrate(options: MigrationOptions): void {
   const { from, to, verbose = false } = options;
 
   const fromType = detectStorageType(from);
@@ -375,9 +399,9 @@ async function migrate(options: MigrationOptions): Promise<void> {
     let graph: KnowledgeGraph;
 
     if (fromType === 'jsonl') {
-      graph = await loadFromJsonl(from);
+      graph = loadFromJsonl(from);
     } else {
-      graph = await loadFromSqlite(from);
+      graph = loadFromSqlite(from);
     }
 
     const entityCount = graph.entities.length;
@@ -396,7 +420,7 @@ async function migrate(options: MigrationOptions): Promise<void> {
     if (toType === 'jsonl') {
       saveToJsonl(to, graph);
     } else {
-      await saveToSqlite(to, graph);
+      saveToSqlite(to, graph);
     }
 
     // Verify by reading back
@@ -404,9 +428,9 @@ async function migrate(options: MigrationOptions): Promise<void> {
     let verifyGraph: KnowledgeGraph;
 
     if (toType === 'jsonl') {
-      verifyGraph = await loadFromJsonl(to);
+      verifyGraph = loadFromJsonl(to);
     } else {
-      verifyGraph = await loadFromSqlite(to);
+      verifyGraph = loadFromSqlite(to);
     }
 
     const verifyEntityCount = verifyGraph.entities.length;
@@ -423,6 +447,10 @@ async function migrate(options: MigrationOptions): Promise<void> {
     console.log(`   Migrated ${entityCount} entities and ${relationCount} relations`);
     console.log(`   From: ${from} (${fromType})`);
     console.log(`   To:   ${to} (${toType})`);
+
+    if (toType === 'sqlite') {
+      console.log('\n   📝 Note: FTS5 full-text search index has been created.');
+    }
   } catch (error) {
     console.error('\n❌ Migration failed:', error instanceof Error ? error.message : error);
     process.exit(1);
@@ -473,6 +501,7 @@ Memory MCP Migration Tool
 =========================
 
 Migrate knowledge graph data between JSONL and SQLite storage formats.
+Uses better-sqlite3 for native SQLite performance.
 
 USAGE:
   migrate-from-jsonl-to-sqlite --from <source> --to <target> [options]
@@ -501,6 +530,12 @@ FILE EXTENSIONS:
   JSONL: .jsonl, .json
   SQLite: .db, .sqlite, .sqlite3
 
+FEATURES:
+  - Native SQLite via better-sqlite3 (3-10x faster than WASM)
+  - FTS5 full-text search index created automatically
+  - WAL mode for better performance
+  - Atomic transactions for data integrity
+
 NOTES:
   - The target file will be created if it doesn't exist
   - If the target file exists, it will be overwritten
@@ -511,7 +546,4 @@ NOTES:
 
 // Run migration
 const options = parseArgs();
-migrate(options).catch((error) => {
-  console.error('Unexpected error:', error);
-  process.exit(1);
-});
+migrate(options);
