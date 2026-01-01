@@ -323,12 +323,11 @@ describe('Observation Tools E2E', () => {
           .rejects.toThrow();
       });
 
-      it('should handle missing entityName field gracefully', async () => {
-        // System may skip entries without entityName
-        const result = await handleToolCall('delete_observations', {
+      it('should require entityName field', async () => {
+        // entityName is required per tool definition
+        await expect(handleToolCall('delete_observations', {
           deletions: [{ observations: ['obs1'] }]
-        }, manager);
-        expect(result.content[0].text).toBeDefined();
+        }, manager)).rejects.toThrow();
       });
 
       it('should require observations field', async () => {

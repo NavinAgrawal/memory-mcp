@@ -246,10 +246,10 @@ export const AddObservationsInputSchema = z.array(AddObservationInputSchema)
 /**
  * Single observation deletion input.
  * Empty observations array is allowed (no-op).
- * Missing entityName entries are skipped by the manager.
+ * Non-existent entities are silently skipped by the manager.
  */
 export const DeleteObservationInputSchema = z.object({
-  entityName: entityNameSchema.optional(),
+  entityName: entityNameSchema,
   observations: z.array(observationSchema),
 });
 
