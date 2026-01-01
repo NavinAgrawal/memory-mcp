@@ -6,7 +6,7 @@
  *
  * Supported storage types:
  * - 'jsonl': JSONL file-based storage (default) - simple, human-readable
- * - 'sqlite': SQLite database storage (sql.js WASM) - indexed, ACID transactions
+ * - 'sqlite': SQLite database storage (better-sqlite3 native) - indexed, ACID transactions, FTS5
  *
  * @module core/StorageFactory
  */

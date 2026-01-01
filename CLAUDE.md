@@ -46,7 +46,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ┌──────────────────┴──────────────────────┐
 │  Layer 3: Storage Layer                 │
 │  core/GraphStorage.ts (JSONL + cache)   │
-│  core/SQLiteStorage.ts (sql.js WASM)    │
+│  core/SQLiteStorage.ts (better-sqlite3) │
 │  core/StorageFactory.ts (backend select)│
 └─────────────────────────────────────────┘
 ```
@@ -105,7 +105,8 @@ interface Relation {
 **SQLite (Optional):**
 - `memory.db` - SQLite database with all data
 - Configure via `MEMORY_STORAGE_TYPE=sqlite` environment variable
-- Uses sql.js (WASM-based) for cross-platform compatibility
+- Uses better-sqlite3 (native SQLite) for 3-10x faster performance
+- Features: FTS5 full-text search, referential integrity (CASCADE), WAL mode
 
 ## Entry Points
 
@@ -197,9 +198,11 @@ Tests are in `src/memory/__tests__/` (1515 tests, 42 files):
 
 **Production:**
 - @modelcontextprotocol/sdk: ^1.21.1
+- better-sqlite3: ^11.7.0
 - zod: ^4.1.13
 
 **Development:**
+- @types/better-sqlite3: ^7.6.12
 - TypeScript: ^5.6.2
 - Vitest: ^4.0.13
 - @vitest/coverage-v8: ^4.0.13

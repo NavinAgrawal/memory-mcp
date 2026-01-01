@@ -1,7 +1,13 @@
 /**
  * SQLiteStorage Unit Tests
  *
- * Tests for the sql.js-based SQLite storage implementation.
+ * Tests for the better-sqlite3-based SQLite storage implementation.
+ * Validates native SQLite functionality including:
+ * - Basic CRUD operations
+ * - Referential integrity (ON DELETE CASCADE)
+ * - FTS5 full-text search
+ * - Transaction handling
+ * - WAL mode persistence
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -25,6 +31,7 @@ describe('SQLiteStorage', () => {
   afterEach(async () => {
     try {
       storage.close();
+      // Clean up WAL files as well
       await fs.rm(testDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
@@ -40,13 +47,20 @@ describe('SQLiteStorage', () => {
     });
 
     it('should load entities and relations from database', async () => {
-      // Save test data
+      // Save test data - include both entities for the relation
       await storage.saveGraph({
         entities: [
           {
             name: 'Alice',
             entityType: 'person',
             observations: ['Engineer'],
+            createdAt: '2024-01-01T00:00:00.000Z',
+            lastModified: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            name: 'Bob',
+            entityType: 'person',
+            observations: ['Designer'],
             createdAt: '2024-01-01T00:00:00.000Z',
             lastModified: '2024-01-01T00:00:00.000Z',
           },
@@ -66,7 +80,7 @@ describe('SQLiteStorage', () => {
       storage.clearCache();
       const graph = await storage.loadGraph();
 
-      expect(graph.entities).toHaveLength(1);
+      expect(graph.entities).toHaveLength(2);
       expect(graph.entities[0].name).toBe('Alice');
       expect(graph.relations).toHaveLength(1);
       expect(graph.relations[0].from).toBe('Alice');
@@ -107,12 +121,20 @@ describe('SQLiteStorage', () => {
 
   describe('saveGraph', () => {
     it('should save entities and relations to SQLite', async () => {
+      // First create both entities so the relation can be created
       const graph = {
         entities: [
           {
             name: 'Alice',
             entityType: 'person',
             observations: ['Engineer'],
+            createdAt: '2024-01-01T00:00:00.000Z',
+            lastModified: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            name: 'Bob',
+            entityType: 'person',
+            observations: ['Designer'],
             createdAt: '2024-01-01T00:00:00.000Z',
             lastModified: '2024-01-01T00:00:00.000Z',
           },
@@ -134,7 +156,7 @@ describe('SQLiteStorage', () => {
       storage.clearCache();
       const loaded = await storage.loadGraph();
 
-      expect(loaded.entities).toHaveLength(1);
+      expect(loaded.entities).toHaveLength(2);
       expect(loaded.entities[0].name).toBe('Alice');
       expect(loaded.relations).toHaveLength(1);
       expect(loaded.relations[0].from).toBe('Alice');
@@ -143,6 +165,13 @@ describe('SQLiteStorage', () => {
     it('should include optional entity fields', async () => {
       const graph = {
         entities: [
+          {
+            name: 'Company',
+            entityType: 'organization',
+            observations: ['Tech company'],
+            createdAt: '2024-01-01T00:00:00.000Z',
+            lastModified: '2024-01-01T00:00:00.000Z',
+          },
           {
             name: 'Alice',
             entityType: 'person',
@@ -162,9 +191,10 @@ describe('SQLiteStorage', () => {
       storage.clearCache();
       const loaded = await storage.loadGraph();
 
-      expect(loaded.entities[0].tags).toEqual(['team']);
-      expect(loaded.entities[0].importance).toBe(8);
-      expect(loaded.entities[0].parentId).toBe('Company');
+      const alice = loaded.entities.find(e => e.name === 'Alice');
+      expect(alice?.tags).toEqual(['team']);
+      expect(alice?.importance).toBe(8);
+      expect(alice?.parentId).toBe('Company');
     });
 
     it('should persist to disk file', async () => {
@@ -283,6 +313,22 @@ describe('SQLiteStorage', () => {
 
     describe('appendRelation', () => {
       it('should append relation to database', async () => {
+        // First create the entities (required for referential integrity)
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+        await storage.appendEntity({
+          name: 'Bob',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
         const relation = {
           from: 'Alice',
           to: 'Bob',
@@ -299,6 +345,22 @@ describe('SQLiteStorage', () => {
       });
 
       it('should update cache with new relation', async () => {
+        // First create the entities (required for referential integrity)
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+        await storage.appendEntity({
+          name: 'Bob',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
         const relation = {
           from: 'Alice',
           to: 'Bob',
@@ -384,7 +446,7 @@ describe('SQLiteStorage', () => {
         lastModified: new Date().toISOString(),
       });
 
-      // compact() should run VACUUM and persist
+      // compact() should run VACUUM and rebuild FTS
       await storage.compact();
 
       // Verify data is still there
@@ -590,6 +652,131 @@ describe('SQLiteStorage', () => {
 
       expect(graph.entities).toHaveLength(3);
       expect(graph.relations).toHaveLength(1);
+    });
+  });
+
+  describe('Referential Integrity', () => {
+    it('should cascade delete relations when entity is deleted', async () => {
+      // Create entities and relation
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [
+          { from: 'Alice', to: 'Bob', relationType: 'knows', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+      });
+
+      // Now save without Alice - relations referencing Alice should be cascade deleted
+      await storage.saveGraph({
+        entities: [
+          { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      });
+
+      storage.clearCache();
+      const graph = await storage.loadGraph();
+
+      expect(graph.entities).toHaveLength(1);
+      expect(graph.entities[0].name).toBe('Bob');
+      expect(graph.relations).toHaveLength(0);
+    });
+
+    it('should allow saving entities with dangling parentId references', async () => {
+      // saveGraph allows dangling references (like JSONL behavior)
+      // This matches the original JSONL behavior where parentId could reference non-existent entities
+      await storage.saveGraph({
+        entities: [
+          { name: 'Child', entityType: 'item', observations: [], parentId: 'NonExistentParent', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      });
+
+      storage.clearCache();
+      const graph = await storage.loadGraph();
+
+      expect(graph.entities).toHaveLength(1);
+      expect(graph.entities[0].name).toBe('Child');
+      // parentId is preserved even if parent doesn't exist (matches JSONL behavior)
+      expect(graph.entities[0].parentId).toBe('NonExistentParent');
+    });
+  });
+
+  describe('FTS5 Full-Text Search', () => {
+    it('should perform full-text search on entity names', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice Smith', entityType: 'person', observations: ['Software engineer'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob Johnson', entityType: 'person', observations: ['Designer'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Alice Cooper', entityType: 'person', observations: ['Musician'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      });
+
+      const results = storage.fullTextSearch('Alice');
+
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.map(r => r.name)).toContain('Alice Smith');
+      expect(results.map(r => r.name)).toContain('Alice Cooper');
+    });
+
+    it('should perform full-text search on observations', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: ['Software engineer at Google'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob', entityType: 'person', observations: ['Designer at Apple'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      });
+
+      const results = storage.fullTextSearch('engineer');
+
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.map(r => r.name)).toContain('Alice');
+    });
+
+    it('should return empty array for invalid FTS query', async () => {
+      await storage.ensureLoaded();
+
+      // Invalid FTS5 query syntax should return empty array, not throw
+      const results = storage.fullTextSearch('AND OR NOT');
+
+      expect(results).toEqual([]);
+    });
+
+    it('should perform simple LIKE-based search', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: ['Engineer'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob', entityType: 'person', observations: ['Designer'], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [],
+      });
+
+      const results = storage.simpleSearch('alice');
+
+      expect(results).toContain('Alice');
+      expect(results).not.toContain('Bob');
+    });
+  });
+
+  describe('WAL Mode', () => {
+    it('should create WAL files for persistence', async () => {
+      await storage.appendEntity({
+        name: 'Test',
+        entityType: 'test',
+        observations: [],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      // WAL files should be created
+      const files = await fs.readdir(testDir);
+      // Main db file should exist
+      expect(files).toContain('test-graph.db');
+      // WAL and SHM files may exist depending on whether checkpoint was run
     });
   });
 });

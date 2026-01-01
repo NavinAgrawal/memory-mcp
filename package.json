@@ -37,11 +37,11 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server-memory": "file:src/memory",
-    "sql.js": "^1.13.0"
+    "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
     "@types/js-yaml": "^4.0.9",
-    "@types/sql.js": "^1.4.9",
     "js-yaml": "^4.1.1"
   }
 }
