@@ -71,7 +71,7 @@ export {
 // ==================== Schemas and Validation ====================
 // Consolidated from: schemas.ts, validationHelper.ts, validationUtils.ts
 export {
-  // Zod schemas
+  // Zod schemas - Entity/Relation
   EntitySchema,
   CreateEntitySchema,
   UpdateEntitySchema,
@@ -85,6 +85,24 @@ export {
   BatchCreateRelationsSchema,
   EntityNamesSchema,
   DeleteRelationsSchema,
+  // Zod schemas - Observations
+  AddObservationInputSchema,
+  AddObservationsInputSchema,
+  DeleteObservationInputSchema,
+  DeleteObservationsInputSchema,
+  // Zod schemas - Archive
+  ArchiveCriteriaSchema,
+  // Zod schemas - Saved Search
+  SavedSearchInputSchema,
+  SavedSearchUpdateSchema,
+  // Zod schemas - Import/Export
+  ImportFormatSchema,
+  ExtendedExportFormatSchema,
+  MergeStrategySchema,
+  ExportFilterSchema,
+  // Zod schemas - Search
+  OptionalTagsSchema,
+  OptionalEntityNamesSchema,
   // Schema types
   type EntityInput,
   type CreateEntityInput,
@@ -95,6 +113,15 @@ export {
   type DateRange,
   type TagAlias,
   type ExportFormat,
+  type AddObservationInput,
+  type DeleteObservationInput,
+  type ArchiveCriteriaInput,
+  type SavedSearchInput,
+  type SavedSearchUpdateInput,
+  type ImportFormat,
+  type ExtendedExportFormat,
+  type MergeStrategy,
+  type ExportFilterInput,
   // Validation result type
   type ValidationResult,
   // Zod helpers
