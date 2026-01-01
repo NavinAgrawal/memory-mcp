@@ -70,6 +70,40 @@ export class GraphStorage implements IGraphStorage {
    */
   constructor(private memoryFilePath: string) {}
 
+  // ==================== Durable File Operations ====================
+
+  /**
+   * Write content to file with fsync for durability.
+   *
+   * @param content - Content to write
+   */
+  private async durableWriteFile(content: string): Promise<void> {
+    const fd = await fs.open(this.memoryFilePath, 'w');
+    try {
+      await fd.write(content);
+      await fd.sync();
+    } finally {
+      await fd.close();
+    }
+  }
+
+  /**
+   * Append content to file with fsync for durability.
+   *
+   * @param content - Content to append
+   * @param prependNewline - Whether to prepend a newline
+   */
+  private async durableAppendFile(content: string, prependNewline: boolean): Promise<void> {
+    const fd = await fs.open(this.memoryFilePath, 'a');
+    try {
+      const dataToWrite = prependNewline ? '\n' + content : content;
+      await fd.write(dataToWrite);
+      await fd.sync();
+    } finally {
+      await fd.close();
+    }
+  }
+
   /**
    * Load the knowledge graph from disk (read-only access).
    *
@@ -242,7 +276,7 @@ export class GraphStorage implements IGraphStorage {
       ),
     ];
 
-    await fs.writeFile(this.memoryFilePath, lines.join('\n'));
+    await this.durableWriteFile(lines.join('\n'));
 
     // Update cache directly with the saved graph (avoid re-reading from disk)
     this.cache = graph;
@@ -285,24 +319,20 @@ export class GraphStorage implements IGraphStorage {
 
     const line = JSON.stringify(entityData);
 
-    // Append to file (prepend newline if file exists and has content)
+    // Append to file with fsync for durability (write FIRST, then update cache)
     try {
       const stat = await fs.stat(this.memoryFilePath);
-      if (stat.size > 0) {
-        await fs.appendFile(this.memoryFilePath, '\n' + line);
-      } else {
-        await fs.writeFile(this.memoryFilePath, line);
-      }
+      await this.durableAppendFile(line, stat.size > 0);
     } catch (error) {
       // File doesn't exist - create it
       if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        await fs.writeFile(this.memoryFilePath, line);
+        await this.durableWriteFile(line);
       } else {
         throw error;
       }
     }
 
-    // Update cache in-place
+    // Update cache in-place (after successful file write)
     this.cache!.entities.push(entity);
 
     // Update indexes
@@ -342,24 +372,20 @@ export class GraphStorage implements IGraphStorage {
       lastModified: relation.lastModified,
     });
 
-    // Append to file (prepend newline if file exists and has content)
+    // Append to file with fsync for durability (write FIRST, then update cache)
     try {
       const stat = await fs.stat(this.memoryFilePath);
-      if (stat.size > 0) {
-        await fs.appendFile(this.memoryFilePath, '\n' + line);
-      } else {
-        await fs.writeFile(this.memoryFilePath, line);
-      }
+      await this.durableAppendFile(line, stat.size > 0);
     } catch (error) {
       // File doesn't exist - create it
       if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        await fs.writeFile(this.memoryFilePath, line);
+        await this.durableWriteFile(line);
       } else {
         throw error;
       }
     }
 
-    // Update cache in-place
+    // Update cache in-place (after successful file write)
     this.cache!.relations.push(relation);
     this.pendingAppends++;
 
@@ -419,11 +445,48 @@ export class GraphStorage implements IGraphStorage {
       return false;
     }
 
-    // Update cache in-place
     const entity = this.cache!.entities[entityIndex];
     const oldType = entity.entityType;
+    const timestamp = new Date().toISOString();
+
+    // Build the updated entity data for file write BEFORE modifying cache
+    // This ensures cache consistency if file write fails
+    const updatedEntity = {
+      ...entity,
+      ...updates,
+      lastModified: timestamp,
+    };
+
+    const entityData: Record<string, unknown> = {
+      type: 'entity',
+      name: updatedEntity.name,
+      entityType: updatedEntity.entityType,
+      observations: updatedEntity.observations,
+      createdAt: updatedEntity.createdAt,
+      lastModified: updatedEntity.lastModified,
+    };
+
+    if (updatedEntity.tags !== undefined) entityData.tags = updatedEntity.tags;
+    if (updatedEntity.importance !== undefined) entityData.importance = updatedEntity.importance;
+    if (updatedEntity.parentId !== undefined) entityData.parentId = updatedEntity.parentId;
+
+    const line = JSON.stringify(entityData);
+
+    // Write to file FIRST with durability - if this fails, cache remains consistent
+    try {
+      const stat = await fs.stat(this.memoryFilePath);
+      await this.durableAppendFile(line, stat.size > 0);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        await this.durableWriteFile(line);
+      } else {
+        throw error;
+      }
+    }
+
+    // File write succeeded - NOW update cache in-place
     Object.assign(entity, updates);
-    entity.lastModified = new Date().toISOString();
+    entity.lastModified = timestamp;
 
     // Update indexes
     this.nameIndex.add(entity); // Update reference
@@ -431,38 +494,6 @@ export class GraphStorage implements IGraphStorage {
       this.typeIndex.updateType(entityName, oldType, updates.entityType);
     }
     this.lowercaseCache.set(entity); // Recompute lowercase
-
-    // Append updated version to file
-    const entityData: Record<string, unknown> = {
-      type: 'entity',
-      name: entity.name,
-      entityType: entity.entityType,
-      observations: entity.observations,
-      createdAt: entity.createdAt,
-      lastModified: entity.lastModified,
-    };
-
-    if (entity.tags !== undefined) entityData.tags = entity.tags;
-    if (entity.importance !== undefined) entityData.importance = entity.importance;
-    if (entity.parentId !== undefined) entityData.parentId = entity.parentId;
-
-    const line = JSON.stringify(entityData);
-
-    // Append to file
-    try {
-      const stat = await fs.stat(this.memoryFilePath);
-      if (stat.size > 0) {
-        await fs.appendFile(this.memoryFilePath, '\n' + line);
-      } else {
-        await fs.writeFile(this.memoryFilePath, line);
-      }
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        await fs.writeFile(this.memoryFilePath, line);
-      } else {
-        throw error;
-      }
-    }
 
     this.pendingAppends++;
 
