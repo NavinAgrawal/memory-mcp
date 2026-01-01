@@ -50,10 +50,17 @@ export class GraphStorage implements IGraphStorage {
   private pendingAppends: number = 0;
 
   /**
-   * Threshold for automatic compaction.
-   * After this many appends, the file is rewritten to remove duplicates.
+   * Dynamic threshold for automatic compaction.
+   *
+   * Returns the larger of 100 or 10% of the current entity count.
+   * This scales with graph size to avoid too-frequent compaction on large graphs
+   * while maintaining a reasonable minimum for small graphs.
+   *
+   * @returns Compaction threshold value
    */
-  private readonly compactionThreshold: number = 100;
+  private get compactionThreshold(): number {
+    return Math.max(100, Math.floor((this.cache?.entities.length ?? 0) * 0.1));
+  }
 
   /**
    * O(1) entity lookup by name.

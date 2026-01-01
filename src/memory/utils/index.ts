@@ -46,6 +46,7 @@ export {
   levenshteinDistance,
   calculateTF,
   calculateIDF,
+  calculateIDFFromTokenSets,
   calculateTFIDF,
   tokenize,
 } from './searchAlgorithms.js';
