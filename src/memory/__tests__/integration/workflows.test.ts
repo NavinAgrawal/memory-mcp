@@ -10,6 +10,7 @@ import { GraphStorage } from '../../core/GraphStorage.js';
 import { EntityManager } from '../../core/EntityManager.js';
 import { RelationManager } from '../../core/RelationManager.js';
 import { SearchManager } from '../../search/SearchManager.js';
+import { CompressionManager } from '../../features/CompressionManager.js';
 import { BasicSearch } from '../../search/BasicSearch.js';
 import { RankedSearch } from '../../search/RankedSearch.js';
 import { BooleanSearch } from '../../search/BooleanSearch.js';
@@ -23,6 +24,7 @@ describe('Integration: Complete Workflows', () => {
   let entityManager: EntityManager;
   let relationManager: RelationManager;
   let searchManager: SearchManager;
+  let compressionManager: CompressionManager;
   let basicSearch: BasicSearch;
   let rankedSearch: RankedSearch;
   let booleanSearch: BooleanSearch;
@@ -42,6 +44,7 @@ describe('Integration: Complete Workflows', () => {
     entityManager = new EntityManager(storage);
     relationManager = new RelationManager(storage);
     searchManager = new SearchManager(storage, savedSearchesPath);
+    compressionManager = new CompressionManager(storage);
     basicSearch = new BasicSearch(storage);
     rankedSearch = new RankedSearch(storage);
     booleanSearch = new BooleanSearch(storage);
@@ -158,7 +161,7 @@ describe('Integration: Complete Workflows', () => {
       expect(beforeSearch.entities).toHaveLength(2);
 
       // Step 3: Compress duplicates with lower threshold for similar names
-      const compressionResult = await searchManager.compressGraph(0.7);
+      const compressionResult = await compressionManager.compressGraph(0.7);
 
       // If duplicates were found and merged
       if (compressionResult.entitiesMerged > 0) {
@@ -196,7 +199,7 @@ describe('Integration: Complete Workflows', () => {
       expect(beforeSearch.relations.length).toBeGreaterThanOrEqual(0);
 
       // Compress with lower threshold
-      await searchManager.compressGraph(0.7);
+      await compressionManager.compressGraph(0.7);
 
       // Verify graph is still functional after compression
       const afterSearch = await basicSearch.searchNodes('');

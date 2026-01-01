@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphStorage } from '../../core/GraphStorage.js';
 import { EntityManager } from '../../core/EntityManager.js';
+import { ObservationManager } from '../../core/ObservationManager.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -15,6 +16,7 @@ import type { Entity } from '../../types/index.js';
 describe('Write Performance', () => {
   let storage: GraphStorage;
   let entityManager: EntityManager;
+  let observationManager: ObservationManager;
   let testDir: string;
   let testFilePath: string;
 
@@ -24,6 +26,7 @@ describe('Write Performance', () => {
     testFilePath = join(testDir, 'test-graph.jsonl');
     storage = new GraphStorage(testFilePath);
     entityManager = new EntityManager(storage);
+    observationManager = new ObservationManager(storage);
   });
 
   afterEach(async () => {
@@ -388,7 +391,7 @@ describe('Write Performance', () => {
       ]);
       expect(storage.getPendingAppends()).toBe(0);
 
-      await entityManager.addObservations([
+      await observationManager.addObservations([
         { entityName: 'TestEntity', contents: ['New observation'] },
       ]);
 
@@ -438,7 +441,7 @@ describe('Write Performance', () => {
     });
   });
 
-  describe('EntityManager.addObservations with atomic operations', () => {
+  describe('ObservationManager.addObservations with atomic operations', () => {
     it('should add observations atomically using saveGraph', async () => {
       // Use bulk create so pending appends starts at 0
       await entityManager.createEntities([
@@ -447,7 +450,7 @@ describe('Write Performance', () => {
       ]);
       expect(storage.getPendingAppends()).toBe(0);
 
-      await entityManager.addObservations([
+      await observationManager.addObservations([
         { entityName: 'TestEntity', contents: ['Obs1', 'Obs2'] },
       ]);
 

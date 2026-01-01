@@ -2,19 +2,18 @@
  * Archive Operations Unit Tests
  *
  * Tests for entity archival based on age, importance, and tags.
- * (Originally ArchiveManager, merged into EntityManager in Sprint 11.3)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { EntityManager } from '../../../core/EntityManager.js';
+import { ArchiveManager } from '../../../features/ArchiveManager.js';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-describe('EntityManager Archive Operations', () => {
+describe('ArchiveManager', () => {
   let storage: GraphStorage;
-  let manager: EntityManager;
+  let archiveManager: ArchiveManager;
   let testDir: string;
   let testFilePath: string;
 
@@ -23,7 +22,7 @@ describe('EntityManager Archive Operations', () => {
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-memory.jsonl');
     storage = new GraphStorage(testFilePath);
-    manager = new EntityManager(storage);
+    archiveManager = new ArchiveManager(storage);
   });
 
   afterEach(async () => {
@@ -44,7 +43,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('Old');
@@ -60,7 +59,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('Old');
@@ -78,7 +77,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       expect(result.archived).toBe(3);
       expect(result.entityNames).toContain('Old1');
@@ -94,7 +93,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       expect(result.archived).toBe(0);
     });
@@ -110,7 +109,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ importanceLessThan: 5 });
+      const result = await archiveManager.archiveEntities({ importanceLessThan: 5 });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('Low');
@@ -126,7 +125,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ importanceLessThan: 5 });
+      const result = await archiveManager.archiveEntities({ importanceLessThan: 5 });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('NoImportance');
@@ -141,7 +140,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ importanceLessThan: 5 });
+      const result = await archiveManager.archiveEntities({ importanceLessThan: 5 });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).not.toContain('AtThreshold');
@@ -156,7 +155,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ importanceLessThan: 1 });
+      const result = await archiveManager.archiveEntities({ importanceLessThan: 1 });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('Zero');
@@ -173,7 +172,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ tags: ['archive'] });
+      const result = await archiveManager.archiveEntities({ tags: ['archive'] });
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('Tagged');
@@ -190,7 +189,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ tags: ['archive'] });
+      const result = await archiveManager.archiveEntities({ tags: ['archive'] });
 
       expect(result.archived).toBe(3);
     });
@@ -205,7 +204,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ tags: ['deprecated', 'obsolete'] });
+      const result = await archiveManager.archiveEntities({ tags: ['deprecated', 'obsolete'] });
 
       expect(result.archived).toBe(2);
       expect(result.entityNames).toContain('HasFirst');
@@ -221,7 +220,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ tags: ['archive'] });
+      const result = await archiveManager.archiveEntities({ tags: ['archive'] });
 
       expect(result.archived).toBe(0);
     });
@@ -239,7 +238,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({
+      const result = await archiveManager.archiveEntities({
         olderThan: '2023-01-01T00:00:00Z',
         importanceLessThan: 5,
         tags: ['archive'],
@@ -267,7 +266,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({
+      const result = await archiveManager.archiveEntities({
         olderThan: '2023-01-01T00:00:00Z',
         importanceLessThan: 5,
         tags: ['archive'],
@@ -288,7 +287,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, true);
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, true);
 
       expect(result.archived).toBe(1);
       expect(result.entityNames).toContain('ToArchive');
@@ -308,8 +307,8 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const dryRunResult = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, true);
-      const actualResult = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, false);
+      const dryRunResult = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, true);
+      const actualResult = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, false);
 
       expect(dryRunResult.archived).toBe(actualResult.archived);
       expect(dryRunResult.entityNames.sort()).toEqual(actualResult.entityNames.sort());
@@ -326,7 +325,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       const graph = await storage.loadGraph();
       expect(graph.entities).toHaveLength(1);
@@ -346,7 +345,7 @@ describe('EntityManager Archive Operations', () => {
         ],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       const graph = await storage.loadGraph();
       expect(graph.relations).toHaveLength(1);
@@ -364,7 +363,7 @@ describe('EntityManager Archive Operations', () => {
         ],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       const graph = await storage.loadGraph();
       expect(graph.relations).toHaveLength(0);
@@ -381,7 +380,7 @@ describe('EntityManager Archive Operations', () => {
         ],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       const graph = await storage.loadGraph();
       expect(graph.relations).toHaveLength(0);
@@ -398,7 +397,7 @@ describe('EntityManager Archive Operations', () => {
         ],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       const graph = await storage.loadGraph();
       expect(graph.entities).toHaveLength(0);
@@ -410,7 +409,7 @@ describe('EntityManager Archive Operations', () => {
     it('should handle empty graph', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       expect(result.archived).toBe(0);
       expect(result.entityNames).toEqual([]);
@@ -424,7 +423,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       expect(result.archived).toBe(0);
       expect(result.entityNames).toEqual([]);
@@ -441,7 +440,7 @@ describe('EntityManager Archive Operations', () => {
         ],
       });
 
-      const result = await manager.archiveEntities({ importanceLessThan: 10 });
+      const result = await archiveManager.archiveEntities({ importanceLessThan: 10 });
 
       expect(result.archived).toBe(2);
 
@@ -458,7 +457,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({});
+      const result = await archiveManager.archiveEntities({});
 
       expect(result.archived).toBe(0);
     });
@@ -471,7 +470,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      const result = await manager.archiveEntities({ tags: [] });
+      const result = await archiveManager.archiveEntities({ tags: [] });
 
       expect(result.archived).toBe(0);
     });
@@ -486,7 +485,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       const graph = await storage.loadGraph();
       expect(graph.entities.map(e => e.name)).toEqual(['A', 'C']);
@@ -502,7 +501,7 @@ describe('EntityManager Archive Operations', () => {
       });
 
       // Invalid date will create NaN comparison, so it won't match
-      const result = await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       // GoodDate should still be archived
       expect(result.entityNames).toContain('GoodDate');
@@ -518,7 +517,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
 
       // Create new storage instance to verify persistence
       const newStorage = new GraphStorage(testFilePath);
@@ -534,7 +533,7 @@ describe('EntityManager Archive Operations', () => {
         relations: [],
       });
 
-      await manager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, true);
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' }, true);
 
       // Create new storage instance to verify no persistence
       const newStorage = new GraphStorage(testFilePath);

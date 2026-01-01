@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphStorage } from '../../../core/GraphStorage.js';
 import { SQLiteStorage } from '../../../core/SQLiteStorage.js';
 import { EntityManager } from '../../../core/EntityManager.js';
+import { ObservationManager } from '../../../core/ObservationManager.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -297,6 +298,7 @@ describe('Concurrency Control', () => {
   describe('EntityManager Atomic Operations', () => {
     let storage: GraphStorage;
     let entityManager: EntityManager;
+    let observationManager: ObservationManager;
     let testDir: string;
     let testFilePath: string;
 
@@ -306,6 +308,7 @@ describe('Concurrency Control', () => {
       testFilePath = join(testDir, 'test-graph.jsonl');
       storage = new GraphStorage(testFilePath);
       entityManager = new EntityManager(storage);
+      observationManager = new ObservationManager(storage);
     });
 
     afterEach(async () => {
@@ -325,7 +328,7 @@ describe('Concurrency Control', () => {
       ]);
 
       // Add observations to all entities in one atomic operation
-      const results = await entityManager.addObservations([
+      const results = await observationManager.addObservations([
         { entityName: 'Entity1', contents: ['new1a', 'new1b'] },
         { entityName: 'Entity2', contents: ['new2a'] },
         { entityName: 'Entity3', contents: ['new3a', 'new3b', 'new3c'] },
@@ -352,7 +355,7 @@ describe('Concurrency Control', () => {
       ]);
 
       // Delete observations from all entities atomically
-      await entityManager.deleteObservations([
+      await observationManager.deleteObservations([
         { entityName: 'Entity1', observations: ['obs1', 'obs3'] },
         { entityName: 'Entity2', observations: ['obs5'] },
       ]);
@@ -380,7 +383,7 @@ describe('Concurrency Control', () => {
       // holding the lock between getGraphForMutation and saveGraph.
       const promises = [];
       for (let i = 0; i < 5; i++) {
-        promises.push(entityManager.addObservations([
+        promises.push(observationManager.addObservations([
           { entityName: 'Entity1', contents: [`obs1_${i}`] },
           { entityName: 'Entity2', contents: [`obs2_${i}`] },
         ]));
@@ -407,7 +410,7 @@ describe('Concurrency Control', () => {
 
       // Sequential addObservations calls (proper usage pattern)
       for (let i = 0; i < 5; i++) {
-        await entityManager.addObservations([
+        await observationManager.addObservations([
           { entityName: 'Entity1', contents: [`obs1_${i}`] },
           { entityName: 'Entity2', contents: [`obs2_${i}`] },
         ]);
@@ -428,7 +431,7 @@ describe('Concurrency Control', () => {
       ]);
 
       // Try to add duplicate observation
-      const results = await entityManager.addObservations([
+      const results = await observationManager.addObservations([
         { entityName: 'Entity1', contents: ['existing'] },
       ]);
 
@@ -443,7 +446,7 @@ describe('Concurrency Control', () => {
       ]);
 
       // Try to delete non-existent observation
-      await entityManager.deleteObservations([
+      await observationManager.deleteObservations([
         { entityName: 'Entity1', observations: ['nonexistent'] },
       ]);
 
