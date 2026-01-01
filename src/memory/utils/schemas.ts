@@ -225,6 +225,120 @@ export const DeleteRelationsSchema = z.array(CreateRelationSchema)
   .min(1, 'Must specify at least one relation')
   .max(1000, 'Cannot delete more than 1000 relations in a single batch');
 
+// ==================== Observation Schemas ====================
+
+/**
+ * Single observation input for add operations.
+ * Empty contents array is allowed (no-op).
+ */
+export const AddObservationInputSchema = z.object({
+  entityName: entityNameSchema,
+  contents: z.array(observationSchema),
+});
+
+/**
+ * Batch observation addition validation.
+ * Empty array is allowed (no-op).
+ */
+export const AddObservationsInputSchema = z.array(AddObservationInputSchema)
+  .max(1000, 'Cannot add observations to more than 1000 entities in a single batch');
+
+/**
+ * Single observation deletion input.
+ * Empty observations array is allowed (no-op).
+ * Missing entityName entries are skipped by the manager.
+ */
+export const DeleteObservationInputSchema = z.object({
+  entityName: entityNameSchema.optional(),
+  observations: z.array(observationSchema),
+});
+
+/**
+ * Batch observation deletion validation.
+ * Empty array is allowed (no-op).
+ */
+export const DeleteObservationsInputSchema = z.array(DeleteObservationInputSchema)
+  .max(1000, 'Cannot delete observations from more than 1000 entities in a single batch');
+
+// ==================== Archive Schema ====================
+
+/**
+ * Archive criteria validation.
+ * All fields are optional - the manager handles the case when no criteria provided.
+ */
+export const ArchiveCriteriaSchema = z.object({
+  olderThan: z.string().optional(),
+  importanceLessThan: z.number().min(0).max(10).optional(),
+  tags: z.array(tagSchema).optional(),
+});
+
+// ==================== Saved Search Schemas ====================
+
+/**
+ * Saved search creation input validation.
+ */
+export const SavedSearchInputSchema = z.object({
+  name: z.string().min(1, 'Search name cannot be empty').max(200, 'Search name cannot exceed 200 characters').trim(),
+  description: z.string().max(1000, 'Description cannot exceed 1000 characters').optional(),
+  query: SearchQuerySchema,
+  tags: z.array(tagSchema).optional(),
+  minImportance: importanceSchema.optional(),
+  maxImportance: importanceSchema.optional(),
+  entityType: entityTypeSchema.optional(),
+});
+
+/**
+ * Saved search update validation.
+ * All fields are optional for partial updates.
+ */
+export const SavedSearchUpdateSchema = z.object({
+  description: z.string().max(1000, 'Description cannot exceed 1000 characters').optional(),
+  query: SearchQuerySchema.optional(),
+  tags: z.array(tagSchema).optional(),
+  minImportance: importanceSchema.optional(),
+  maxImportance: importanceSchema.optional(),
+  entityType: entityTypeSchema.optional(),
+});
+
+// ==================== Import/Export Schemas ====================
+
+/**
+ * Import format validation.
+ */
+export const ImportFormatSchema = z.enum(['json', 'csv', 'graphml']);
+
+/**
+ * Export format validation (includes all output formats).
+ */
+export const ExtendedExportFormatSchema = z.enum(['json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid']);
+
+/**
+ * Merge strategy validation for imports.
+ */
+export const MergeStrategySchema = z.enum(['replace', 'skip', 'merge', 'fail']);
+
+/**
+ * Export filter validation.
+ */
+export const ExportFilterSchema = z.object({
+  startDate: isoDateSchema.optional(),
+  endDate: isoDateSchema.optional(),
+  entityType: entityTypeSchema.optional(),
+  tags: z.array(tagSchema).optional(),
+});
+
+// ==================== Search Parameter Schemas ====================
+
+/**
+ * Tags array validation (optional, for search filters).
+ */
+export const OptionalTagsSchema = z.array(tagSchema).optional();
+
+/**
+ * Optional entity names array validation.
+ */
+export const OptionalEntityNamesSchema = z.array(entityNameSchema).optional();
+
 // ==================== Schema Type Exports ====================
 
 export type EntityInput = z.infer<typeof EntitySchema>;
@@ -236,6 +350,15 @@ export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 export type DateRange = z.infer<typeof DateRangeSchema>;
 export type TagAlias = z.infer<typeof TagAliasSchema>;
 export type ExportFormat = z.infer<typeof ExportFormatSchema>;
+export type AddObservationInput = z.infer<typeof AddObservationInputSchema>;
+export type DeleteObservationInput = z.infer<typeof DeleteObservationInputSchema>;
+export type ArchiveCriteriaInput = z.infer<typeof ArchiveCriteriaSchema>;
+export type SavedSearchInput = z.infer<typeof SavedSearchInputSchema>;
+export type SavedSearchUpdateInput = z.infer<typeof SavedSearchUpdateSchema>;
+export type ImportFormat = z.infer<typeof ImportFormatSchema>;
+export type ExtendedExportFormat = z.infer<typeof ExtendedExportFormatSchema>;
+export type MergeStrategy = z.infer<typeof MergeStrategySchema>;
+export type ExportFilterInput = z.infer<typeof ExportFilterSchema>;
 
 // ==================== Validation Result Type ====================
 
