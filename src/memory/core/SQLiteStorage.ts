@@ -22,6 +22,7 @@
 
 import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
+import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 import { NameIndex, TypeIndex } from '../utils/indexes.js';
@@ -40,6 +41,14 @@ import { NameIndex, TypeIndex } from '../utils/indexes.js';
  * ```
  */
 export class SQLiteStorage implements IGraphStorage {
+  /**
+   * Mutex for thread-safe access to storage operations.
+   * Prevents concurrent writes from corrupting the cache.
+   * Note: SQLite itself handles file-level locking, but we need
+   * to protect our in-memory cache and index operations.
+   */
+  private mutex = new Mutex();
+
   /**
    * SQLite database instance.
    */
@@ -296,85 +305,91 @@ export class SQLiteStorage implements IGraphStorage {
   /**
    * Save the entire knowledge graph to storage.
    *
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
+   *
    * @param graph - The knowledge graph to save
    * @returns Promise resolving when save is complete
    */
   async saveGraph(graph: KnowledgeGraph): Promise<void> {
     await this.ensureLoaded();
 
-    if (!this.db) throw new Error('Database not initialized');
+    return this.mutex.runExclusive(async () => {
+      if (!this.db) throw new Error('Database not initialized');
 
-    // Disable foreign keys for bulk replace operation
-    // This allows inserting entities with parentId references that may not exist
-    // and relations with dangling references (which matches the original JSONL behavior)
-    this.db.pragma('foreign_keys = OFF');
+      // Disable foreign keys for bulk replace operation
+      // This allows inserting entities with parentId references that may not exist
+      // and relations with dangling references (which matches the original JSONL behavior)
+      this.db.pragma('foreign_keys = OFF');
 
-    // Use transaction for atomicity
-    const transaction = this.db.transaction(() => {
-      // Clear existing data
-      this.db!.exec('DELETE FROM relations');
-      this.db!.exec('DELETE FROM entities');
+      // Use transaction for atomicity
+      const transaction = this.db.transaction(() => {
+        // Clear existing data
+        this.db!.exec('DELETE FROM relations');
+        this.db!.exec('DELETE FROM entities');
 
-      // Insert all entities
-      const entityStmt = this.db!.prepare(`
-        INSERT INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+        // Insert all entities
+        const entityStmt = this.db!.prepare(`
+          INSERT INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
 
+        for (const entity of graph.entities) {
+          entityStmt.run(
+            entity.name,
+            entity.entityType,
+            JSON.stringify(entity.observations),
+            entity.tags ? JSON.stringify(entity.tags) : null,
+            entity.importance ?? null,
+            entity.parentId ?? null,
+            entity.createdAt || new Date().toISOString(),
+            entity.lastModified || new Date().toISOString(),
+          );
+        }
+
+        // Insert all relations
+        const relationStmt = this.db!.prepare(`
+          INSERT INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+
+        for (const relation of graph.relations) {
+          relationStmt.run(
+            relation.from,
+            relation.to,
+            relation.relationType,
+            relation.createdAt || new Date().toISOString(),
+            relation.lastModified || new Date().toISOString(),
+          );
+        }
+      });
+
+      transaction();
+
+      // Re-enable foreign keys for future operations
+      this.db.pragma('foreign_keys = ON');
+
+      // Update cache
+      this.cache = graph;
+      this.lowercaseCache.clear();
       for (const entity of graph.entities) {
-        entityStmt.run(
-          entity.name,
-          entity.entityType,
-          JSON.stringify(entity.observations),
-          entity.tags ? JSON.stringify(entity.tags) : null,
-          entity.importance ?? null,
-          entity.parentId ?? null,
-          entity.createdAt || new Date().toISOString(),
-          entity.lastModified || new Date().toISOString(),
-        );
+        this.updateLowercaseCache(entity);
       }
 
-      // Insert all relations
-      const relationStmt = this.db!.prepare(`
-        INSERT INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
-        VALUES (?, ?, ?, ?, ?)
-      `);
+      // Rebuild indexes
+      this.nameIndex.build(graph.entities);
+      this.typeIndex.build(graph.entities);
 
-      for (const relation of graph.relations) {
-        relationStmt.run(
-          relation.from,
-          relation.to,
-          relation.relationType,
-          relation.createdAt || new Date().toISOString(),
-          relation.lastModified || new Date().toISOString(),
-        );
-      }
+      this.pendingChanges = 0;
+
+      // Clear search caches
+      clearAllSearchCaches();
     });
-
-    transaction();
-
-    // Re-enable foreign keys for future operations
-    this.db.pragma('foreign_keys = ON');
-
-    // Update cache
-    this.cache = graph;
-    this.lowercaseCache.clear();
-    for (const entity of graph.entities) {
-      this.updateLowercaseCache(entity);
-    }
-
-    // Rebuild indexes
-    this.nameIndex.build(graph.entities);
-    this.typeIndex.build(graph.entities);
-
-    this.pendingChanges = 0;
-
-    // Clear search caches
-    clearAllSearchCaches();
   }
 
   /**
    * Append a single entity to storage.
+   *
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
    *
    * @param entity - The entity to append
    * @returns Promise resolving when append is complete
@@ -382,44 +397,48 @@ export class SQLiteStorage implements IGraphStorage {
   async appendEntity(entity: Entity): Promise<void> {
     await this.ensureLoaded();
 
-    if (!this.db) throw new Error('Database not initialized');
+    return this.mutex.runExclusive(async () => {
+      if (!this.db) throw new Error('Database not initialized');
 
-    // Use INSERT OR REPLACE to handle updates
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+      // Use INSERT OR REPLACE to handle updates
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
-    stmt.run(
-      entity.name,
-      entity.entityType,
-      JSON.stringify(entity.observations),
-      entity.tags ? JSON.stringify(entity.tags) : null,
-      entity.importance ?? null,
-      entity.parentId ?? null,
-      entity.createdAt || new Date().toISOString(),
-      entity.lastModified || new Date().toISOString(),
-    );
+      stmt.run(
+        entity.name,
+        entity.entityType,
+        JSON.stringify(entity.observations),
+        entity.tags ? JSON.stringify(entity.tags) : null,
+        entity.importance ?? null,
+        entity.parentId ?? null,
+        entity.createdAt || new Date().toISOString(),
+        entity.lastModified || new Date().toISOString(),
+      );
 
-    // Update cache
-    const existingIndex = this.cache!.entities.findIndex(e => e.name === entity.name);
-    if (existingIndex >= 0) {
-      this.cache!.entities[existingIndex] = entity;
-    } else {
-      this.cache!.entities.push(entity);
-    }
+      // Update cache
+      const existingIndex = this.cache!.entities.findIndex(e => e.name === entity.name);
+      if (existingIndex >= 0) {
+        this.cache!.entities[existingIndex] = entity;
+      } else {
+        this.cache!.entities.push(entity);
+      }
 
-    // Update indexes
-    this.nameIndex.add(entity);
-    this.typeIndex.add(entity);
-    this.updateLowercaseCache(entity);
-    clearAllSearchCaches();
+      // Update indexes
+      this.nameIndex.add(entity);
+      this.typeIndex.add(entity);
+      this.updateLowercaseCache(entity);
+      clearAllSearchCaches();
 
-    this.pendingChanges++;
+      this.pendingChanges++;
+    });
   }
 
   /**
    * Append a single relation to storage.
+   *
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
    *
    * @param relation - The relation to append
    * @returns Promise resolving when append is complete
@@ -427,39 +446,43 @@ export class SQLiteStorage implements IGraphStorage {
   async appendRelation(relation: Relation): Promise<void> {
     await this.ensureLoaded();
 
-    if (!this.db) throw new Error('Database not initialized');
+    return this.mutex.runExclusive(async () => {
+      if (!this.db) throw new Error('Database not initialized');
 
-    // Use INSERT OR REPLACE to handle updates
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
-      VALUES (?, ?, ?, ?, ?)
-    `);
+      // Use INSERT OR REPLACE to handle updates
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
+        VALUES (?, ?, ?, ?, ?)
+      `);
 
-    stmt.run(
-      relation.from,
-      relation.to,
-      relation.relationType,
-      relation.createdAt || new Date().toISOString(),
-      relation.lastModified || new Date().toISOString(),
-    );
+      stmt.run(
+        relation.from,
+        relation.to,
+        relation.relationType,
+        relation.createdAt || new Date().toISOString(),
+        relation.lastModified || new Date().toISOString(),
+      );
 
-    // Update cache
-    const existingIndex = this.cache!.relations.findIndex(
-      r => r.from === relation.from && r.to === relation.to && r.relationType === relation.relationType
-    );
-    if (existingIndex >= 0) {
-      this.cache!.relations[existingIndex] = relation;
-    } else {
-      this.cache!.relations.push(relation);
-    }
+      // Update cache
+      const existingIndex = this.cache!.relations.findIndex(
+        r => r.from === relation.from && r.to === relation.to && r.relationType === relation.relationType
+      );
+      if (existingIndex >= 0) {
+        this.cache!.relations[existingIndex] = relation;
+      } else {
+        this.cache!.relations.push(relation);
+      }
 
-    clearAllSearchCaches();
+      clearAllSearchCaches();
 
-    this.pendingChanges++;
+      this.pendingChanges++;
+    });
   }
 
   /**
    * Update an entity in storage.
+   *
+   * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
    *
    * @param entityName - Name of the entity to update
    * @param updates - Partial entity updates to apply
@@ -468,73 +491,79 @@ export class SQLiteStorage implements IGraphStorage {
   async updateEntity(entityName: string, updates: Partial<Entity>): Promise<boolean> {
     await this.ensureLoaded();
 
-    if (!this.db) throw new Error('Database not initialized');
+    return this.mutex.runExclusive(async () => {
+      if (!this.db) throw new Error('Database not initialized');
 
-    // Find entity in cache using index (O(1))
-    const entity = this.nameIndex.get(entityName);
-    if (!entity) {
-      return false;
-    }
+      // Find entity in cache using index (O(1))
+      const entity = this.nameIndex.get(entityName);
+      if (!entity) {
+        return false;
+      }
 
-    // Track old type for index update
-    const oldType = entity.entityType;
+      // Track old type for index update
+      const oldType = entity.entityType;
 
-    // Apply updates to cached entity
-    Object.assign(entity, updates);
-    entity.lastModified = new Date().toISOString();
+      // Apply updates to cached entity
+      Object.assign(entity, updates);
+      entity.lastModified = new Date().toISOString();
 
-    // Update in database
-    const stmt = this.db.prepare(`
-      UPDATE entities SET
-        entityType = ?,
-        observations = ?,
-        tags = ?,
-        importance = ?,
-        parentId = ?,
-        lastModified = ?
-      WHERE name = ?
-    `);
+      // Update in database
+      const stmt = this.db.prepare(`
+        UPDATE entities SET
+          entityType = ?,
+          observations = ?,
+          tags = ?,
+          importance = ?,
+          parentId = ?,
+          lastModified = ?
+        WHERE name = ?
+      `);
 
-    stmt.run(
-      entity.entityType,
-      JSON.stringify(entity.observations),
-      entity.tags ? JSON.stringify(entity.tags) : null,
-      entity.importance ?? null,
-      entity.parentId ?? null,
-      entity.lastModified,
-      entityName,
-    );
+      stmt.run(
+        entity.entityType,
+        JSON.stringify(entity.observations),
+        entity.tags ? JSON.stringify(entity.tags) : null,
+        entity.importance ?? null,
+        entity.parentId ?? null,
+        entity.lastModified,
+        entityName,
+      );
 
-    // Update indexes
-    this.nameIndex.add(entity); // Update reference
-    if (updates.entityType && updates.entityType !== oldType) {
-      this.typeIndex.updateType(entityName, oldType, updates.entityType);
-    }
-    this.updateLowercaseCache(entity);
-    clearAllSearchCaches();
+      // Update indexes
+      this.nameIndex.add(entity); // Update reference
+      if (updates.entityType && updates.entityType !== oldType) {
+        this.typeIndex.updateType(entityName, oldType, updates.entityType);
+      }
+      this.updateLowercaseCache(entity);
+      clearAllSearchCaches();
 
-    this.pendingChanges++;
+      this.pendingChanges++;
 
-    return true;
+      return true;
+    });
   }
 
   /**
    * Compact the storage (runs VACUUM to reclaim space).
+   *
+   * THREAD-SAFE: Uses mutex to prevent concurrent operations.
    *
    * @returns Promise resolving when compaction is complete
    */
   async compact(): Promise<void> {
     await this.ensureLoaded();
 
-    if (!this.db) return;
+    return this.mutex.runExclusive(async () => {
+      if (!this.db) return;
 
-    // Run SQLite VACUUM to reclaim space and defragment
-    this.db.exec('VACUUM');
+      // Run SQLite VACUUM to reclaim space and defragment
+      this.db.exec('VACUUM');
 
-    // Rebuild FTS index for optimal search performance
-    this.db.exec(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`);
+      // Rebuild FTS index for optimal search performance
+      this.db.exec(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`);
 
-    this.pendingChanges = 0;
+      this.pendingChanges = 0;
+    });
   }
 
   /**
