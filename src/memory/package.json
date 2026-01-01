@@ -70,10 +70,11 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.21.1",
-    "sql.js": "^1.12.0",
+    "better-sqlite3": "^11.7.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22",
     "@vitest/coverage-v8": "^4.0.13",
     "shx": "^0.4.0",

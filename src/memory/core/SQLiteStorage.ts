@@ -1,43 +1,35 @@
 /**
  * SQLite Storage
  *
- * Handles storage operations for the knowledge graph using sql.js (WASM SQLite).
+ * Handles storage operations for the knowledge graph using better-sqlite3 (native SQLite).
  * Implements IGraphStorage interface for storage abstraction.
  *
- * Benefits over JSONL:
+ * Benefits over sql.js (WASM):
+ * - 3-10x faster than WASM-based SQLite
+ * - Native FTS5 full-text search support
+ * - ACID transactions with proper durability
+ * - Concurrent read access support
+ * - No memory overhead from WASM runtime
+ * - Direct disk I/O (no manual export/import)
+ *
+ * Features:
  * - Built-in indexes for O(1) lookups
- * - ACID transactions
- * - No full-file rewrites on updates
- * - FTS5-like search capability (simulated with LIKE for sql.js compatibility)
+ * - Referential integrity with ON DELETE CASCADE
+ * - FTS5 full-text search on entity names and observations
  *
  * @module core/SQLiteStorage
  */
 
-import { promises as fs } from 'fs';
-import { createRequire } from 'module';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
+import Database from 'better-sqlite3';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
-
-/**
- * Get the path to the sql.js WASM file in node_modules.
- */
-function getWasmPath(): string {
-  // Try to find the WASM file in node_modules
-  const require = createRequire(import.meta.url);
-  const sqlJsPath = require.resolve('sql.js');
-  const sqlJsDir = dirname(sqlJsPath);
-  return join(sqlJsDir, 'sql-wasm.wasm');
-}
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 
 /**
- * SQLiteStorage manages persistence of the knowledge graph using SQLite.
+ * SQLiteStorage manages persistence of the knowledge graph using native SQLite.
  *
- * Uses sql.js (WASM-based SQLite) for cross-platform compatibility without
- * native module compilation. Database is loaded into memory and persisted
- * to disk on write operations.
+ * Uses better-sqlite3 for native SQLite bindings with full FTS5 support,
+ * referential integrity, and proper ACID transactions.
  *
  * @example
  * ```typescript
@@ -48,14 +40,9 @@ import { clearAllSearchCaches } from '../utils/searchCache.js';
  */
 export class SQLiteStorage implements IGraphStorage {
   /**
-   * sql.js static module reference.
-   */
-  private SQL: SqlJsStatic | null = null;
-
-  /**
    * SQLite database instance.
    */
-  private db: Database | null = null;
+  private db: DatabaseType | null = null;
 
   /**
    * Whether the database has been initialized.
@@ -75,13 +62,9 @@ export class SQLiteStorage implements IGraphStorage {
 
   /**
    * Pending changes counter for batching disk writes.
+   * Note: better-sqlite3 writes to disk immediately, but we track for API compatibility.
    */
   private pendingChanges: number = 0;
-
-  /**
-   * Threshold for automatic disk persistence.
-   */
-  private readonly persistThreshold: number = 10;
 
   /**
    * Create a new SQLiteStorage instance.
@@ -91,38 +74,19 @@ export class SQLiteStorage implements IGraphStorage {
   constructor(private dbFilePath: string) {}
 
   /**
-   * Initialize sql.js and load or create the database.
+   * Initialize the database connection and schema.
    */
-  private async initialize(): Promise<void> {
+  private initialize(): void {
     if (this.initialized) return;
 
-    // Load WASM binary from node_modules and convert to ArrayBuffer
-    const wasmPath = getWasmPath();
-    const wasmBuffer = await fs.readFile(wasmPath);
-    const wasmBinary = wasmBuffer.buffer.slice(
-      wasmBuffer.byteOffset,
-      wasmBuffer.byteOffset + wasmBuffer.byteLength
-    );
+    // Open database (creates file if it doesn't exist)
+    this.db = new Database(this.dbFilePath);
 
-    // Initialize sql.js with the WASM binary
-    this.SQL = await initSqlJs({
-      wasmBinary,
-    });
+    // Enable foreign keys and WAL mode for better performance
+    this.db.pragma('foreign_keys = ON');
+    this.db.pragma('journal_mode = WAL');
 
-    // Try to load existing database from disk
-    try {
-      const fileBuffer = await fs.readFile(this.dbFilePath);
-      this.db = new this.SQL.Database(fileBuffer);
-    } catch (error) {
-      // File doesn't exist - create new database
-      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        this.db = new this.SQL.Database();
-      } else {
-        throw error;
-      }
-    }
-
-    // Create tables if they don't exist
+    // Create tables and indexes
     this.createTables();
 
     // Load cache from database
@@ -132,30 +96,30 @@ export class SQLiteStorage implements IGraphStorage {
   }
 
   /**
-   * Create database tables and indexes.
+   * Create database tables, indexes, and FTS5 virtual table.
    */
   private createTables(): void {
     if (!this.db) throw new Error('Database not initialized');
 
-    // Entities table
-    this.db.run(`
+    // Entities table with referential integrity for parentId
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS entities (
         name TEXT PRIMARY KEY,
         entityType TEXT NOT NULL,
         observations TEXT NOT NULL,
         tags TEXT,
         importance INTEGER,
-        parentId TEXT,
+        parentId TEXT REFERENCES entities(name) ON DELETE SET NULL,
         createdAt TEXT NOT NULL,
         lastModified TEXT NOT NULL
       )
     `);
 
-    // Relations table
-    this.db.run(`
+    // Relations table with referential integrity (CASCADE delete)
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS relations (
-        fromEntity TEXT NOT NULL,
-        toEntity TEXT NOT NULL,
+        fromEntity TEXT NOT NULL REFERENCES entities(name) ON DELETE CASCADE,
+        toEntity TEXT NOT NULL REFERENCES entities(name) ON DELETE CASCADE,
         relationType TEXT NOT NULL,
         createdAt TEXT NOT NULL,
         lastModified TEXT NOT NULL,
@@ -164,10 +128,47 @@ export class SQLiteStorage implements IGraphStorage {
     `);
 
     // Indexes for fast lookups
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_entity_type ON entities(entityType)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_entity_parent ON entities(parentId)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_relation_from ON relations(fromEntity)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_relation_to ON relations(toEntity)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_type ON entities(entityType)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_parent ON entities(parentId)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_from ON relations(fromEntity)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_to ON relations(toEntity)`);
+
+    // FTS5 virtual table for full-text search
+    // content='' makes it an external content table (we manage content ourselves)
+    this.db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
+        name,
+        entityType,
+        observations,
+        tags,
+        content='entities',
+        content_rowid='rowid'
+      )
+    `);
+
+    // Triggers to keep FTS5 index in sync with entities table
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
+        INSERT INTO entities_fts(rowid, name, entityType, observations, tags)
+        VALUES (NEW.rowid, NEW.name, NEW.entityType, NEW.observations, NEW.tags);
+      END
+    `);
+
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
+        INSERT INTO entities_fts(entities_fts, rowid, name, entityType, observations, tags)
+        VALUES ('delete', OLD.rowid, OLD.name, OLD.entityType, OLD.observations, OLD.tags);
+      END
+    `);
+
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
+        INSERT INTO entities_fts(entities_fts, rowid, name, entityType, observations, tags)
+        VALUES ('delete', OLD.rowid, OLD.name, OLD.entityType, OLD.observations, OLD.tags);
+        INSERT INTO entities_fts(rowid, name, entityType, observations, tags)
+        VALUES (NEW.rowid, NEW.name, NEW.entityType, NEW.observations, NEW.tags);
+      END
+    `);
   }
 
   /**
@@ -180,23 +181,17 @@ export class SQLiteStorage implements IGraphStorage {
     const relations: Relation[] = [];
 
     // Load entities
-    const entityRows = this.db.exec(`SELECT * FROM entities`);
-    if (entityRows.length > 0) {
-      const columns = entityRows[0].columns;
-      for (const row of entityRows[0].values) {
-        const entity = this.rowToEntity(columns, row);
-        entities.push(entity);
-        this.updateLowercaseCache(entity);
-      }
+    const entityRows = this.db.prepare(`SELECT * FROM entities`).all() as EntityRow[];
+    for (const row of entityRows) {
+      const entity = this.rowToEntity(row);
+      entities.push(entity);
+      this.updateLowercaseCache(entity);
     }
 
     // Load relations
-    const relationRows = this.db.exec(`SELECT * FROM relations`);
-    if (relationRows.length > 0) {
-      const columns = relationRows[0].columns;
-      for (const row of relationRows[0].values) {
-        relations.push(this.rowToRelation(columns, row));
-      }
+    const relationRows = this.db.prepare(`SELECT * FROM relations`).all() as RelationRow[];
+    for (const row of relationRows) {
+      relations.push(this.rowToRelation(row));
     }
 
     this.cache = { entities, relations };
@@ -205,39 +200,29 @@ export class SQLiteStorage implements IGraphStorage {
   /**
    * Convert a database row to an Entity object.
    */
-  private rowToEntity(columns: string[], row: (string | number | Uint8Array | null)[]): Entity {
-    const obj: Record<string, unknown> = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-
+  private rowToEntity(row: EntityRow): Entity {
     return {
-      name: obj.name as string,
-      entityType: obj.entityType as string,
-      observations: JSON.parse(obj.observations as string),
-      tags: obj.tags ? JSON.parse(obj.tags as string) : undefined,
-      importance: obj.importance as number | undefined,
-      parentId: obj.parentId as string | undefined,
-      createdAt: obj.createdAt as string,
-      lastModified: obj.lastModified as string,
+      name: row.name,
+      entityType: row.entityType,
+      observations: JSON.parse(row.observations),
+      tags: row.tags ? JSON.parse(row.tags) : undefined,
+      importance: row.importance ?? undefined,
+      parentId: row.parentId ?? undefined,
+      createdAt: row.createdAt,
+      lastModified: row.lastModified,
     };
   }
 
   /**
    * Convert a database row to a Relation object.
    */
-  private rowToRelation(columns: string[], row: (string | number | Uint8Array | null)[]): Relation {
-    const obj: Record<string, unknown> = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-
+  private rowToRelation(row: RelationRow): Relation {
     return {
-      from: obj.fromEntity as string,
-      to: obj.toEntity as string,
-      relationType: obj.relationType as string,
-      createdAt: obj.createdAt as string,
-      lastModified: obj.lastModified as string,
+      from: row.fromEntity,
+      to: row.toEntity,
+      relationType: row.relationType,
+      createdAt: row.createdAt,
+      lastModified: row.lastModified,
     };
   }
 
@@ -251,28 +236,6 @@ export class SQLiteStorage implements IGraphStorage {
       observations: entity.observations.map(o => o.toLowerCase()),
       tags: entity.tags?.map(t => t.toLowerCase()) || [],
     });
-  }
-
-  /**
-   * Persist database to disk.
-   */
-  private async persistToDisk(): Promise<void> {
-    if (!this.db) return;
-
-    const data = this.db.export();
-    const buffer = Buffer.from(data);
-    await fs.writeFile(this.dbFilePath, buffer);
-    this.pendingChanges = 0;
-  }
-
-  /**
-   * Check if persistence is needed and perform it.
-   */
-  private async checkPersist(): Promise<void> {
-    this.pendingChanges++;
-    if (this.pendingChanges >= this.persistThreshold) {
-      await this.persistToDisk();
-    }
   }
 
   // ==================== IGraphStorage Implementation ====================
@@ -311,7 +274,7 @@ export class SQLiteStorage implements IGraphStorage {
    */
   async ensureLoaded(): Promise<void> {
     if (!this.initialized) {
-      await this.initialize();
+      this.initialize();
     }
   }
 
@@ -326,22 +289,25 @@ export class SQLiteStorage implements IGraphStorage {
 
     if (!this.db) throw new Error('Database not initialized');
 
-    // Use transaction for atomicity
-    this.db.run('BEGIN TRANSACTION');
+    // Disable foreign keys for bulk replace operation
+    // This allows inserting entities with parentId references that may not exist
+    // and relations with dangling references (which matches the original JSONL behavior)
+    this.db.pragma('foreign_keys = OFF');
 
-    try {
+    // Use transaction for atomicity
+    const transaction = this.db.transaction(() => {
       // Clear existing data
-      this.db.run('DELETE FROM entities');
-      this.db.run('DELETE FROM relations');
+      this.db!.exec('DELETE FROM relations');
+      this.db!.exec('DELETE FROM entities');
 
       // Insert all entities
-      const entityStmt = this.db.prepare(`
+      const entityStmt = this.db!.prepare(`
         INSERT INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const entity of graph.entities) {
-        entityStmt.run([
+        entityStmt.run(
           entity.name,
           entity.entityType,
           JSON.stringify(entity.observations),
@@ -350,45 +316,42 @@ export class SQLiteStorage implements IGraphStorage {
           entity.parentId ?? null,
           entity.createdAt || new Date().toISOString(),
           entity.lastModified || new Date().toISOString(),
-        ]);
+        );
       }
-      entityStmt.free();
 
       // Insert all relations
-      const relationStmt = this.db.prepare(`
+      const relationStmt = this.db!.prepare(`
         INSERT INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
         VALUES (?, ?, ?, ?, ?)
       `);
 
       for (const relation of graph.relations) {
-        relationStmt.run([
+        relationStmt.run(
           relation.from,
           relation.to,
           relation.relationType,
           relation.createdAt || new Date().toISOString(),
           relation.lastModified || new Date().toISOString(),
-        ]);
+        );
       }
-      relationStmt.free();
+    });
 
-      this.db.run('COMMIT');
+    transaction();
 
-      // Update cache
-      this.cache = graph;
-      this.lowercaseCache.clear();
-      for (const entity of graph.entities) {
-        this.updateLowercaseCache(entity);
-      }
+    // Re-enable foreign keys for future operations
+    this.db.pragma('foreign_keys = ON');
 
-      // Persist to disk
-      await this.persistToDisk();
-
-      // Clear search caches
-      clearAllSearchCaches();
-    } catch (error) {
-      this.db.run('ROLLBACK');
-      throw error;
+    // Update cache
+    this.cache = graph;
+    this.lowercaseCache.clear();
+    for (const entity of graph.entities) {
+      this.updateLowercaseCache(entity);
     }
+
+    this.pendingChanges = 0;
+
+    // Clear search caches
+    clearAllSearchCaches();
   }
 
   /**
@@ -403,10 +366,12 @@ export class SQLiteStorage implements IGraphStorage {
     if (!this.db) throw new Error('Database not initialized');
 
     // Use INSERT OR REPLACE to handle updates
-    this.db.run(`
+    const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+    `);
+
+    stmt.run(
       entity.name,
       entity.entityType,
       JSON.stringify(entity.observations),
@@ -415,7 +380,7 @@ export class SQLiteStorage implements IGraphStorage {
       entity.parentId ?? null,
       entity.createdAt || new Date().toISOString(),
       entity.lastModified || new Date().toISOString(),
-    ]);
+    );
 
     // Update cache
     const existingIndex = this.cache!.entities.findIndex(e => e.name === entity.name);
@@ -428,7 +393,7 @@ export class SQLiteStorage implements IGraphStorage {
     this.updateLowercaseCache(entity);
     clearAllSearchCaches();
 
-    await this.checkPersist();
+    this.pendingChanges++;
   }
 
   /**
@@ -443,16 +408,18 @@ export class SQLiteStorage implements IGraphStorage {
     if (!this.db) throw new Error('Database not initialized');
 
     // Use INSERT OR REPLACE to handle updates
-    this.db.run(`
+    const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO relations (fromEntity, toEntity, relationType, createdAt, lastModified)
       VALUES (?, ?, ?, ?, ?)
-    `, [
+    `);
+
+    stmt.run(
       relation.from,
       relation.to,
       relation.relationType,
       relation.createdAt || new Date().toISOString(),
       relation.lastModified || new Date().toISOString(),
-    ]);
+    );
 
     // Update cache
     const existingIndex = this.cache!.relations.findIndex(
@@ -466,7 +433,7 @@ export class SQLiteStorage implements IGraphStorage {
 
     clearAllSearchCaches();
 
-    await this.checkPersist();
+    this.pendingChanges++;
   }
 
   /**
@@ -493,7 +460,7 @@ export class SQLiteStorage implements IGraphStorage {
     entity.lastModified = new Date().toISOString();
 
     // Update in database
-    this.db.run(`
+    const stmt = this.db.prepare(`
       UPDATE entities SET
         entityType = ?,
         observations = ?,
@@ -502,7 +469,9 @@ export class SQLiteStorage implements IGraphStorage {
         parentId = ?,
         lastModified = ?
       WHERE name = ?
-    `, [
+    `);
+
+    stmt.run(
       entity.entityType,
       JSON.stringify(entity.observations),
       entity.tags ? JSON.stringify(entity.tags) : null,
@@ -510,18 +479,18 @@ export class SQLiteStorage implements IGraphStorage {
       entity.parentId ?? null,
       entity.lastModified,
       entityName,
-    ]);
+    );
 
     this.updateLowercaseCache(entity);
     clearAllSearchCaches();
 
-    await this.checkPersist();
+    this.pendingChanges++;
 
     return true;
   }
 
   /**
-   * Compact the storage (no-op for SQLite, already optimized).
+   * Compact the storage (runs VACUUM to reclaim space).
    *
    * @returns Promise resolving when compaction is complete
    */
@@ -530,10 +499,13 @@ export class SQLiteStorage implements IGraphStorage {
 
     if (!this.db) return;
 
-    // Run SQLite VACUUM to reclaim space
-    this.db.run('VACUUM');
+    // Run SQLite VACUUM to reclaim space and defragment
+    this.db.exec('VACUUM');
 
-    await this.persistToDisk();
+    // Rebuild FTS index for optimal search performance
+    this.db.exec(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`);
+
+    this.pendingChanges = 0;
   }
 
   /**
@@ -608,6 +580,57 @@ export class SQLiteStorage implements IGraphStorage {
     return this.lowercaseCache.get(entityName);
   }
 
+  // ==================== FTS5 Full-Text Search ====================
+
+  /**
+   * Perform full-text search using FTS5.
+   *
+   * @param query - Search query (supports FTS5 query syntax)
+   * @returns Array of matching entity names with relevance scores
+   */
+  fullTextSearch(query: string): Array<{ name: string; score: number }> {
+    if (!this.db || !this.initialized) return [];
+
+    try {
+      // Use FTS5 MATCH for full-text search with BM25 ranking
+      const stmt = this.db.prepare(`
+        SELECT name, bm25(entities_fts, 10, 5, 3, 1) as score
+        FROM entities_fts
+        WHERE entities_fts MATCH ?
+        ORDER BY score
+        LIMIT 100
+      `);
+
+      const results = stmt.all(query) as Array<{ name: string; score: number }>;
+      return results;
+    } catch {
+      // If FTS query fails (invalid syntax), fall back to empty results
+      return [];
+    }
+  }
+
+  /**
+   * Perform a simple text search (LIKE-based, case-insensitive).
+   *
+   * @param searchTerm - Term to search for
+   * @returns Array of matching entity names
+   */
+  simpleSearch(searchTerm: string): string[] {
+    if (!this.db || !this.initialized) return [];
+
+    const pattern = `%${searchTerm}%`;
+    const stmt = this.db.prepare(`
+      SELECT name FROM entities
+      WHERE name LIKE ? COLLATE NOCASE
+         OR entityType LIKE ? COLLATE NOCASE
+         OR observations LIKE ? COLLATE NOCASE
+         OR tags LIKE ? COLLATE NOCASE
+    `);
+
+    const results = stmt.all(pattern, pattern, pattern, pattern) as Array<{ name: string }>;
+    return results.map(r => r.name);
+  }
+
   // ==================== Utility Operations ====================
 
   /**
@@ -622,19 +645,23 @@ export class SQLiteStorage implements IGraphStorage {
   /**
    * Get the current pending changes count.
    *
-   * @returns Number of pending changes since last persistence
+   * @returns Number of pending changes since last reset
    */
   getPendingAppends(): number {
     return this.pendingChanges;
   }
 
   /**
-   * Force persistence to disk.
+   * Force persistence to disk (no-op for better-sqlite3 as it writes immediately).
    *
    * @returns Promise resolving when persistence is complete
    */
   async flush(): Promise<void> {
-    await this.persistToDisk();
+    // better-sqlite3 writes to disk immediately, but we run a checkpoint for WAL mode
+    if (this.db) {
+      this.db.pragma('wal_checkpoint(TRUNCATE)');
+    }
+    this.pendingChanges = 0;
   }
 
   /**
@@ -647,4 +674,25 @@ export class SQLiteStorage implements IGraphStorage {
     }
     this.initialized = false;
   }
+}
+
+// ==================== Type Definitions for Database Rows ====================
+
+interface EntityRow {
+  name: string;
+  entityType: string;
+  observations: string;
+  tags: string | null;
+  importance: number | null;
+  parentId: string | null;
+  createdAt: string;
+  lastModified: string;
+}
+
+interface RelationRow {
+  fromEntity: string;
+  toEntity: string;
+  relationType: string;
+  createdAt: string;
+  lastModified: string;
 }
