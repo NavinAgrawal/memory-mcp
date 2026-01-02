@@ -12,7 +12,7 @@ import { GraphStorage } from '../../core/GraphStorage.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import type { Entity, Relation, KnowledgeGraph } from '../../types/index.js';
+import type { KnowledgeGraph } from '../../types/index.js';
 
 describe('Backup Compression Integration', () => {
   let storage: GraphStorage;
