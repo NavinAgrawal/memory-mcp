@@ -17,5 +17,6 @@ export { CompressionManager } from './CompressionManager.js';
 export {
   ArchiveManager,
   type ArchiveCriteria,
+  type ArchiveOptions,
   type ArchiveResult,
 } from './ArchiveManager.js';

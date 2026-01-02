@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1634 tests)
+npm test              # Run tests with coverage (1681 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.54.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.55.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -51,7 +51,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 45 TypeScript files
+### Source Structure (src/memory/) - 46 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
@@ -60,7 +60,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 | **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, index |
 | **server/** | 4 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
-| **utils/** | 11 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
+| **utils/** | 12 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
 | **root** | 2 | index.ts (entry point), vitest.config.ts |
 
 > **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files
@@ -142,7 +142,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1634 tests, 46 files):
+Tests are in `src/memory/__tests__/` (1681 tests, 48 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -157,7 +157,7 @@ Tests are in `src/memory/__tests__/` (1634 tests, 46 files):
 | unit/core/SQLiteStorage.test.ts | 31 | SQLite storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
 | unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
-| unit/features/ArchiveManager.test.ts | 27 | Entity archival (via EntityManager) |
+| unit/features/ArchiveManager.test.ts | 42 | Entity archival + compression (via EntityManager) |
 | unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
 | integration/backup-compression.test.ts | 16 | Backup compression integration |
 | unit/features/CompressionManager.test.ts | 32 | Duplicate detection (via SearchManager) |
@@ -179,7 +179,9 @@ Tests are in `src/memory/__tests__/` (1634 tests, 46 files):
 | unit/utils/tagUtils.test.ts | 48 | Tag utilities |
 | unit/utils/validationHelper.test.ts | 26 | Zod validation |
 | unit/utils/compressionUtil.test.ts | 41 | Brotli compression utilities |
+| unit/utils/compressedCache.test.ts | 42 | LRU cache with compression |
 | unit/server/responseCompressor.test.ts | 25 | MCP response compression |
+| performance/compression-benchmarks.test.ts | 9 | Compression performance benchmarks |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 

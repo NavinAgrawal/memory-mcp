@@ -2,13 +2,18 @@
  * Archive Manager
  *
  * Handles archiving (removal) of entities based on criteria.
+ * Archives are stored as compressed files for space-efficient long-term storage.
  * Extracted from EntityManager (Phase 4: Consolidate God Objects).
+ * Enhanced with brotli compression in Phase 3 Sprint 5.
  *
  * @module features/ArchiveManager
  */
 
-import type { Entity } from '../types/index.js';
+import { promises as fs } from 'fs';
+import { dirname, join } from 'path';
+import type { Entity, ArchiveResultExtended } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
+import { compress, COMPRESSION_CONFIG } from '../utils/index.js';
 
 /**
  * Criteria for archiving entities.
@@ -23,20 +28,48 @@ export interface ArchiveCriteria {
 }
 
 /**
+ * Options for archive operations.
+ */
+export interface ArchiveOptions {
+  /** Dry run mode - preview without making changes */
+  dryRun?: boolean;
+  /** Whether to save archived entities to a compressed file (default: true) */
+  saveToFile?: boolean;
+}
+
+/**
  * Result of archive operation.
+ * Extends ArchiveResultExtended with compression statistics.
  */
 export interface ArchiveResult {
   /** Number of entities archived */
   archived: number;
   /** Names of archived entities */
   entityNames: string[];
+  /** Path to the archive file (if created) */
+  archivePath?: string;
+  /** Original size of archive data in bytes */
+  originalSize?: number;
+  /** Compressed size in bytes */
+  compressedSize?: number;
+  /** Compression ratio (compressedSize / originalSize). Lower is better. */
+  compressionRatio?: number;
 }
 
 /**
  * Manages archive operations for the knowledge graph.
+ *
+ * Archives are stored as brotli-compressed files in the `.archives` directory.
+ * Maximum compression quality is used for optimal long-term storage.
  */
 export class ArchiveManager {
-  constructor(private storage: GraphStorage) {}
+  private readonly archiveDir: string;
+
+  constructor(private storage: GraphStorage) {
+    const filePath = this.storage.getFilePath();
+    const dir = dirname(filePath);
+    this.archiveDir = join(dir, '.archives');
+  }
 
   /**
    * Archive old or low-importance entities.
@@ -46,13 +79,37 @@ export class ArchiveManager {
    * - importance less than importanceLessThan
    * - has at least one tag from tags array
    *
-   * Archived entities and their relations are removed from the graph.
+   * By default, archived entities are saved to a compressed file before
+   * being removed from the active graph. Use `saveToFile: false` to
+   * skip creating the archive file.
    *
    * @param criteria - Archiving criteria
-   * @param dryRun - If true, preview what would be archived without making changes
-   * @returns Archive result with count and entity names
+   * @param options - Archive options (dryRun, saveToFile)
+   * @returns Archive result with count, entity names, and compression stats
+   *
+   * @example
+   * ```typescript
+   * // Archive old entities with compression
+   * const result = await manager.archiveEntities({
+   *   olderThan: '2023-01-01T00:00:00Z',
+   *   importanceLessThan: 3
+   * });
+   * console.log(`Archived ${result.archived} entities`);
+   * console.log(`Compressed from ${result.originalSize} to ${result.compressedSize} bytes`);
+   *
+   * // Preview without making changes
+   * const preview = await manager.archiveEntities(criteria, { dryRun: true });
+   * ```
    */
-  async archiveEntities(criteria: ArchiveCriteria, dryRun: boolean = false): Promise<ArchiveResult> {
+  async archiveEntities(
+    criteria: ArchiveCriteria,
+    options: ArchiveOptions | boolean = {}
+  ): Promise<ArchiveResult> {
+    // Handle legacy boolean argument (backward compatibility)
+    const opts: ArchiveOptions = typeof options === 'boolean'
+      ? { dryRun: options, saveToFile: true }
+      : { saveToFile: true, ...options };
+
     // Use read-only graph for analysis
     const readGraph = await this.storage.loadGraph();
     const toArchive: Entity[] = [];
@@ -91,21 +148,196 @@ export class ArchiveManager {
       }
     }
 
-    if (!dryRun && toArchive.length > 0) {
-      // Get mutable copy for write operation
-      const graph = await this.storage.getGraphForMutation();
-      // Remove archived entities from main graph
-      const archiveNames = new Set(toArchive.map(e => e.name));
-      graph.entities = graph.entities.filter(e => !archiveNames.has(e.name));
-      graph.relations = graph.relations.filter(
-        r => !archiveNames.has(r.from) && !archiveNames.has(r.to)
-      );
-      await this.storage.saveGraph(graph);
+    // Dry run - return preview without changes
+    if (opts.dryRun) {
+      return {
+        archived: toArchive.length,
+        entityNames: toArchive.map(e => e.name),
+      };
     }
+
+    // No entities to archive
+    if (toArchive.length === 0) {
+      return {
+        archived: 0,
+        entityNames: [],
+      };
+    }
+
+    // Save to compressed archive file
+    let archivePath: string | undefined;
+    let originalSize: number | undefined;
+    let compressedSize: number | undefined;
+    let compressionRatio: number | undefined;
+
+    if (opts.saveToFile) {
+      const archiveResult = await this.saveToArchive(toArchive);
+      archivePath = archiveResult.archivePath;
+      originalSize = archiveResult.originalSize;
+      compressedSize = archiveResult.compressedSize;
+      compressionRatio = archiveResult.compressionRatio;
+    }
+
+    // Get mutable copy for write operation
+    const graph = await this.storage.getGraphForMutation();
+
+    // Remove archived entities from main graph
+    const archiveNames = new Set(toArchive.map(e => e.name));
+    graph.entities = graph.entities.filter(e => !archiveNames.has(e.name));
+    graph.relations = graph.relations.filter(
+      r => !archiveNames.has(r.from) && !archiveNames.has(r.to)
+    );
+    await this.storage.saveGraph(graph);
 
     return {
       archived: toArchive.length,
       entityNames: toArchive.map(e => e.name),
+      archivePath,
+      originalSize,
+      compressedSize,
+      compressionRatio,
     };
+  }
+
+  /**
+   * Save entities to a compressed archive file.
+   *
+   * Creates a brotli-compressed file in the `.archives` directory
+   * with maximum compression quality for space efficiency.
+   *
+   * @param entities - Entities to archive
+   * @returns Archive file path and compression statistics
+   */
+  private async saveToArchive(entities: Entity[]): Promise<{
+    archivePath: string;
+    originalSize: number;
+    compressedSize: number;
+    compressionRatio: number;
+  }> {
+    // Ensure archive directory exists
+    await fs.mkdir(this.archiveDir, { recursive: true });
+
+    // Generate timestamp-based filename
+    const timestamp = new Date().toISOString()
+      .replace(/:/g, '-')
+      .replace(/\./g, '-')
+      .replace('T', '_')
+      .replace('Z', '');
+    const archivePath = join(this.archiveDir, `archive_${timestamp}.jsonl.br`);
+
+    // Serialize entities to JSONL format
+    const content = entities.map(e => JSON.stringify(e)).join('\n');
+
+    // Compress with maximum quality for archives
+    const compressionResult = await compress(content, {
+      quality: COMPRESSION_CONFIG.BROTLI_QUALITY_ARCHIVE,
+      mode: 'text',
+    });
+
+    // Write compressed archive
+    await fs.writeFile(archivePath, compressionResult.compressed);
+
+    // Write metadata file
+    const metadataPath = `${archivePath}.meta.json`;
+    const metadata = {
+      timestamp: new Date().toISOString(),
+      entityCount: entities.length,
+      entityNames: entities.map(e => e.name),
+      compressed: true,
+      compressionFormat: 'brotli',
+      originalSize: compressionResult.originalSize,
+      compressedSize: compressionResult.compressedSize,
+      compressionRatio: compressionResult.ratio,
+    };
+    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+    return {
+      archivePath,
+      originalSize: compressionResult.originalSize,
+      compressedSize: compressionResult.compressedSize,
+      compressionRatio: compressionResult.ratio,
+    };
+  }
+
+  /**
+   * List all available archives.
+   *
+   * @returns Array of archive information with compression details
+   */
+  async listArchives(): Promise<Array<{
+    fileName: string;
+    filePath: string;
+    timestamp: string;
+    entityCount: number;
+    compressed: boolean;
+    originalSize?: number;
+    compressedSize?: number;
+    compressionRatio?: number;
+  }>> {
+    try {
+      try {
+        await fs.access(this.archiveDir);
+      } catch {
+        return [];
+      }
+
+      const files = await fs.readdir(this.archiveDir);
+      const archiveFiles = files.filter(f =>
+        f.startsWith('archive_') &&
+        (f.endsWith('.jsonl') || f.endsWith('.jsonl.br')) &&
+        !f.endsWith('.meta.json')
+      );
+
+      const archives: Array<{
+        fileName: string;
+        filePath: string;
+        timestamp: string;
+        entityCount: number;
+        compressed: boolean;
+        originalSize?: number;
+        compressedSize?: number;
+        compressionRatio?: number;
+      }> = [];
+
+      for (const fileName of archiveFiles) {
+        const filePath = join(this.archiveDir, fileName);
+        const metadataPath = `${filePath}.meta.json`;
+
+        try {
+          const metadataContent = await fs.readFile(metadataPath, 'utf-8');
+          const metadata = JSON.parse(metadataContent);
+
+          archives.push({
+            fileName,
+            filePath,
+            timestamp: metadata.timestamp,
+            entityCount: metadata.entityCount,
+            compressed: metadata.compressed ?? fileName.endsWith('.br'),
+            originalSize: metadata.originalSize,
+            compressedSize: metadata.compressedSize,
+            compressionRatio: metadata.compressionRatio,
+          });
+        } catch {
+          // Skip archives without valid metadata
+          continue;
+        }
+      }
+
+      // Sort by timestamp (newest first)
+      archives.sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      return archives;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Get the path to the archives directory.
+   */
+  getArchiveDir(): string {
+    return this.archiveDir;
   }
 }

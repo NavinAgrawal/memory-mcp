@@ -27,6 +27,9 @@ export type {
   ValidationReport,
   ValidationIssue,
   ValidationWarning,
+  CacheCompressionStats,
+  // Archive types
+  ArchiveResultExtended,
   // Import/Export types
   ExportFilter,
   ExportOptions,
