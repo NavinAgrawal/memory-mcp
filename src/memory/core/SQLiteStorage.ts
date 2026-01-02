@@ -901,6 +901,179 @@ export class SQLiteStorage implements IGraphStorage {
     const row = stmt.get(entityName, entityName);
     return row !== undefined;
   }
+
+  // ==================== Embedding Storage (Phase 4 Sprint 11) ====================
+
+  /**
+   * Phase 4 Sprint 11: Ensure embeddings table exists.
+   *
+   * Creates the embeddings table if it doesn't exist.
+   * Separate table from entities to avoid schema migration complexity.
+   */
+  private ensureEmbeddingsTable(): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS embeddings (
+        entityName TEXT PRIMARY KEY REFERENCES entities(name) ON DELETE CASCADE,
+        embedding BLOB NOT NULL,
+        embeddingModel TEXT NOT NULL,
+        embeddingUpdatedAt TEXT NOT NULL,
+        dimensions INTEGER NOT NULL
+      )
+    `);
+
+    // Index for quick lookup by model
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_embedding_model ON embeddings(embeddingModel)`);
+  }
+
+  /**
+   * Phase 4 Sprint 11: Store an embedding for an entity.
+   *
+   * @param entityName - Name of the entity
+   * @param vector - Embedding vector
+   * @param model - Model name used for the embedding
+   */
+  storeEmbedding(entityName: string, vector: number[], model: string): void {
+    if (!this.db || !this.initialized) {
+      throw new Error('Database not initialized');
+    }
+
+    this.ensureEmbeddingsTable();
+
+    // Convert to Float32Array for efficient storage
+    const buffer = Buffer.from(new Float32Array(vector).buffer);
+
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO embeddings (entityName, embedding, embeddingModel, embeddingUpdatedAt, dimensions)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(entityName, buffer, model, new Date().toISOString(), vector.length);
+  }
+
+  /**
+   * Phase 4 Sprint 11: Get an embedding for an entity.
+   *
+   * @param entityName - Name of the entity
+   * @returns Embedding vector if found, null otherwise
+   */
+  getEmbedding(entityName: string): number[] | null {
+    if (!this.db || !this.initialized) return null;
+
+    try {
+      this.ensureEmbeddingsTable();
+
+      const stmt = this.db.prepare(`SELECT embedding FROM embeddings WHERE entityName = ?`);
+      const row = stmt.get(entityName) as { embedding: Buffer } | undefined;
+
+      if (!row) return null;
+
+      // Convert from Buffer to number array
+      const float32Array = new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.embedding.length / 4);
+      return Array.from(float32Array);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Phase 4 Sprint 11: Load all embeddings from storage.
+   *
+   * @returns Array of [entityName, vector] pairs
+   */
+  async loadAllEmbeddings(): Promise<[string, number[]][]> {
+    if (!this.db || !this.initialized) return [];
+
+    try {
+      this.ensureEmbeddingsTable();
+
+      const stmt = this.db.prepare(`SELECT entityName, embedding FROM embeddings`);
+      const rows = stmt.all() as Array<{ entityName: string; embedding: Buffer }>;
+
+      return rows.map(row => {
+        const float32Array = new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.embedding.length / 4);
+        return [row.entityName, Array.from(float32Array)] as [string, number[]];
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Phase 4 Sprint 11: Remove an embedding for an entity.
+   *
+   * @param entityName - Name of the entity
+   */
+  removeEmbedding(entityName: string): void {
+    if (!this.db || !this.initialized) return;
+
+    try {
+      this.ensureEmbeddingsTable();
+      const stmt = this.db.prepare(`DELETE FROM embeddings WHERE entityName = ?`);
+      stmt.run(entityName);
+    } catch {
+      // Ignore errors if table doesn't exist
+    }
+  }
+
+  /**
+   * Phase 4 Sprint 11: Clear all embeddings from storage.
+   */
+  clearAllEmbeddings(): void {
+    if (!this.db || !this.initialized) return;
+
+    try {
+      this.ensureEmbeddingsTable();
+      this.db.exec(`DELETE FROM embeddings`);
+    } catch {
+      // Ignore errors if table doesn't exist
+    }
+  }
+
+  /**
+   * Phase 4 Sprint 11: Check if an entity has an embedding.
+   *
+   * @param entityName - Name of the entity
+   * @returns True if embedding exists
+   */
+  hasEmbedding(entityName: string): boolean {
+    if (!this.db || !this.initialized) return false;
+
+    try {
+      this.ensureEmbeddingsTable();
+      const stmt = this.db.prepare(`SELECT 1 FROM embeddings WHERE entityName = ? LIMIT 1`);
+      const row = stmt.get(entityName);
+      return row !== undefined;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Phase 4 Sprint 11: Get embedding statistics.
+   *
+   * @returns Stats about stored embeddings
+   */
+  getEmbeddingStats(): { count: number; models: string[] } {
+    if (!this.db || !this.initialized) {
+      return { count: 0, models: [] };
+    }
+
+    try {
+      this.ensureEmbeddingsTable();
+
+      const countRow = this.db.prepare(`SELECT COUNT(*) as count FROM embeddings`).get() as { count: number };
+      const modelRows = this.db.prepare(`SELECT DISTINCT embeddingModel FROM embeddings`).all() as Array<{ embeddingModel: string }>;
+
+      return {
+        count: countRow.count,
+        models: modelRows.map(r => r.embeddingModel),
+      };
+    } catch {
+      return { count: 0, models: [] };
+    }
+  }
 }
 
 // ==================== Type Definitions for Database Rows ====================

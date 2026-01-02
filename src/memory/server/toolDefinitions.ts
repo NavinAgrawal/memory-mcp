@@ -832,6 +832,56 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+
+  // ==================== SEMANTIC SEARCH TOOLS (Phase 4 Sprint 12) ====================
+  {
+    name: 'semantic_search',
+    description: 'Search for entities using semantic similarity. Requires embedding provider to be configured via MEMORY_EMBEDDING_PROVIDER.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Natural language search query' },
+        limit: { type: 'number', description: 'Maximum number of results (default: 10, max: 100)' },
+        minSimilarity: {
+          type: 'number',
+          description: 'Minimum similarity score threshold (0.0-1.0, default: 0)',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'find_similar_entities',
+    description: 'Find entities similar to a given entity using semantic similarity. Requires embedding provider.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Name of entity to find similar entities for' },
+        limit: { type: 'number', description: 'Maximum number of results (default: 10, max: 100)' },
+        minSimilarity: {
+          type: 'number',
+          description: 'Minimum similarity score threshold (0.0-1.0, default: 0)',
+        },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'index_embeddings',
+    description: 'Index all entities for semantic search. Call this after adding entities to enable semantic search. Requires embedding provider.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        forceReindex: {
+          type: 'boolean',
+          description: 'Force re-indexing of all entities even if already indexed (default: false)',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 /**
@@ -851,4 +901,6 @@ export const toolCategories = {
   // Phase 4 Sprint 9: Graph algorithm tools
   graphAlgorithm: ['find_shortest_path', 'find_all_paths', 'get_connected_components', 'get_centrality'],
   importExport: ['import_graph', 'export_graph'],
+  // Phase 4 Sprint 12: Semantic search tools
+  semanticSearch: ['semantic_search', 'find_similar_entities', 'index_embeddings'],
 } as const;

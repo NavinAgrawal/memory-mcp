@@ -186,3 +186,94 @@ export type CompressionQuality =
   | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_BATCH
   | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_ARCHIVE
   | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_CACHE;
+
+// ==================== Semantic Search Configuration (Phase 4 Sprint 10-12) ====================
+
+/**
+ * Environment variable names for embedding configuration.
+ */
+export const EMBEDDING_ENV_VARS = {
+  /** Embedding provider: 'openai', 'local', or 'none' (default: 'none') */
+  PROVIDER: 'MEMORY_EMBEDDING_PROVIDER',
+  /** OpenAI API key (required when provider is 'openai') */
+  OPENAI_API_KEY: 'MEMORY_OPENAI_API_KEY',
+  /** Optional model override for the embedding service */
+  MODEL: 'MEMORY_EMBEDDING_MODEL',
+  /** Auto-index entities on creation: 'true' or 'false' (default: 'false') */
+  AUTO_INDEX: 'MEMORY_AUTO_INDEX_EMBEDDINGS',
+} as const;
+
+/**
+ * Default embedding configuration values.
+ */
+export const EMBEDDING_DEFAULTS = {
+  /** Default provider (disabled by default) */
+  PROVIDER: 'none' as const,
+  /** Default OpenAI model for embeddings (1536 dimensions) */
+  OPENAI_MODEL: 'text-embedding-3-small',
+  /** Default local model for embeddings (384 dimensions) */
+  LOCAL_MODEL: 'Xenova/all-MiniLM-L6-v2',
+  /** OpenAI embedding dimensions for text-embedding-3-small */
+  OPENAI_DIMENSIONS: 1536,
+  /** Local embedding dimensions for all-MiniLM-L6-v2 */
+  LOCAL_DIMENSIONS: 384,
+  /** Maximum texts per batch for OpenAI */
+  OPENAI_MAX_BATCH_SIZE: 2048,
+  /** Default batch size for embedding operations */
+  DEFAULT_BATCH_SIZE: 100,
+  /** Whether to auto-index entities by default */
+  AUTO_INDEX: false,
+} as const;
+
+/**
+ * Semantic search configuration limits.
+ */
+export const SEMANTIC_SEARCH_LIMITS = {
+  /** Default number of results for semantic search */
+  DEFAULT_LIMIT: 10,
+  /** Maximum number of results for semantic search */
+  MAX_LIMIT: 100,
+  /** Minimum similarity score for results (0.0-1.0) */
+  MIN_SIMILARITY: 0.0,
+} as const;
+
+/**
+ * OpenAI API configuration.
+ */
+export const OPENAI_API_CONFIG: {
+  BASE_URL: string;
+  EMBEDDINGS_ENDPOINT: string;
+  MAX_RETRIES: number;
+  INITIAL_BACKOFF_MS: number;
+  MAX_BACKOFF_MS: number;
+} = {
+  /** Base URL for OpenAI API */
+  BASE_URL: 'https://api.openai.com/v1',
+  /** Embeddings endpoint */
+  EMBEDDINGS_ENDPOINT: '/embeddings',
+  /** Maximum retries for rate limiting */
+  MAX_RETRIES: 3,
+  /** Initial backoff delay in milliseconds */
+  INITIAL_BACKOFF_MS: 1000,
+  /** Maximum backoff delay in milliseconds */
+  MAX_BACKOFF_MS: 10000,
+};
+
+/**
+ * Get embedding configuration from environment variables.
+ *
+ * @returns EmbeddingConfig object with values from environment or defaults
+ */
+export function getEmbeddingConfig(): {
+  provider: 'openai' | 'local' | 'none';
+  apiKey?: string;
+  model?: string;
+  autoIndex: boolean;
+} {
+  const provider = (process.env[EMBEDDING_ENV_VARS.PROVIDER] || EMBEDDING_DEFAULTS.PROVIDER) as 'openai' | 'local' | 'none';
+  const apiKey = process.env[EMBEDDING_ENV_VARS.OPENAI_API_KEY];
+  const model = process.env[EMBEDDING_ENV_VARS.MODEL];
+  const autoIndex = process.env[EMBEDDING_ENV_VARS.AUTO_INDEX] === 'true';
+
+  return { provider, apiKey, model, autoIndex };
+}

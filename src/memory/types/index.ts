@@ -60,4 +60,11 @@ export type {
   ConnectedComponentsResult,
   CentralityResult,
   WeightedRelation,
+  // Phase 4 Sprint 10-12: Semantic search types
+  EmbeddingService,
+  SemanticSearchResult,
+  IVectorStore,
+  VectorSearchResult,
+  EmbeddingConfig,
+  SemanticIndexOptions,
 } from './types.js';

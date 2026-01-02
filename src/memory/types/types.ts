@@ -1178,3 +1178,185 @@ export interface WeightedRelation extends Relation {
   /** Optional metadata for the relation */
   metadata?: Record<string, unknown>;
 }
+
+// ==================== Semantic Search Types (Phase 4 Sprint 10-12) ====================
+
+/**
+ * Phase 4 Sprint 10: Embedding service interface for vector embeddings.
+ *
+ * Provides abstraction over different embedding providers (OpenAI, local models).
+ * Implementations can use cloud APIs or local transformer models.
+ *
+ * @example
+ * ```typescript
+ * const service: EmbeddingService = new OpenAIEmbeddingService(apiKey);
+ * const embedding = await service.embed("Hello world");
+ * console.log(`Vector dimensions: ${service.dimensions}`);
+ * ```
+ */
+export interface EmbeddingService {
+  /** Number of dimensions in the embedding vectors */
+  readonly dimensions: number;
+
+  /** Provider name for identification */
+  readonly provider: string;
+
+  /** Model name being used */
+  readonly model: string;
+
+  /**
+   * Generate embedding for a single text.
+   *
+   * @param text - Text to embed
+   * @returns Promise resolving to embedding vector (array of numbers)
+   */
+  embed(text: string): Promise<number[]>;
+
+  /**
+   * Generate embeddings for multiple texts in batch.
+   *
+   * @param texts - Array of texts to embed
+   * @returns Promise resolving to array of embedding vectors
+   */
+  embedBatch(texts: string[]): Promise<number[][]>;
+
+  /**
+   * Check if the service is initialized and ready.
+   *
+   * @returns Promise resolving to true if ready
+   */
+  isReady(): Promise<boolean>;
+}
+
+/**
+ * Phase 4 Sprint 10: Result from semantic search operations.
+ *
+ * Contains the matched entity along with its similarity score
+ * to the query vector.
+ *
+ * @example
+ * ```typescript
+ * const results: SemanticSearchResult[] = await semanticSearch.search("machine learning");
+ * results.forEach(r => {
+ *   console.log(`${r.entity.name}: ${(r.similarity * 100).toFixed(1)}% similar`);
+ * });
+ * ```
+ */
+export interface SemanticSearchResult {
+  /** The matched entity */
+  entity: Entity;
+
+  /** Similarity score (0.0 to 1.0, higher is more similar) */
+  similarity: number;
+}
+
+/**
+ * Phase 4 Sprint 11: Vector store interface for embedding storage and retrieval.
+ *
+ * Provides abstraction over different vector storage backends (in-memory, SQLite).
+ *
+ * @example
+ * ```typescript
+ * const store: IVectorStore = new InMemoryVectorStore();
+ * await store.add("entity1", embedding);
+ * const results = await store.search(queryVector, 10);
+ * ```
+ */
+export interface IVectorStore {
+  /**
+   * Add a vector for an entity.
+   *
+   * @param entityName - Name of the entity
+   * @param vector - Embedding vector
+   */
+  add(entityName: string, vector: number[]): void;
+
+  /**
+   * Search for similar vectors.
+   *
+   * @param queryVector - Query embedding vector
+   * @param k - Number of results to return
+   * @returns Array of results with entity name and similarity score
+   */
+  search(queryVector: number[], k: number): VectorSearchResult[];
+
+  /**
+   * Remove a vector by entity name.
+   *
+   * @param entityName - Name of the entity to remove
+   * @returns True if found and removed
+   */
+  remove(entityName: string): boolean;
+
+  /**
+   * Get the number of vectors stored.
+   *
+   * @returns Number of vectors
+   */
+  size(): number;
+
+  /**
+   * Clear all vectors from the store.
+   */
+  clear(): void;
+
+  /**
+   * Check if a vector exists for an entity.
+   *
+   * @param entityName - Name of the entity
+   * @returns True if vector exists
+   */
+  has(entityName: string): boolean;
+
+  /**
+   * Get the vector for an entity.
+   *
+   * @param entityName - Name of the entity
+   * @returns Vector if found, undefined otherwise
+   */
+  get(entityName: string): number[] | undefined;
+}
+
+/**
+ * Phase 4 Sprint 11: Result from vector similarity search.
+ *
+ * Contains the entity name and similarity score from vector search.
+ */
+export interface VectorSearchResult {
+  /** Entity name */
+  name: string;
+
+  /** Similarity score (0.0 to 1.0, cosine similarity) */
+  score: number;
+}
+
+/**
+ * Phase 4 Sprint 10: Configuration for embedding services.
+ */
+export interface EmbeddingConfig {
+  /** Embedding provider: 'openai', 'local', or 'none' */
+  provider: 'openai' | 'local' | 'none';
+
+  /** API key for OpenAI (required when provider is 'openai') */
+  apiKey?: string;
+
+  /** Optional model override */
+  model?: string;
+
+  /** Whether to auto-index entities on creation */
+  autoIndex?: boolean;
+}
+
+/**
+ * Phase 4 Sprint 12: Options for semantic search indexing.
+ */
+export interface SemanticIndexOptions {
+  /** Force re-indexing even if embeddings exist */
+  forceReindex?: boolean;
+
+  /** Progress callback for large graphs */
+  onProgress?: (current: number, total: number) => void;
+
+  /** Batch size for embedding API calls */
+  batchSize?: number;
+}

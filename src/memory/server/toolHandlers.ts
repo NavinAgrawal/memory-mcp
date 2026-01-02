@@ -507,6 +507,87 @@ export const toolHandlers: Record<string, ToolHandler> = {
     // Uncompressed: return raw content for backward compatibility
     return formatRawResponse(result.content);
   },
+
+  // ==================== SEMANTIC SEARCH HANDLERS (Phase 4 Sprint 12) ====================
+  semantic_search: async (ctx, args) => {
+    const semanticSearch = ctx.semanticSearch;
+    if (!semanticSearch) {
+      return formatTextResponse(
+        'Semantic search is not available. Set MEMORY_EMBEDDING_PROVIDER environment variable to "openai" or "local".'
+      );
+    }
+
+    const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
+    const limit = args.limit !== undefined
+      ? validateWithSchema(args.limit, z.number().int().min(1).max(100), 'Invalid limit (1-100)')
+      : undefined;
+    const minSimilarity = args.minSimilarity !== undefined
+      ? validateWithSchema(args.minSimilarity, z.number().min(0).max(1), 'Invalid minSimilarity (0-1)')
+      : undefined;
+
+    const graph = await ctx.storage.loadGraph();
+    const results = await semanticSearch.search(graph, query, limit, minSimilarity);
+
+    return formatToolResponse({
+      query,
+      results: results.map(r => ({
+        entity: r.entity,
+        similarity: r.similarity,
+      })),
+      count: results.length,
+    });
+  },
+
+  find_similar_entities: async (ctx, args) => {
+    const semanticSearch = ctx.semanticSearch;
+    if (!semanticSearch) {
+      return formatTextResponse(
+        'Semantic search is not available. Set MEMORY_EMBEDDING_PROVIDER environment variable to "openai" or "local".'
+      );
+    }
+
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entity name');
+    const limit = args.limit !== undefined
+      ? validateWithSchema(args.limit, z.number().int().min(1).max(100), 'Invalid limit (1-100)')
+      : undefined;
+    const minSimilarity = args.minSimilarity !== undefined
+      ? validateWithSchema(args.minSimilarity, z.number().min(0).max(1), 'Invalid minSimilarity (0-1)')
+      : undefined;
+
+    const graph = await ctx.storage.loadGraph();
+    const results = await semanticSearch.findSimilar(graph, entityName, limit, minSimilarity);
+
+    return formatToolResponse({
+      entityName,
+      similarEntities: results.map(r => ({
+        entity: r.entity,
+        similarity: r.similarity,
+      })),
+      count: results.length,
+    });
+  },
+
+  index_embeddings: async (ctx, args) => {
+    const semanticSearch = ctx.semanticSearch;
+    if (!semanticSearch) {
+      return formatTextResponse(
+        'Semantic search is not available. Set MEMORY_EMBEDDING_PROVIDER environment variable to "openai" or "local".'
+      );
+    }
+
+    const forceReindex = args.forceReindex !== undefined
+      ? validateWithSchema(args.forceReindex, z.boolean(), 'Invalid forceReindex value')
+      : false;
+
+    const graph = await ctx.storage.loadGraph();
+    const result = await semanticSearch.indexAll(graph, { forceReindex });
+
+    return formatToolResponse({
+      ...result,
+      totalEntities: graph.entities.length,
+      stats: semanticSearch.getStats(),
+    });
+  },
 };
 
 /**
