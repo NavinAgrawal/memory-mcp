@@ -1,0 +1,169 @@
+{
+  "phase": 4,
+  "sprint": 10,
+  "title": "Semantic Search: Embedding Service Abstraction",
+  "priority": "LOW",
+  "effort": "8 hours",
+  "status": "planned",
+  "impact": "Foundation for AI-powered semantic search; Supports multiple embedding providers",
+  "targetMetrics": {
+    "openAILatency": { "target": "<200ms per embedding (API bound)" },
+    "localLatency": { "target": "<50ms per embedding (model bound)" },
+    "batchSize": { "target": "Up to 2048 texts per batch (OpenAI)" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Define Embedding Service Interface - Create EmbeddingService interface with embed(), embedBatch(), and dimensions properties; Define SemanticSearchResult interface",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/types/types.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "EmbeddingService interface defined",
+        "embed(text: string): Promise<number[]> method",
+        "embedBatch(texts: string[]): Promise<number[][]> method",
+        "dimensions: number readonly property",
+        "SemanticSearchResult with entity and similarity fields"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Search",
+      "description": "Implement OpenAI Embedding Service - Create OpenAIEmbeddingService class using text-embedding-3-small model, implement embed() and embedBatch() with proper error handling and rate limiting",
+      "status": "planned",
+      "estimatedHours": 2.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/EmbeddingService.ts"],
+      "testCategories": [
+        "Single text embedding",
+        "Batch embedding",
+        "API error handling",
+        "Rate limit handling"
+      ],
+      "acceptanceCriteria": [
+        "OpenAIEmbeddingService class implementing EmbeddingService",
+        "Constructor accepts apiKey string",
+        "dimensions = 1536 for text-embedding-3-small",
+        "embed() calls OpenAI embeddings API",
+        "embedBatch() batches up to 2048 texts per request",
+        "Handles API errors with descriptive messages",
+        "Respects rate limits with exponential backoff"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Search",
+      "description": "Implement Local Embedding Service - Create LocalEmbeddingService using @xenova/transformers with all-MiniLM-L6-v2 model, implement lazy initialization and single/batch embedding",
+      "status": "planned",
+      "estimatedHours": 2.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/EmbeddingService.ts"],
+      "testCategories": [
+        "Model initialization",
+        "Single text embedding",
+        "Batch embedding",
+        "No network required"
+      ],
+      "acceptanceCriteria": [
+        "LocalEmbeddingService class implementing EmbeddingService",
+        "Uses @xenova/transformers for local inference",
+        "Model: Xenova/all-MiniLM-L6-v2",
+        "dimensions = 384",
+        "initialize() method for lazy model loading",
+        "embedBatch() processes texts sequentially (no parallel for local)",
+        "Works offline after initial model download"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Search",
+      "description": "Create Embedding Service Factory - Implement factory function that creates appropriate embedding service based on environment configuration",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/search/EmbeddingService.ts"],
+      "testCategories": [
+        "Factory creates OpenAI service",
+        "Factory creates Local service",
+        "Factory returns null for 'none'"
+      ],
+      "acceptanceCriteria": [
+        "createEmbeddingService(config) factory function",
+        "Config from environment: MEMORY_EMBEDDING_PROVIDER",
+        "Supports 'openai', 'local', 'none'",
+        "OpenAI requires MEMORY_OPENAI_API_KEY",
+        "Returns null for 'none' (semantic search disabled)",
+        "Throws descriptive error for missing API key"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Configuration",
+      "description": "Add Environment Variables for Embeddings - Document and implement environment variable parsing for embedding configuration",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/utils/constants.ts"],
+      "testCategories": [
+        "Environment variable parsing",
+        "Default values"
+      ],
+      "acceptanceCriteria": [
+        "MEMORY_EMBEDDING_PROVIDER: 'openai' | 'local' | 'none' (default: 'none')",
+        "MEMORY_OPENAI_API_KEY: string (required for OpenAI)",
+        "MEMORY_EMBEDDING_MODEL: string (optional, overrides default)",
+        "MEMORY_AUTO_INDEX_EMBEDDINGS: 'true' | 'false' (default: 'false')",
+        "Constants exported for use in services"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Tests",
+      "description": "Create Embedding Service Tests - Test both OpenAI and Local implementations with mocks",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/search/EmbeddingService.test.ts"],
+      "testCategories": [
+        "OpenAI embed and embedBatch",
+        "Local embed and embedBatch",
+        "Factory function",
+        "Error handling"
+      ],
+      "acceptanceCriteria": [
+        "OpenAI service tests with mocked fetch",
+        "Local service tests with mocked transformers",
+        "Factory creates correct service type",
+        "Error handling tests",
+        "15+ tests total"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "EmbeddingService abstraction supports multiple providers",
+    "OpenAI implementation with proper API handling",
+    "Local implementation with transformers.js",
+    "Factory creates services from environment config",
+    "Comprehensive test coverage with mocks"
+  ],
+  "filesCreated": [
+    "src/memory/search/EmbeddingService.ts",
+    "src/memory/__tests__/unit/search/EmbeddingService.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/types/types.ts",
+    "src/memory/utils/constants.ts",
+    "src/memory/search/index.ts"
+  ],
+  "dependencies": {
+    "production": ["@xenova/transformers (optional, for local embeddings)"],
+    "existing": ["@modelcontextprotocol/sdk", "better-sqlite3"]
+  },
+  "totalNewTests": 15,
+  "totalEstimatedHours": 8,
+  "dependencies_sprints": [],
+  "notes": "This sprint creates the embedding abstraction layer that supports both cloud (OpenAI) and local (transformers.js) embeddings. The local option is important for offline use and avoiding API costs. The @xenova/transformers dependency is optional - users who don't want semantic search won't need it."
+}

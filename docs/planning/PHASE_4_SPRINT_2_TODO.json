@@ -1,0 +1,122 @@
+{
+  "phase": 4,
+  "sprint": 2,
+  "title": "Quick Wins: RankedSearch Cache & Lazy Loading",
+  "priority": "HIGH",
+  "effort": "4 hours",
+  "status": "planned",
+  "impact": "60-80% faster fallback searches; Near-instant startup for large graphs",
+  "targetMetrics": {
+    "rankedSearchFallback": { "current": "O(n*m) per search", "target": "O(n*m) first, O(m) subsequent" },
+    "startupTime1K": { "current": "~50ms", "target": "~5ms" },
+    "startupTime10K": { "current": "~500ms", "target": "~5ms" },
+    "startupTime100K": { "current": "~5000ms", "target": "~5ms" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Add TokenizedEntity Interface - Create interface with entity reference, tokens Set<string>, and document string for caching tokenization results in RankedSearch",
+      "status": "planned",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/memory/search/RankedSearch.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "TokenizedEntity interface defined with entity, tokens, and document fields",
+        "Interface used for type safety in token cache"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Caching",
+      "description": "Implement RankedSearch Fallback Token Cache - Add tokenCache Map<string, TokenizedEntity> and idfCache Map<string, number> to RankedSearch, implement getOrComputeTokens() method with lastModified-based invalidation",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/RankedSearch.ts"],
+      "testCategories": [
+        "Token cache hit for unchanged entities",
+        "Token cache miss for modified entities",
+        "IDF cache rebuild on significant graph changes"
+      ],
+      "acceptanceCriteria": [
+        "tokenCache: Map<string, TokenizedEntity> property added",
+        "idfCache: Map<string, number> property added",
+        "lastEntityCount: number property for IDF rebuild detection",
+        "getOrComputeTokens() checks lastModified for cache validity",
+        "IDF cache rebuilds when entity count changes >10%",
+        "Fallback search uses cached tokens instead of recomputing"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Storage",
+      "description": "Implement Lazy Graph Loading in SQLiteStorage - Add cacheLoaded boolean and loadingPromise, implement ensureCacheLoaded() method, modify loadGraph() to call ensureCacheLoaded(), add getEntity() fast path that queries DB directly without full cache load",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/SQLiteStorage.ts"],
+      "testCategories": [
+        "Startup without loading full cache",
+        "Lazy load on first full graph access",
+        "Direct DB query for single entity lookup",
+        "Cache loaded once and reused"
+      ],
+      "acceptanceCriteria": [
+        "cacheLoaded: boolean property added (default false)",
+        "loadingPromise: Promise<void> | null for concurrent load handling",
+        "ensureCacheLoaded() method that loads cache only once",
+        "loadGraph() calls ensureCacheLoaded() before returning cache",
+        "getEntity(name) queries DB directly if cache not loaded",
+        "Constructor no longer calls loadGraphIntoCache() immediately",
+        "Startup time reduced to <5ms regardless of graph size"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Lazy Loading and Cache Tests - Test lazy loading behavior, token cache effectiveness, and startup time improvements",
+      "status": "planned",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": [
+        "src/memory/__tests__/unit/core/SQLiteStorage.test.ts",
+        "src/memory/__tests__/unit/search/RankedSearch.test.ts"
+      ],
+      "testCategories": [
+        "Lazy loading defers cache population",
+        "getEntity works without full cache",
+        "Token cache improves subsequent search performance",
+        "Startup time benchmark"
+      ],
+      "acceptanceCriteria": [
+        "Test verifies cache not loaded on construction",
+        "Test verifies cache loaded on first loadGraph() call",
+        "Test verifies getEntity() works without cache",
+        "Test verifies token cache hit improves performance",
+        "Startup time test with 10K entities < 50ms",
+        "10+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "RankedSearch token cache reduces repeated fallback search time by 60-80%",
+    "SQLiteStorage supports lazy graph loading",
+    "Startup time independent of graph size (~5ms)",
+    "Single entity lookups work without loading full graph",
+    "All existing tests continue to pass",
+    "New tests verify lazy loading and caching behavior"
+  ],
+  "filesModified": [
+    "src/memory/search/RankedSearch.ts",
+    "src/memory/core/SQLiteStorage.ts",
+    "src/memory/__tests__/unit/core/SQLiteStorage.test.ts",
+    "src/memory/__tests__/unit/search/RankedSearch.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 4,
+  "dependencies": ["Sprint 1"],
+  "notes": "This sprint completes the Quick Wins phase. The RankedSearch fallback cache addresses the performance issue when TF-IDF index files aren't available. Lazy graph loading dramatically improves startup time for large graphs by deferring the full cache load until first access. These optimizations have no API changes and are backward compatible."
+}

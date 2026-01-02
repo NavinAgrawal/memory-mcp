@@ -1,0 +1,170 @@
+{
+  "phase": 4,
+  "sprint": 6,
+  "title": "Graph Algorithms: Traversal Framework Foundation",
+  "priority": "MEDIUM",
+  "effort": "8 hours",
+  "status": "planned",
+  "impact": "Foundation for all graph algorithm features; Enables path finding, centrality, and component analysis",
+  "targetMetrics": {
+    "bfsTraversal": { "target": "<50ms for 1000 nodes" },
+    "dfsTraversal": { "target": "<50ms for 1000 nodes" },
+    "neighborLookup": { "target": "O(1) via relation index" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Define Graph Traversal Types - Create TraversalOptions interface with maxDepth, includeHierarchy, includeRelations, relationTypes, direction, and stopCondition. Create PathResult, ComponentResult, and CentralityResult interfaces",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/types/types.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "TraversalOptions interface with all traversal configuration options",
+        "PathResult interface with path, relations, and length",
+        "ComponentResult interface with entities, relations, and size",
+        "CentralityResult interface with entity and score",
+        "All types exported from types/index.ts"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Create GraphTraversal Class - Implement new src/memory/core/GraphTraversal.ts with constructor accepting graph and relationIndex, implement getNeighbors() helper that respects TraversalOptions",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Constructor initialization",
+        "getNeighbors with hierarchy",
+        "getNeighbors with relations",
+        "getNeighbors with direction filter",
+        "getNeighbors with relation type filter"
+      ],
+      "acceptanceCriteria": [
+        "GraphTraversal class created with constructor(graph, relationIndex)",
+        "getNeighbors() method respects includeHierarchy option",
+        "getNeighbors() method respects includeRelations option",
+        "getNeighbors() method filters by relationTypes",
+        "getNeighbors() method respects direction (outgoing/incoming/both)",
+        "Returns unique neighbor names as array"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Implement BFS Algorithm - Add bfs() method to GraphTraversal that returns Map<string, number> of visited entities with depths, respect maxDepth and stopCondition options",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "BFS visits all reachable nodes",
+        "BFS returns correct depths",
+        "maxDepth limits traversal",
+        "stopCondition terminates early",
+        "Handles disconnected graphs"
+      ],
+      "acceptanceCriteria": [
+        "bfs(startName, options) method implemented",
+        "Returns Map<string, number> with entity names and depths",
+        "Respects maxDepth option (default: Infinity)",
+        "Respects stopCondition callback",
+        "Handles non-existent start entity gracefully",
+        "Traversal order is correct (level by level)"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core",
+      "description": "Implement DFS Algorithm - Add dfs() method to GraphTraversal that returns string[] of visited entities in DFS order, respect maxDepth and stopCondition options",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "DFS visits all reachable nodes",
+        "DFS returns correct order",
+        "maxDepth limits traversal",
+        "stopCondition terminates early",
+        "Recursive vs iterative equivalence"
+      ],
+      "acceptanceCriteria": [
+        "dfs(startName, options) method implemented",
+        "Returns string[] in DFS traversal order",
+        "Uses recursive helper or explicit stack",
+        "Respects maxDepth option",
+        "Respects stopCondition callback",
+        "Handles cycles (visited set)"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Core",
+      "description": "Add getNeighborsWithRelations Helper - Implement method that returns neighbors with their connecting relations for path reconstruction",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Returns neighbors with relations",
+        "Includes hierarchy edges as null relations",
+        "Respects direction option"
+      ],
+      "acceptanceCriteria": [
+        "getNeighborsWithRelations(entityName, options) method implemented",
+        "Returns Array<{ neighbor: string; relation?: Relation }>",
+        "Hierarchy edges have undefined relation",
+        "Relation edges include full Relation object",
+        "Used by path finding algorithms"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Tests",
+      "description": "Create GraphTraversal Unit Tests - Comprehensive tests for BFS, DFS, getNeighbors, and traversal options",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/core/GraphTraversal.test.ts"],
+      "testCategories": [
+        "BFS correctness",
+        "DFS correctness",
+        "Neighbor lookup with options",
+        "Traversal performance",
+        "Edge cases (empty graph, disconnected, cycles)"
+      ],
+      "acceptanceCriteria": [
+        "BFS tests verify correct depths and order",
+        "DFS tests verify correct traversal order",
+        "Tests cover all TraversalOptions",
+        "Performance test: 1000 nodes < 50ms",
+        "Edge case tests for empty, disconnected, cyclic graphs",
+        "20+ tests total"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "GraphTraversal class implemented with BFS and DFS",
+    "Traversal respects hierarchy and relation edges",
+    "TraversalOptions allow fine-grained control",
+    "getNeighbors and getNeighborsWithRelations helpers work",
+    "Performance meets targets (<50ms for 1000 nodes)",
+    "Comprehensive test coverage"
+  ],
+  "filesCreated": [
+    "src/memory/core/GraphTraversal.ts",
+    "src/memory/__tests__/unit/core/GraphTraversal.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/types/types.ts",
+    "src/memory/core/index.ts"
+  ],
+  "totalNewTests": 20,
+  "totalEstimatedHours": 8,
+  "dependencies": ["Sprint 1"],
+  "notes": "This sprint establishes the foundation for all graph algorithm features. The GraphTraversal class provides BFS and DFS as building blocks for more complex algorithms like shortest path and connected components. The getNeighbors abstraction handles both hierarchy (parent-child) and relation (edge) traversal uniformly."
+}

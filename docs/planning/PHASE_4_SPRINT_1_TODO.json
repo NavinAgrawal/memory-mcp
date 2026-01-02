@@ -1,0 +1,122 @@
+{
+  "phase": 4,
+  "sprint": 1,
+  "title": "Quick Wins: SQLite Indexes & Bidirectional Cache",
+  "priority": "CRITICAL",
+  "effort": "4 hours",
+  "status": "planned",
+  "impact": "O(n) to O(log n) for range queries; 50-90% faster repeated relation lookups",
+  "targetMetrics": {
+    "importanceRangeQuery": { "current": "O(n)", "target": "O(log n)" },
+    "dateRangeQuery": { "current": "O(n)", "target": "O(log n)" },
+    "relationTypeQuery": { "current": "O(n)", "target": "O(log n)" },
+    "bidirectionalRelationLookup": { "current": "O(n)", "target": "O(1) cached" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Database",
+      "description": "Add Missing SQLite Indexes for Range Queries - Add idx_entity_importance, idx_entity_lastmodified, idx_entity_createdat, idx_relation_type, and composite idx_entity_type_importance indexes to SQLiteStorage.createTables() after line 154",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/core/SQLiteStorage.ts"],
+      "testCategories": [
+        "Index existence verification",
+        "Query plan uses indexes"
+      ],
+      "acceptanceCriteria": [
+        "idx_entity_importance index created on entities(importance)",
+        "idx_entity_lastmodified index created on entities(lastModified)",
+        "idx_entity_createdat index created on entities(createdAt)",
+        "idx_relation_type index created on relations(relationType)",
+        "idx_entity_type_importance composite index created",
+        "All indexes created with IF NOT EXISTS for idempotency"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Caching",
+      "description": "Implement Bidirectional Relation Cache - Add private bidirectionalRelationCache Map to SQLiteStorage, implement getRelationsFor() with cache lookup, add invalidateBidirectionalCache() helper method",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/SQLiteStorage.ts"],
+      "testCategories": [
+        "Cache hit for repeated lookups",
+        "Cache miss for first lookup",
+        "Cache invalidation on relation changes"
+      ],
+      "acceptanceCriteria": [
+        "bidirectionalRelationCache: Map<string, Relation[]> property added",
+        "getRelationsFor() checks cache before query",
+        "Cache populated on cache miss",
+        "invalidateBidirectionalCache() method implemented",
+        "Cache returns same reference on hit (no copying)"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Caching",
+      "description": "Add Cache Invalidation Points - Call invalidateBidirectionalCache() in addRelation() (invalidate both from/to), removeRelation() (invalidate both from/to), deleteEntity() (invalidate deleted entity), and clear cache in saveGraph()",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/core/SQLiteStorage.ts"],
+      "testCategories": [
+        "addRelation invalidates cache for both entities",
+        "removeRelation invalidates cache for both entities",
+        "deleteEntity invalidates cache",
+        "saveGraph clears entire cache"
+      ],
+      "acceptanceCriteria": [
+        "addRelation() calls invalidateBidirectionalCache(from) and invalidateBidirectionalCache(to)",
+        "removeRelation() calls invalidateBidirectionalCache(from) and invalidateBidirectionalCache(to)",
+        "deleteEntity() calls invalidateBidirectionalCache(entityName)",
+        "saveGraph() clears bidirectionalRelationCache entirely",
+        "No stale cache entries after mutations"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Create Index and Cache Performance Tests - Add tests verifying index usage for range queries and cache behavior for bidirectional relation lookups",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/core/SQLiteStorage.test.ts"],
+      "testCategories": [
+        "Importance range query uses index (< 10ms with 10K entities)",
+        "Date range query uses index",
+        "Relation type query uses index",
+        "Bidirectional cache hit performance",
+        "Cache invalidation correctness"
+      ],
+      "acceptanceCriteria": [
+        "Range query performance test with 10,000 entities",
+        "Importance filter query < 10ms",
+        "Date range filter query < 10ms",
+        "Cache hit test shows O(1) performance",
+        "Cache invalidation test verifies correctness after mutations",
+        "15+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All 5 new indexes created in SQLite schema",
+    "Bidirectional relation cache implemented and functional",
+    "Cache invalidation occurs at all mutation points",
+    "Range queries use indexes (verified via EXPLAIN QUERY PLAN)",
+    "Repeated relation lookups are 50-90% faster",
+    "All tests pass"
+  ],
+  "filesModified": [
+    "src/memory/core/SQLiteStorage.ts",
+    "src/memory/__tests__/unit/core/SQLiteStorage.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 4,
+  "dependencies": [],
+  "notes": "This sprint focuses on low-hanging fruit that provides immediate performance gains with minimal code changes. The SQLite indexes improve range query performance from O(n) to O(log n), while the bidirectional cache eliminates redundant relation lookups. These are quick wins that lay the foundation for more complex optimizations."
+}

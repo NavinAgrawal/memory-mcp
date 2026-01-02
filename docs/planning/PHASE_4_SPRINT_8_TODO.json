@@ -1,0 +1,150 @@
+{
+  "phase": 4,
+  "sprint": 8,
+  "title": "Graph Algorithms: Connected Components & Centrality",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "planned",
+  "impact": "New capabilities: Find disconnected subgraphs; Identify most important entities",
+  "targetMetrics": {
+    "connectedComponents": { "target": "<100ms for 1000 nodes" },
+    "degreeCentrality": { "target": "<50ms for 1000 nodes" },
+    "betweennessCentrality": { "target": "<500ms for 1000 nodes (sampled)" },
+    "pageRank": { "target": "<100ms for 1000 nodes, 20 iterations" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Implement Connected Components - Add connectedComponents() method using BFS to find all disconnected subgraphs, return ComponentResult[] sorted by size",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Single connected component",
+        "Multiple disconnected components",
+        "Isolated entities",
+        "Component sizes correct"
+      ],
+      "acceptanceCriteria": [
+        "connectedComponents(options) method implemented",
+        "Uses BFS to explore each component",
+        "Returns ComponentResult[] with entities, relations, size",
+        "Results sorted by size (largest first)",
+        "Respects TraversalOptions for edge types",
+        "Handles empty graph"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Implement Degree Centrality - Add degreeCentrality() method that counts connections per entity, return CentralityResult[] sorted by score",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Correct degree counts",
+        "Both directions counted",
+        "Hierarchy edges included",
+        "Sorted by score"
+      ],
+      "acceptanceCriteria": [
+        "degreeCentrality(options) method implemented",
+        "Score = number of neighbors (in + out)",
+        "Respects direction option in TraversalOptions",
+        "Returns CentralityResult[] with entity and score",
+        "Sorted by score descending",
+        "O(n) complexity"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Implement Betweenness Centrality - Add betweennessCentrality() method with optional sampling for large graphs, count how often each entity appears on shortest paths",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Bridge nodes have high betweenness",
+        "Leaf nodes have zero betweenness",
+        "Sampling reduces computation",
+        "Normalized scores"
+      ],
+      "acceptanceCriteria": [
+        "betweennessCentrality(sampleSize?) method implemented",
+        "sampleSize limits number of entity pairs checked",
+        "Uses shortestPath for each sampled pair",
+        "Counts intermediate nodes on paths",
+        "Normalizes scores to 0-1 range",
+        "Returns CentralityResult[] sorted by score"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core",
+      "description": "Implement PageRank Algorithm - Add pageRank() method with configurable damping factor and iterations, propagate scores through graph edges",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Converges to stable scores",
+        "Highly-linked entities score higher",
+        "Damping factor affects distribution",
+        "Iteration count affects precision"
+      ],
+      "acceptanceCriteria": [
+        "pageRank(dampingFactor?, iterations?) method implemented",
+        "Default dampingFactor = 0.85",
+        "Default iterations = 20",
+        "Initializes all scores to 1/n",
+        "Propagates scores through outgoing edges",
+        "Returns CentralityResult[] sorted by score",
+        "Handles nodes with no outgoing edges"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Tests",
+      "description": "Create Component and Centrality Tests - Test all algorithms with various graph structures",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/core/GraphTraversal.test.ts"],
+      "testCategories": [
+        "Connected components detection",
+        "Degree centrality calculation",
+        "Betweenness with bridge node",
+        "PageRank convergence"
+      ],
+      "acceptanceCriteria": [
+        "Test disconnected graph splits into components",
+        "Test degree centrality counts correctly",
+        "Test betweenness identifies bridge nodes",
+        "Test PageRank gives hub nodes higher scores",
+        "Performance tests meet targets",
+        "12+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "connectedComponents() finds all disconnected subgraphs",
+    "degreeCentrality() counts entity connections",
+    "betweennessCentrality() identifies bridge entities",
+    "pageRank() propagates importance through graph",
+    "All algorithms meet performance targets",
+    "Comprehensive test coverage"
+  ],
+  "filesModified": [
+    "src/memory/core/GraphTraversal.ts",
+    "src/memory/__tests__/unit/core/GraphTraversal.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 6", "Sprint 7"],
+  "notes": "Connected components help users understand the structure of their knowledge graph - are there isolated clusters? Centrality measures identify the most 'important' entities by different criteria: degree (most connections), betweenness (bridges between groups), and PageRank (influence propagation). These are essential for knowledge graph analysis."
+}

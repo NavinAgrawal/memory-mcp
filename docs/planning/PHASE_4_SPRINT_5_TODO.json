@@ -1,0 +1,138 @@
+{
+  "phase": 4,
+  "sprint": 5,
+  "title": "Search Optimization: Pagination Cache",
+  "priority": "MEDIUM",
+  "effort": "4 hours",
+  "status": "planned",
+  "impact": "90%+ faster for paginated result navigation; Improved UX for large result sets",
+  "targetMetrics": {
+    "firstPage": { "current": "Full search time", "target": "Full search time (unchanged)" },
+    "subsequentPages": { "current": "Full search time", "target": "<5ms (just array slice)" },
+    "cacheTTL": { "target": "30 seconds for pagination session" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Define PaginatedCacheEntry Interface - Create interface with fullResults array, totalCount number, and timestamp number for TTL tracking",
+      "status": "planned",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/memory/search/SearchManager.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "PaginatedCacheEntry<T> generic interface defined",
+        "Contains fullResults: T[], totalCount: number, timestamp: number",
+        "Interface supports any result type (Entity, SearchResult, etc.)"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Caching",
+      "description": "Implement Pagination Cache in SearchManager - Add paginationCache Map with 30-second TTL constant, implement buildSearchCacheKey() for unique query identification, store full results on first page request",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/SearchManager.ts"],
+      "testCategories": [
+        "First page populates cache",
+        "Subsequent pages use cached results",
+        "Different queries have different cache keys",
+        "Cache expires after 30 seconds"
+      ],
+      "acceptanceCriteria": [
+        "paginationCache: Map<string, PaginatedCacheEntry<Entity>> property added",
+        "PAGINATION_CACHE_TTL = 30_000 constant defined",
+        "buildSearchCacheKey() creates unique key from query + filters",
+        "First page request stores full results in cache",
+        "Subsequent page requests slice cached results",
+        "Cache entry includes timestamp for TTL checking"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Caching",
+      "description": "Integrate Pagination Cache with Search Methods - Modify searchNodes(), searchNodesRanked(), booleanSearch(), fuzzySearch() to use pagination cache for offset/limit operations, return PaginatedResult with totalCount and hasMore",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/SearchManager.ts"],
+      "testCategories": [
+        "searchNodes uses pagination cache",
+        "searchNodesRanked uses pagination cache",
+        "booleanSearch uses pagination cache",
+        "fuzzySearch uses pagination cache",
+        "PaginatedResult includes totalCount and hasMore"
+      ],
+      "acceptanceCriteria": [
+        "All search methods check pagination cache before executing",
+        "Cache key includes method name to avoid collisions",
+        "PaginatedResult type returned with results, totalCount, hasMore",
+        "Backward compatibility maintained for non-paginated calls",
+        "Cache hit slices from fullResults without re-executing search"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Caching",
+      "description": "Add Cache Cleanup - Implement periodic cleanup of expired entries, add invalidatePaginationCache() for manual clearing after mutations, integrate with entity mutation hooks",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/search/SearchManager.ts"],
+      "testCategories": [
+        "Expired entries cleaned up",
+        "Manual invalidation clears cache",
+        "Entity mutations trigger invalidation"
+      ],
+      "acceptanceCriteria": [
+        "Expired entries removed on cache access",
+        "invalidatePaginationCache() method implemented",
+        "Cache cleared after entity create/update/delete",
+        "No memory leaks from stale cache entries"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Tests",
+      "description": "Add Pagination Cache Tests - Test cache behavior across page navigation, TTL expiration, cache invalidation, and performance improvements",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/unit/search/SearchManager.test.ts"],
+      "testCategories": [
+        "First page populates cache",
+        "Second page uses cached results",
+        "TTL expiration removes entry",
+        "Different searches have different caches",
+        "Performance: page 2 request <5ms"
+      ],
+      "acceptanceCriteria": [
+        "Test verifies first page stores results",
+        "Test verifies second page is <5ms",
+        "Test verifies TTL expiration after 30 seconds",
+        "Test verifies cache invalidation on mutation",
+        "Test verifies PaginatedResult structure",
+        "8+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Pagination cache stores full results on first page request",
+    "Subsequent page requests use cached results (90%+ faster)",
+    "30-second TTL for pagination sessions",
+    "Cache invalidated on entity mutations",
+    "PaginatedResult type with totalCount and hasMore",
+    "All existing search tests pass"
+  ],
+  "filesModified": [
+    "src/memory/search/SearchManager.ts",
+    "src/memory/__tests__/unit/search/SearchManager.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 8,
+  "totalEstimatedHours": 4,
+  "dependencies": ["Sprint 3", "Sprint 4"],
+  "notes": "This sprint completes the Search Optimization phase. Pagination is a common pattern where users browse through result pages. Without caching, each page request re-executes the full search and discards most results. With caching, the full result set is computed once and pages are served from cache. The 30-second TTL is chosen to cover typical browsing sessions while ensuring data freshness."
+}
