@@ -6,7 +6,7 @@
  * @module search/FuzzySearch
  */
 
-import type { KnowledgeGraph } from '../types/index.js';
+import type { Entity, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
@@ -20,16 +20,103 @@ import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 export const DEFAULT_FUZZY_THRESHOLD = 0.7;
 
 /**
+ * Phase 4 Sprint 3: Cache entry for fuzzy search results.
+ */
+interface FuzzyCacheEntry {
+  /** Cached entity names that matched */
+  entityNames: string[];
+  /** Entity count when cache was created (for invalidation) */
+  entityCount: number;
+  /** Timestamp when cached */
+  timestamp: number;
+}
+
+/**
+ * Phase 4 Sprint 3: Maximum cache size to prevent memory bloat.
+ */
+const FUZZY_CACHE_MAX_SIZE = 100;
+
+/**
+ * Phase 4 Sprint 3: Cache TTL in milliseconds (5 minutes).
+ */
+const FUZZY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/**
  * Performs fuzzy search with configurable similarity threshold.
  */
 export class FuzzySearch {
+  /**
+   * Phase 4 Sprint 3: Result cache for fuzzy search.
+   * Maps cache key -> cached entity names.
+   */
+  private fuzzyResultCache: Map<string, FuzzyCacheEntry> = new Map();
+
   constructor(private storage: GraphStorage) {}
+
+  /**
+   * Phase 4 Sprint 3: Generate cache key for fuzzy search parameters.
+   */
+  private generateCacheKey(
+    query: string,
+    threshold: number,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number,
+    offset?: number,
+    limit?: number
+  ): string {
+    return JSON.stringify({
+      q: query.toLowerCase(),
+      t: threshold,
+      tags: tags?.sort().join(',') ?? '',
+      min: minImportance,
+      max: maxImportance,
+      off: offset,
+      lim: limit,
+    });
+  }
+
+  /**
+   * Phase 4 Sprint 3: Clear the fuzzy search cache.
+   */
+  clearCache(): void {
+    this.fuzzyResultCache.clear();
+  }
+
+  /**
+   * Phase 4 Sprint 3: Invalidate stale cache entries.
+   */
+  private cleanupCache(): void {
+    const now = Date.now();
+    const entries = Array.from(this.fuzzyResultCache.entries());
+
+    // Remove expired entries
+    for (const [key, entry] of entries) {
+      if (now - entry.timestamp > FUZZY_CACHE_TTL_MS) {
+        this.fuzzyResultCache.delete(key);
+      }
+    }
+
+    // If still over limit, remove oldest entries
+    if (this.fuzzyResultCache.size > FUZZY_CACHE_MAX_SIZE) {
+      const sortedEntries = entries
+        .filter(([k]) => this.fuzzyResultCache.has(k))
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+      const toRemove = sortedEntries.slice(0, this.fuzzyResultCache.size - FUZZY_CACHE_MAX_SIZE);
+      for (const [key] of toRemove) {
+        this.fuzzyResultCache.delete(key);
+      }
+    }
+  }
 
   /**
    * Fuzzy search for entities with typo tolerance and pagination.
    *
    * Uses Levenshtein distance to calculate similarity between strings.
    * Matches if similarity >= threshold (0.0 to 1.0).
+   *
+   * Phase 4 Sprint 3: Implements result caching for repeated queries.
    *
    * @param query - Search query
    * @param threshold - Similarity threshold (0.0 to 1.0), default DEFAULT_FUZZY_THRESHOLD
@@ -52,9 +139,65 @@ export class FuzzySearch {
     const graph = await this.storage.loadGraph();
     const queryLower = query.toLowerCase();
 
-    // First filter by fuzzy text match (search-specific)
-    // OPTIMIZED: Uses pre-computed lowercase cache where applicable
-    const fuzzyMatched = graph.entities.filter(e => {
+    // Phase 4 Sprint 3: Generate cache key and check cache
+    const cacheKey = this.generateCacheKey(query, threshold, tags, minImportance, maxImportance, offset, limit);
+    const cached = this.fuzzyResultCache.get(cacheKey);
+
+    // Check if cache is valid (entity count hasn't changed)
+    if (cached && cached.entityCount === graph.entities.length) {
+      const now = Date.now();
+      if (now - cached.timestamp < FUZZY_CACHE_TTL_MS) {
+        // Return cached results
+        const cachedNameSet = new Set(cached.entityNames);
+        const cachedEntities = graph.entities.filter(e => cachedNameSet.has(e.name));
+        const cachedEntityNames = new Set(cached.entityNames);
+        const cachedRelations = graph.relations.filter(
+          r => cachedEntityNames.has(r.from) && cachedEntityNames.has(r.to)
+        );
+        return { entities: cachedEntities, relations: cachedRelations };
+      }
+    }
+
+    // Perform fuzzy search
+    const fuzzyMatched = this.performFuzzyMatch(graph.entities, queryLower, threshold);
+
+    // Apply tag and importance filters using SearchFilterChain
+    const filters: SearchFilters = { tags, minImportance, maxImportance };
+    const filteredEntities = SearchFilterChain.applyFilters(fuzzyMatched, filters);
+
+    // Apply pagination using SearchFilterChain
+    const pagination = SearchFilterChain.validatePagination(offset, limit);
+    const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
+
+    // Phase 4 Sprint 3: Cache the results
+    this.fuzzyResultCache.set(cacheKey, {
+      entityNames: paginatedEntities.map(e => e.name),
+      entityCount: graph.entities.length,
+      timestamp: Date.now(),
+    });
+
+    // Cleanup old cache entries periodically
+    if (this.fuzzyResultCache.size > FUZZY_CACHE_MAX_SIZE / 2) {
+      this.cleanupCache();
+    }
+
+    const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
+    const filteredRelations = graph.relations.filter(
+      r => filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
+    );
+
+    return {
+      entities: paginatedEntities,
+      relations: filteredRelations,
+    };
+  }
+
+  /**
+   * Phase 4 Sprint 3: Perform the actual fuzzy matching logic.
+   * Extracted from fuzzySearch for cleaner code structure.
+   */
+  private performFuzzyMatch(entities: readonly Entity[], queryLower: string, threshold: number): Entity[] {
+    return entities.filter(e => {
       const lowercased = this.storage.getLowercased(e.name);
 
       // Check name match (use pre-computed lowercase)
@@ -76,25 +219,7 @@ export class FuzzySearch {
           // Also check if the observation contains the query
           this.isFuzzyMatchLower(o, queryLower, threshold)
       );
-    });
-
-    // Apply tag and importance filters using SearchFilterChain
-    const filters: SearchFilters = { tags, minImportance, maxImportance };
-    const filteredEntities = SearchFilterChain.applyFilters(fuzzyMatched, filters);
-
-    // Apply pagination using SearchFilterChain
-    const pagination = SearchFilterChain.validatePagination(offset, limit);
-    const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
-
-    const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
-    const filteredRelations = graph.relations.filter(
-      r => filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
-    );
-
-    return {
-      entities: paginatedEntities,
-      relations: filteredRelations,
-    };
+    }) as Entity[];
   }
 
   /**

@@ -18,6 +18,8 @@ import { SavedSearchManager } from './SavedSearchManager.js';
 
 /**
  * Unified search manager providing access to all search types.
+ *
+ * Phase 4 Sprint 5: Manages search caches across all search types.
  */
 export class SearchManager {
   private basicSearch: BasicSearch;
@@ -34,6 +36,41 @@ export class SearchManager {
     this.fuzzySearcher = new FuzzySearch(storage);
     this.searchSuggestions = new SearchSuggestions(storage);
     this.savedSearchManager = new SavedSearchManager(savedSearchesFilePath, this.basicSearch);
+  }
+
+  // ==================== Cache Management (Phase 4 Sprint 5) ====================
+
+  /**
+   * Phase 4 Sprint 5: Clear all search caches.
+   *
+   * Clears caches in all search types: fuzzy, boolean, and ranked token cache.
+   * Call this when the graph has been modified to ensure fresh results.
+   */
+  clearAllCaches(): void {
+    this.fuzzySearcher.clearCache();
+    this.booleanSearcher.clearCache();
+    this.rankedSearch.clearTokenCache();
+  }
+
+  /**
+   * Phase 4 Sprint 5: Clear fuzzy search cache.
+   */
+  clearFuzzyCache(): void {
+    this.fuzzySearcher.clearCache();
+  }
+
+  /**
+   * Phase 4 Sprint 5: Clear boolean search cache.
+   */
+  clearBooleanCache(): void {
+    this.booleanSearcher.clearCache();
+  }
+
+  /**
+   * Phase 4 Sprint 5: Clear ranked search token cache.
+   */
+  clearRankedCache(): void {
+    this.rankedSearch.clearTokenCache();
   }
 
   // ==================== Basic Search ====================

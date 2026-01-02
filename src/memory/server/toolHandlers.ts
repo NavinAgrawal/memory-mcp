@@ -1,9 +1,10 @@
 /**
  * MCP Tool Handlers
  *
- * Contains handler functions for all 47 Knowledge Graph tools.
+ * Contains handler functions for all 51 Knowledge Graph tools.
  * Handlers call managers directly via ManagerContext.
  * Phase 4: Updated to use specialized managers for single responsibility.
+ * Phase 4 Sprint 9: Added 4 graph algorithm tools (find_shortest_path, find_all_paths, get_connected_components, get_centrality).
  * Phase 6: Updated to use Zod validation instead of type assertions.
  * Phase 3 Sprint 4: Added response compression for large payloads.
  *
@@ -378,6 +379,77 @@ export const toolHandlers: Record<string, ToolHandler> = {
     );
     const dryRun = args.dryRun !== undefined ? validateWithSchema(args.dryRun, z.boolean(), 'Invalid dryRun value') : undefined;
     return formatToolResponse(await ctx.archiveManager.archiveEntities(criteria, dryRun));
+  },
+
+  // ==================== GRAPH ALGORITHM HANDLERS (Phase 4 Sprint 9) ====================
+  find_shortest_path: async (ctx, args) => {
+    const source = validateWithSchema(args.source, z.string().min(1), 'Invalid source entity');
+    const target = validateWithSchema(args.target, z.string().min(1), 'Invalid target entity');
+    const direction = args.direction !== undefined
+      ? validateWithSchema(args.direction, z.enum(['outgoing', 'incoming', 'both']), 'Invalid direction')
+      : undefined;
+    const relationTypes = args.relationTypes !== undefined
+      ? validateWithSchema(args.relationTypes, z.array(z.string()), 'Invalid relation types')
+      : undefined;
+
+    const result = ctx.graphTraversal.findShortestPath(source, target, { direction, relationTypes });
+    if (!result) {
+      return formatTextResponse(`No path found between "${source}" and "${target}"`);
+    }
+    return formatToolResponse(result);
+  },
+
+  find_all_paths: async (ctx, args) => {
+    const source = validateWithSchema(args.source, z.string().min(1), 'Invalid source entity');
+    const target = validateWithSchema(args.target, z.string().min(1), 'Invalid target entity');
+    const maxDepth = args.maxDepth !== undefined
+      ? validateWithSchema(args.maxDepth, z.number().int().min(1).max(10), 'Invalid maxDepth (1-10)')
+      : 5;
+    const direction = args.direction !== undefined
+      ? validateWithSchema(args.direction, z.enum(['outgoing', 'incoming', 'both']), 'Invalid direction')
+      : undefined;
+    const relationTypes = args.relationTypes !== undefined
+      ? validateWithSchema(args.relationTypes, z.array(z.string()), 'Invalid relation types')
+      : undefined;
+
+    const results = ctx.graphTraversal.findAllPaths(source, target, maxDepth, { direction, relationTypes });
+    return formatToolResponse({ paths: results, count: results.length });
+  },
+
+  get_connected_components: async (ctx) => {
+    const result = await ctx.graphTraversal.findConnectedComponents();
+    return formatToolResponse(result);
+  },
+
+  get_centrality: async (ctx, args) => {
+    const algorithm = args.algorithm !== undefined
+      ? validateWithSchema(args.algorithm, z.enum(['degree', 'betweenness', 'pagerank']), 'Invalid algorithm')
+      : 'degree';
+    const topN = args.topN !== undefined
+      ? validateWithSchema(args.topN, z.number().int().min(1).max(100), 'Invalid topN (1-100)')
+      : 10;
+
+    let result;
+    if (algorithm === 'degree') {
+      const direction = args.direction !== undefined
+        ? validateWithSchema(args.direction, z.enum(['in', 'out', 'both']), 'Invalid direction')
+        : 'both';
+      result = await ctx.graphTraversal.calculateDegreeCentrality(direction, topN);
+    } else if (algorithm === 'betweenness') {
+      result = await ctx.graphTraversal.calculateBetweennessCentrality(topN);
+    } else {
+      const dampingFactor = args.dampingFactor !== undefined
+        ? validateWithSchema(args.dampingFactor, z.number().min(0).max(1), 'Invalid damping factor (0-1)')
+        : 0.85;
+      result = await ctx.graphTraversal.calculatePageRank(dampingFactor, 100, 1e-6, topN);
+    }
+
+    // Convert Map to object for JSON serialization
+    return formatToolResponse({
+      algorithm: result.algorithm,
+      topEntities: result.topEntities,
+      totalEntities: result.scores.size,
+    });
   },
 
   // ==================== IMPORT/EXPORT HANDLERS ====================

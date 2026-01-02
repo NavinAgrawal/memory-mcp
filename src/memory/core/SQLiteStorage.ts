@@ -87,6 +87,12 @@ export class SQLiteStorage implements IGraphStorage {
   private pendingChanges: number = 0;
 
   /**
+   * Phase 4 Sprint 1: Bidirectional relation cache for O(1) repeated lookups.
+   * Maps entity name -> all relations involving that entity (both incoming and outgoing).
+   */
+  private bidirectionalRelationCache: Map<string, Relation[]> = new Map();
+
+  /**
    * Create a new SQLiteStorage instance.
    *
    * @param dbFilePath - Absolute path to the SQLite database file
@@ -152,6 +158,15 @@ export class SQLiteStorage implements IGraphStorage {
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_parent ON entities(parentId)`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_from ON relations(fromEntity)`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_to ON relations(toEntity)`);
+
+    // Phase 4 Sprint 1: Additional indexes for range queries (O(n) -> O(log n))
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_importance ON entities(importance)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_lastmodified ON entities(lastModified)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_createdat ON entities(createdAt)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_type ON relations(relationType)`);
+
+    // Composite index for common query patterns (type + importance filtering)
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_type_importance ON entities(entityType, importance)`);
 
     // FTS5 virtual table for full-text search
     // content='' makes it an external content table (we manage content ourselves)
@@ -303,6 +318,22 @@ export class SQLiteStorage implements IGraphStorage {
   }
 
   /**
+   * Phase 4 Sprint 1: Invalidate bidirectional relation cache for an entity.
+   *
+   * @param entityName - Entity name to invalidate cache for
+   */
+  private invalidateBidirectionalCache(entityName: string): void {
+    this.bidirectionalRelationCache.delete(entityName);
+  }
+
+  /**
+   * Phase 4 Sprint 1: Clear the entire bidirectional relation cache.
+   */
+  private clearBidirectionalCache(): void {
+    this.bidirectionalRelationCache.clear();
+  }
+
+  /**
    * Save the entire knowledge graph to storage.
    *
    * THREAD-SAFE: Uses mutex to prevent concurrent write operations.
@@ -383,6 +414,9 @@ export class SQLiteStorage implements IGraphStorage {
 
       // Clear search caches
       clearAllSearchCaches();
+
+      // Phase 4 Sprint 1: Clear bidirectional relation cache on full save
+      this.clearBidirectionalCache();
     });
   }
 
@@ -474,6 +508,10 @@ export class SQLiteStorage implements IGraphStorage {
       }
 
       clearAllSearchCaches();
+
+      // Phase 4 Sprint 1: Invalidate bidirectional cache for both entities
+      this.invalidateBidirectionalCache(relation.from);
+      this.invalidateBidirectionalCache(relation.to);
 
       this.pendingChanges++;
     });
@@ -574,6 +612,8 @@ export class SQLiteStorage implements IGraphStorage {
     this.nameIndex.clear();
     this.typeIndex.clear();
     this.lowercaseCache.clear();
+    // Phase 4 Sprint 1: Clear bidirectional relation cache
+    this.bidirectionalRelationCache.clear();
     this.initialized = false;
     if (this.db) {
       this.db.close();
@@ -803,30 +843,42 @@ export class SQLiteStorage implements IGraphStorage {
   /**
    * Get all relations involving the entity (both incoming and outgoing).
    *
-   * OPTIMIZED: Uses SQLite indexes for efficient lookup.
+   * OPTIMIZED: Phase 4 Sprint 1 - Uses bidirectional cache for O(1) repeated lookups.
    *
    * @param entityName - Entity name to look up all relations for
    * @returns Array of all relations involving the entity
    */
   getRelationsFor(entityName: string): Relation[] {
-    // Check cache first
-    if (this.cache) {
-      return this.cache.relations.filter(r => r.from === entityName || r.to === entityName);
+    // Phase 4 Sprint 1: Check bidirectional cache first for O(1) repeated lookups
+    const cached = this.bidirectionalRelationCache.get(entityName);
+    if (cached !== undefined) {
+      return cached;
     }
 
-    // Fall back to database query
-    if (!this.db || !this.initialized) return [];
-    const stmt = this.db.prepare(
-      'SELECT fromEntity, toEntity, relationType, createdAt, lastModified FROM relations WHERE fromEntity = ? OR toEntity = ?'
-    );
-    const rows = stmt.all(entityName, entityName) as RelationRow[];
-    return rows.map(row => ({
-      from: row.fromEntity,
-      to: row.toEntity,
-      relationType: row.relationType,
-      createdAt: row.createdAt,
-      lastModified: row.lastModified,
-    }));
+    // Check main cache and compute result
+    let relations: Relation[];
+    if (this.cache) {
+      relations = this.cache.relations.filter(r => r.from === entityName || r.to === entityName);
+    } else if (this.db && this.initialized) {
+      // Fall back to database query
+      const stmt = this.db.prepare(
+        'SELECT fromEntity, toEntity, relationType, createdAt, lastModified FROM relations WHERE fromEntity = ? OR toEntity = ?'
+      );
+      const rows = stmt.all(entityName, entityName) as RelationRow[];
+      relations = rows.map(row => ({
+        from: row.fromEntity,
+        to: row.toEntity,
+        relationType: row.relationType,
+        createdAt: row.createdAt,
+        lastModified: row.lastModified,
+      }));
+    } else {
+      return [];
+    }
+
+    // Cache the result for O(1) subsequent lookups
+    this.bidirectionalRelationCache.set(entityName, relations);
+    return relations;
   }
 
   /**

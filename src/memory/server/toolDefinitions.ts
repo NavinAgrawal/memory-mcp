@@ -694,6 +694,86 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // ==================== GRAPH ALGORITHM TOOLS (Phase 4 Sprint 9) ====================
+  {
+    name: 'find_shortest_path',
+    description: 'Find the shortest path between two entities in the knowledge graph',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        source: { type: 'string', description: 'Source entity name' },
+        target: { type: 'string', description: 'Target entity name' },
+        direction: {
+          type: 'string',
+          enum: ['outgoing', 'incoming', 'both'],
+          description: 'Direction of traversal (default: both)',
+        },
+        relationTypes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional filter for relation types to follow',
+        },
+      },
+      required: ['source', 'target'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'find_all_paths',
+    description: 'Find all paths between two entities up to a maximum depth',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        source: { type: 'string', description: 'Source entity name' },
+        target: { type: 'string', description: 'Target entity name' },
+        maxDepth: { type: 'number', description: 'Maximum path length (default: 5)' },
+        direction: {
+          type: 'string',
+          enum: ['outgoing', 'incoming', 'both'],
+          description: 'Direction of traversal (default: both)',
+        },
+        relationTypes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional filter for relation types to follow',
+        },
+      },
+      required: ['source', 'target'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_connected_components',
+    description: 'Find all connected components in the knowledge graph',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_centrality',
+    description: 'Calculate centrality metrics for entities in the graph',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        algorithm: {
+          type: 'string',
+          enum: ['degree', 'betweenness', 'pagerank'],
+          description: 'Centrality algorithm to use (default: degree)',
+        },
+        direction: {
+          type: 'string',
+          enum: ['in', 'out', 'both'],
+          description: 'Direction for degree centrality (default: both)',
+        },
+        topN: { type: 'number', description: 'Number of top entities to return (default: 10)' },
+        dampingFactor: { type: 'number', description: 'Damping factor for PageRank (default: 0.85)' },
+      },
+      additionalProperties: false,
+    },
+  },
+
   // ==================== IMPORT/EXPORT TOOLS ====================
   {
     name: 'import_graph',
@@ -768,5 +848,7 @@ export const toolCategories = {
   hierarchy: ['set_entity_parent', 'get_children', 'get_parent', 'get_ancestors', 'get_descendants', 'get_subtree', 'get_root_entities', 'get_entity_depth', 'move_entity'],
   analytics: ['get_graph_stats', 'validate_graph'],
   compression: ['find_duplicates', 'merge_entities', 'compress_graph', 'archive_entities'],
+  // Phase 4 Sprint 9: Graph algorithm tools
+  graphAlgorithm: ['find_shortest_path', 'find_all_paths', 'get_connected_components', 'get_centrality'],
   importExport: ['import_graph', 'export_graph'],
 } as const;

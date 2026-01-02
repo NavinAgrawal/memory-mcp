@@ -14,6 +14,7 @@ import { EntityManager } from './EntityManager.js';
 import { RelationManager } from './RelationManager.js';
 import { ObservationManager } from './ObservationManager.js';
 import { HierarchyManager } from './HierarchyManager.js';
+import { GraphTraversal } from './GraphTraversal.js';
 import { SearchManager } from '../search/SearchManager.js';
 import { IOManager } from '../features/IOManager.js';
 import { TagManager } from '../features/TagManager.js';
@@ -35,6 +36,7 @@ export class ManagerContext {
   private _relationManager?: RelationManager;
   private _observationManager?: ObservationManager;
   private _hierarchyManager?: HierarchyManager;
+  private _graphTraversal?: GraphTraversal;
   private _searchManager?: SearchManager;
   private _ioManager?: IOManager;
   private _tagManager?: TagManager;
@@ -72,6 +74,11 @@ export class ManagerContext {
   /** HierarchyManager - Entity hierarchy operations */
   get hierarchyManager(): HierarchyManager {
     return (this._hierarchyManager ??= new HierarchyManager(this.storage));
+  }
+
+  /** GraphTraversal - Phase 4 Sprint 6-8: Graph traversal algorithms */
+  get graphTraversal(): GraphTraversal {
+    return (this._graphTraversal ??= new GraphTraversal(this.storage));
   }
 
   /** SearchManager - All search operations */

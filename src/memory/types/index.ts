@@ -22,6 +22,11 @@ export type {
   BooleanQueryNode,
   DocumentVector,
   TFIDFIndex,
+  // Phase 4: Search cache types
+  FuzzyCacheKey,
+  BooleanCacheEntry,
+  PaginatedCacheEntry,
+  TokenizedEntity,
   // Analytics types
   GraphStats,
   ValidationReport,
@@ -48,4 +53,11 @@ export type {
   IGraphStorage,
   StorageConfig,
   LowercaseData,
+  // Phase 4 Sprint 6-9: Graph algorithm types
+  TraversalOptions,
+  TraversalResult,
+  PathResult,
+  ConnectedComponentsResult,
+  CentralityResult,
+  WeightedRelation,
 } from './types.js';

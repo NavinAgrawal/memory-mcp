@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1681 tests)
+npm test              # Run tests with coverage (1713 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -23,9 +23,9 @@ npx vitest run -t "should create entities"
 
 ## Architecture Overview
 
-This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
+This is an enhanced MCP memory server with **51 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.55.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.56.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -33,7 +33,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 ┌─────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer            │
 │  server/MCPServer.ts + toolDefinitions  │
-│  + toolHandlers (47 tools)              │
+│  + toolHandlers (51 tools)              │
 └──────────────────┬──────────────────────┘
                    │ (direct manager access)
 ┌──────────────────┴──────────────────────┐
@@ -51,11 +51,11 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 46 TypeScript files
+### Source Structure (src/memory/) - 47 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 10 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, index |
+| **core/** | 11 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (Phase 4: graph algorithms), index |
 | **features/** | 6 | TagManager (tag aliases), IOManager (import/export/backup), AnalyticsManager, ArchiveManager, CompressionManager, index |
 | **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, index |
 | **server/** | 4 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
@@ -69,7 +69,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 
 1. **Context Pattern**: ManagerContext holds all managers with lazy-initialized getters
 2. **Direct Manager Access**: Tool handlers call managers directly via `ctx.entityManager`, `ctx.searchManager`, etc.
-3. **Lazy Initialization**: 5 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager, TagManager)
+3. **Lazy Initialization**: 6 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager, TagManager, GraphTraversal)
 4. **Dependency Injection**: GraphStorage injected into managers
 5. **Handler Registry**: Tool handlers mapped in toolHandlers.ts
 6. **Barrel Exports**: Each module exports via index.ts (includes `KnowledgeGraphManager` alias)
@@ -124,7 +124,7 @@ interface Relation {
 - `MEMORY_FILE_PATH` - Custom path to storage file (defaults to current directory)
 - `MEMORY_STORAGE_TYPE` - Storage backend: 'jsonl' (default) or 'sqlite'
 
-## Tool Categories (47 Total)
+## Tool Categories (51 Total)
 
 | Category | Count | Tools |
 |----------|-------|-------|
@@ -136,13 +136,14 @@ interface Relation {
 | **Tag Management** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
 | **Tag Aliases** | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
 | **Hierarchy** | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
+| **Graph Algorithms** | 4 | find_shortest_path, find_all_paths, get_connected_components, get_centrality |
 | **Analytics** | 2 | get_graph_stats, validate_graph |
 | **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | **Import/Export** | 2 | import_graph (3 formats), export_graph (7 formats + compression) |
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1681 tests, 48 files):
+Tests are in `src/memory/__tests__/` (1713 tests, 49 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -156,6 +157,7 @@ Tests are in `src/memory/__tests__/` (1681 tests, 48 files):
 | unit/core/GraphStorage.test.ts | 10 | JSONL storage layer |
 | unit/core/SQLiteStorage.test.ts | 31 | SQLite storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
+| unit/core/GraphTraversal.test.ts | 34 | Graph traversal algorithms (Phase 4) |
 | unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
 | unit/features/ArchiveManager.test.ts | 42 | Entity archival + compression (via EntityManager) |
 | unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
@@ -193,17 +195,24 @@ Tests are in `src/memory/__tests__/` (1681 tests, 48 files):
 - In-memory caching with write-through invalidation
 - 50x faster duplicate detection using two-level bucketing
 - Lazy TF-IDF index loading
-- Lazy manager initialization (5 managers load on-demand)
+- Lazy manager initialization (6 managers load on-demand)
 - Batch operations support via TransactionManager
 - Handles 2000+ entities efficiently
+- **Phase 4 Search Caching**:
+  - Bidirectional relation cache with O(1) repeated lookups
+  - RankedSearch token cache with entity count invalidation
+  - Fuzzy search result cache with TTL (5 minutes) and LRU eviction
+  - Boolean search AST cache (50 entries) and result cache (100 entries)
+  - Cache management methods: `clearAllCaches()`, `clearFuzzyCache()`, `clearBooleanCache()`, `clearRankedCache()`
 
 ## Server Architecture (v0.44.0+)
 
 - **MCPServer.ts**: 66 lines (reduced from 907, 92.6% reduction)
-- **toolDefinitions.ts**: 760 lines - all 47 tool schemas organized by category
-- **toolHandlers.ts**: 340 lines - handler registry, dispatch logic, and response compression wrapper
+- **toolDefinitions.ts**: 860 lines - all 51 tool schemas organized by category (including Graph Algorithms)
+- **toolHandlers.ts**: 400 lines - handler registry, dispatch logic, and response compression wrapper
 - **responseCompressor.ts**: 170 lines - automatic brotli compression for large responses (>256KB)
 - **Consolidated constants**: SIMILARITY_WEIGHTS centralized in constants.ts
+- **GraphTraversal.ts**: 500+ lines - BFS, DFS, shortest path, all paths, connected components, centrality (degree, betweenness, PageRank)
 
 ## Dependencies
 

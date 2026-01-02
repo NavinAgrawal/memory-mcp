@@ -6,7 +6,7 @@
  * @module search/RankedSearch
  */
 
-import type { Entity, SearchResult, TFIDFIndex } from '../types/index.js';
+import type { Entity, SearchResult, TFIDFIndex, TokenizedEntity } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { calculateTF, calculateIDFFromTokenSets, tokenize } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
@@ -19,6 +19,14 @@ import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 export class RankedSearch {
   private indexManager: TFIDFIndexManager | null = null;
 
+  /**
+   * Phase 4 Sprint 2: Fallback token cache for entities.
+   * Maps entity name -> pre-tokenized entity data.
+   * Invalidated when graph changes (detected by entity count mismatch).
+   */
+  private fallbackTokenCache: Map<string, TokenizedEntity> = new Map();
+  private cachedEntityCount: number = 0;
+
   constructor(
     private storage: GraphStorage,
     storageDir?: string
@@ -27,6 +35,15 @@ export class RankedSearch {
     if (storageDir) {
       this.indexManager = new TFIDFIndexManager(storageDir);
     }
+  }
+
+  /**
+   * Phase 4 Sprint 2: Clear the fallback token cache.
+   * Called when graph changes are detected or explicitly by external code.
+   */
+  clearTokenCache(): void {
+    this.fallbackTokenCache.clear();
+    this.cachedEntityCount = 0;
   }
 
   /**
@@ -187,8 +204,9 @@ export class RankedSearch {
   /**
    * Search without index (on-the-fly calculation, slow path).
    *
-   * OPTIMIZED: Pre-tokenizes all documents once and uses calculateIDFFromTokenSets
-   * for O(1) lookup per document instead of re-tokenizing for each term.
+   * OPTIMIZED: Phase 4 Sprint 2 - Uses fallback token cache to avoid
+   * repeated tokenization of entities. Pre-tokenizes all documents once
+   * and caches for subsequent searches.
    */
   private searchWithoutIndex(
     entities: Entity[],
@@ -197,16 +215,31 @@ export class RankedSearch {
   ): SearchResult[] {
     const results: SearchResult[] = [];
 
-    // Pre-tokenize all documents once (optimization from Phase 7)
-    const documentData = entities.map(e => {
+    // Phase 4 Sprint 2: Check if cache needs invalidation
+    if (entities.length !== this.cachedEntityCount) {
+      this.clearTokenCache();
+      this.cachedEntityCount = entities.length;
+    }
+
+    // Phase 4 Sprint 2: Get or compute tokenized data for each entity
+    const documentData: TokenizedEntity[] = entities.map(e => {
+      // Check cache first
+      const cached = this.fallbackTokenCache.get(e.name);
+      if (cached) {
+        return cached;
+      }
+
+      // Compute and cache tokenized data
       const text = [e.name, e.entityType, ...e.observations].join(' ');
       const tokens = tokenize(text);
-      return {
+      const tokenized: TokenizedEntity = {
         entity: e,
         text,
         tokens,
         tokenSet: new Set(tokens),
       };
+      this.fallbackTokenCache.set(e.name, tokenized);
+      return tokenized;
     });
 
     // Pre-compute token sets for IDF calculation (O(1) lookup per document)

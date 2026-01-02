@@ -5,6 +5,79 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.56.0] - 2026-01-02
+
+### Added
+
+- **Phase 4 Sprint 1: SQLite Performance Indexes & Bidirectional Relation Cache**
+  - Added 5 SQLite indexes for range queries on importance, lastModified, createdAt, relationType
+  - Implemented bidirectional relation cache with O(1) repeated lookups
+  - Cache invalidation on entity and relation changes
+  - New `invalidateBidirectionalCache()` method in SQLiteStorage
+
+- **Phase 4 Sprint 2: RankedSearch Token Cache**
+  - Added fallback token cache for RankedSearch
+  - Entity count-based invalidation for cache freshness
+  - New `TokenizedEntity` interface for cached tokenization
+  - `clearTokenCache()` method for manual cache control
+
+- **Phase 4 Sprint 3: Fuzzy Search Cache**
+  - Added fuzzy result cache with TTL (5 minutes) and size limits (100 entries)
+  - LRU-style cache eviction with `cleanupCache()` method
+  - New `FuzzyCacheKey` interface for cache key generation
+  - `clearCache()` method for manual cache control
+
+- **Phase 4 Sprint 4: Boolean Search AST & Result Cache**
+  - Added AST cache (max 50 entries) to avoid re-parsing queries
+  - Added result cache (max 100 entries) for repeated searches
+  - `getOrParseAST()` method for cached query parsing
+  - New `BooleanCacheEntry` interface for cache entries
+
+- **Phase 4 Sprint 5: Pagination Cache in SearchManager**
+  - Added `PaginatedCacheEntry` interface for paginated results
+  - New cache management methods in SearchManager:
+    - `clearAllCaches()` - Clear all search caches
+    - `clearFuzzyCache()` - Clear fuzzy search cache
+    - `clearBooleanCache()` - Clear boolean search cache
+    - `clearRankedCache()` - Clear ranked search token cache
+
+- **Phase 4 Sprint 6-8: Graph Traversal Algorithms**
+  - New `GraphTraversal` class with comprehensive graph algorithms:
+    - `bfs()` - Breadth-first search with depth tracking
+    - `dfs()` - Depth-first search with depth tracking
+    - `findShortestPath()` - Find shortest path between entities
+    - `findAllPaths()` - Find all paths with optional depth limit
+    - `findConnectedComponents()` - Detect isolated subgraphs
+    - `calculateDegreeCentrality()` - Hub identification (in/out/both)
+    - `calculateBetweennessCentrality()` - Identify bridge nodes
+    - `calculatePageRank()` - Iterative PageRank with convergence
+    - `getNeighborsWithRelations()` - Get filtered neighbors
+  - New types: `TraversalOptions`, `TraversalResult`, `PathResult`, `ConnectedComponentsResult`, `CentralityResult`, `WeightedRelation`
+  - GraphTraversal accessor added to ManagerContext
+
+- **Phase 4 Sprint 9: MCP Tools for Graph Algorithms**
+  - 4 new MCP tools for graph algorithms (51 total tools):
+    - `find_shortest_path` - Find shortest path between entities
+    - `find_all_paths` - Find all paths with max depth
+    - `get_connected_components` - Analyze graph connectivity
+    - `get_centrality` - Calculate centrality metrics (degree, betweenness, pagerank)
+  - New tool category `graphAlgorithm` in toolDefinitions.ts
+  - Complete test coverage for new tools
+
+- **New Tests**
+  - 34 tests for GraphTraversal algorithms
+  - Updated server integration tests for 51 tools
+
+### Changed
+
+- **Tool Count** - Increased from 47 to 51 tools
+- **Test Count** - 1713 tests (up from 1681)
+- **Source Structure** - core/ now includes GraphTraversal.ts
+- **types/index.ts** - Exports new graph algorithm types
+- **ManagerContext.ts** - Added graphTraversal lazy accessor
+- **toolHandlers.ts** - Added handlers for 4 graph algorithm tools
+- **toolDefinitions.ts** - Added graphAlgorithm tool category
+
 ## [8.55.0] - 2026-01-02
 
 ### Added
