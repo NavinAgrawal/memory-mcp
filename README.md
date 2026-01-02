@@ -1,15 +1,15 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-8.50.24-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-8.57.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![Changelog](https://img.shields.io/badge/changelog-latest-orange.svg)](CHANGELOG.md)
 
-An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **archiving**, **advanced search**, and **multi-format import/export**.
+An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 47 tools, hierarchical organization, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
+> **Enterprise-grade knowledge graph** with 54 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
 
 ## Table of Contents
 
@@ -39,12 +39,15 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 
 ### Advanced Features
 - **Hierarchical Nesting**: Parent-child relationships for organizing tree structures (9 tools)
+- **Graph Algorithms**: Path finding, connected components, centrality metrics (4 tools)
+- **Semantic Search**: Embedding-based similarity search with OpenAI or local models (3 tools)
 - **Memory Compression**: Intelligent duplicate detection and merging with similarity scoring (4 tools)
 - **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching, date range search (6 tools)
-- **Import/Export**: 7 export formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid), 3 import formats
+- **Import/Export**: 7 export formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with brotli compression, 3 import formats
 - **Tag Management**: Tags, aliases, bulk operations, importance scores (11 tools)
 - **Saved Searches**: Store and execute frequent queries (5 tools)
 - **Graph Analytics**: Statistics, validation, integrity checks (2 tools)
+- **Brotli Compression**: Compressed backups, exports, and MCP responses (50-70% size reduction)
 
 ### Data Management
 - **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
@@ -53,6 +56,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - **Tags System**: Categorize entities with case-insensitive tags and aliases
 - **Importance Levels**: 0-10 scale for entity prioritization
 - **Advanced Filtering**: Combine text, tags, importance, and date ranges
+- **Compressed Archives**: Archived entities stored with brotli compression
 
 ### Comparison with Official Memory Server
 
@@ -63,7 +67,10 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | Observation Tracking | ✅ | ✅ |
 | Basic Search | ✅ | ✅ |
 | **Hierarchical Nesting** | ❌ | ✅ Parent-child trees |
+| **Graph Algorithms** | ❌ | ✅ Path finding, centrality |
+| **Semantic Search** | ❌ | ✅ Embedding-based similarity |
 | **Memory Compression** | ❌ | ✅ Duplicate detection (50x faster) |
+| **Brotli Compression** | ❌ | ✅ Backups, exports, responses |
 | **Smart Archiving** | ❌ | ✅ Criteria-based |
 | **Advanced Search** | ❌ | ✅ TF-IDF + Boolean |
 | **Fuzzy Search** | ❌ | ✅ Typo-tolerant |
@@ -72,7 +79,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Graph Validation** | ❌ | ✅ Integrity checks |
 | **Timestamps** | ❌ | ✅ createdAt + lastModified |
 | **Importance Levels** | ❌ | ✅ 0-10 scale |
-| **Export Formats** | ❌ | ✅ 7 formats |
+| **Export Formats** | ❌ | ✅ 7 formats + compression |
 | **Import** | ❌ | ✅ 3 formats + merge |
 | **Input Validation** | ❌ | ✅ Zod schemas (14 validators) |
 | **Caching Layer** | ❌ | ✅ In-memory (instant reads) |
@@ -84,8 +91,8 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **SQLite Backend** | ❌ | ✅ better-sqlite3 (3-10x faster) |
 | **Full-Text Search** | ❌ | ✅ FTS5 with BM25 ranking |
 | **Concurrency Control** | ❌ | ✅ Thread-safe with async-mutex |
-| **Total Tools** | 11 | **47** (+327%) |
-| **Code Structure** | Monolithic | **Modular** (43 files, ~10.7K lines) |
+| **Total Tools** | 11 | **54** (+391%) |
+| **Code Structure** | Monolithic | **Modular** (50 files, ~10.7K lines) |
 
 ## Key Features
 
@@ -94,19 +101,21 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 **🔐 Security & Data Integrity**
 - **Input Validation**: Zod-based schemas validate all inputs, preventing malformed data and injection attacks
 - **Transaction Support**: ACID-compliant transactions with automatic rollback on failures
-- **Backup & Restore**: Point-in-time recovery with timestamped backups and metadata
+- **Backup & Restore**: Point-in-time recovery with timestamped, compressed backups and metadata
 - **Data Protection**: Comprehensive validation with size limits, range checks, and format enforcement
 
 **⚡ Performance Optimizations**
 - **Smart Caching**: In-memory cache with write-through invalidation for instant reads
 - **Optimized Algorithms**: 50x faster duplicate detection using two-level bucketing (O(n²) → O(n·k))
 - **Efficient Storage**: JSONL format with modular architecture for better tree-shaking
+- **Brotli Compression**: 50-70% size reduction for backups, exports, and large responses
+- **Multi-Level Caching**: Bidirectional relation cache, fuzzy search cache, boolean AST cache
 
 **🏗️ Architecture**
-- **Modular Design**: Clean separation of concerns across 49 focused modules with 5 consolidated managers
+- **Modular Design**: Clean separation of concerns across 50 focused modules with 7 lazy-initialized managers
 - **Type Safety**: Full TypeScript strict mode with comprehensive type definitions
 - **Lazy Initialization**: Context pattern with on-demand manager instantiation
-- **Developer Experience**: Barrel exports, 1484 tests, and comprehensive documentation
+- **Developer Experience**: Barrel exports, 1803 tests, and comprehensive documentation
 
 ## Quick Start
 
@@ -280,7 +289,7 @@ Add to `.vscode/mcp.json`:
 
 ## API Reference
 
-### Complete Tool List (47 Tools)
+### Complete Tool List (54 Tools)
 
 #### Entity Operations (4 tools)
 - `create_entities` - Create multiple new entities
@@ -303,6 +312,11 @@ Add to `.vscode/mcp.json`:
 - `boolean_search` - Boolean queries (AND/OR/NOT)
 - `fuzzy_search` - Typo-tolerant search
 - `get_search_suggestions` - Get "Did you mean?" suggestions
+
+#### Semantic Search (3 tools)
+- `semantic_search` - Search by semantic similarity using embeddings
+- `find_similar_entities` - Find entities similar to a reference entity
+- `index_embeddings` - Build or rebuild the semantic search index
 
 #### Saved Searches (5 tools)
 - `save_search` - Save search query
@@ -337,6 +351,12 @@ Add to `.vscode/mcp.json`:
 - `get_entity_depth` - Get depth in hierarchy (0 = root)
 - `move_entity` - Move entity to new parent
 
+#### Graph Algorithms (4 tools)
+- `find_shortest_path` - Find shortest path between two entities
+- `find_all_paths` - Find all paths between entities with max depth
+- `get_connected_components` - Analyze graph connectivity and detect isolated subgraphs
+- `get_centrality` - Calculate centrality metrics (degree, betweenness, PageRank)
+
 #### Graph Analytics (2 tools)
 - `get_graph_stats` - Get comprehensive graph statistics
 - `validate_graph` - Validate graph integrity
@@ -348,7 +368,7 @@ Add to `.vscode/mcp.json`:
 - `archive_entities` - Archive by age, importance, or tags
 
 #### Import & Export (2 tools)
-- `export_graph` - Export in 7 formats
+- `export_graph` - Export in 7 formats (with optional brotli compression)
 - `import_graph` - Import from JSON/CSV/GraphML
 
 ---
@@ -1257,9 +1277,235 @@ Validate graph integrity and detect issues.
 ---
 
 <details>
+<summary><b>Graph Algorithms: find_shortest_path</b></summary>
+
+Find the shortest path between two entities using BFS.
+
+**Input:**
+```typescript
+{
+  from: string;        // Source entity name
+  to: string;          // Target entity name
+  directed?: boolean;  // Follow relation direction (default: false)
+}
+```
+
+**Returns:**
+```typescript
+{
+  path: string[];           // Entity names in order
+  length: number;           // Number of hops
+  relations: string[];      // Relation types traversed
+}
+```
+
+**Example:**
+```json
+{
+  "from": "Alice",
+  "to": "Charlie"
+}
+```
+</details>
+
+<details>
+<summary><b>Graph Algorithms: find_all_paths</b></summary>
+
+Find all paths between two entities with optional depth limit.
+
+**Input:**
+```typescript
+{
+  from: string;        // Source entity name
+  to: string;          // Target entity name
+  maxDepth?: number;   // Maximum path length (default: 5)
+  directed?: boolean;  // Follow relation direction (default: false)
+}
+```
+
+**Returns:**
+```typescript
+{
+  paths: Array<{
+    path: string[];
+    length: number;
+    relations: string[];
+  }>;
+  count: number;
+}
+```
+
+**Example:**
+```json
+{
+  "from": "Alice",
+  "to": "Charlie",
+  "maxDepth": 3
+}
+```
+</details>
+
+<details>
+<summary><b>Graph Algorithms: get_connected_components</b></summary>
+
+Detect isolated subgraphs and analyze connectivity.
+
+**Input:**
+```typescript
+{
+  directed?: boolean;  // Consider direction (default: false)
+}
+```
+
+**Returns:**
+```typescript
+{
+  components: Array<{
+    id: number;
+    entities: string[];
+    size: number;
+  }>;
+  totalComponents: number;
+  largestComponent: number;  // Size of largest
+  isolatedNodes: string[];   // Entities with no connections
+}
+```
+</details>
+
+<details>
+<summary><b>Graph Algorithms: get_centrality</b></summary>
+
+Calculate centrality metrics to identify important nodes.
+
+**Input:**
+```typescript
+{
+  metric: "degree" | "betweenness" | "pagerank";
+  direction?: "in" | "out" | "both";  // For degree centrality
+  limit?: number;                      // Top N results (default: 10)
+}
+```
+
+**Returns:**
+```typescript
+Array<{
+  entity: string;
+  score: number;
+  rank: number;
+}>
+```
+
+**Metrics:**
+- **degree**: Count of connections (hub identification)
+- **betweenness**: Bridge nodes connecting subgraphs
+- **pagerank**: Influence based on connections to influential nodes
+
+**Example:**
+```json
+{
+  "metric": "pagerank",
+  "limit": 5
+}
+```
+</details>
+
+---
+
+<details>
+<summary><b>Semantic Search: semantic_search</b></summary>
+
+Search using semantic similarity with embeddings.
+
+**Input:**
+```typescript
+{
+  query: string;       // Natural language query
+  limit?: number;      // Max results (default: 10)
+  threshold?: number;  // Min similarity 0-1 (default: 0.5)
+}
+```
+
+**Returns:**
+```typescript
+Array<{
+  entity: Entity;
+  similarity: number;  // 0-1 cosine similarity
+}>
+```
+
+**Example:**
+```json
+{
+  "query": "machine learning projects",
+  "limit": 5,
+  "threshold": 0.7
+}
+```
+
+**Note:** Requires embedding provider configuration. See [Configuration](#configuration).
+</details>
+
+<details>
+<summary><b>Semantic Search: find_similar_entities</b></summary>
+
+Find entities semantically similar to a reference entity.
+
+**Input:**
+```typescript
+{
+  entityName: string;  // Reference entity
+  limit?: number;      // Max results (default: 10)
+  threshold?: number;  // Min similarity 0-1 (default: 0.5)
+}
+```
+
+**Returns:**
+```typescript
+Array<{
+  entity: Entity;
+  similarity: number;
+}>
+```
+
+**Example:**
+```json
+{
+  "entityName": "Project_Alpha",
+  "limit": 5
+}
+```
+</details>
+
+<details>
+<summary><b>Semantic Search: index_embeddings</b></summary>
+
+Build or rebuild the semantic search index.
+
+**Input:**
+```typescript
+{
+  force?: boolean;  // Rebuild even if index exists (default: false)
+}
+```
+
+**Returns:**
+```typescript
+{
+  indexed: number;    // Entities indexed
+  skipped: number;    // Already indexed (if not forced)
+  duration: number;   // Time in ms
+}
+```
+
+**Note:** Required before using semantic_search if auto-indexing is disabled.
+</details>
+
+---
+
+<details>
 <summary><b>Export: export_graph</b></summary>
 
-Export knowledge graph in multiple formats.
+Export knowledge graph in multiple formats with optional compression.
 
 **Input:**
 ```typescript
@@ -1270,7 +1516,9 @@ Export knowledge graph in multiple formats.
     endDate?: string;
     entityType?: string;
     tags?: string[];
-  }
+  };
+  compress?: boolean;           // Enable brotli compression (auto for >100KB)
+  compressionQuality?: number;  // 0-11, default 6
 }
 ```
 
@@ -1283,14 +1531,17 @@ Export knowledge graph in multiple formats.
 - **Markdown**: Human-readable documentation
 - **Mermaid**: Embedded diagrams
 
+**Compression:**
+- Exports >100KB are automatically compressed unless `compress: false`
+- Compressed output is base64-encoded for safe JSON transport
+- Returns `ExportResult` with compression metadata
+
 **Example:**
 ```json
 {
-  "format": "gexf",
-  "filter": {
-    "entityType": "person",
-    "tags": ["colleague"]
-  }
+  "format": "json",
+  "compress": true,
+  "compressionQuality": 9
 }
 ```
 </details>
@@ -1457,7 +1708,7 @@ All files use JSONL (JSON Lines) format where each line is a valid JSON object.
 Comprehensive documentation organized by category:
 
 **Core Documentation**
-- **[API Reference](docs/architecture/API.md)** - Complete API documentation for all 47 tools
+- **[API Reference](docs/architecture/API.md)** - Complete API documentation for all 54 tools
 - **[Architecture](docs/architecture/ARCHITECTURE.md)** - Technical architecture and system design
 - **[Dependency Graph](docs/architecture/DEPENDENCY_GRAPH.md)** - Module dependencies and structure
 - **[Workflow](docs/development/WORKFLOW.md)** - Development workflow and procedures
@@ -1477,6 +1728,8 @@ Comprehensive documentation organized by category:
 
 ### Environment Variables
 
+#### Storage Configuration
+
 - **`MEMORY_FILE_PATH`**: Path to the main memory storage file
   - **Default**: `memory.jsonl` in the current working directory
   - Sets the location for the primary knowledge graph storage
@@ -1485,6 +1738,24 @@ Comprehensive documentation organized by category:
   - **Values**: `jsonl` (default) or `sqlite`
   - **JSONL**: Human-readable, line-based JSON format
   - **SQLite**: Native database with better-sqlite3 (3-10x faster, FTS5 full-text search, WAL mode)
+
+#### Semantic Search Configuration
+
+- **`MEMORY_EMBEDDING_PROVIDER`**: Embedding provider for semantic search
+  - **Values**: `openai`, `local`, or `none` (default)
+  - **openai**: Use OpenAI's text-embedding API (requires API key)
+  - **local**: Use local transformer models via @xenova/transformers
+  - **none**: Disable semantic search features
+
+- **`MEMORY_OPENAI_API_KEY`**: OpenAI API key (required if provider is `openai`)
+
+- **`MEMORY_EMBEDDING_MODEL`**: Embedding model to use
+  - **OpenAI default**: `text-embedding-3-small`
+  - **Local default**: `Xenova/all-MiniLM-L6-v2`
+
+- **`MEMORY_AUTO_INDEX_EMBEDDINGS`**: Auto-index entities on creation
+  - **Values**: `true` or `false` (default)
+  - When enabled, new entities are automatically indexed for semantic search
 
 ### Storage Backends
 
@@ -1620,7 +1891,7 @@ npm run typecheck # TypeScript type checking
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
 │  server/MCPServer.ts + toolDefinitions              │
-│  + toolHandlers (47 tools)                          │
+│  + toolHandlers (54 tools) + responseCompressor     │
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────┐
@@ -1631,6 +1902,8 @@ npm run typecheck # TypeScript type checking
 │  • SearchManager   (search + compression + stats)   │
 │  • IOManager       (import + export + backup)       │
 │  • TagManager      (tag aliases)                    │
+│  • GraphTraversal  (path finding, centrality)       │
+│  • SemanticSearch  (embeddings, similarity)         │
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────┐
@@ -1645,10 +1918,10 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/memory/                     # Main source (43 TypeScript files)
+├── src/memory/                     # Main source (50 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── vitest.config.ts            # Test configuration
-│   ├── core/                       # Core managers (10 files)
+│   ├── core/                       # Core managers (11 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
 │   │   ├── EntityManager.ts            # Entity CRUD + hierarchy + archive
 │   │   ├── RelationManager.ts          # Relation CRUD
@@ -1658,12 +1931,14 @@ memory-mcp/
 │   │   ├── StorageFactory.ts           # Storage backend factory
 │   │   ├── HierarchyManager.ts         # Tree operations
 │   │   ├── ObservationManager.ts       # Observation CRUD
+│   │   ├── GraphTraversal.ts           # Path finding, centrality, BFS/DFS
 │   │   └── index.ts                    # Barrel export (+ KnowledgeGraphManager alias)
-│   ├── server/                     # MCP protocol layer (3 files)
+│   ├── server/                     # MCP protocol layer (4 files)
 │   │   ├── MCPServer.ts                # Server setup (67 lines)
-│   │   ├── toolDefinitions.ts          # 47 tool schemas
-│   │   └── toolHandlers.ts             # Handler registry
-│   ├── search/                     # Search implementations (10 files)
+│   │   ├── toolDefinitions.ts          # 54 tool schemas
+│   │   ├── toolHandlers.ts             # Handler registry
+│   │   └── responseCompressor.ts       # Brotli response compression
+│   ├── search/                     # Search implementations (13 files)
 │   │   ├── SearchManager.ts            # Search orchestrator + compression + analytics
 │   │   ├── BasicSearch.ts              # Text matching
 │   │   ├── RankedSearch.ts             # TF-IDF scoring
@@ -1673,6 +1948,9 @@ memory-mcp/
 │   │   ├── SearchSuggestions.ts        # "Did you mean?"
 │   │   ├── TFIDFIndexManager.ts        # TF-IDF index
 │   │   ├── SearchFilterChain.ts        # Unified filters
+│   │   ├── EmbeddingService.ts         # Embedding provider abstraction
+│   │   ├── VectorStore.ts              # Vector storage + similarity
+│   │   ├── SemanticSearch.ts           # Semantic search manager
 │   │   └── index.ts
 │   ├── features/                   # Advanced capabilities (6 files)
 │   │   ├── IOManager.ts                # Import + export + backup (consolidated)
@@ -1684,7 +1962,7 @@ memory-mcp/
 │   ├── types/                      # TypeScript definitions (2 files)
 │   │   ├── types.ts                    # All type definitions (consolidated)
 │   │   └── index.ts
-│   ├── utils/                      # Shared utilities (10 files)
+│   ├── utils/                      # Shared utilities (12 files)
 │   │   ├── schemas.ts                  # Zod validation (14 schemas)
 │   │   ├── constants.ts                # Shared constants (SIMILARITY_WEIGHTS)
 │   │   ├── errors.ts                   # Custom error types
@@ -1692,15 +1970,22 @@ memory-mcp/
 │   │   ├── entityUtils.ts              # Entity/tag/date/filter/path utilities
 │   │   ├── formatters.ts               # Response formatting + pagination
 │   │   ├── indexes.ts                  # NameIndex, TypeIndex, RelationIndex
+│   │   ├── compressionUtil.ts          # Brotli compression utilities
+│   │   ├── compressedCache.ts          # LRU cache with compression
+│   │   ├── logger.ts                   # Logging utilities
+│   │   ├── searchCache.ts              # Search result caching
 │   │   └── index.ts
-│   ├── __tests__/                  # Test suite (1537 tests)
+│   ├── __tests__/                  # Test suite (1803 tests)
 │   └── dist/                       # Compiled output
 ├── docs/                           # Documentation
 │   ├── architecture/               # Architecture docs
 │   ├── guides/                     # User guides
 │   └── README.md
 ├── tools/                          # Development tools
-│   └── create-dependency-graph/    # Dependency analyzer
+│   ├── chunking-for-files/         # File splitting for context limits
+│   ├── compress-for-context/       # CTON compression for LLMs
+│   ├── create-dependency-graph/    # Dependency analyzer
+│   └── migrate-from-jsonl-to-sqlite/ # Storage format migration
 ├── CHANGELOG.md                    # Version history
 └── README.md                       # This file
 ```
@@ -1710,7 +1995,7 @@ memory-mcp/
 ```bash
 npm run build      # Build TypeScript to JavaScript
 npm run watch      # Watch mode for development
-npm test           # Run 1537 tests with coverage
+npm test           # Run 1803 tests with coverage
 npm run typecheck  # TypeScript strict type checking
 npm run clean      # Clean dist/ directories
 npm run docs:deps  # Generate dependency graph
@@ -1745,7 +2030,7 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and
 - **Fixed**: Bug fixes
 - **Security**: Security improvements
 
-**Current version**: v0.59.0 - [View full changelog →](CHANGELOG.md)
+**Current version**: v8.57.0 - [View full changelog →](CHANGELOG.md)
 
 ## License
 
@@ -1767,30 +2052,31 @@ Enhanced fork of [Model Context Protocol memory server](https://github.com/model
 
 **Major Features Added:**
 - Hierarchical nesting with parent-child relationships
+- Graph algorithms: path finding, centrality, connected components
+- Semantic search with embedding-based similarity (OpenAI/local models)
+- Brotli compression for backups, exports, and responses
 - Memory compression with intelligent duplicate detection
 - Smart archiving with criteria-based filtering
 - Advanced search: TF-IDF, boolean, and fuzzy matching
-- Multi-format import/export with merge strategies
+- Multi-format import/export with merge strategies and compression
 - Enhanced tag management with aliases and bulk operations
 - Saved searches with usage tracking
 - Graph validation and integrity checks
 - Transaction support with ACID guarantees
-- Backup and restore capabilities
+- Backup and restore capabilities with compression
 - Input validation and security hardening
-- Performance optimizations and caching
+- Performance optimizations and multi-level caching
 - Comprehensive documentation and guides
 
 ### Community
 
 Thanks to:
-- 🛠️ [MCP Specification](https://modelcontextprotocol.io)
-- 📚 MCP community and contributors
-- **Technologies:** Vitest, TypeScript, Node.js
+- [MCP Specification](https://modelcontextprotocol.io)
+- MCP community and contributors
+- **Technologies:** Vitest, TypeScript, Node.js, better-sqlite3
 
 ---
 
 **Repository:** https://github.com/danielsimonjr/memory-mcp
 **Issues:** https://github.com/danielsimonjr/memory-mcp/issues
 **NPM:** https://www.npmjs.com/package/@danielsimonjr/memory-mcp
-
-**Made with ❤️ for the MCP community**
