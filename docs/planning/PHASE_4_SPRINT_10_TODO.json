@@ -158,12 +158,12 @@
     "src/memory/utils/constants.ts",
     "src/memory/search/index.ts"
   ],
-  "dependencies": {
+  "newDependencies": {
     "production": ["@xenova/transformers (optional, for local embeddings)"],
     "existing": ["@modelcontextprotocol/sdk", "better-sqlite3"]
   },
   "totalNewTests": 15,
   "totalEstimatedHours": 8,
-  "dependencies_sprints": [],
+  "dependencies": [],
   "notes": "This sprint creates the embedding abstraction layer that supports both cloud (OpenAI) and local (transformers.js) embeddings. The local option is important for offline use and avoiding API costs. The @xenova/transformers dependency is optional - users who don't want semantic search won't need it."
 }

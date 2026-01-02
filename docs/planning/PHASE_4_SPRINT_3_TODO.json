@@ -15,7 +15,7 @@
     {
       "id": 1,
       "category": "Types",
-      "description": "Define FuzzyCacheKey Interface - Create interface extending SearchCacheKey with query, maxDistance (threshold), limit, and offset fields for cache key generation",
+      "description": "Define FuzzyCacheKey Interface - Create interface with query, threshold, limit, and offset fields for generating unique cache keys",
       "status": "planned",
       "estimatedHours": 0.25,
       "agent": "haiku",
@@ -30,7 +30,7 @@
     {
       "id": 2,
       "category": "Caching",
-      "description": "Implement Fuzzy Search Result Cache - Import createSearchCache from utils, add private cache property with maxSize 100 and TTL 5 minutes, implement cache lookup before computation in fuzzySearch()",
+      "description": "Implement Fuzzy Search Result Cache - Use SearchCache class from utils/searchCache.ts (new SearchCache<KnowledgeGraph>(100, 300000)), add private cache property with maxSize 100 and TTL 5 minutes, implement cache lookup before computation in fuzzySearch()",
       "status": "planned",
       "estimatedHours": 1.5,
       "agent": "sonnet",
@@ -42,7 +42,7 @@
         "Cache respects maxSize limit"
       ],
       "acceptanceCriteria": [
-        "Import createSearchCache from ../utils/searchCache.js",
+        "Import SearchCache class from ../utils/searchCache.js",
         "Private cache property initialized with maxSize: 100, ttlMs: 300000 (5 min)",
         "fuzzySearch() checks cache before computing",
         "Cache key generated from normalized query + threshold + limit + offset",
@@ -114,6 +114,6 @@
   "filesCreated": [],
   "totalNewTests": 12,
   "totalEstimatedHours": 4,
-  "dependencies": ["Sprint 1", "Sprint 2"],
-  "notes": "Fuzzy search is expensive due to Levenshtein distance calculations on every entity. Caching dramatically improves repeated query performance. The cache uses both TTL-based expiration and entity mutation invalidation to ensure freshness. This pattern will be reused for Boolean search caching in Sprint 4."
+  "dependencies": [],
+  "notes": "Fuzzy search is expensive due to Levenshtein distance calculations on every entity. Caching dramatically improves repeated query performance. The cache uses both TTL-based expiration and entity mutation invalidation to ensure freshness. This pattern will be reused for Boolean search caching in Sprint 4. This sprint is independent of Sprints 1-2 (storage optimizations) and can be developed in parallel."
 }

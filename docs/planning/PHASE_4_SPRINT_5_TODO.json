@@ -133,6 +133,6 @@
   "filesCreated": [],
   "totalNewTests": 8,
   "totalEstimatedHours": 4,
-  "dependencies": ["Sprint 3", "Sprint 4"],
-  "notes": "This sprint completes the Search Optimization phase. Pagination is a common pattern where users browse through result pages. Without caching, each page request re-executes the full search and discards most results. With caching, the full result set is computed once and pages are served from cache. The 30-second TTL is chosen to cover typical browsing sessions while ensuring data freshness."
+  "dependencies": [],
+  "notes": "This sprint completes the Search Optimization phase. Pagination is a common pattern where users browse through result pages. Without caching, each page request re-executes the full search and discards most results. With caching, the full result set is computed once and pages are served from cache. The 30-second TTL is chosen to cover typical browsing sessions while ensuring data freshness. This sprint is independent of other search cache sprints (3-4) and can be developed in parallel."
 }
