@@ -9,9 +9,27 @@
 
 import { promises as fs } from 'fs';
 import { dirname, join } from 'path';
-import type { Entity, Relation, KnowledgeGraph, ReadonlyKnowledgeGraph, ImportResult } from '../types/index.js';
+import type {
+  Entity,
+  Relation,
+  KnowledgeGraph,
+  ReadonlyKnowledgeGraph,
+  ImportResult,
+  BackupOptions,
+  BackupResult,
+  RestoreResult,
+  BackupMetadataExtended,
+  BackupInfoExtended,
+} from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { FileOperationError } from '../utils/errors.js';
+import {
+  compress,
+  decompress,
+  hasBrotliExtension,
+  createMetadata,
+  COMPRESSION_CONFIG,
+} from '../utils/index.js';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -34,6 +52,7 @@ export type MergeStrategy = 'replace' | 'skip' | 'merge' | 'fail';
 
 /**
  * Metadata stored with each backup.
+ * Extended with compression information for Phase 3 Sprint 2.
  */
 export interface BackupMetadata {
   /** Timestamp when backup was created (ISO 8601) */
@@ -42,14 +61,23 @@ export interface BackupMetadata {
   entityCount: number;
   /** Number of relations in the backup */
   relationCount: number;
-  /** File size in bytes */
+  /** File size in bytes (compressed size if compressed) */
   fileSize: number;
   /** Optional description/reason for backup */
   description?: string;
+  /** Whether the backup is compressed (default: true for new backups) */
+  compressed?: boolean;
+  /** Original size before compression in bytes */
+  originalSize?: number;
+  /** Compression ratio achieved (compressedSize / originalSize) */
+  compressionRatio?: number;
+  /** Compression format used */
+  compressionFormat?: 'brotli' | 'none';
 }
 
 /**
  * Information about a backup file.
+ * Extended with compression details for Phase 3 Sprint 2.
  */
 export interface BackupInfo {
   /** Backup file name */
@@ -58,6 +86,10 @@ export interface BackupInfo {
   filePath: string;
   /** Backup metadata */
   metadata: BackupMetadata;
+  /** Whether the backup is compressed */
+  compressed: boolean;
+  /** File size in bytes */
+  size: number;
 }
 
 // ============================================================
@@ -741,28 +773,50 @@ export class IOManager {
 
   /**
    * Generate backup file name with timestamp.
+   * @param compressed - Whether the backup will be compressed (affects extension)
    */
-  private generateBackupFileName(): string {
+  private generateBackupFileName(compressed: boolean = true): string {
     const now = new Date();
     const timestamp = now.toISOString()
       .replace(/:/g, '-')
       .replace(/\./g, '-')
       .replace('T', '_')
       .replace('Z', '');
-    return `backup_${timestamp}.jsonl`;
+    const extension = compressed ? '.jsonl.br' : '.jsonl';
+    return `backup_${timestamp}${extension}`;
   }
 
   /**
    * Create a backup of the current knowledge graph.
    *
-   * @param description - Optional description for this backup
-   * @returns Promise resolving to the backup file path
+   * By default, backups are compressed with brotli for 50-70% space reduction.
+   * Use `options.compress = false` to create uncompressed backups.
+   *
+   * @param options - Backup options (compress, description) or legacy description string
+   * @returns Promise resolving to BackupResult with compression statistics
+   *
+   * @example
+   * ```typescript
+   * // Compressed backup (default)
+   * const result = await manager.createBackup({ description: 'Pre-migration backup' });
+   * console.log(`Compressed from ${result.originalSize} to ${result.compressedSize} bytes`);
+   *
+   * // Uncompressed backup
+   * const result = await manager.createBackup({ compress: false });
+   * ```
    */
-  async createBackup(description?: string): Promise<string> {
+  async createBackup(options?: BackupOptions | string): Promise<BackupResult> {
     await this.ensureBackupDir();
 
+    // Handle legacy string argument (backward compatibility)
+    const opts: BackupOptions = typeof options === 'string'
+      ? { description: options, compress: COMPRESSION_CONFIG.AUTO_COMPRESS_BACKUP }
+      : { compress: COMPRESSION_CONFIG.AUTO_COMPRESS_BACKUP, ...options };
+
+    const shouldCompress = opts.compress ?? COMPRESSION_CONFIG.AUTO_COMPRESS_BACKUP;
     const graph = await this.storage.loadGraph();
-    const fileName = this.generateBackupFileName();
+    const timestamp = new Date().toISOString();
+    const fileName = this.generateBackupFileName(shouldCompress);
     const backupPath = join(this.backupDir, fileName);
 
     try {
@@ -772,6 +826,7 @@ export class IOManager {
       try {
         fileContent = await fs.readFile(originalPath, 'utf-8');
       } catch {
+        // If file doesn't exist, generate content from graph
         const lines = [
           ...graph.entities.map(e => JSON.stringify({ type: 'entity', ...e })),
           ...graph.relations.map(r => JSON.stringify({ type: 'relation', ...r })),
@@ -779,22 +834,53 @@ export class IOManager {
         fileContent = lines.join('\n');
       }
 
-      await fs.writeFile(backupPath, fileContent);
+      const originalSize = Buffer.byteLength(fileContent, 'utf-8');
+      let compressedSize = originalSize;
+      let compressionRatio = 1;
+
+      if (shouldCompress) {
+        // Compress with maximum quality for backups (archive quality)
+        const compressionResult = await compress(fileContent, {
+          quality: COMPRESSION_CONFIG.BROTLI_QUALITY_ARCHIVE,
+          mode: 'text',
+        });
+
+        await fs.writeFile(backupPath, compressionResult.compressed);
+        compressedSize = compressionResult.compressedSize;
+        compressionRatio = compressionResult.ratio;
+      } else {
+        // Write uncompressed backup
+        await fs.writeFile(backupPath, fileContent);
+      }
 
       const stats = await fs.stat(backupPath);
 
       const metadata: BackupMetadata = {
-        timestamp: new Date().toISOString(),
+        timestamp,
         entityCount: graph.entities.length,
         relationCount: graph.relations.length,
         fileSize: stats.size,
-        description,
+        description: opts.description,
+        compressed: shouldCompress,
+        originalSize,
+        compressionRatio: shouldCompress ? compressionRatio : undefined,
+        compressionFormat: shouldCompress ? 'brotli' : 'none',
       };
 
       const metadataPath = `${backupPath}.meta.json`;
       await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
 
-      return backupPath;
+      return {
+        path: backupPath,
+        timestamp,
+        entityCount: graph.entities.length,
+        relationCount: graph.relations.length,
+        compressed: shouldCompress,
+        originalSize,
+        compressedSize,
+        compressionRatio,
+        description: opts.description,
+      };
     } catch (error) {
       throw new FileOperationError('create backup', backupPath, error as Error);
     }
@@ -803,7 +889,9 @@ export class IOManager {
   /**
    * List all available backups, sorted by timestamp (newest first).
    *
-   * @returns Promise resolving to array of backup information
+   * Detects both compressed (.jsonl.br) and uncompressed (.jsonl) backups.
+   *
+   * @returns Promise resolving to array of backup information with compression details
    */
   async listBackups(): Promise<BackupInfo[]> {
     try {
@@ -814,24 +902,46 @@ export class IOManager {
       }
 
       const files = await fs.readdir(this.backupDir);
-      const backupFiles = files.filter(f => f.startsWith('backup_') && f.endsWith('.jsonl'));
+      // Match both .jsonl and .jsonl.br backup files, exclude metadata files
+      const backupFiles = files.filter(f =>
+        f.startsWith('backup_') &&
+        (f.endsWith('.jsonl') || f.endsWith('.jsonl.br')) &&
+        !f.endsWith('.meta.json')
+      );
 
       const backups: BackupInfo[] = [];
 
       for (const fileName of backupFiles) {
         const filePath = join(this.backupDir, fileName);
+        const isCompressed = hasBrotliExtension(fileName);
+
+        // Try to read metadata file (handles both .jsonl.meta.json and .jsonl.br.meta.json)
         const metadataPath = `${filePath}.meta.json`;
 
         try {
-          const metadataContent = await fs.readFile(metadataPath, 'utf-8');
+          const [metadataContent, stats] = await Promise.all([
+            fs.readFile(metadataPath, 'utf-8'),
+            fs.stat(filePath),
+          ]);
           const metadata: BackupMetadata = JSON.parse(metadataContent);
+
+          // Ensure compression fields are present (backward compatibility)
+          if (metadata.compressed === undefined) {
+            metadata.compressed = isCompressed;
+          }
+          if (metadata.compressionFormat === undefined) {
+            metadata.compressionFormat = isCompressed ? 'brotli' : 'none';
+          }
 
           backups.push({
             fileName,
             filePath,
             metadata,
+            compressed: isCompressed,
+            size: stats.size,
           });
         } catch {
+          // Skip backups without valid metadata
           continue;
         }
       }
@@ -849,18 +959,53 @@ export class IOManager {
   /**
    * Restore the knowledge graph from a backup file.
    *
+   * Automatically detects and decompresses brotli-compressed backups (.br extension).
+   * Maintains backward compatibility with uncompressed backups.
+   *
    * @param backupPath - Path to the backup file to restore from
+   * @returns Promise resolving to RestoreResult with restoration details
+   *
+   * @example
+   * ```typescript
+   * // Restore from compressed backup
+   * const result = await manager.restoreFromBackup('/path/to/backup.jsonl.br');
+   * console.log(`Restored ${result.entityCount} entities from compressed backup`);
+   *
+   * // Restore from uncompressed backup (legacy)
+   * const result = await manager.restoreFromBackup('/path/to/backup.jsonl');
+   * ```
    */
-  async restoreFromBackup(backupPath: string): Promise<void> {
+  async restoreFromBackup(backupPath: string): Promise<RestoreResult> {
     try {
       await fs.access(backupPath);
 
-      const backupContent = await fs.readFile(backupPath, 'utf-8');
+      const isCompressed = hasBrotliExtension(backupPath);
+      const backupBuffer = await fs.readFile(backupPath);
+
+      let backupContent: string;
+      if (isCompressed) {
+        // Decompress the backup
+        const decompressedBuffer = await decompress(backupBuffer);
+        backupContent = decompressedBuffer.toString('utf-8');
+      } else {
+        // Read as plain text
+        backupContent = backupBuffer.toString('utf-8');
+      }
 
       const mainPath = this.storage.getFilePath();
       await fs.writeFile(mainPath, backupContent);
 
       this.storage.clearCache();
+
+      // Load the restored graph to get counts
+      const graph = await this.storage.loadGraph();
+
+      return {
+        entityCount: graph.entities.length,
+        relationCount: graph.relations.length,
+        restoredFrom: backupPath,
+        wasCompressed: isCompressed,
+      };
     } catch (error) {
       throw new FileOperationError('restore from backup', backupPath, error as Error);
     }

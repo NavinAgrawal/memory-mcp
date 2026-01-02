@@ -3,6 +3,7 @@
  *
  * Tests for backup creation, listing, restoration, and cleanup.
  * (Originally BackupManager, merged into IOManager in Sprint 11.4)
+ * Updated for Phase 3 Sprint 2: Backup Compression
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -54,21 +55,21 @@ describe('IOManager Backup Operations', () => {
         relations: [],
       });
 
-      const backupPath = await manager.createBackup();
+      const result = await manager.createBackup();
 
-      expect(backupPath).toContain('.backups');
-      expect(backupPath).toContain('backup_');
-      expect(backupPath).toContain('.jsonl');
+      expect(result.path).toContain('.backups');
+      expect(result.path).toContain('backup_');
+      expect(result.path).toContain('.jsonl');
 
-      const exists = await fs.access(backupPath).then(() => true).catch(() => false);
+      const exists = await fs.access(result.path).then(() => true).catch(() => false);
       expect(exists).toBe(true);
     });
 
     it('should create metadata file alongside backup', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
-      const backupPath = await manager.createBackup();
+      const result = await manager.createBackup();
 
-      const metadataPath = `${backupPath}.meta.json`;
+      const metadataPath = `${result.path}.meta.json`;
       const exists = await fs.access(metadataPath).then(() => true).catch(() => false);
       expect(exists).toBe(true);
     });
@@ -84,8 +85,8 @@ describe('IOManager Backup Operations', () => {
         ],
       });
 
-      const backupPath = await manager.createBackup();
-      const metadataContent = await fs.readFile(`${backupPath}.meta.json`, 'utf-8');
+      const result = await manager.createBackup();
+      const metadataContent = await fs.readFile(`${result.path}.meta.json`, 'utf-8');
       const metadata = JSON.parse(metadataContent);
 
       expect(metadata.entityCount).toBe(2);
@@ -94,9 +95,9 @@ describe('IOManager Backup Operations', () => {
 
     it('should include description when provided', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
-      const backupPath = await manager.createBackup('Test backup');
+      const result = await manager.createBackup('Test backup');
 
-      const metadataContent = await fs.readFile(`${backupPath}.meta.json`, 'utf-8');
+      const metadataContent = await fs.readFile(`${result.path}.meta.json`, 'utf-8');
       const metadata = JSON.parse(metadataContent);
 
       expect(metadata.description).toBe('Test backup');
@@ -105,10 +106,10 @@ describe('IOManager Backup Operations', () => {
     it('should include timestamp in metadata', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
       const beforeTime = new Date().toISOString();
-      const backupPath = await manager.createBackup();
+      const result = await manager.createBackup();
       const afterTime = new Date().toISOString();
 
-      const metadataContent = await fs.readFile(`${backupPath}.meta.json`, 'utf-8');
+      const metadataContent = await fs.readFile(`${result.path}.meta.json`, 'utf-8');
       const metadata = JSON.parse(metadataContent);
 
       expect(metadata.timestamp >= beforeTime).toBe(true);
@@ -120,9 +121,9 @@ describe('IOManager Backup Operations', () => {
         entities: [{ name: 'Test', entityType: 'test', observations: ['data'] }],
         relations: [],
       });
-      const backupPath = await manager.createBackup();
+      const result = await manager.createBackup();
 
-      const metadataContent = await fs.readFile(`${backupPath}.meta.json`, 'utf-8');
+      const metadataContent = await fs.readFile(`${result.path}.meta.json`, 'utf-8');
       const metadata = JSON.parse(metadataContent);
 
       expect(metadata.fileSize).toBeGreaterThan(0);
@@ -139,10 +140,41 @@ describe('IOManager Backup Operations', () => {
 
     it('should handle empty graph', async () => {
       // Don't save anything - file doesn't exist
-      const backupPath = await manager.createBackup();
+      const result = await manager.createBackup();
 
-      const exists = await fs.access(backupPath).then(() => true).catch(() => false);
+      const exists = await fs.access(result.path).then(() => true).catch(() => false);
       expect(exists).toBe(true);
+    });
+
+    it('should return BackupResult with compression statistics', async () => {
+      await storage.saveGraph({
+        entities: [{ name: 'Test', entityType: 'test', observations: ['data'] }],
+        relations: [],
+      });
+      const result = await manager.createBackup();
+
+      // BackupResult properties
+      expect(result.path).toBeDefined();
+      expect(result.timestamp).toBeDefined();
+      expect(result.entityCount).toBe(1);
+      expect(result.relationCount).toBe(0);
+      expect(result.compressed).toBe(true);
+      expect(result.originalSize).toBeGreaterThan(0);
+      expect(result.compressedSize).toBeGreaterThan(0);
+      expect(result.compressionRatio).toBeLessThanOrEqual(1);
+    });
+
+    it('should create uncompressed backup when compress is false', async () => {
+      await storage.saveGraph({
+        entities: [{ name: 'Test', entityType: 'test', observations: ['data'] }],
+        relations: [],
+      });
+      const result = await manager.createBackup({ compress: false });
+
+      expect(result.compressed).toBe(false);
+      expect(result.path).not.toContain('.br');
+      expect(result.compressionRatio).toBe(1);
+      expect(result.originalSize).toBe(result.compressedSize);
     });
   });
 
@@ -194,6 +226,17 @@ describe('IOManager Backup Operations', () => {
       const backups = await manager.listBackups();
       expect(backups).toHaveLength(1);
     });
+
+    it('should include compression info in backup list', async () => {
+      await storage.saveGraph({ entities: [], relations: [] });
+      await manager.createBackup({ description: 'Compressed backup' });
+
+      const backups = await manager.listBackups();
+      expect(backups[0].compressed).toBe(true);
+      expect(backups[0].metadata.compressed).toBe(true);
+      expect(backups[0].metadata.compressionFormat).toBe('brotli');
+      expect(backups[0].size).toBeGreaterThan(0);
+    });
   });
 
   describe('restoreFromBackup', () => {
@@ -203,7 +246,7 @@ describe('IOManager Backup Operations', () => {
         entities: [{ name: 'Original', entityType: 'test', observations: [] }],
         relations: [],
       });
-      const backupPath = await manager.createBackup();
+      const backupResult = await manager.createBackup();
 
       // Modify data
       await storage.saveGraph({
@@ -212,11 +255,12 @@ describe('IOManager Backup Operations', () => {
       });
 
       // Restore
-      await manager.restoreFromBackup(backupPath);
+      const restoreResult = await manager.restoreFromBackup(backupResult.path);
       const graph = await storage.loadGraph();
 
       expect(graph.entities).toHaveLength(1);
       expect(graph.entities[0].name).toBe('Original');
+      expect(restoreResult.entityCount).toBe(1);
     });
 
     it('should clear storage cache after restore', async () => {
@@ -224,14 +268,14 @@ describe('IOManager Backup Operations', () => {
         entities: [{ name: 'Backup', entityType: 'test', observations: [] }],
         relations: [],
       });
-      const backupPath = await manager.createBackup();
+      const backupResult = await manager.createBackup();
 
       await storage.saveGraph({
         entities: [{ name: 'Current', entityType: 'test', observations: [] }],
         relations: [],
       });
 
-      await manager.restoreFromBackup(backupPath);
+      await manager.restoreFromBackup(backupResult.path);
       const graph = await storage.loadGraph();
 
       expect(graph.entities[0].name).toBe('Backup');
@@ -243,25 +287,41 @@ describe('IOManager Backup Operations', () => {
       await expect(manager.restoreFromBackup(fakePath))
         .rejects.toThrow();
     });
+
+    it('should return RestoreResult with restoration details', async () => {
+      await storage.saveGraph({
+        entities: [{ name: 'Test', entityType: 'test', observations: [] }],
+        relations: [{ from: 'Test', to: 'Test', relationType: 'self' }],
+      });
+      const backupResult = await manager.createBackup();
+
+      await storage.saveGraph({ entities: [], relations: [] });
+      const restoreResult = await manager.restoreFromBackup(backupResult.path);
+
+      expect(restoreResult.entityCount).toBe(1);
+      expect(restoreResult.relationCount).toBe(1);
+      expect(restoreResult.restoredFrom).toBe(backupResult.path);
+      expect(restoreResult.wasCompressed).toBe(true);
+    });
   });
 
   describe('deleteBackup', () => {
     it('should delete backup file', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
-      const backupPath = await manager.createBackup();
+      const result = await manager.createBackup();
 
-      await manager.deleteBackup(backupPath);
+      await manager.deleteBackup(result.path);
 
-      const exists = await fs.access(backupPath).then(() => true).catch(() => false);
+      const exists = await fs.access(result.path).then(() => true).catch(() => false);
       expect(exists).toBe(false);
     });
 
     it('should delete metadata file', async () => {
       await storage.saveGraph({ entities: [], relations: [] });
-      const backupPath = await manager.createBackup();
-      const metadataPath = `${backupPath}.meta.json`;
+      const result = await manager.createBackup();
+      const metadataPath = `${result.path}.meta.json`;
 
-      await manager.deleteBackup(backupPath);
+      await manager.deleteBackup(result.path);
 
       const exists = await fs.access(metadataPath).then(() => true).catch(() => false);
       expect(exists).toBe(false);

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1578 tests)
+npm test              # Run tests with coverage (1598 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.51.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.52.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -142,7 +142,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1578 tests, 44 files):
+Tests are in `src/memory/__tests__/` (1598 tests, 45 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -158,7 +158,8 @@ Tests are in `src/memory/__tests__/` (1578 tests, 44 files):
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
 | unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
 | unit/features/ArchiveManager.test.ts | 27 | Entity archival (via EntityManager) |
-| unit/features/BackupManager.test.ts | 27 | Backup/restore (via IOManager) |
+| unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
+| integration/backup-compression.test.ts | 16 | Backup compression integration |
 | unit/features/CompressionManager.test.ts | 32 | Duplicate detection (via SearchManager) |
 | unit/features/ExportManager.test.ts | 84 | Export formats (via IOManager) |
 | unit/features/ImportManager.test.ts | 26 | Import formats (via IOManager) |
