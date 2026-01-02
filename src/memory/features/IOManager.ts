@@ -18,8 +18,6 @@ import type {
   BackupOptions,
   BackupResult,
   RestoreResult,
-  BackupMetadataExtended,
-  BackupInfoExtended,
 } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { FileOperationError } from '../utils/errors.js';
@@ -27,7 +25,6 @@ import {
   compress,
   decompress,
   hasBrotliExtension,
-  createMetadata,
   COMPRESSION_CONFIG,
 } from '../utils/index.js';
 
