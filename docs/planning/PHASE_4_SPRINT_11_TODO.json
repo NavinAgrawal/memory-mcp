@@ -1,0 +1,167 @@
+{
+  "phase": 4,
+  "sprint": 11,
+  "title": "Semantic Search: Vector Store Implementation",
+  "priority": "LOW",
+  "effort": "8 hours",
+  "status": "planned",
+  "impact": "Efficient storage and retrieval of embeddings; Enables similarity search at scale",
+  "targetMetrics": {
+    "vectorSearchLatency": { "target": "<50ms for 10K vectors" },
+    "cosineSimilarity": { "target": "O(n) brute force, optimized inner loop" },
+    "storageOverhead": { "target": "~6KB per entity (1536-dim float32)" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Define Vector Store Interface - Create IVectorStore interface with add(), search(), remove(), and size() methods; Define VectorSearchResult interface",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/types/types.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "IVectorStore interface defined",
+        "add(entityName, vector) method",
+        "search(queryVector, k) method returning VectorSearchResult[]",
+        "remove(entityName) method",
+        "size() method returning number of vectors",
+        "VectorSearchResult with name and score fields"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Search",
+      "description": "Implement In-Memory Vector Store - Create InMemoryVectorStore class with Map-based storage, implement brute-force cosine similarity search with optimized inner loop",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/search/VectorStore.ts"],
+      "testCategories": [
+        "Add and retrieve vectors",
+        "Cosine similarity calculation",
+        "Top-k search results",
+        "Remove vectors"
+      ],
+      "acceptanceCriteria": [
+        "InMemoryVectorStore implements IVectorStore",
+        "vectors: Map<string, number[]> for storage",
+        "cosineSimilarity() helper with optimized loop (no array methods)",
+        "search() returns top-k results sorted by similarity",
+        "remove() cleans up vectors",
+        "clear() method for full reset"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Database",
+      "description": "Add SQLite Embedding Storage - Extend SQLiteStorage to store embeddings as BLOB, add embedding and embedding_model columns to entities table",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/SQLiteStorage.ts"],
+      "testCategories": [
+        "Store embedding with entity",
+        "Retrieve embedding",
+        "Update embedding",
+        "Null embedding handling"
+      ],
+      "acceptanceCriteria": [
+        "ALTER TABLE adds embedding BLOB column",
+        "ALTER TABLE adds embedding_model TEXT column",
+        "ALTER TABLE adds embedding_updated_at TEXT column",
+        "storeEmbedding(entityName, vector) method",
+        "getEmbedding(entityName) method",
+        "Embeddings stored as Float32Array BLOB",
+        "Migration handles existing tables"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Search",
+      "description": "Implement SQLite Vector Store - Create SQLiteVectorStore that persists vectors to SQLite and loads into memory for search",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/search/VectorStore.ts"],
+      "testCategories": [
+        "Persist vectors to SQLite",
+        "Load vectors from SQLite",
+        "Search with persistence",
+        "Incremental updates"
+      ],
+      "acceptanceCriteria": [
+        "SQLiteVectorStore implements IVectorStore",
+        "Uses SQLiteStorage for persistence",
+        "Loads vectors into InMemoryVectorStore on init",
+        "add() persists to SQLite immediately",
+        "remove() removes from SQLite",
+        "Lazy loading option for large graphs"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Search",
+      "description": "Create Vector Store Factory - Implement factory that creates InMemoryVectorStore or SQLiteVectorStore based on storage type",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/search/VectorStore.ts"],
+      "testCategories": [
+        "Factory creates correct store type",
+        "SQLite storage uses SQLite vector store",
+        "JSONL storage uses in-memory"
+      ],
+      "acceptanceCriteria": [
+        "createVectorStore(storageType, storage?) factory",
+        "Returns InMemoryVectorStore for 'jsonl'",
+        "Returns SQLiteVectorStore for 'sqlite'",
+        "SQLiteVectorStore requires storage reference"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Tests",
+      "description": "Create Vector Store Tests - Test both implementations with various vector sizes and search scenarios",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/search/VectorStore.test.ts"],
+      "testCategories": [
+        "In-memory store operations",
+        "SQLite store operations",
+        "Cosine similarity correctness",
+        "Top-k search accuracy",
+        "Performance benchmarks"
+      ],
+      "acceptanceCriteria": [
+        "Test add/search/remove for in-memory",
+        "Test persistence for SQLite store",
+        "Test cosine similarity with known values",
+        "Performance: 10K vectors search < 50ms",
+        "15+ tests total"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "IVectorStore abstraction supports multiple backends",
+    "InMemoryVectorStore for fast temporary storage",
+    "SQLiteVectorStore for persistent embedding storage",
+    "Efficient cosine similarity implementation",
+    "Factory creates appropriate store based on config"
+  ],
+  "filesCreated": [
+    "src/memory/search/VectorStore.ts",
+    "src/memory/__tests__/unit/search/VectorStore.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/types/types.ts",
+    "src/memory/core/SQLiteStorage.ts",
+    "src/memory/search/index.ts"
+  ],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 8,
+  "dependencies": ["Sprint 10"],
+  "notes": "The vector store provides efficient storage and retrieval of embedding vectors. For small graphs (<10K entities), brute-force cosine similarity is fast enough. For larger graphs, consider sqlite-vss extension in the future. SQLite storage persists embeddings so they don't need to be recomputed on each startup."
+}

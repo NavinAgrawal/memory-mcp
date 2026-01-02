@@ -1,0 +1,127 @@
+{
+  "phase": 4,
+  "sprint": 7,
+  "title": "Graph Algorithms: Path Finding",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "planned",
+  "impact": "New capability: Find connections between entities; Answer 'how are X and Y related?'",
+  "targetMetrics": {
+    "shortestPath": { "target": "<50ms for 1000 nodes" },
+    "allPaths": { "target": "<200ms for 1000 nodes, maxLength=5" },
+    "pathReconstruction": { "target": "Include full entity and relation details" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Implement Shortest Path Algorithm - Add shortestPath() method to GraphTraversal using BFS for unweighted graphs, return PathResult with entity path and relations traversed",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Find shortest path between connected entities",
+        "Handle same source and target (length 0)",
+        "Return null for disconnected entities",
+        "Respect relation type filters",
+        "Include relations in result"
+      ],
+      "acceptanceCriteria": [
+        "shortestPath(fromName, toName, options) method implemented",
+        "Uses BFS for unweighted shortest path",
+        "Returns PathResult with path[], relations[], length",
+        "Returns null if no path exists",
+        "Same entity returns path of length 0",
+        "Respects TraversalOptions (relationTypes, direction, maxDepth)",
+        "reconstructPath() helper builds full PathResult"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Implement reconstructPath Helper - Add private method to rebuild path from BFS parent map, include full Entity objects and Relation objects in PathResult",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Reconstructs path correctly",
+        "Includes all intermediate entities",
+        "Includes all traversed relations"
+      ],
+      "acceptanceCriteria": [
+        "reconstructPath(from, to, parentMap) method implemented",
+        "Returns PathResult with Entity[] not just names",
+        "Includes Relation[] for edges traversed",
+        "Handles hierarchy edges (no relation)",
+        "Path order is correct (start to end)"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Implement All Paths Algorithm - Add allPaths() method using DFS with backtracking, return all paths up to maxLength, limit results to prevent explosion",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/core/GraphTraversal.ts"],
+      "testCategories": [
+        "Find all paths between entities",
+        "Respect maxLength limit",
+        "Handle cycles (visited set per path)",
+        "Limit number of results",
+        "Include relations in results"
+      ],
+      "acceptanceCriteria": [
+        "allPaths(fromName, toName, maxLength) method implemented",
+        "Default maxLength = 5 to limit computation",
+        "Uses DFS with backtracking",
+        "Visited set is per-path (allows revisits on different paths)",
+        "Returns PathResult[] sorted by length",
+        "Maximum 100 paths returned to prevent explosion"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Create Path Finding Tests - Test shortest path and all paths with various graph structures and edge cases",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/core/GraphTraversal.test.ts"],
+      "testCategories": [
+        "Shortest path in simple graph",
+        "Shortest path with multiple options",
+        "All paths with cycles",
+        "No path exists",
+        "Performance with large graphs"
+      ],
+      "acceptanceCriteria": [
+        "Test shortest path in linear graph",
+        "Test shortest path with branching",
+        "Test all paths finds multiple routes",
+        "Test maxLength limits results",
+        "Test no path returns null/empty",
+        "Performance test < 50ms for 1000 nodes",
+        "15+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "shortestPath() finds optimal path between entities",
+    "allPaths() finds all routes up to maxLength",
+    "PathResult includes full Entity and Relation objects",
+    "Performance meets targets for 1000-node graphs",
+    "Edge cases handled (no path, same entity, cycles)"
+  ],
+  "filesModified": [
+    "src/memory/core/GraphTraversal.ts",
+    "src/memory/__tests__/unit/core/GraphTraversal.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 6"],
+  "notes": "Path finding is one of the most useful graph operations. shortestPath answers 'what is the closest connection between X and Y?' while allPaths shows 'all the ways X and Y are connected'. Both are essential for exploring knowledge graph relationships. The algorithms build on the BFS/DFS foundation from Sprint 6."
+}

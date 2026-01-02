@@ -1,0 +1,119 @@
+{
+  "phase": 4,
+  "sprint": 3,
+  "title": "Search Optimization: Fuzzy Search Cache",
+  "priority": "HIGH",
+  "effort": "4 hours",
+  "status": "planned",
+  "impact": "Repeated fuzzy searches 100ms -> <1ms (99%+ improvement)",
+  "targetMetrics": {
+    "firstFuzzySearch": { "current": "~100ms", "target": "~100ms (unchanged)" },
+    "repeatedFuzzySearch": { "current": "~100ms", "target": "<1ms" },
+    "cacheHitRate": { "target": ">90% for typical usage patterns" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Define FuzzyCacheKey Interface - Create interface extending SearchCacheKey with query, maxDistance (threshold), limit, and offset fields for cache key generation",
+      "status": "planned",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/memory/search/FuzzySearch.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "FuzzyCacheKey interface defined with query, threshold/maxDistance, limit, offset",
+        "Query field stored in lowercase for normalization",
+        "Interface supports cache key comparison"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Caching",
+      "description": "Implement Fuzzy Search Result Cache - Import createSearchCache from utils, add private cache property with maxSize 100 and TTL 5 minutes, implement cache lookup before computation in fuzzySearch()",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/FuzzySearch.ts"],
+      "testCategories": [
+        "Cache hit returns cached results",
+        "Cache miss computes and stores results",
+        "Different query params create different cache keys",
+        "Cache respects maxSize limit"
+      ],
+      "acceptanceCriteria": [
+        "Import createSearchCache from ../utils/searchCache.js",
+        "Private cache property initialized with maxSize: 100, ttlMs: 300000 (5 min)",
+        "fuzzySearch() checks cache before computing",
+        "Cache key generated from normalized query + threshold + limit + offset",
+        "Results cached after computation",
+        "Cache returns same object reference (no deep copy)"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Caching",
+      "description": "Add Cache Invalidation Method - Implement invalidateCache() method that clears the fuzzy search cache, hook into storage change notifications for automatic invalidation on entity mutations",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/search/FuzzySearch.ts", "src/memory/search/SearchManager.ts"],
+      "testCategories": [
+        "invalidateCache() clears cache",
+        "Cache cleared on entity create/update/delete",
+        "TTL-based expiration works correctly"
+      ],
+      "acceptanceCriteria": [
+        "invalidateCache() method implemented in FuzzySearch",
+        "Method clears entire cache",
+        "SearchManager can call invalidateCache() after mutations",
+        "Cache entries expire after TTL (5 minutes)",
+        "LRU eviction when cache exceeds maxSize"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Fuzzy Search Cache Tests - Test cache hit/miss behavior, performance improvement, cache invalidation, TTL expiration, and LRU eviction",
+      "status": "planned",
+      "estimatedHours": 1.25,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/search/FuzzySearch.test.ts"],
+      "testCategories": [
+        "Cache hit returns same results",
+        "Cache miss triggers computation",
+        "Different parameters create different entries",
+        "Performance: repeated query <1ms",
+        "Cache invalidation clears entries",
+        "TTL expiration removes stale entries"
+      ],
+      "acceptanceCriteria": [
+        "Test verifies cache hit returns identical object",
+        "Test verifies first query takes full computation time",
+        "Test verifies second identical query is <1ms",
+        "Test verifies different threshold creates new cache entry",
+        "Test verifies invalidateCache() clears all entries",
+        "Test verifies TTL-based expiration",
+        "12+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Fuzzy search cache implemented with 100-entry limit",
+    "Repeated identical queries return in <1ms",
+    "Cache properly invalidated on entity mutations",
+    "TTL-based expiration after 5 minutes",
+    "LRU eviction when cache full",
+    "All existing fuzzy search tests pass"
+  ],
+  "filesModified": [
+    "src/memory/search/FuzzySearch.ts",
+    "src/memory/search/SearchManager.ts",
+    "src/memory/__tests__/unit/search/FuzzySearch.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 4,
+  "dependencies": ["Sprint 1", "Sprint 2"],
+  "notes": "Fuzzy search is expensive due to Levenshtein distance calculations on every entity. Caching dramatically improves repeated query performance. The cache uses both TTL-based expiration and entity mutation invalidation to ensure freshness. This pattern will be reused for Boolean search caching in Sprint 4."
+}

@@ -1,0 +1,159 @@
+{
+  "phase": 4,
+  "sprint": 9,
+  "title": "Graph Algorithms: MCP Tools & Relation Weights",
+  "priority": "MEDIUM",
+  "effort": "4 hours",
+  "status": "planned",
+  "impact": "Expose graph algorithms via MCP tools; Enable weighted relationships",
+  "targetMetrics": {
+    "newTools": { "target": "4+ new MCP tools" },
+    "toolResponseTime": { "target": "<100ms for typical queries" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Add Relation Weight and Metadata - Extend Relation interface with optional weight (number) and metadata (Record<string, unknown>) fields for weighted graph algorithms",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/types/types.ts"],
+      "testCategories": [
+        "Backward compatible with existing relations",
+        "Weight defaults to 1.0"
+      ],
+      "acceptanceCriteria": [
+        "Relation.weight?: number added (default: 1.0)",
+        "Relation.metadata?: Record<string, unknown> added",
+        "Existing code continues to work",
+        "SQLite schema updated with weight column",
+        "JSONL format supports new fields"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Server",
+      "description": "Add find_shortest_path Tool - Create MCP tool definition and handler that calls GraphTraversal.shortestPath(), accept from, to, relationTypes, and maxDepth parameters",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Tool finds path between entities",
+        "Returns path with entity names and relations",
+        "Returns message when no path exists"
+      ],
+      "acceptanceCriteria": [
+        "find_shortest_path tool defined in toolDefinitions.ts",
+        "Handler implemented in toolHandlers.ts",
+        "Parameters: from (required), to (required), relationTypes (optional), maxDepth (optional)",
+        "Returns path as entity name array and relation descriptions",
+        "Returns 'No path found' message when appropriate"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Server",
+      "description": "Add get_connected_components Tool - Create MCP tool that returns component analysis, accept optional minSize filter",
+      "status": "planned",
+      "estimatedHours": 0.75,
+      "agent": "sonnet",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Returns all components",
+        "minSize filters small components",
+        "Response includes entity names and counts"
+      ],
+      "acceptanceCriteria": [
+        "get_connected_components tool defined",
+        "Parameters: minSize (optional)",
+        "Returns totalComponents count",
+        "Returns component details (size, entity names, relation count)",
+        "Sorted by size descending"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Server",
+      "description": "Add get_centrality Tool - Create MCP tool supporting degree, betweenness, and pagerank algorithms, accept algorithm and limit parameters",
+      "status": "planned",
+      "estimatedHours": 0.75,
+      "agent": "sonnet",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Degree centrality returns correct results",
+        "Betweenness centrality with sampling",
+        "PageRank returns scored entities"
+      ],
+      "acceptanceCriteria": [
+        "get_centrality tool defined",
+        "Parameters: algorithm (enum: degree, betweenness, pagerank), limit (optional)",
+        "Returns topEntities array with entity names and scores",
+        "Default limit = 10",
+        "Algorithm name included in response"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Server",
+      "description": "Add find_all_paths Tool - Create MCP tool to find all paths between entities with maxLength limit",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Returns multiple paths",
+        "Respects maxLength",
+        "Includes relations in paths"
+      ],
+      "acceptanceCriteria": [
+        "find_all_paths tool defined",
+        "Parameters: from (required), to (required), maxLength (optional, default 5)",
+        "Returns paths array with entity names and lengths",
+        "Limited to 100 paths to prevent explosion"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Tests",
+      "description": "Create MCP Tool Integration Tests - Test all new graph algorithm tools through MCP interface",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/__tests__/integration/graph-tools.test.ts"],
+      "testCategories": [
+        "find_shortest_path tool",
+        "get_connected_components tool",
+        "get_centrality tool",
+        "find_all_paths tool"
+      ],
+      "acceptanceCriteria": [
+        "All 4 tools callable via MCP",
+        "Response format matches schema",
+        "Error handling for invalid inputs",
+        "10+ integration tests"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "4 new MCP tools for graph algorithms",
+    "Relation weight and metadata support added",
+    "Tools return well-formatted responses",
+    "Integration tests verify MCP interface",
+    "Total MCP tools: 47 -> 51"
+  ],
+  "filesModified": [
+    "src/memory/types/types.ts",
+    "src/memory/server/toolDefinitions.ts",
+    "src/memory/server/toolHandlers.ts",
+    "src/memory/core/SQLiteStorage.ts"
+  ],
+  "filesCreated": [
+    "src/memory/__tests__/integration/graph-tools.test.ts"
+  ],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 4,
+  "dependencies": ["Sprint 6", "Sprint 7", "Sprint 8"],
+  "notes": "This sprint completes the Graph Algorithms phase by exposing the algorithms via MCP tools. Users can now ask questions like 'how is Alice connected to the Marketing project?' or 'which entities are most central to my knowledge graph?'. The relation weight support enables future weighted shortest path algorithms."
+}

@@ -1,0 +1,134 @@
+{
+  "phase": 4,
+  "sprint": 4,
+  "title": "Search Optimization: Boolean Search Cache with AST Caching",
+  "priority": "MEDIUM",
+  "effort": "4 hours",
+  "status": "planned",
+  "impact": "40-60% faster repeated boolean queries; Parsed ASTs cached indefinitely",
+  "targetMetrics": {
+    "firstBooleanSearch": { "current": "~50ms", "target": "~50ms (unchanged)" },
+    "repeatedBooleanSearch": { "current": "~50ms", "target": "<5ms" },
+    "astParsing": { "current": "Parse every time", "target": "Parse once, cache forever" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Types",
+      "description": "Define BooleanCacheEntry Interface - Create interface with ast (BooleanQueryNode), results (Entity[]), and entityHash (string) fields for tracking result validity",
+      "status": "planned",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/memory/search/BooleanSearch.ts"],
+      "testCategories": [],
+      "acceptanceCriteria": [
+        "BooleanCacheEntry interface defined with ast, results, entityHash fields",
+        "entityHash used for cache invalidation detection",
+        "Interface supports efficient cache lookups"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Caching",
+      "description": "Implement AST Cache - Add private astCache Map<string, BooleanQueryNode> to BooleanSearch, cache parsed ASTs after parsing, normalize query strings before caching (whitespace, operator case)",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/search/BooleanSearch.ts"],
+      "testCategories": [
+        "AST cached after first parse",
+        "Normalized queries share same AST",
+        "AST cache never expires (query syntax is static)"
+      ],
+      "acceptanceCriteria": [
+        "astCache: Map<string, BooleanQueryNode> property added",
+        "normalizeQuery() method normalizes whitespace and operator case",
+        "Parsed AST cached with normalized query as key",
+        "Subsequent parses of equivalent queries use cached AST",
+        "AST cache has no size limit (queries are small)"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Caching",
+      "description": "Implement Result Cache with Entity Hash - Add resultCache Map, implement computeEntityHash() for fast invalidation detection (based on count + first/last entity names + timestamps), check entityHash before returning cached results",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/BooleanSearch.ts"],
+      "testCategories": [
+        "Result cache hit when entities unchanged",
+        "Result cache miss when entity hash changes",
+        "Entity hash computation is fast"
+      ],
+      "acceptanceCriteria": [
+        "resultCache: Map<string, BooleanCacheEntry> property added",
+        "computeEntityHash() returns string hash of entity state",
+        "Hash based on: entity count, first entity name, last entity lastModified",
+        "booleanSearch() checks result cache before evaluation",
+        "Cache returns results only if entityHash matches",
+        "Result cache invalidated when entity hash changes"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Caching",
+      "description": "Add Cache Invalidation Method - Implement invalidateResultCache() to clear result cache (AST cache never cleared), optionally integrate with SearchManager for automatic invalidation",
+      "status": "planned",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/memory/search/BooleanSearch.ts", "src/memory/search/SearchManager.ts"],
+      "testCategories": [
+        "invalidateResultCache() clears results only",
+        "AST cache preserved after invalidation"
+      ],
+      "acceptanceCriteria": [
+        "invalidateResultCache() method implemented",
+        "Method clears resultCache but preserves astCache",
+        "SearchManager can trigger invalidation after mutations"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Tests",
+      "description": "Add Boolean Cache Tests - Test AST caching, result caching, entity hash invalidation, normalized query matching, and performance improvements",
+      "status": "planned",
+      "estimatedHours": 0.75,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/unit/search/BooleanSearch.test.ts"],
+      "testCategories": [
+        "AST cached and reused",
+        "Normalized queries share AST",
+        "Result cache hit performance",
+        "Entity hash invalidation",
+        "Cache invalidation method"
+      ],
+      "acceptanceCriteria": [
+        "Test verifies AST cached after first parse",
+        "Test verifies 'AND' and 'and' normalized to same cache key",
+        "Test verifies repeated query <5ms",
+        "Test verifies cache miss after entity mutation",
+        "Test verifies entity hash detects changes",
+        "10+ new tests added"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Boolean query ASTs cached indefinitely after parsing",
+    "Normalized queries share same cached AST",
+    "Result cache provides 40-60% speedup for repeated queries",
+    "Entity hash-based invalidation detects graph changes",
+    "Repeated boolean queries return in <5ms",
+    "All existing boolean search tests pass"
+  ],
+  "filesModified": [
+    "src/memory/search/BooleanSearch.ts",
+    "src/memory/search/SearchManager.ts",
+    "src/memory/__tests__/unit/search/BooleanSearch.test.ts"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 4,
+  "dependencies": ["Sprint 3"],
+  "notes": "Boolean search has two optimization opportunities: AST parsing (done once per unique query syntax) and result evaluation (cached with entity hash for invalidation). The AST cache never expires because query syntax doesn't change. The result cache uses a fast entity hash to detect when cached results are stale without comparing full entity sets."
+}

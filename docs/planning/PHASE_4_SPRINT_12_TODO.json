@@ -1,0 +1,204 @@
+{
+  "phase": 4,
+  "sprint": 12,
+  "title": "Semantic Search: Manager & MCP Tools",
+  "priority": "LOW",
+  "effort": "9 hours",
+  "status": "planned",
+  "impact": "Complete semantic search capability; Natural language entity discovery",
+  "targetMetrics": {
+    "semanticSearchLatency": { "target": "<300ms (embedding + search)" },
+    "findSimilarLatency": { "target": "<350ms per entity" },
+    "indexAllThroughput": { "target": "~100 entities/second (OpenAI limited)" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Search",
+      "description": "Create SemanticSearch Manager - Implement SemanticSearch class with constructor accepting EmbeddingService, VectorStore, and IGraphStorage; Add entityToText() helper for combining entity fields",
+      "status": "planned",
+      "estimatedHours": 2,
+      "agent": "sonnet",
+      "files": ["src/memory/search/SemanticSearch.ts"],
+      "testCategories": [
+        "Manager initialization",
+        "entityToText combines all fields",
+        "Dependency injection"
+      ],
+      "acceptanceCriteria": [
+        "SemanticSearch class with constructor(embeddingService, vectorStore, storage)",
+        "entityToText(entity) combines name, type, observations, tags",
+        "Handles optional entity fields gracefully",
+        "Lazy initialization of components"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Search",
+      "description": "Implement indexAll Method - Batch embed all entities and store in vector store, support progress callback for large graphs",
+      "status": "planned",
+      "estimatedHours": 1.5,
+      "agent": "sonnet",
+      "files": ["src/memory/search/SemanticSearch.ts"],
+      "testCategories": [
+        "Index all entities",
+        "Batch processing",
+        "Progress reporting",
+        "Skip already indexed"
+      ],
+      "acceptanceCriteria": [
+        "indexAll(options?) method implemented",
+        "Loads all entities from storage",
+        "Batch embeds using embedBatch()",
+        "Stores vectors in vectorStore",
+        "Optional progress callback(current, total)",
+        "Optional forceReindex to skip cache check"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Search",
+      "description": "Implement search Method - Semantic search using query embedding and vector similarity, return entities with similarity scores",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/search/SemanticSearch.ts"],
+      "testCategories": [
+        "Search returns similar entities",
+        "Scores are reasonable",
+        "Limit parameter works"
+      ],
+      "acceptanceCriteria": [
+        "search(query, limit?) method implemented",
+        "Embeds query using embeddingService",
+        "Searches vectorStore for similar vectors",
+        "Returns SemanticSearchResult[] with entity and similarity",
+        "Default limit = 10"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Search",
+      "description": "Implement findSimilar Method - Find entities similar to a given entity by its embedding",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/search/SemanticSearch.ts"],
+      "testCategories": [
+        "Find similar to existing entity",
+        "Excludes self from results",
+        "Uses existing embedding if available"
+      ],
+      "acceptanceCriteria": [
+        "findSimilar(entityName, limit?) method implemented",
+        "Gets entity text and embeds it",
+        "Searches for similar entities",
+        "Excludes the source entity from results",
+        "Returns SemanticSearchResult[]"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Server",
+      "description": "Add semantic_search Tool - Create MCP tool for natural language entity search",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Tool searches by meaning",
+        "Returns similarity scores",
+        "Handles disabled semantic search"
+      ],
+      "acceptanceCriteria": [
+        "semantic_search tool defined",
+        "Parameters: query (required), limit (optional)",
+        "Returns entities with similarity scores",
+        "Returns error message if semantic search disabled",
+        "Handler calls SemanticSearch.search()"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Server",
+      "description": "Add find_similar_entities Tool - Create MCP tool to find entities similar to a given entity",
+      "status": "planned",
+      "estimatedHours": 0.75,
+      "agent": "sonnet",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Finds similar entities",
+        "Entity not found handling"
+      ],
+      "acceptanceCriteria": [
+        "find_similar_entities tool defined",
+        "Parameters: entityName (required), limit (optional)",
+        "Returns similar entities with scores",
+        "Handles entity not found error"
+      ]
+    },
+    {
+      "id": 7,
+      "category": "Server",
+      "description": "Add index_embeddings Tool - Create MCP tool to trigger embedding indexing on demand",
+      "status": "planned",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": ["src/memory/server/toolDefinitions.ts", "src/memory/server/toolHandlers.ts"],
+      "testCategories": [
+        "Triggers indexing",
+        "Reports progress/completion"
+      ],
+      "acceptanceCriteria": [
+        "index_embeddings tool defined",
+        "Parameters: forceReindex (optional)",
+        "Returns count of entities indexed",
+        "Reports estimated time for large graphs"
+      ]
+    },
+    {
+      "id": 8,
+      "category": "Tests",
+      "description": "Create Semantic Search Integration Tests - Test end-to-end semantic search with mocked embeddings",
+      "status": "planned",
+      "estimatedHours": 1,
+      "agent": "sonnet",
+      "files": ["src/memory/__tests__/integration/semantic-search.test.ts"],
+      "testCategories": [
+        "Full semantic search flow",
+        "find_similar_entities flow",
+        "Index and search",
+        "Tool responses"
+      ],
+      "acceptanceCriteria": [
+        "End-to-end tests with mocked embedding service",
+        "Test semantic_search tool",
+        "Test find_similar_entities tool",
+        "Test index_embeddings tool",
+        "12+ integration tests"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "SemanticSearch manager orchestrates embedding and search",
+    "search() finds entities by meaning",
+    "findSimilar() discovers related entities",
+    "3 new MCP tools for semantic search",
+    "Graceful degradation when semantic search disabled",
+    "Total MCP tools: 51 -> 54+"
+  ],
+  "filesCreated": [
+    "src/memory/search/SemanticSearch.ts",
+    "src/memory/__tests__/integration/semantic-search.test.ts"
+  ],
+  "filesModified": [
+    "src/memory/server/toolDefinitions.ts",
+    "src/memory/server/toolHandlers.ts",
+    "src/memory/search/SearchManager.ts",
+    "src/memory/search/index.ts"
+  ],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 9,
+  "dependencies": ["Sprint 10", "Sprint 11"],
+  "notes": "This sprint completes the Semantic Search phase. The SemanticSearch manager ties together the embedding service and vector store to provide natural language search. Users can now ask 'find entities related to authentication' instead of exact keyword matching. The tools expose this capability through MCP."
+}
