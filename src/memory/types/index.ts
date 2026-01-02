@@ -29,6 +29,8 @@ export type {
   ValidationWarning,
   // Import/Export types
   ExportFilter,
+  ExportOptions,
+  ExportResult,
   ImportResult,
   CompressionResult,
   // Backup types

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1598 tests)
+npm test              # Run tests with coverage (1609 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.52.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.53.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -138,11 +138,11 @@ interface Relation {
 | **Hierarchy** | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
 | **Analytics** | 2 | get_graph_stats, validate_graph |
 | **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
-| **Import/Export** | 2 | import_graph (3 formats), export_graph (7 formats) |
+| **Import/Export** | 2 | import_graph (3 formats), export_graph (7 formats + compression) |
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1598 tests, 45 files):
+Tests are in `src/memory/__tests__/` (1609 tests, 45 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -161,7 +161,7 @@ Tests are in `src/memory/__tests__/` (1598 tests, 45 files):
 | unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
 | integration/backup-compression.test.ts | 16 | Backup compression integration |
 | unit/features/CompressionManager.test.ts | 32 | Duplicate detection (via SearchManager) |
-| unit/features/ExportManager.test.ts | 84 | Export formats (via IOManager) |
+| unit/features/ExportManager.test.ts | 95 | Export formats + compression (via IOManager) |
 | unit/features/ImportManager.test.ts | 26 | Import formats (via IOManager) |
 | unit/features/TagManager.test.ts | 35 | Tag aliases |
 | unit/search/BasicSearch.test.ts | 37 | Basic search |

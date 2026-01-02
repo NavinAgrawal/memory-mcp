@@ -2,6 +2,7 @@
  * Export Operations Unit Tests
  *
  * Tests for JSON, CSV, GraphML, GEXF, DOT, Markdown, and Mermaid exports.
+ * Includes export compression tests (Phase 3 Sprint 3).
  * (Originally ExportManager, merged into IOManager in Sprint 11.4)
  */
 
@@ -12,6 +13,8 @@ import type { KnowledgeGraph } from '../../../types/index.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { decompressFromBase64 } from '../../../utils/compressionUtil.js';
+import { COMPRESSION_CONFIG } from '../../../utils/constants.js';
 
 describe('IOManager Export Operations', () => {
   let storage: GraphStorage;
@@ -667,6 +670,193 @@ describe('IOManager Export Operations', () => {
       // These formats should handle special characters without crashing
       const jsonResult = manager.exportGraph(graph, 'json');
       expect(JSON.parse(jsonResult).entities[0].name).toBe('Test.*+?^${}()|[]\\');
+    });
+  });
+
+  // ==================== Export Compression Tests (Phase 3 Sprint 3) ====================
+  describe('Export Compression', () => {
+    it('should export JSON with explicit compression', async () => {
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: true,
+      });
+
+      expect(result.compressed).toBe(true);
+      expect(result.encoding).toBe('base64');
+      expect(result.format).toBe('json');
+      expect(result.entityCount).toBe(2);
+      expect(result.relationCount).toBe(1);
+      expect(result.compressedSize).toBeLessThan(result.originalSize);
+    });
+
+    it('should export GraphML with compression', async () => {
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'graphml', {
+        compress: true,
+      });
+
+      expect(result.compressed).toBe(true);
+      expect(result.encoding).toBe('base64');
+      expect(result.format).toBe('graphml');
+    });
+
+    it('should export all 7 formats with compression', async () => {
+      const formats: ExportFormat[] = ['json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid'];
+
+      for (const format of formats) {
+        const result = await manager.exportGraphWithCompression(sampleGraph, format, {
+          compress: true,
+        });
+
+        expect(result.compressed).toBe(true);
+        expect(result.encoding).toBe('base64');
+        expect(result.format).toBe(format);
+        expect(result.content.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should auto-compress above threshold', async () => {
+      // Create a large graph that exceeds 100KB
+      const largeGraph: KnowledgeGraph = {
+        entities: Array.from({ length: 500 }, (_, i) => ({
+          name: `Entity${i}`,
+          entityType: 'test',
+          observations: Array.from({ length: 20 }, (_, j) => `Observation ${i}-${j} with some additional text to make it larger`),
+          tags: ['tag1', 'tag2', 'tag3'],
+          importance: 5,
+        })),
+        relations: Array.from({ length: 400 }, (_, i) => ({
+          from: `Entity${i}`,
+          to: `Entity${(i + 1) % 500}`,
+          relationType: 'relates_to',
+        })),
+      };
+
+      // Export without explicit compress option - should auto-compress
+      const result = await manager.exportGraphWithCompression(largeGraph, 'json');
+
+      // Should auto-compress because content > 100KB
+      expect(result.originalSize).toBeGreaterThan(COMPRESSION_CONFIG.AUTO_COMPRESS_EXPORT_SIZE);
+      expect(result.compressed).toBe(true);
+      expect(result.encoding).toBe('base64');
+    });
+
+    it('should not compress below threshold without explicit option', async () => {
+      // Small graph that is below 100KB
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'json');
+
+      // Should not compress because content < 100KB and compress not explicitly set
+      expect(result.originalSize).toBeLessThan(COMPRESSION_CONFIG.AUTO_COMPRESS_EXPORT_SIZE);
+      expect(result.compressed).toBe(false);
+      expect(result.encoding).toBe('utf-8');
+    });
+
+    it('should respect compressionQuality setting', async () => {
+      // Export with low quality (fast, larger output)
+      const lowQualityResult = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: true,
+        compressionQuality: 1,
+      });
+
+      // Export with high quality (slow, smaller output)
+      const highQualityResult = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: true,
+        compressionQuality: 11,
+      });
+
+      // Both should be compressed
+      expect(lowQualityResult.compressed).toBe(true);
+      expect(highQualityResult.compressed).toBe(true);
+
+      // High quality should achieve better (lower) or equal compression ratio
+      expect(highQualityResult.compressionRatio).toBeLessThanOrEqual(lowQualityResult.compressionRatio);
+    });
+
+    it('should return base64 encoded compressed content', async () => {
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: true,
+      });
+
+      expect(result.compressed).toBe(true);
+      expect(result.encoding).toBe('base64');
+
+      // Verify it's valid base64
+      const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+      expect(base64Regex.test(result.content)).toBe(true);
+    });
+
+    it('should decompress exported content correctly', async () => {
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: true,
+      });
+
+      expect(result.compressed).toBe(true);
+
+      // Decompress and verify content matches
+      const decompressed = await decompressFromBase64(result.content);
+      const parsed = JSON.parse(decompressed);
+
+      expect(parsed.entities).toHaveLength(2);
+      expect(parsed.relations).toHaveLength(1);
+      expect(parsed.entities[0].name).toBe('Alice');
+    });
+
+    it('should achieve reasonable compression on JSON format', async () => {
+      // Create a moderately sized graph for compression testing
+      const mediumGraph: KnowledgeGraph = {
+        entities: Array.from({ length: 100 }, (_, i) => ({
+          name: `Entity${i}`,
+          entityType: 'test',
+          observations: [`Observation for entity ${i}`, `Another observation ${i}`],
+          tags: ['common-tag'],
+        })),
+        relations: Array.from({ length: 50 }, (_, i) => ({
+          from: `Entity${i}`,
+          to: `Entity${(i + 1) % 100}`,
+          relationType: 'relates_to',
+        })),
+      };
+
+      const result = await manager.exportGraphWithCompression(mediumGraph, 'json', {
+        compress: true,
+      });
+
+      expect(result.compressed).toBe(true);
+      // JSON compresses well - expect at least 50% reduction
+      expect(result.compressionRatio).toBeLessThan(0.5);
+    });
+
+    it('should include compression metadata in result', async () => {
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: true,
+      });
+
+      expect(result).toHaveProperty('format', 'json');
+      expect(result).toHaveProperty('content');
+      expect(result).toHaveProperty('entityCount', 2);
+      expect(result).toHaveProperty('relationCount', 1);
+      expect(result).toHaveProperty('compressed', true);
+      expect(result).toHaveProperty('encoding', 'base64');
+      expect(result).toHaveProperty('originalSize');
+      expect(result).toHaveProperty('compressedSize');
+      expect(result).toHaveProperty('compressionRatio');
+
+      expect(typeof result.originalSize).toBe('number');
+      expect(typeof result.compressedSize).toBe('number');
+      expect(typeof result.compressionRatio).toBe('number');
+    });
+
+    it('should return uncompressed result with correct metadata when compress is false', async () => {
+      const result = await manager.exportGraphWithCompression(sampleGraph, 'json', {
+        compress: false,
+      });
+
+      expect(result.compressed).toBe(false);
+      expect(result.encoding).toBe('utf-8');
+      expect(result.compressionRatio).toBe(1);
+      expect(result.compressedSize).toBe(result.originalSize);
+
+      // Content should be valid JSON (not base64)
+      const parsed = JSON.parse(result.content);
+      expect(parsed.entities).toHaveLength(2);
     });
   });
 });

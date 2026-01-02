@@ -341,6 +341,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
   export_graph: async (ctx, args) => {
     const format = validateWithSchema(args.format, ExtendedExportFormatSchema, 'Invalid export format');
     const filter = args.filter !== undefined ? validateWithSchema(args.filter, ExportFilterSchema, 'Invalid export filter') : undefined;
+    const compress = args.compress !== undefined ? validateWithSchema(args.compress, z.boolean(), 'Invalid compress value') : undefined;
+    const compressionQuality = args.compressionQuality !== undefined
+      ? validateWithSchema(args.compressionQuality, z.number().int().min(0).max(11), 'Invalid compression quality (must be 0-11)')
+      : undefined;
 
     // Get filtered or full graph
     let graph;
@@ -355,7 +359,30 @@ export const toolHandlers: Record<string, ToolHandler> = {
       graph = await ctx.storage.loadGraph();
     }
 
-    return formatRawResponse(ctx.ioManager.exportGraph(graph, format));
+    // Export with optional compression
+    const result = await ctx.ioManager.exportGraphWithCompression(graph, format, {
+      filter,
+      compress,
+      compressionQuality,
+    });
+
+    // Return compressed result with metadata, or raw content for uncompressed
+    if (result.compressed) {
+      return formatToolResponse({
+        format: result.format,
+        entityCount: result.entityCount,
+        relationCount: result.relationCount,
+        compressed: true,
+        encoding: result.encoding,
+        originalSize: result.originalSize,
+        compressedSize: result.compressedSize,
+        compressionRatio: `${(result.compressionRatio * 100).toFixed(1)}%`,
+        data: result.content,
+      });
+    }
+
+    // Uncompressed: return raw content for backward compatibility
+    return formatRawResponse(result.content);
   },
 };
 
