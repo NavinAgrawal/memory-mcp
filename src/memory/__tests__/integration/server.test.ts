@@ -56,8 +56,9 @@ describe('MCPServer Integration', () => {
   });
 
   describe('Tool Registration', () => {
-    it('should have 47 tool definitions available', () => {
-      expect(toolDefinitions).toHaveLength(47);
+    it('should have 51 tool definitions available', () => {
+      // Phase 4 Sprint 9: Added 4 graph algorithm tools (find_shortest_path, find_all_paths, get_connected_components, get_centrality)
+      expect(toolDefinitions).toHaveLength(51);
     });
 
     it('should have matching handlers for all definitions', async () => {

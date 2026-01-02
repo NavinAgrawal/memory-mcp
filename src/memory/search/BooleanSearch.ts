@@ -13,13 +13,136 @@ import { ValidationError } from '../utils/errors.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
 
 /**
+ * Phase 4 Sprint 4: Cache entry for Boolean search AST and results.
+ */
+interface BooleanCacheEntry {
+  /** Parsed AST */
+  ast: BooleanQueryNode;
+  /** Cached entity names that matched */
+  entityNames: string[];
+  /** Entity count when cache was created (for invalidation) */
+  entityCount: number;
+  /** Timestamp when cached */
+  timestamp: number;
+}
+
+/**
+ * Phase 4 Sprint 4: Maximum AST cache size.
+ */
+const AST_CACHE_MAX_SIZE = 50;
+
+/**
+ * Phase 4 Sprint 4: Result cache max size.
+ */
+const RESULT_CACHE_MAX_SIZE = 100;
+
+/**
+ * Phase 4 Sprint 4: Cache TTL in milliseconds (5 minutes).
+ */
+const BOOLEAN_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/**
  * Performs boolean search with query parsing and AST evaluation.
  */
 export class BooleanSearch {
+  /**
+   * Phase 4 Sprint 4: AST cache to avoid re-parsing queries.
+   * Maps query string -> parsed AST.
+   */
+  private astCache: Map<string, BooleanQueryNode> = new Map();
+
+  /**
+   * Phase 4 Sprint 4: Result cache for boolean search.
+   * Maps cache key -> cached results.
+   */
+  private resultCache: Map<string, BooleanCacheEntry> = new Map();
+
   constructor(private storage: GraphStorage) {}
 
   /**
+   * Phase 4 Sprint 4: Generate cache key for boolean search.
+   */
+  private generateCacheKey(
+    query: string,
+    tags?: string[],
+    minImportance?: number,
+    maxImportance?: number,
+    offset?: number,
+    limit?: number
+  ): string {
+    return JSON.stringify({
+      q: query,
+      tags: tags?.sort().join(',') ?? '',
+      min: minImportance,
+      max: maxImportance,
+      off: offset,
+      lim: limit,
+    });
+  }
+
+  /**
+   * Phase 4 Sprint 4: Clear all caches.
+   */
+  clearCache(): void {
+    this.astCache.clear();
+    this.resultCache.clear();
+  }
+
+  /**
+   * Phase 4 Sprint 4: Cleanup old cache entries.
+   */
+  private cleanupResultCache(): void {
+    const now = Date.now();
+    const entries = Array.from(this.resultCache.entries());
+
+    // Remove expired entries
+    for (const [key, entry] of entries) {
+      if (now - entry.timestamp > BOOLEAN_CACHE_TTL_MS) {
+        this.resultCache.delete(key);
+      }
+    }
+
+    // If still over limit, remove oldest entries
+    if (this.resultCache.size > RESULT_CACHE_MAX_SIZE) {
+      const sortedEntries = entries
+        .filter(([k]) => this.resultCache.has(k))
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+      const toRemove = sortedEntries.slice(0, this.resultCache.size - RESULT_CACHE_MAX_SIZE);
+      for (const [key] of toRemove) {
+        this.resultCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Phase 4 Sprint 4: Get or parse AST for a query.
+   */
+  private getOrParseAST(query: string): BooleanQueryNode {
+    // Check AST cache
+    const cached = this.astCache.get(query);
+    if (cached) {
+      return cached;
+    }
+
+    // Parse and cache
+    const ast = this.parseBooleanQuery(query);
+
+    // Enforce cache size limit
+    if (this.astCache.size >= AST_CACHE_MAX_SIZE) {
+      // Remove first entry (oldest)
+      const firstKey = this.astCache.keys().next().value;
+      if (firstKey) this.astCache.delete(firstKey);
+    }
+
+    this.astCache.set(query, ast);
+    return ast;
+  }
+
+  /**
    * Boolean search with support for AND, OR, NOT operators, field-specific queries, and pagination.
+   *
+   * Phase 4 Sprint 4: Implements AST caching and result caching for repeated queries.
    *
    * Query syntax examples:
    * - "alice AND programming" - Both terms must match
@@ -53,10 +176,27 @@ export class BooleanSearch {
 
     const graph = await this.storage.loadGraph();
 
-    // Parse the query into an AST
+    // Phase 4 Sprint 4: Check result cache
+    const cacheKey = this.generateCacheKey(query, tags, minImportance, maxImportance, offset, limit);
+    const cached = this.resultCache.get(cacheKey);
+
+    if (cached && cached.entityCount === graph.entities.length) {
+      const now = Date.now();
+      if (now - cached.timestamp < BOOLEAN_CACHE_TTL_MS) {
+        // Return cached results
+        const cachedNameSet = new Set(cached.entityNames);
+        const cachedEntities = graph.entities.filter(e => cachedNameSet.has(e.name));
+        const cachedRelations = graph.relations.filter(
+          r => cachedNameSet.has(r.from) && cachedNameSet.has(r.to)
+        );
+        return { entities: cachedEntities as Entity[], relations: cachedRelations };
+      }
+    }
+
+    // Phase 4 Sprint 4: Use cached AST or parse new one
     let queryAst: BooleanQueryNode;
     try {
-      queryAst = this.parseBooleanQuery(query);
+      queryAst = this.getOrParseAST(query);
     } catch (error) {
       throw new Error(
         `Failed to parse boolean query: ${error instanceof Error ? error.message : String(error)}`
@@ -78,6 +218,19 @@ export class BooleanSearch {
     // Apply pagination using SearchFilterChain
     const pagination = SearchFilterChain.validatePagination(offset, limit);
     const paginatedEntities = SearchFilterChain.paginate(filteredEntities, pagination);
+
+    // Phase 4 Sprint 4: Cache the results
+    this.resultCache.set(cacheKey, {
+      ast: queryAst,
+      entityNames: paginatedEntities.map(e => e.name),
+      entityCount: graph.entities.length,
+      timestamp: Date.now(),
+    });
+
+    // Cleanup old cache entries periodically
+    if (this.resultCache.size > RESULT_CACHE_MAX_SIZE / 2) {
+      this.cleanupResultCache();
+    }
 
     const filteredEntityNames = new Set(paginatedEntities.map(e => e.name));
     const filteredRelations = graph.relations.filter(

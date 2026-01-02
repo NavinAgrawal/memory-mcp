@@ -131,6 +131,85 @@ export type ReadonlyKnowledgeGraph = {
 // ==================== Search Types ====================
 
 /**
+ * Phase 4 Sprint 3: Cache key for fuzzy search results.
+ *
+ * Used to uniquely identify a fuzzy search query for caching purposes.
+ */
+export interface FuzzyCacheKey {
+  /** The search query */
+  query: string;
+  /** Similarity threshold */
+  threshold: number;
+  /** Stringified tags filter (or empty if no tags) */
+  tagsKey: string;
+  /** Min importance filter */
+  minImportance?: number;
+  /** Max importance filter */
+  maxImportance?: number;
+}
+
+/**
+ * Phase 4 Sprint 4: Cache entry for Boolean search results.
+ *
+ * Stores both the parsed AST and query results for caching.
+ */
+export interface BooleanCacheEntry {
+  /** Stringified AST for the query */
+  astKey: string;
+  /** Hash of entity names in the graph (for invalidation) */
+  entityHash: string;
+  /** Cached search results */
+  entityNames: string[];
+  /** Timestamp when cached */
+  timestamp: number;
+}
+
+/**
+ * Phase 4 Sprint 5: Cache entry for paginated search results.
+ *
+ * Stores paginated results with their query parameters.
+ */
+export interface PaginatedCacheEntry {
+  /** The query key (search query + filters) */
+  queryKey: string;
+  /** Total count of matching entities (before pagination) */
+  totalCount: number;
+  /** Cached paginated entity names */
+  entityNames: string[];
+  /** Offset used for this cache entry */
+  offset: number;
+  /** Limit used for this cache entry */
+  limit: number;
+  /** Timestamp when cached */
+  timestamp: number;
+}
+
+/**
+ * Phase 4 Sprint 2: Represents a pre-tokenized entity for search optimization.
+ *
+ * Used by RankedSearch fallback token cache to avoid repeated tokenization.
+ *
+ * @example
+ * ```typescript
+ * const tokenized: TokenizedEntity = {
+ *   entity: { name: "Alice", entityType: "person", observations: ["Developer"] },
+ *   tokens: ["alice", "person", "developer"],
+ *   tokenSet: new Set(["alice", "person", "developer"])
+ * };
+ * ```
+ */
+export interface TokenizedEntity {
+  /** The original entity */
+  entity: Entity;
+  /** Array of tokens from the entity text */
+  tokens: string[];
+  /** Set of unique tokens for fast lookup */
+  tokenSet: Set<string>;
+  /** Combined text from entity fields (for TF calculation) */
+  text: string;
+}
+
+/**
  * Represents a search result with relevance scoring and match details.
  *
  * Used by ranked search to return entities sorted by relevance
@@ -1024,4 +1103,78 @@ export interface IGraphStorage {
    * @returns Number of pending appends since last compaction
    */
   getPendingAppends(): number;
+}
+
+// ==================== Graph Algorithm Types (Phase 4 Sprint 6-9) ====================
+
+/**
+ * Phase 4 Sprint 6: Options for graph traversal algorithms.
+ */
+export interface TraversalOptions {
+  /** Direction of traversal: 'outgoing' (default), 'incoming', or 'both' */
+  direction?: 'outgoing' | 'incoming' | 'both';
+  /** Maximum depth to traverse (default: Infinity) */
+  maxDepth?: number;
+  /** Optional filter for relation types to follow */
+  relationTypes?: string[];
+  /** Optional filter for entity types to include */
+  entityTypes?: string[];
+}
+
+/**
+ * Phase 4 Sprint 6: Result of a graph traversal operation.
+ */
+export interface TraversalResult {
+  /** Nodes visited in traversal order */
+  nodes: string[];
+  /** Depth at which each node was found */
+  depths: Map<string, number>;
+  /** Parent node for each visited node (for path reconstruction) */
+  parents: Map<string, string | null>;
+}
+
+/**
+ * Phase 4 Sprint 7: Result of a path finding operation.
+ */
+export interface PathResult {
+  /** Path from source to target as array of node names */
+  path: string[];
+  /** Total length of the path (number of hops or weighted distance) */
+  length: number;
+  /** Relations along the path */
+  relations: Relation[];
+}
+
+/**
+ * Phase 4 Sprint 8: Result of connected components analysis.
+ */
+export interface ConnectedComponentsResult {
+  /** Array of components, each containing array of entity names */
+  components: string[][];
+  /** Number of components found */
+  count: number;
+  /** Size of the largest component */
+  largestComponentSize: number;
+}
+
+/**
+ * Phase 4 Sprint 8: Result of centrality analysis.
+ */
+export interface CentralityResult {
+  /** Centrality scores for each entity */
+  scores: Map<string, number>;
+  /** Top N entities by centrality (name and score) */
+  topEntities: Array<{ name: string; score: number }>;
+  /** Centrality algorithm used */
+  algorithm: 'degree' | 'betweenness' | 'pagerank';
+}
+
+/**
+ * Phase 4 Sprint 9: Extended relation with optional weight and metadata.
+ */
+export interface WeightedRelation extends Relation {
+  /** Optional weight for the relation (default: 1.0) */
+  weight?: number;
+  /** Optional metadata for the relation */
+  metadata?: Record<string, unknown>;
 }

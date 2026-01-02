@@ -9,8 +9,9 @@ import { toolDefinitions, ToolDefinition } from '../../../server/toolDefinitions
 
 describe('toolDefinitions', () => {
   describe('Schema Structure', () => {
-    it('should have 47 tool definitions', () => {
-      expect(toolDefinitions).toHaveLength(47);
+    it('should have 51 tool definitions', () => {
+      // Phase 4 Sprint 9: Added 4 graph algorithm tools
+      expect(toolDefinitions).toHaveLength(51);
     });
 
     it('should have unique tool names', () => {
