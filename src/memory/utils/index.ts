@@ -36,7 +36,26 @@ export {
   IMPORTANCE_RANGE,
   GRAPH_LIMITS,
   QUERY_LIMITS,
+  COMPRESSION_CONFIG,
+  type CompressionQuality,
 } from './constants.js';
+
+// ==================== Compression Utilities ====================
+export {
+  compress,
+  decompress,
+  compressFile,
+  decompressFile,
+  compressToBase64,
+  decompressFromBase64,
+  hasBrotliExtension,
+  getCompressionRatio,
+  createMetadata,
+  createUncompressedMetadata,
+  type CompressionOptions,
+  type CompressionResult,
+  type CompressionMetadata,
+} from './compressionUtil.js';
 
 // ==================== Logger ====================
 export { logger } from './logger.js';

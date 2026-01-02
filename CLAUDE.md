@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1537 tests)
+npm test              # Run tests with coverage (1578 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -25,7 +25,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **47 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.50.24 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.51.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -51,7 +51,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 43 TypeScript files
+### Source Structure (src/memory/) - 44 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
@@ -60,7 +60,7 @@ This is an enhanced MCP memory server with **47 tools** (vs 11 in official versi
 | **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, index |
 | **server/** | 3 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
-| **utils/** | 10 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
+| **utils/** | 11 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
 | **root** | 2 | index.ts (entry point), vitest.config.ts |
 
 > **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files
@@ -142,7 +142,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1537 tests, 43 files):
+Tests are in `src/memory/__tests__/` (1578 tests, 44 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -177,6 +177,7 @@ Tests are in `src/memory/__tests__/` (1537 tests, 43 files):
 | unit/utils/responseFormatter.test.ts | 36 | Response formatting |
 | unit/utils/tagUtils.test.ts | 48 | Tag utilities |
 | unit/utils/validationHelper.test.ts | 26 | Zod validation |
+| unit/utils/compressionUtil.test.ts | 41 | Brotli compression utilities |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 
