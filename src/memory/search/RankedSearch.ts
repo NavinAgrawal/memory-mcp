@@ -213,7 +213,7 @@ export class RankedSearch {
     const tokenSets = documentData.map(d => d.tokenSet);
 
     for (const docData of documentData) {
-      const { entity, text, tokens } = docData;
+      const { entity, text } = docData;
 
       // Calculate score for each query term
       let totalScore = 0;

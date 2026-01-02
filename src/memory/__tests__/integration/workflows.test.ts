@@ -9,7 +9,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphStorage } from '../../core/GraphStorage.js';
 import { EntityManager } from '../../core/EntityManager.js';
 import { RelationManager } from '../../core/RelationManager.js';
-import { SearchManager } from '../../search/SearchManager.js';
 import { CompressionManager } from '../../features/CompressionManager.js';
 import { BasicSearch } from '../../search/BasicSearch.js';
 import { RankedSearch } from '../../search/RankedSearch.js';
@@ -23,7 +22,6 @@ describe('Integration: Complete Workflows', () => {
   let storage: GraphStorage;
   let entityManager: EntityManager;
   let relationManager: RelationManager;
-  let searchManager: SearchManager;
   let compressionManager: CompressionManager;
   let basicSearch: BasicSearch;
   let rankedSearch: RankedSearch;
@@ -31,19 +29,16 @@ describe('Integration: Complete Workflows', () => {
   let fuzzySearch: FuzzySearch;
   let testDir: string;
   let testFilePath: string;
-  let savedSearchesPath: string;
 
   beforeEach(async () => {
     // Create unique temp directory for each test
     testDir = join(tmpdir(), `integration-test-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testDir, { recursive: true });
     testFilePath = join(testDir, 'test-graph.jsonl');
-    savedSearchesPath = join(testDir, 'saved-searches.jsonl');
 
     storage = new GraphStorage(testFilePath);
     entityManager = new EntityManager(storage);
     relationManager = new RelationManager(storage);
-    searchManager = new SearchManager(storage, savedSearchesPath);
     compressionManager = new CompressionManager(storage);
     basicSearch = new BasicSearch(storage);
     rankedSearch = new RankedSearch(storage);
