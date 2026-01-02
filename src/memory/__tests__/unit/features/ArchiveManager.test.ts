@@ -541,4 +541,229 @@ describe('ArchiveManager', () => {
       expect(graph.entities).toHaveLength(1);
     });
   });
+
+  describe('archiveEntities - Compression (Phase 3 Sprint 5)', () => {
+    it('should create compressed archive file by default', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive1', entityType: 'test', observations: ['Observation 1', 'Observation 2'], lastModified: '2020-01-01T00:00:00Z' },
+          { name: 'ToArchive2', entityType: 'test', observations: ['Observation 3', 'Observation 4'], lastModified: '2020-06-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      expect(result.archived).toBe(2);
+      expect(result.archivePath).toBeDefined();
+      expect(result.archivePath).toMatch(/\.jsonl\.br$/);
+      expect(result.originalSize).toBeGreaterThan(0);
+      expect(result.compressedSize).toBeGreaterThan(0);
+      expect(result.compressionRatio).toBeDefined();
+    });
+
+    it('should achieve compression on typical entities', async () => {
+      // Create entities with substantial content for compression
+      await storage.saveGraph({
+        entities: Array.from({ length: 20 }, (_, i) => ({
+          name: `Entity${i}`,
+          entityType: 'test',
+          observations: [
+            `This is a longer observation text for Entity${i} that should compress well due to repetitive patterns.`,
+            `Another observation with similar structure and content that brotli can compress efficiently.`,
+            `Third observation to add more content and ensure we have enough data for meaningful compression.`,
+          ],
+          lastModified: '2020-01-01T00:00:00Z',
+          tags: ['test', 'archive', 'compression'],
+          importance: i % 10,
+        })),
+        relations: [],
+      });
+
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      expect(result.archived).toBe(20);
+      expect(result.compressionRatio).toBeDefined();
+      expect(result.compressionRatio!).toBeLessThan(1); // Compressed size < original
+      expect(result.compressionRatio!).toBeLessThan(0.8); // At least 20% compression
+    });
+
+    it('should not create archive file when saveToFile is false', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive', entityType: 'test', observations: [], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      const result = await archiveManager.archiveEntities(
+        { olderThan: '2023-01-01T00:00:00Z' },
+        { saveToFile: false }
+      );
+
+      expect(result.archived).toBe(1);
+      expect(result.archivePath).toBeUndefined();
+      expect(result.originalSize).toBeUndefined();
+      expect(result.compressedSize).toBeUndefined();
+    });
+
+    it('should handle options object correctly', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive', entityType: 'test', observations: ['Test observation'], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      // Test with new options object format
+      const result = await archiveManager.archiveEntities(
+        { olderThan: '2023-01-01T00:00:00Z' },
+        { dryRun: false, saveToFile: true }
+      );
+
+      expect(result.archived).toBe(1);
+      expect(result.archivePath).toBeDefined();
+    });
+
+    it('should support legacy boolean dryRun parameter', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive', entityType: 'test', observations: [], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      // Legacy boolean parameter should still work
+      const dryRunResult = await archiveManager.archiveEntities(
+        { olderThan: '2023-01-01T00:00:00Z' },
+        true // Legacy boolean for dryRun
+      );
+
+      expect(dryRunResult.archived).toBe(1);
+      expect(dryRunResult.archivePath).toBeUndefined(); // No file in dry run
+
+      // Verify graph unchanged
+      const graph = await storage.loadGraph();
+      expect(graph.entities).toHaveLength(1);
+    });
+
+    it('should create archive directory if it does not exist', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive', entityType: 'test', observations: ['Test'], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      // Archive directory should not exist initially
+      const archiveDir = archiveManager.getArchiveDir();
+
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      expect(result.archived).toBe(1);
+      expect(result.archivePath).toContain(archiveDir);
+
+      // Verify archive file exists
+      const stats = await fs.stat(result.archivePath!);
+      expect(stats.isFile()).toBe(true);
+    });
+
+    it('should create metadata file alongside archive', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive', entityType: 'test', observations: ['Test observation'], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      const result = await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      const metadataPath = `${result.archivePath}.meta.json`;
+      const metadataContent = await fs.readFile(metadataPath, 'utf-8');
+      const metadata = JSON.parse(metadataContent);
+
+      expect(metadata.entityCount).toBe(1);
+      expect(metadata.entityNames).toContain('ToArchive');
+      expect(metadata.compressed).toBe(true);
+      expect(metadata.compressionFormat).toBe('brotli');
+      expect(metadata.originalSize).toBeGreaterThan(0);
+      expect(metadata.compressedSize).toBeGreaterThan(0);
+    });
+  });
+
+  describe('listArchives', () => {
+    it('should return empty array when no archives exist', async () => {
+      const archives = await archiveManager.listArchives();
+      expect(archives).toEqual([]);
+    });
+
+    it('should list archives after archiving', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'ToArchive', entityType: 'test', observations: ['Test'], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      const archives = await archiveManager.listArchives();
+      expect(archives).toHaveLength(1);
+      expect(archives[0].compressed).toBe(true);
+      expect(archives[0].entityCount).toBe(1);
+    });
+
+    it('should list multiple archives sorted by timestamp', async () => {
+      // Create first archive
+      await storage.saveGraph({
+        entities: [
+          { name: 'First', entityType: 'test', observations: [], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      // Small delay to ensure different timestamps
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Create second archive
+      await storage.saveGraph({
+        entities: [
+          { name: 'Second', entityType: 'test', observations: [], lastModified: '2020-01-01T00:00:00Z' },
+        ],
+        relations: [],
+      });
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      const archives = await archiveManager.listArchives();
+      expect(archives).toHaveLength(2);
+
+      // Should be sorted newest first
+      const timestamps = archives.map(a => new Date(a.timestamp).getTime());
+      expect(timestamps[0]).toBeGreaterThan(timestamps[1]);
+    });
+
+    it('should include compression statistics in archive list', async () => {
+      await storage.saveGraph({
+        entities: Array.from({ length: 10 }, (_, i) => ({
+          name: `Entity${i}`,
+          entityType: 'test',
+          observations: ['Some observation text that can be compressed efficiently.'],
+          lastModified: '2020-01-01T00:00:00Z',
+        })),
+        relations: [],
+      });
+
+      await archiveManager.archiveEntities({ olderThan: '2023-01-01T00:00:00Z' });
+
+      const archives = await archiveManager.listArchives();
+      expect(archives).toHaveLength(1);
+
+      const archive = archives[0];
+      expect(archive.originalSize).toBeGreaterThan(0);
+      expect(archive.compressedSize).toBeGreaterThan(0);
+      expect(archive.compressionRatio).toBeDefined();
+      expect(archive.compressionRatio).toBeLessThan(1);
+    });
+  });
 });

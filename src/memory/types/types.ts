@@ -328,7 +328,8 @@ export interface TFIDFIndex {
  *   relationTypesCounts: { works_on: 100, manages: 20, related_to: 200 },
  *   oldestEntity: { name: "Alice", date: "2024-01-01T00:00:00Z" },
  *   newestEntity: { name: "Bob", date: "2024-12-31T23:59:59Z" },
- *   entityDateRange: { earliest: "2024-01-01T00:00:00Z", latest: "2024-12-31T23:59:59Z" }
+ *   entityDateRange: { earliest: "2024-01-01T00:00:00Z", latest: "2024-12-31T23:59:59Z" },
+ *   cacheStats: { totalEntries: 150, compressedEntries: 50, uncompressedEntries: 100, estimatedMemorySaved: 250000 }
  * };
  * ```
  */
@@ -362,6 +363,9 @@ export interface GraphStats {
 
   /** Date range of all relations */
   relationDateRange?: { earliest: string; latest: string };
+
+  /** Cache compression statistics (optional, only when CompressedCache is used) */
+  cacheStats?: CacheCompressionStats;
 }
 
 /**
@@ -737,6 +741,56 @@ export interface ExportResult {
   compressedSize: number;
   /** Compression ratio (compressedSize / originalSize). Lower is better. */
   compressionRatio: number;
+}
+
+// ==================== Archive Types ====================
+
+/**
+ * Extended archive result with compression information.
+ *
+ * Used when archiving entities to compressed storage.
+ *
+ * @example
+ * ```typescript
+ * const result: ArchiveResultExtended = {
+ *   archived: 50,
+ *   entityNames: ['Entity1', 'Entity2', ...],
+ *   archivePath: '/path/to/.archives/archive_2024-01-01.jsonl.br',
+ *   originalSize: 125000,
+ *   compressedSize: 37500,
+ *   compressionRatio: 0.3
+ * };
+ * ```
+ */
+export interface ArchiveResultExtended {
+  /** Number of entities archived */
+  archived: number;
+  /** Names of archived entities */
+  entityNames: string[];
+  /** Path to the archive file (if created) */
+  archivePath?: string;
+  /** Original size of archive data in bytes */
+  originalSize?: number;
+  /** Compressed size in bytes */
+  compressedSize?: number;
+  /** Compression ratio (compressedSize / originalSize). Lower is better. */
+  compressionRatio?: number;
+}
+
+/**
+ * Cache compression statistics.
+ *
+ * Provides information about the compressed cache state for memory optimization.
+ */
+export interface CacheCompressionStats {
+  /** Total number of entries in the cache */
+  totalEntries: number;
+  /** Number of compressed entries */
+  compressedEntries: number;
+  /** Number of uncompressed (hot) entries */
+  uncompressedEntries: number;
+  /** Estimated memory saved by compression in bytes */
+  estimatedMemorySaved: number;
 }
 
 // ==================== Tag Types ====================

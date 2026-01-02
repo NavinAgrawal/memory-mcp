@@ -57,6 +57,13 @@ export {
   type CompressionMetadata,
 } from './compressionUtil.js';
 
+// ==================== Compressed Cache ====================
+export {
+  CompressedCache,
+  type CompressedCacheOptions,
+  type CompressedCacheStats,
+} from './compressedCache.js';
+
 // ==================== Logger ====================
 export { logger } from './logger.js';
 

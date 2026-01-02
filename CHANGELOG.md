@@ -5,6 +5,58 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.55.0] - 2026-01-02
+
+### Added
+
+- **Phase 3 Sprint 5: Archive & Cache Compression**
+  - Compressed archive storage for archived entities
+    - Archived entities are saved to `.archives/` directory with brotli compression
+    - Uses maximum compression quality (11) for optimal long-term storage
+    - Archive files have `.jsonl.br` extension with metadata sidecar files
+    - Returns compression statistics (originalSize, compressedSize, compressionRatio)
+  - `CompressedCache` utility class for memory-efficient caching
+    - LRU cache with automatic compression of old entries
+    - Configurable `maxUncompressed` limit for hot entries
+    - Sync compression/decompression using brotli (quality 5)
+    - Reduces memory footprint for large knowledge graphs (50k+ entities)
+  - New `ArchiveOptions` interface for archive operations
+    - `dryRun` - Preview mode without changes
+    - `saveToFile` - Control archive file creation
+  - `listArchives()` method to list available archives with compression details
+  - Cache compression statistics in `GraphStats`
+    - New `cacheStats` field with `CacheCompressionStats` type
+    - Tracks totalEntries, compressedEntries, uncompressedEntries, estimatedMemorySaved
+  - 42 new tests for CompressedCache utility
+    - Basic operations, automatic compression, manual compression
+    - Statistics tracking, decompressAll, getAllEntities
+    - Edge cases and compression threshold tests
+  - 15 new tests for archive compression in ArchiveManager
+    - Compressed file creation, metadata generation
+    - Legacy boolean parameter compatibility
+    - Archive listing with compression statistics
+  - 9 new compression performance benchmarks
+    - 5K entity compression/decompression timing
+    - Quality level comparison
+    - Memory savings measurement
+    - Archive operation performance
+
+### Changed
+
+- **ArchiveManager**
+  - Now creates compressed archive files by default
+  - `archiveEntities()` accepts `ArchiveOptions` object (backward compatible with boolean)
+  - Archives include metadata JSON files with compression statistics
+- **types.ts**
+  - Added `ArchiveResultExtended` and `CacheCompressionStats` types
+  - Extended `GraphStats` with optional `cacheStats` field
+- **utils/index.ts**
+  - Exports `CompressedCache`, `CompressedCacheOptions`, `CompressedCacheStats`
+- **features/index.ts**
+  - Exports `ArchiveOptions` type
+- **Test Count** - 1681 tests (up from 1634)
+- **Source Structure** - utils/ now 11 files (added compressedCache.ts)
+
 ## [8.54.0] - 2026-01-02
 
 ### Added
