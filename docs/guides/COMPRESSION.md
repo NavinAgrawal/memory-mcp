@@ -1,28 +1,210 @@
 # Memory Compression Guide
-## Intelligent Duplicate Detection and Entity Merging
+## Brotli Compression, Response Compression, and Entity Deduplication
 
-**Version:** 0.8.0
-**Last Updated:** 2025-11-23
+**Version:** 1.0.0
+**Last Updated:** 2026-01-02
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Core Concepts](#core-concepts)
-3. [Understanding Similarity Scoring](#understanding-similarity-scoring)
-4. [Getting Started](#getting-started)
-5. [Tool Reference](#tool-reference)
-6. [Common Use Cases](#common-use-cases)
-7. [Best Practices](#best-practices)
-8. [Advanced Patterns](#advanced-patterns)
-9. [Troubleshooting](#troubleshooting)
+1. [Brotli Compression Overview](#brotli-compression-overview)
+2. [Response Compression](#response-compression)
+3. [Backup & Export Compression](#backup--export-compression)
+4. [Entity Deduplication Overview](#entity-deduplication-overview)
+5. [Core Concepts](#core-concepts)
+6. [Understanding Similarity Scoring](#understanding-similarity-scoring)
+7. [Getting Started](#getting-started)
+8. [Tool Reference](#tool-reference)
+9. [Common Use Cases](#common-use-cases)
+10. [Best Practices](#best-practices)
+11. [Advanced Patterns](#advanced-patterns)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Overview
+## Brotli Compression Overview
 
-Memory compression helps you maintain a clean, efficient knowledge graph by identifying and merging duplicate or highly similar entities. Over time, knowledge graphs can accumulate redundant entries that waste storage and complicate queries.
+Memory-MCP uses **Brotli compression** for efficient data storage and transfer. Brotli is a modern compression algorithm (built into Node.js) that offers 15-20% better compression than gzip, with 60-75% compression typical for JSON data.
+
+### Where Compression is Used
+
+| Feature | Compression | Quality Level | Threshold |
+|---------|-------------|---------------|-----------|
+| **Backups** | Always (default) | Maximum (11) | Always compressed |
+| **Exports** | Optional/Auto | Batch (6) | >100KB auto-compress |
+| **MCP Responses** | Auto | Batch (6) | >256KB auto-compress |
+| **Archives** | Always | Maximum (11) | Always compressed |
+
+### Benefits
+
+- **50-70% backup space reduction** - Maximum compression for archival
+- **60-75% export compression** - Smaller files for transport
+- **Reduced bandwidth** - Large MCP responses compressed automatically
+- **No external dependencies** - Uses Node.js built-in `zlib` module
+
+---
+
+## Response Compression
+
+Large MCP tool responses are automatically compressed using Brotli when they exceed 256KB. This reduces bandwidth for operations like `read_graph`, `search_nodes`, `get_subtree`, and `open_nodes`.
+
+### Compressed Response Format
+
+When a response is compressed, it returns the following structure:
+
+```json
+{
+  "compressed": true,
+  "compressionFormat": "brotli",
+  "encoding": "base64",
+  "originalSize": 524288,
+  "compressedSize": 157286,
+  "data": "G3gBILSh7WDAqy...base64-encoded-compressed-data..."
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `compressed` | boolean | Whether the data is compressed |
+| `compressionFormat` | string | `"brotli"` or `"none"` |
+| `encoding` | string | `"base64"` (compressed) or `"utf-8"` (uncompressed) |
+| `originalSize` | number | Original size in bytes (only if compressed) |
+| `compressedSize` | number | Compressed size in bytes (only if compressed) |
+| `data` | string | The response data (base64-encoded if compressed) |
+
+### Client Decompression
+
+To decompress a response on the client side:
+
+```typescript
+import { brotliDecompress } from 'zlib';
+import { promisify } from 'util';
+
+const decompress = promisify(brotliDecompress);
+
+async function handleResponse(response: unknown) {
+  // Check if response is compressed
+  if (typeof response === 'object' && response !== null) {
+    const resp = response as Record<string, unknown>;
+    if (resp.compressed === true && resp.encoding === 'base64') {
+      const buffer = Buffer.from(resp.data as string, 'base64');
+      const decompressed = await decompress(buffer);
+      return decompressed.toString('utf-8');
+    }
+  }
+  // Return as-is if not compressed
+  return JSON.stringify(response);
+}
+
+// Usage
+const result = await handleResponse(mcpResponse);
+const data = JSON.parse(result);
+```
+
+### Python Client Example
+
+```python
+import brotli
+import base64
+import json
+
+def handle_response(response):
+    if isinstance(response, dict) and response.get('compressed'):
+        compressed_data = base64.b64decode(response['data'])
+        decompressed = brotli.decompress(compressed_data)
+        return decompressed.decode('utf-8')
+    return json.dumps(response)
+
+# Usage
+result = handle_response(mcp_response)
+data = json.loads(result)
+```
+
+### Tools with Automatic Compression
+
+These tools may return compressed responses for large payloads:
+
+- `read_graph` - Returns full knowledge graph
+- `search_nodes` - May return many search results
+- `get_subtree` - Large hierarchical subtrees
+- `open_nodes` - Multiple entity details
+
+### Configuration
+
+The compression threshold can be controlled via constants (default 256KB):
+
+```typescript
+// In constants.ts
+COMPRESSION_CONFIG.AUTO_COMPRESS_RESPONSE_SIZE = 256 * 1024; // 256KB
+```
+
+---
+
+## Backup & Export Compression
+
+### Backup Compression
+
+Backups are compressed by default with maximum quality (level 11):
+
+```typescript
+// Create compressed backup (default)
+const result = await createBackup();
+// result.path = 'backup_2026-01-02T10-00-00.jsonl.br'
+// result.compressionRatio = 0.28 (72% reduction)
+
+// Create uncompressed backup
+const result = await createBackup({ compress: false });
+// result.path = 'backup_2026-01-02T10-00-00.jsonl'
+```
+
+### Export Compression
+
+Exports can be compressed explicitly or auto-compress above 100KB:
+
+```typescript
+// Explicit compression
+export_graph({
+  format: 'json',
+  compress: true,
+  compressionQuality: 6  // 0-11, default 6
+})
+
+// Returns:
+{
+  "format": "json",
+  "entityCount": 5000,
+  "relationCount": 2000,
+  "compressed": true,
+  "encoding": "base64",
+  "originalSize": 1250000,
+  "compressedSize": 375000,
+  "compressionRatio": "30.0%",
+  "data": "G3gBILSh...base64-data..."
+}
+
+// Auto-compression (>100KB)
+export_graph({ format: 'json' })
+// Large exports auto-compress; small exports remain uncompressed
+```
+
+### Quality Levels
+
+| Level | Use Case | Speed | Compression |
+|-------|----------|-------|-------------|
+| 0-3 | Real-time streaming | Very Fast | Low |
+| 4 | Entity writes | Fast | Moderate |
+| 5-6 | Exports, responses | Balanced | Good |
+| 7-9 | Batch processing | Slow | Better |
+| 10-11 | Backups, archives | Very Slow | Maximum |
+
+---
+
+## Entity Deduplication Overview
+
+Memory compression also helps you maintain a clean, efficient knowledge graph by identifying and merging duplicate or highly similar entities. Over time, knowledge graphs can accumulate redundant entries that waste storage and complicate queries.
 
 ### Key Features
 

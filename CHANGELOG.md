@@ -5,6 +5,42 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.54.0] - 2026-01-02
+
+### Added
+
+- **Phase 3 Sprint 4: MCP Response Compression**
+  - Automatic response compression for large MCP tool responses
+    - Responses exceeding 256KB are automatically compressed with brotli
+    - Base64-encoded for safe JSON transport
+    - Returns `CompressedResponse` structure with metadata
+  - New `responseCompressor.ts` module in server/
+    - `maybeCompressResponse()` - Conditional compression based on size threshold
+    - `decompressResponse()` - Decompress compressed responses
+    - `isCompressedResponse()` - Type guard for compressed response detection
+    - `estimateCompressionRatio()` - Heuristic estimation for compression potential
+  - Response compression wrapper in toolHandlers.ts
+    - `withCompression()` wrapper for large-response handlers
+    - Applied to: `read_graph`, `search_nodes`, `get_subtree`, `open_nodes`
+  - 25 new response compression tests
+    - Tests for threshold behavior, force compression, UTF-8 handling
+    - Roundtrip tests for compress/decompress
+    - Integration scenarios for typical MCP responses
+    - `isCompressedResponse` type guard validation
+  - Updated COMPRESSION.md documentation
+    - Added Brotli Compression Overview section
+    - Added Response Compression section with client decompression examples
+    - Added Backup & Export Compression reference
+    - Includes TypeScript and Python client examples
+
+### Changed
+
+- **toolHandlers.ts**
+  - Large-response tools now wrapped with automatic compression
+  - Compression applied transparently to responses >256KB
+- **Test Count** - 1634 tests (up from 1609)
+- **Source Structure** - server/ now 4 files (added responseCompressor.ts)
+
 ## [8.53.0] - 2026-01-02
 
 ### Added

@@ -5,6 +5,7 @@
  * Handlers call managers directly via ManagerContext.
  * Phase 4: Updated to use specialized managers for single responsibility.
  * Phase 6: Updated to use Zod validation instead of type assertions.
+ * Phase 3 Sprint 4: Added response compression for large payloads.
  *
  * @module server/toolHandlers
  */
@@ -31,6 +32,7 @@ import {
 } from '../utils/index.js';
 import type { ManagerContext } from '../core/ManagerContext.js';
 import { z } from 'zod';
+import { maybeCompressResponse } from './responseCompressor.js';
 
 /**
  * Tool response type for MCP SDK compatibility.
@@ -46,8 +48,50 @@ export type ToolHandler = (
 ) => Promise<ToolResponse>;
 
 /**
+ * Wrapper to apply automatic response compression for large tool responses.
+ *
+ * Responses exceeding 256KB are automatically compressed with brotli
+ * and base64-encoded for transport. The compressed response includes
+ * metadata about the compression (original size, compressed size, ratio).
+ *
+ * @param handler - The original handler function
+ * @returns A wrapped handler that may compress the response
+ */
+async function withCompression(
+  handler: () => Promise<ToolResponse>
+): Promise<ToolResponse> {
+  const result = await handler();
+
+  // Only compress text responses
+  const textContent = result.content[0];
+  if (textContent?.type !== 'text') {
+    return result;
+  }
+
+  const compressed = await maybeCompressResponse(textContent.text);
+
+  // If compression was applied, wrap the response
+  if (compressed.compressed) {
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(compressed),
+        },
+      ],
+    };
+  }
+
+  // Return original if no compression needed
+  return result;
+}
+
+/**
  * Registry of all tool handlers keyed by tool name.
  * Handlers call managers directly for reduced abstraction layers.
+ *
+ * Note: Large-response tools (read_graph, search_nodes, get_subtree, open_nodes)
+ * are wrapped with automatic response compression for payloads >256KB.
  */
 export const toolHandlers: Record<string, ToolHandler> = {
   // ==================== ENTITY HANDLERS ====================
@@ -62,13 +106,16 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatTextResponse(`Deleted ${entityNames.length} entities`);
   },
 
-  read_graph: async (ctx) => formatToolResponse(await ctx.storage.loadGraph()),
+  read_graph: async (ctx) =>
+    withCompression(async () => formatToolResponse(await ctx.storage.loadGraph())),
 
   open_nodes: async (ctx, args) => {
     const names = args.names !== undefined
       ? validateWithSchema(args.names, z.array(z.string()), 'Invalid entity names')
       : [];
-    return formatToolResponse(await ctx.searchManager.openNodes(names));
+    return withCompression(async () =>
+      formatToolResponse(await ctx.searchManager.openNodes(names))
+    );
   },
 
   // ==================== RELATION HANDLERS ====================
@@ -101,7 +148,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const tags = args.tags !== undefined ? validateWithSchema(args.tags, z.array(z.string()), 'Invalid tags') : undefined;
     const minImportance = args.minImportance !== undefined ? validateWithSchema(args.minImportance, z.number().min(0).max(10), 'Invalid minImportance') : undefined;
     const maxImportance = args.maxImportance !== undefined ? validateWithSchema(args.maxImportance, z.number().min(0).max(10), 'Invalid maxImportance') : undefined;
-    return formatToolResponse(await ctx.searchManager.searchNodes(query, tags, minImportance, maxImportance));
+    return withCompression(async () =>
+      formatToolResponse(await ctx.searchManager.searchNodes(query, tags, minImportance, maxImportance))
+    );
   },
 
   search_by_date_range: async (ctx, args) => {
@@ -273,7 +322,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
 
   get_subtree: async (ctx, args) => {
     const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entity name');
-    return formatToolResponse(await ctx.hierarchyManager.getSubtree(entityName));
+    return withCompression(async () =>
+      formatToolResponse(await ctx.hierarchyManager.getSubtree(entityName))
+    );
   },
 
   get_root_entities: async (ctx) => formatToolResponse(await ctx.hierarchyManager.getRootEntities()),
