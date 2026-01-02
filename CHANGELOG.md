@@ -5,6 +5,40 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.53.0] - 2026-01-02
+
+### Added
+
+- **Phase 3 Sprint 3: Export Compression**
+  - Compressed exports with brotli for all 7 export formats
+    - `export_graph` tool now accepts `compress` and `compressionQuality` options
+    - Returns `ExportResult` with compression metadata when compressed
+    - Compressed content is base64-encoded for transport
+  - Auto-compression for large exports (>100KB threshold)
+    - Exports exceeding 100KB are automatically compressed
+    - Explicit `compress: false` disables auto-compression
+  - `exportGraphWithCompression()` method in IOManager
+    - Supports JSON, CSV, GraphML, GEXF, DOT, Markdown, and Mermaid formats
+    - Configurable quality level 0-11 (default: 6)
+    - Returns detailed compression statistics
+  - New export types in `types.ts`
+    - `ExportOptions` - Options for export operations with compression
+    - `ExportResult` - Result with content, counts, and compression metadata
+  - 11 new export compression tests
+    - Tests for explicit compression, auto-compression, decompression
+    - Validates base64 encoding, compression ratios, metadata
+    - Achieves 50%+ compression on typical JSON exports
+
+### Changed
+
+- **toolDefinitions.ts**
+  - `export_graph` tool schema updated with `compress` and `compressionQuality` properties
+- **toolHandlers.ts**
+  - `export_graph` handler uses `exportGraphWithCompression()` for all exports
+  - Returns JSON response with metadata for compressed exports
+  - Maintains backward compatibility for uncompressed exports
+- **Test Count** - 1609 tests (up from 1598)
+
 ## [8.52.0] - 2026-01-02
 
 ### Added

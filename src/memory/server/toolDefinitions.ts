@@ -716,7 +716,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: 'export_graph',
-    description: 'Export knowledge graph in various formats',
+    description: 'Export knowledge graph in various formats with optional brotli compression',
     inputSchema: {
       type: 'object',
       properties: {
@@ -734,6 +734,18 @@ export const toolDefinitions: ToolDefinition[] = [
             tags: { type: 'array', items: { type: 'string' } },
           },
           description: 'Optional filter',
+        },
+        compress: {
+          type: 'boolean',
+          description: 'Compress output with brotli (auto-enabled for >100KB)',
+          default: false,
+        },
+        compressionQuality: {
+          type: 'number',
+          description: 'Brotli quality level 0-11 (default: 6). Higher = better compression but slower.',
+          minimum: 0,
+          maximum: 11,
+          default: 6,
         },
       },
       required: ['format'],

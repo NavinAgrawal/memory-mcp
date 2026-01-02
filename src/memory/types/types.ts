@@ -674,6 +674,71 @@ export interface BackupInfoExtended {
   metadata: BackupMetadataExtended;
 }
 
+// ==================== Export Types ====================
+
+/**
+ * Options for export operations with optional compression.
+ *
+ * @example
+ * ```typescript
+ * const options: ExportOptions = {
+ *   filter: { entityType: 'person' },
+ *   compress: true,
+ *   compressionQuality: 11
+ * };
+ * ```
+ */
+export interface ExportOptions {
+  /** Optional filter criteria for the export */
+  filter?: ExportFilter;
+  /** Whether to compress the export with brotli (default: false, auto-enabled for >100KB) */
+  compress?: boolean;
+  /** Brotli quality level 0-11 (default: 6). Higher = better compression but slower. */
+  compressionQuality?: number;
+}
+
+/**
+ * Result of an export operation with compression metadata.
+ *
+ * Provides the exported content along with compression statistics
+ * when compression is applied.
+ *
+ * @example
+ * ```typescript
+ * const result: ExportResult = {
+ *   format: 'json',
+ *   content: 'base64-encoded-data...',
+ *   entityCount: 150,
+ *   relationCount: 320,
+ *   compressed: true,
+ *   encoding: 'base64',
+ *   originalSize: 125000,
+ *   compressedSize: 37500,
+ *   compressionRatio: 0.3
+ * };
+ * ```
+ */
+export interface ExportResult {
+  /** The export format used */
+  format: string;
+  /** The exported content (string if uncompressed, base64 if compressed) */
+  content: string;
+  /** Number of entities in the export */
+  entityCount: number;
+  /** Number of relations in the export */
+  relationCount: number;
+  /** Whether the content is compressed */
+  compressed: boolean;
+  /** Content encoding: 'utf-8' for plain text, 'base64' for compressed */
+  encoding: 'utf-8' | 'base64';
+  /** Original size in bytes before compression */
+  originalSize: number;
+  /** Size after compression in bytes (same as original if not compressed) */
+  compressedSize: number;
+  /** Compression ratio (compressedSize / originalSize). Lower is better. */
+  compressionRatio: number;
+}
+
 // ==================== Tag Types ====================
 
 /**

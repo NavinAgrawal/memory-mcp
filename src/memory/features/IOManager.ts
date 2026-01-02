@@ -18,6 +18,8 @@ import type {
   BackupOptions,
   BackupResult,
   RestoreResult,
+  ExportOptions,
+  ExportResult,
 } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { FileOperationError } from '../utils/errors.js';
@@ -140,6 +142,85 @@ export class IOManager {
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
+  }
+
+  /**
+   * Export graph with optional brotli compression.
+   *
+   * Compression is applied when:
+   * - `options.compress` is explicitly set to `true`
+   * - The exported content exceeds 100KB (auto-compress threshold)
+   *
+   * Compressed content is returned as base64-encoded string.
+   * Uncompressed content is returned as UTF-8 string.
+   *
+   * @param graph - Knowledge graph to export
+   * @param format - Export format
+   * @param options - Export options including compression settings
+   * @returns Export result with content and compression metadata
+   *
+   * @example
+   * ```typescript
+   * // Export with explicit compression
+   * const result = await manager.exportGraphWithCompression(graph, 'json', {
+   *   compress: true,
+   *   compressionQuality: 11
+   * });
+   *
+   * // Export with auto-compression for large graphs
+   * const result = await manager.exportGraphWithCompression(graph, 'json');
+   * // Compresses automatically if content > 100KB
+   * ```
+   */
+  async exportGraphWithCompression(
+    graph: ReadonlyKnowledgeGraph,
+    format: ExportFormat,
+    options?: ExportOptions
+  ): Promise<ExportResult> {
+    // Generate export content using existing method
+    const content = this.exportGraph(graph, format);
+    const originalSize = Buffer.byteLength(content, 'utf-8');
+
+    // Determine if compression should be applied
+    const shouldCompress =
+      options?.compress === true ||
+      (options?.compress !== false &&
+        originalSize > COMPRESSION_CONFIG.AUTO_COMPRESS_EXPORT_SIZE);
+
+    if (shouldCompress) {
+      const quality =
+        options?.compressionQuality ?? COMPRESSION_CONFIG.BROTLI_QUALITY_BATCH;
+
+      const compressionResult = await compress(content, {
+        quality,
+        mode: 'text',
+      });
+
+      return {
+        format,
+        content: compressionResult.compressed.toString('base64'),
+        entityCount: graph.entities.length,
+        relationCount: graph.relations.length,
+        compressed: true,
+        encoding: 'base64',
+        originalSize,
+        compressedSize: compressionResult.compressedSize,
+        compressionRatio: compressionResult.ratio,
+      };
+    }
+
+    // Return uncompressed content
+    return {
+      format,
+      content,
+      entityCount: graph.entities.length,
+      relationCount: graph.relations.length,
+      compressed: false,
+      encoding: 'utf-8',
+      originalSize,
+      compressedSize: originalSize,
+      compressionRatio: 1,
+    };
   }
 
   private exportAsJson(graph: ReadonlyKnowledgeGraph): string {
