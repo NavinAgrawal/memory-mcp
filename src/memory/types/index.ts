@@ -31,6 +31,12 @@ export type {
   ExportFilter,
   ImportResult,
   CompressionResult,
+  // Backup types
+  BackupOptions,
+  BackupResult,
+  RestoreResult,
+  BackupMetadataExtended,
+  BackupInfoExtended,
   // Tag types
   TagAlias,
   // Storage types

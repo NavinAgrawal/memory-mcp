@@ -5,6 +5,45 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.52.0] - 2026-01-02
+
+### Added
+
+- **Phase 3 Sprint 2: Backup Compression**
+  - Compressed backup creation with brotli (enabled by default)
+    - `createBackup()` now accepts `BackupOptions` with `compress` flag
+    - Returns `BackupResult` with compression statistics (originalSize, compressedSize, compressionRatio)
+    - Uses maximum quality (11) for optimal compression on backups
+    - 50-70% size reduction on typical knowledge graphs
+  - Automatic compressed backup restoration
+    - `restoreFromBackup()` auto-detects .br extension and decompresses
+    - Returns `RestoreResult` with restoration details
+    - Full backward compatibility with uncompressed backups
+  - Enhanced `listBackups()` with compression info
+    - Shows compression status, file size, and compression ratio
+    - Detects both .jsonl and .jsonl.br backup files
+  - New backup types in `types.ts`
+    - `BackupOptions` - Options for backup creation
+    - `BackupResult` - Result with compression statistics
+    - `RestoreResult` - Restoration details
+    - `BackupMetadataExtended` - Metadata with compression info
+    - `BackupInfoExtended` - Backup listing with compression details
+  - 20 new tests (16 integration tests + 4 unit test additions)
+    - `backup-compression.test.ts` - Full backup compression integration tests
+    - Updated `BackupManager.test.ts` for new return types
+
+### Changed
+
+- **IOManager.ts**
+  - `createBackup()` returns `BackupResult` instead of string (breaking change)
+  - `restoreFromBackup()` returns `RestoreResult` instead of void
+  - `listBackups()` now includes `compressed` and `size` fields
+  - `BackupMetadata` extended with compression fields
+  - Backward compatible: accepts legacy string description argument
+- **TransactionManager.ts**
+  - Updated to use new `BackupResult.path` for backup creation
+- **Test Count** - 1598 tests (up from 1578)
+
 ## [8.51.0] - 2026-01-02
 
 ### Added

@@ -542,6 +542,138 @@ export interface CompressionResult {
   mergedEntities: Array<{ kept: string; merged: string[] }>;
 }
 
+// ==================== Backup Types ====================
+
+/**
+ * Options for backup creation.
+ *
+ * @example
+ * ```typescript
+ * const options: BackupOptions = {
+ *   compress: true,
+ *   description: 'Pre-migration backup'
+ * };
+ * ```
+ */
+export interface BackupOptions {
+  /** Whether to compress the backup with brotli (default: true) */
+  compress?: boolean;
+  /** Optional description for the backup */
+  description?: string;
+}
+
+/**
+ * Result of a backup creation operation.
+ *
+ * Provides details about the created backup including compression statistics.
+ *
+ * @example
+ * ```typescript
+ * const result: BackupResult = {
+ *   path: '/path/to/.backups/backup_2024-01-01.jsonl.br',
+ *   timestamp: '2024-01-01T00:00:00.000Z',
+ *   entityCount: 150,
+ *   relationCount: 320,
+ *   compressed: true,
+ *   originalSize: 125000,
+ *   compressedSize: 37500,
+ *   compressionRatio: 0.3
+ * };
+ * ```
+ */
+export interface BackupResult {
+  /** Full path to the backup file */
+  path: string;
+  /** ISO 8601 timestamp when backup was created */
+  timestamp: string;
+  /** Number of entities in the backup */
+  entityCount: number;
+  /** Number of relations in the backup */
+  relationCount: number;
+  /** Whether the backup is compressed */
+  compressed: boolean;
+  /** Original size in bytes (before compression) */
+  originalSize: number;
+  /** Size after compression in bytes (same as original if not compressed) */
+  compressedSize: number;
+  /** Compression ratio (compressedSize / originalSize). Lower is better. */
+  compressionRatio: number;
+  /** Optional description for the backup */
+  description?: string;
+}
+
+/**
+ * Result of a backup restoration operation.
+ *
+ * @example
+ * ```typescript
+ * const result: RestoreResult = {
+ *   entityCount: 150,
+ *   relationCount: 320,
+ *   restoredFrom: '/path/to/.backups/backup_2024-01-01.jsonl.br',
+ *   wasCompressed: true
+ * };
+ * ```
+ */
+export interface RestoreResult {
+  /** Number of entities restored */
+  entityCount: number;
+  /** Number of relations restored */
+  relationCount: number;
+  /** Path of the backup file that was restored */
+  restoredFrom: string;
+  /** Whether the backup was compressed */
+  wasCompressed: boolean;
+}
+
+/**
+ * Extended backup metadata with compression information.
+ *
+ * Stored alongside backups for integrity verification and restoration.
+ */
+export interface BackupMetadataExtended {
+  /** Timestamp when backup was created (ISO 8601) */
+  timestamp: string;
+  /** Number of entities in the backup */
+  entityCount: number;
+  /** Number of relations in the backup */
+  relationCount: number;
+  /** File size in bytes (compressed size if compressed) */
+  fileSize: number;
+  /** Optional description/reason for backup */
+  description?: string;
+  /** Whether the backup is compressed */
+  compressed: boolean;
+  /** Original size before compression in bytes */
+  originalSize?: number;
+  /** Compression ratio achieved (compressedSize / originalSize) */
+  compressionRatio?: number;
+  /** Compression format used */
+  compressionFormat?: 'brotli' | 'none';
+}
+
+/**
+ * Extended backup info with compression details.
+ *
+ * Used when listing backups to show compression statistics.
+ */
+export interface BackupInfoExtended {
+  /** Backup file name */
+  fileName: string;
+  /** Full path to backup file */
+  filePath: string;
+  /** Whether the backup is compressed */
+  compressed: boolean;
+  /** File size in bytes */
+  size: number;
+  /** Original size before compression (if available) */
+  originalSize?: number;
+  /** Compression ratio (if available) */
+  compressionRatio?: number;
+  /** Backup metadata */
+  metadata: BackupMetadataExtended;
+}
+
 // ==================== Tag Types ====================
 
 /**

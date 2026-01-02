@@ -262,9 +262,10 @@ export class TransactionManager {
 
     try {
       // Create backup for rollback
-      this.transactionBackup = await this.ioManager.createBackup(
-        'Transaction backup (auto-created)'
-      );
+      const backupResult = await this.ioManager.createBackup({
+        description: 'Transaction backup (auto-created)',
+      });
+      this.transactionBackup = backupResult.path;
 
       // Load mutable copy of graph for transaction
       const graph = await this.storage.getGraphForMutation();
