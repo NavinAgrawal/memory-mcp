@@ -138,3 +138,51 @@ export const QUERY_LIMITS = {
   /** Maximum query string length */
   MAX_QUERY_LENGTH: 5000,
 } as const;
+
+/**
+ * Brotli compression configuration constants.
+ * Brotli is built into Node.js >=11.7.0 via the zlib module.
+ * No external dependencies required.
+ *
+ * Quality levels determine compression ratio vs speed tradeoff:
+ * - Lower values (0-4): Faster compression, lower ratio
+ * - Higher values (9-11): Slower compression, higher ratio
+ */
+export const COMPRESSION_CONFIG = {
+  // Quality levels (0-11)
+  /** Fast compression for real-time entity writes (quality 4) */
+  BROTLI_QUALITY_REALTIME: 4,
+  /** Balanced compression for exports and imports (quality 6) */
+  BROTLI_QUALITY_BATCH: 6,
+  /** Maximum compression for backups and archives (quality 11) */
+  BROTLI_QUALITY_ARCHIVE: 11,
+  /** Fast decompress for cache compression (quality 5) */
+  BROTLI_QUALITY_CACHE: 5,
+
+  // Auto-compression thresholds (in bytes)
+  /** Auto-compress exports larger than 100KB */
+  AUTO_COMPRESS_EXPORT_SIZE: 100 * 1024,
+  /** Auto-compress MCP responses larger than 256KB */
+  AUTO_COMPRESS_RESPONSE_SIZE: 256 * 1024,
+  /** Always compress backups by default */
+  AUTO_COMPRESS_BACKUP: true,
+
+  // File extension for compressed files
+  /** Brotli compressed file extension */
+  BROTLI_EXTENSION: '.br',
+
+  // Performance tuning
+  /** Chunk size for streaming compression (64KB) */
+  COMPRESSION_CHUNK_SIZE: 65536,
+  /** Default window size for brotli (lgwin parameter) */
+  COMPRESSION_WINDOW_SIZE: 22,
+} as const;
+
+/**
+ * Type representing valid brotli quality levels used in the application.
+ */
+export type CompressionQuality =
+  | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_REALTIME
+  | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_BATCH
+  | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_ARCHIVE
+  | typeof COMPRESSION_CONFIG.BROTLI_QUALITY_CACHE;

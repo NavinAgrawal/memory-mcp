@@ -1,8 +1,11 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "8.50.24",
+  "version": "8.51.0",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, and 47 advanced tools",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "author": "Daniel Simon Jr. (https://github.com/danielsimonjr)",
   "homepage": "https://github.com/danielsimonjr/memory-mcp",
   "bugs": "https://github.com/danielsimonjr/memory-mcp/issues",

@@ -5,6 +5,29 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.51.0] - 2026-01-02
+
+### Added
+
+- **Phase 3 Sprint 1: Brotli Compression Foundation**
+  - `compressionUtil.ts` - Brotli compression utilities using Node.js built-in zlib
+    - `compress()` / `decompress()` - Async compression with quality levels 0-11
+    - `compressFile()` / `decompressFile()` - File I/O compression operations
+    - `compressToBase64()` / `decompressFromBase64()` - Base64 encoding for JSON responses
+    - `hasBrotliExtension()` - Detect .br file extension
+    - `createMetadata()` - Compression metadata for backup integrity
+  - `COMPRESSION_CONFIG` constants in `constants.ts`
+    - Quality levels: REALTIME (4), BATCH (6), ARCHIVE (11), CACHE (5)
+    - Thresholds: AUTO_COMPRESS_EXPORT_SIZE (100KB), AUTO_COMPRESS_RESPONSE_SIZE (256KB)
+    - File extension: BROTLI_EXTENSION (.br)
+  - 41 unit tests for compression utilities with 94.87% coverage
+  - Node.js engine requirement >=18.0.0 for built-in brotli support
+
+### Changed
+
+- **Test Count** - 1578 tests (up from 1537)
+- **Source Structure** - utils/ now 11 files (added compressionUtil.ts)
+
 ## [8.50.24] - 2026-01-01
 
 ### Added
