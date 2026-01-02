@@ -20,7 +20,6 @@ import { SavedSearchManager } from './SavedSearchManager.js';
  * Unified search manager providing access to all search types.
  */
 export class SearchManager {
-  private storage: GraphStorage;
   private basicSearch: BasicSearch;
   private rankedSearch: RankedSearch;
   private booleanSearcher: BooleanSearch;
@@ -29,7 +28,6 @@ export class SearchManager {
   private savedSearchManager: SavedSearchManager;
 
   constructor(storage: GraphStorage, savedSearchesFilePath: string) {
-    this.storage = storage;
     this.basicSearch = new BasicSearch(storage);
     this.rankedSearch = new RankedSearch(storage);
     this.booleanSearcher = new BooleanSearch(storage);
