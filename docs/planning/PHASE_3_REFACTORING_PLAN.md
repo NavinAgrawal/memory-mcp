@@ -591,7 +591,7 @@ describe('Backup Compression Integration', () => {
 
 ### Task 2.5: Update BackupResult and BackupInfo Types
 
-**File**: `src/memory/types/import-export.types.ts`
+**File**: `src/memory/types/types.ts`
 **Estimated Time**: 30 minutes
 **Agent**: Claude Haiku
 
@@ -753,7 +753,7 @@ async exportGraph(
 
 ### Task 3.3: Update ExportResult Type
 
-**File**: `src/memory/types/import-export.types.ts`
+**File**: `src/memory/types/types.ts`
 **Estimated Time**: 30 minutes
 **Agent**: Claude Haiku
 
@@ -1402,7 +1402,7 @@ docs/guides/COMPRESSION.md
 src/memory/package.json                    # Verify Node.js version (brotli built-in)
 src/memory/utils/constants.ts              # Add compression constants
 src/memory/utils/index.ts                  # Export compression utilities
-src/memory/types/import-export.types.ts    # Add compression types
+src/memory/types/types.ts                  # Add compression types
 src/memory/features/IOManager.ts           # Backup/export compression
 src/memory/core/EntityManager.ts           # Archive compression
 src/memory/server/toolDefinitions.ts       # Compression options
@@ -1419,7 +1419,7 @@ src/memory/search/SearchManager.ts         # Cache stats (optional)
 | Corrupt compressed files | Low | High | Checksums, graceful fallback |
 | Decompression failures | Low | Medium | Error handling, retry logic |
 | Out-of-memory on large decompress | Medium | Medium | Streaming for files >100MB |
-| Backward compatibility issues | Low | High | Magic byte detection, testing |
+| Backward compatibility issues | Low | High | File extension detection (.br), testing |
 | Performance regression | Low | Medium | Benchmarking in Sprint 5 |
 | Increased complexity | Medium | Low | Abstraction in compressionUtil |
 

@@ -12,7 +12,7 @@ This document outlines a strategic plan to integrate brotli compression into the
 
 **memory-mcp** is an enhanced Model Context Protocol (MCP) memory server providing enterprise-grade knowledge graph storage.
 
-- **Version:** 0.59.0
+- **Version:** 8.50.24
 - **Language:** TypeScript 5.6, Node.js 18+
 - **Storage Backends:** JSONL (default) and SQLite (optional)
 - **Scale:** Handles 2,000-100,000 entities efficiently
@@ -232,7 +232,7 @@ interface Relation {
 - Significant space savings for aged archives
 - Doesn't impact active entity performance
 
-**Implementation File:** `src/memory/managers/EntityManager.ts` - archival methods
+**Implementation File:** `src/memory/core/EntityManager.ts` - archival methods
 
 ---
 
@@ -301,9 +301,9 @@ interface IGraphStorage {
 
 **Solutions:**
 
-1. **File Header Magic Bytes:** Detect compression format on load
-   - JSONL: First line starts with `{`
-   - Brotli-compressed: First bytes are brotli magic (0xce, 0xb2, 0xcf, 0x81)
+1. **File Extension Detection:** Detect compression format on load
+   - JSONL: File extension `.jsonl`
+   - Brotli-compressed: File extension `.br` (Note: Brotli does NOT have reliable magic bytes)
 
 2. **Version Metadata:** Store compression info in backup metadata
    ```typescript
@@ -386,8 +386,8 @@ export async function decompressFile(
   outputPath: string
 ): Promise<void>;
 
-// Detect if buffer is brotli compressed (check magic bytes)
-export function isBrotliCompressed(buffer: Buffer): boolean;
+// Check if file path indicates brotli compression (check .br extension)
+export function hasBrotliExtension(filePath: string): boolean;
 ```
 
 ### `src/memory/utils/constants.ts` Additions
@@ -398,14 +398,15 @@ export const COMPRESSION_CONFIG = {
   BROTLI_QUALITY_BATCH: 6,         // Exports, imports
   BROTLI_QUALITY_ARCHIVE: 11,      // Backups, archives
   BROTLI_QUALITY_CACHE: 5,         // Cache compression
-  
+
   // Thresholds for auto-compression
   AUTO_COMPRESS_EXPORT_SIZE: 100 * 1024,    // 100KB
   AUTO_COMPRESS_RESPONSE_SIZE: 256 * 1024,  // 256KB
-  
-  // Brotli magic bytes for detection
-  BROTLI_MAGIC_BYTES: Buffer.from([0xce, 0xb2, 0xcf, 0x81]),
-  
+
+  // File extension for compressed files
+  // Note: Brotli does NOT have reliable magic bytes - use file extension instead
+  BROTLI_EXTENSION: '.br',
+
   // Performance tuning
   COMPRESSION_CHUNK_SIZE: 65536,    // 64KB chunks for streaming
 };
@@ -420,19 +421,19 @@ export const COMPRESSION_CONFIG = {
 | `src/memory/features/IOManager.ts` | Import/export/backup | Compress backups & exports | P1 |
 | `src/memory/core/GraphStorage.ts` | JSONL storage | Transparent compression wrapper | P2 |
 | `src/memory/server/MCPServer.ts` | MCP protocol | Response compression | P2 |
-| `src/memory/managers/EntityManager.ts` | Entity management | Archive compression | P3 |
+| `src/memory/core/EntityManager.ts` | Entity management | Archive compression | P3 |
 | `src/memory/utils/compressionUtil.ts` | **NEW** | Unified brotli interface | P0 |
 | `src/memory/utils/constants.ts` | Configuration | Compression constants | P0 |
 | `src/memory/__tests__/` | Tests | Compression test suite | P0 |
-| `package.json` | Dependencies | Add brotli package | P0 |
+| `package.json` | Dependencies | Verify Node.js engines >= 11.7.0 | P0 |
 | `docs/guides/COMPRESSION.md` | **NEW** | Usage documentation | P3 |
 
 ---
 
 ## 8. Implementation Phases (Recommended Order)
 
-### Phase 1: Foundation & Backup Compression (Weeks 1-2)
-- [ ] Add `brotli` dependency to package.json
+### Phase 1: Foundation & Backup Compression
+- [ ] Verify Node.js version >= 11.7.0 for built-in brotli (via `zlib` module)
 - [ ] Create `utils/compressionUtil.ts` with unified API
 - [ ] Add compression configuration to `constants.ts`
 - [ ] Implement backup compression in `IOManager.createBackup()`
@@ -440,7 +441,7 @@ export const COMPRESSION_CONFIG = {
 - [ ] Write comprehensive unit tests
 - [ ] **Benefit:** Immediate 50-70% backup space reduction
 
-### Phase 2: Export Compression (Weeks 2-3)
+### Phase 2: Export Compression
 - [ ] Implement auto-compression for large exports (>100KB)
 - [ ] Add compression option to `export_graph` tool
 - [ ] Return compression metadata in tool responses
@@ -448,7 +449,7 @@ export const COMPRESSION_CONFIG = {
 - [ ] Update tool documentation
 - [ ] **Benefit:** 60-75% reduction on exported graphs
 
-### Phase 3: MCP Protocol Response Compression (Weeks 3-4)
+### Phase 3: MCP Protocol Response Compression
 - [ ] Wrap tool responses with auto-compression in `MCPServer.ts`
 - [ ] Add configuration for response size threshold
 - [ ] Implement response decompression in client examples
@@ -456,14 +457,14 @@ export const COMPRESSION_CONFIG = {
 - [ ] Create client-side decompression utilities
 - [ ] **Benefit:** Reduced bandwidth between Claude and MCP server
 
-### Phase 4: Archive & Cache Compression (Weeks 4-5)
+### Phase 4: Archive & Cache Compression
 - [ ] Implement archive compression in `EntityManager.ts`
 - [ ] Add cache layer compression (LRU with eviction)
 - [ ] Implement incremental backup compression
 - [ ] Add compression statistics to graph analytics
 - [ ] **Benefit:** Efficient long-term storage, reduced RAM usage
 
-### Phase 5: Optimization & Documentation (Weeks 5-6)
+### Phase 5: Optimization & Documentation
 - [ ] Tune brotli quality levels for different operations
 - [ ] Performance benchmarking and profiling
 - [ ] Create migration guide for compressed archives
@@ -623,8 +624,8 @@ Brotli compression is an excellent fit for memory-mcp:
 Brotli compression enables memory-mcp to scale efficiently to 100k+ entity graphs, especially for cloud deployments where bandwidth and storage costs are critical factors.
 
 ### Next Steps
-1. Add brotli to package.json
-2. Create compressionUtil.ts wrapper
+1. Verify Node.js 11.7.0+ for built-in zlib brotli support
+2. Create compressionUtil.ts wrapper using Node.js zlib module
 3. Implement backup compression (Phase 1)
 4. Measure space/performance improvements
 5. Proceed with Phases 2-5 based on priorities
@@ -633,22 +634,31 @@ Brotli compression enables memory-mcp to scale efficiently to 100k+ entity graph
 
 ## Appendix: Quick Reference
 
-### Brotli npm Package Options
-- **`brotli`** - Pure JavaScript (easy, portable)
-- **`iltorb`** - Native C++ bindings (faster, requires compilation)
+### Node.js Built-in Brotli Support
 
-### Recommended: `brotli` for simplicity and portability
-
-### Installation
-```bash
-npm install brotli
-```
+Node.js 11.7.0+ includes built-in brotli compression via the `zlib` module. **No external dependencies required.**
 
 ### Basic Usage
 ```typescript
-import { compress, decompress } from 'brotli';
+import { brotliCompress, brotliDecompress, constants } from 'zlib';
+import { promisify } from 'util';
+
+const compress = promisify(brotliCompress);
+const decompress = promisify(brotliDecompress);
 
 const data = Buffer.from('your data');
-const compressed = await compress(data);
+
+// Compress with quality level
+const compressed = await compress(data, {
+  params: {
+    [constants.BROTLI_PARAM_QUALITY]: 6,  // 0-11, default 11
+  },
+});
+
 const decompressed = await decompress(compressed);
 ```
+
+### Quality Levels
+- **0-4**: Fast compression, lower ratio (real-time use)
+- **5-8**: Balanced speed and ratio (batch operations)
+- **9-11**: Maximum compression, slower (archives)
