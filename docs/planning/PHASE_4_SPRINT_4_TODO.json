@@ -129,6 +129,6 @@
   "filesCreated": [],
   "totalNewTests": 10,
   "totalEstimatedHours": 4,
-  "dependencies": ["Sprint 3"],
-  "notes": "Boolean search has two optimization opportunities: AST parsing (done once per unique query syntax) and result evaluation (cached with entity hash for invalidation). The AST cache never expires because query syntax doesn't change. The result cache uses a fast entity hash to detect when cached results are stale without comparing full entity sets."
+  "dependencies": [],
+  "notes": "Boolean search has two optimization opportunities: AST parsing (done once per unique query syntax) and result evaluation (cached with entity hash for invalidation). The AST cache never expires because query syntax doesn't change. The result cache uses a fast entity hash to detect when cached results are stale without comparing full entity sets. This sprint is independent of Sprint 3 (fuzzy cache) and can be developed in parallel."
 }

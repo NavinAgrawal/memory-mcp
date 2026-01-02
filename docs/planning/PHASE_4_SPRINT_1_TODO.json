@@ -16,7 +16,7 @@
     {
       "id": 1,
       "category": "Database",
-      "description": "Add Missing SQLite Indexes for Range Queries - Add idx_entity_importance, idx_entity_lastmodified, idx_entity_createdat, idx_relation_type, and composite idx_entity_type_importance indexes to SQLiteStorage.createTables() after line 154",
+      "description": "Add Missing SQLite Indexes for Range Queries - Add idx_entity_importance, idx_entity_lastmodified, idx_entity_createdat, idx_relation_type, and composite idx_entity_type_importance indexes to SQLiteStorage.createTables() after the existing indexes at lines 151-154",
       "status": "planned",
       "estimatedHours": 0.5,
       "agent": "haiku",
@@ -37,7 +37,7 @@
     {
       "id": 2,
       "category": "Caching",
-      "description": "Implement Bidirectional Relation Cache - Add private bidirectionalRelationCache Map to SQLiteStorage, implement getRelationsFor() with cache lookup, add invalidateBidirectionalCache() helper method",
+      "description": "Implement Bidirectional Relation Cache - Add private bidirectionalRelationCache Map to SQLiteStorage. Current getRelationsFor() filters the in-memory cache with O(n) complexity; add a dedicated bidirectional cache Map for O(1) repeated lookups, add invalidateBidirectionalCache() helper method",
       "status": "planned",
       "estimatedHours": 1.5,
       "agent": "sonnet",

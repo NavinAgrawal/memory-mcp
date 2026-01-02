@@ -52,7 +52,7 @@
     {
       "id": 3,
       "category": "Storage",
-      "description": "Implement Lazy Graph Loading in SQLiteStorage - Add cacheLoaded boolean and loadingPromise, implement ensureCacheLoaded() method, modify loadGraph() to call ensureCacheLoaded(), add getEntity() fast path that queries DB directly without full cache load",
+      "description": "Implement Lazy Graph Loading in SQLiteStorage - Currently loadCache() is called in initialize() at line 113. Add cacheLoaded boolean and loadingPromise, implement ensureCacheLoaded() method, modify loadGraph() to call ensureCacheLoaded() instead of immediate load, add getEntity() fast path that queries DB directly without full cache load",
       "status": "planned",
       "estimatedHours": 1.5,
       "agent": "sonnet",
@@ -69,7 +69,7 @@
         "ensureCacheLoaded() method that loads cache only once",
         "loadGraph() calls ensureCacheLoaded() before returning cache",
         "getEntity(name) queries DB directly if cache not loaded",
-        "Constructor no longer calls loadGraphIntoCache() immediately",
+        "Constructor/initialize() no longer calls loadCache() immediately",
         "Startup time reduced to <5ms regardless of graph size"
       ]
     },

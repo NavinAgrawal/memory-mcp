@@ -165,6 +165,6 @@
   ],
   "totalNewTests": 20,
   "totalEstimatedHours": 8,
-  "dependencies": ["Sprint 1"],
-  "notes": "This sprint establishes the foundation for all graph algorithm features. The GraphTraversal class provides BFS and DFS as building blocks for more complex algorithms like shortest path and connected components. The getNeighbors abstraction handles both hierarchy (parent-child) and relation (edge) traversal uniformly."
+  "dependencies": [],
+  "notes": "This sprint establishes the foundation for all graph algorithm features. The GraphTraversal class provides BFS and DFS as building blocks for more complex algorithms like shortest path and connected components. The getNeighbors abstraction handles both hierarchy (parent-child) and relation (edge) traversal uniformly. This sprint is independent of Sprints 1-5 (performance optimizations) and can be developed in parallel."
 }
