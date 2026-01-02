@@ -16,11 +16,13 @@ import { ObservationManager } from './ObservationManager.js';
 import { HierarchyManager } from './HierarchyManager.js';
 import { GraphTraversal } from './GraphTraversal.js';
 import { SearchManager } from '../search/SearchManager.js';
+import { SemanticSearch, createEmbeddingService, createVectorStore } from '../search/index.js';
 import { IOManager } from '../features/IOManager.js';
 import { TagManager } from '../features/TagManager.js';
 import { AnalyticsManager } from '../features/AnalyticsManager.js';
 import { CompressionManager } from '../features/CompressionManager.js';
 import { ArchiveManager } from '../features/ArchiveManager.js';
+import { getEmbeddingConfig } from '../utils/constants.js';
 
 /**
  * Context holding all manager instances with lazy initialization.
@@ -38,6 +40,7 @@ export class ManagerContext {
   private _hierarchyManager?: HierarchyManager;
   private _graphTraversal?: GraphTraversal;
   private _searchManager?: SearchManager;
+  private _semanticSearch?: SemanticSearch | null;
   private _ioManager?: IOManager;
   private _tagManager?: TagManager;
   private _analyticsManager?: AnalyticsManager;
@@ -84,6 +87,25 @@ export class ManagerContext {
   /** SearchManager - All search operations */
   get searchManager(): SearchManager {
     return (this._searchManager ??= new SearchManager(this.storage, this.savedSearchesFilePath));
+  }
+
+  /**
+   * SemanticSearch - Phase 4 Sprint 12: Semantic similarity search.
+   * Returns null if no embedding provider is configured.
+   */
+  get semanticSearch(): SemanticSearch | null {
+    if (this._semanticSearch === undefined) {
+      const config = getEmbeddingConfig();
+      const embeddingService = createEmbeddingService(config);
+
+      if (embeddingService) {
+        const vectorStore = createVectorStore('jsonl'); // Use in-memory for now
+        this._semanticSearch = new SemanticSearch(embeddingService, vectorStore);
+      } else {
+        this._semanticSearch = null;
+      }
+    }
+    return this._semanticSearch;
   }
 
   /** IOManager - Import, export, and backup operations */

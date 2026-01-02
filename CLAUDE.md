@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (1713 tests)
+npm test              # Run tests with coverage (1803 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directories
@@ -23,9 +23,9 @@ npx vitest run -t "should create entities"
 
 ## Architecture Overview
 
-This is an enhanced MCP memory server with **51 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
+This is an enhanced MCP memory server with **54 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.56.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 8.57.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -33,7 +33,7 @@ This is an enhanced MCP memory server with **51 tools** (vs 11 in official versi
 ┌─────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer            │
 │  server/MCPServer.ts + toolDefinitions  │
-│  + toolHandlers (51 tools)              │
+│  + toolHandlers (54 tools)              │
 └──────────────────┬──────────────────────┘
                    │ (direct manager access)
 ┌──────────────────┴──────────────────────┐
@@ -51,13 +51,13 @@ This is an enhanced MCP memory server with **51 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 47 TypeScript files
+### Source Structure (src/memory/) - 50 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
 | **core/** | 11 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (Phase 4: graph algorithms), index |
 | **features/** | 6 | TagManager (tag aliases), IOManager (import/export/backup), AnalyticsManager, ArchiveManager, CompressionManager, index |
-| **search/** | 10 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, index |
+| **search/** | 13 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, EmbeddingService, VectorStore, SemanticSearch, index |
 | **server/** | 4 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
 | **utils/** | 12 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
@@ -69,7 +69,7 @@ This is an enhanced MCP memory server with **51 tools** (vs 11 in official versi
 
 1. **Context Pattern**: ManagerContext holds all managers with lazy-initialized getters
 2. **Direct Manager Access**: Tool handlers call managers directly via `ctx.entityManager`, `ctx.searchManager`, etc.
-3. **Lazy Initialization**: 6 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager, TagManager, GraphTraversal)
+3. **Lazy Initialization**: 7 managers instantiated on-demand (EntityManager, RelationManager, SearchManager, IOManager, TagManager, GraphTraversal, SemanticSearch)
 4. **Dependency Injection**: GraphStorage injected into managers
 5. **Handler Registry**: Tool handlers mapped in toolHandlers.ts
 6. **Barrel Exports**: Each module exports via index.ts (includes `KnowledgeGraphManager` alias)
@@ -123,8 +123,12 @@ interface Relation {
 
 - `MEMORY_FILE_PATH` - Custom path to storage file (defaults to current directory)
 - `MEMORY_STORAGE_TYPE` - Storage backend: 'jsonl' (default) or 'sqlite'
+- `MEMORY_EMBEDDING_PROVIDER` - Embedding provider: 'openai', 'local', or 'none' (default)
+- `MEMORY_OPENAI_API_KEY` - OpenAI API key (required if provider is 'openai')
+- `MEMORY_EMBEDDING_MODEL` - Embedding model (default: text-embedding-3-small for OpenAI, Xenova/all-MiniLM-L6-v2 for local)
+- `MEMORY_AUTO_INDEX_EMBEDDINGS` - Auto-index entities on creation: 'true' or 'false' (default: false)
 
-## Tool Categories (51 Total)
+## Tool Categories (54 Total)
 
 | Category | Count | Tools |
 |----------|-------|-------|
@@ -132,6 +136,7 @@ interface Relation {
 | **Relation Operations** | 2 | create_relations, delete_relations |
 | **Observation Management** | 2 | add_observations, delete_observations |
 | **Search** | 6 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions |
+| **Semantic Search** | 3 | semantic_search, find_similar_entities, index_embeddings |
 | **Saved Searches** | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | **Tag Management** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
 | **Tag Aliases** | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
@@ -143,7 +148,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1713 tests, 49 files):
+Tests are in `src/memory/__tests__/` (1803 tests, 52 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -174,6 +179,9 @@ Tests are in `src/memory/__tests__/` (1713 tests, 49 files):
 | unit/search/SearchFilterChain.test.ts | 48 | Filter logic |
 | unit/search/SearchSuggestions.test.ts | 24 | "Did you mean?" |
 | unit/search/TFIDFIndexManager.test.ts | 38 | TF-IDF indexing |
+| unit/search/EmbeddingService.test.ts | 31 | Embedding service abstraction (Phase 4) |
+| unit/search/VectorStore.test.ts | 32 | Vector storage & similarity search (Phase 4) |
+| unit/search/SemanticSearch.test.ts | 27 | Semantic search manager (Phase 4) |
 | unit/utils/entityUtils.test.ts | 32 | Entity utilities |
 | unit/utils/indexes.test.ts | 24 | Search indexes |
 | unit/utils/levenshtein.test.ts | 12 | String distance |
@@ -208,7 +216,7 @@ Tests are in `src/memory/__tests__/` (1713 tests, 49 files):
 ## Server Architecture (v0.44.0+)
 
 - **MCPServer.ts**: 66 lines (reduced from 907, 92.6% reduction)
-- **toolDefinitions.ts**: 860 lines - all 51 tool schemas organized by category (including Graph Algorithms)
+- **toolDefinitions.ts**: 920 lines - all 54 tool schemas organized by category (including Graph Algorithms and Semantic Search)
 - **toolHandlers.ts**: 400 lines - handler registry, dispatch logic, and response compression wrapper
 - **responseCompressor.ts**: 170 lines - automatic brotli compression for large responses (>256KB)
 - **Consolidated constants**: SIMILARITY_WEIGHTS centralized in constants.ts

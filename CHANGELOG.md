@@ -5,6 +5,64 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.57.0] - 2026-01-02
+
+### Added
+
+- **Phase 4 Sprint 10: Embedding Service Abstraction**
+  - New `EmbeddingService` interface for embedding provider abstraction
+  - `OpenAIEmbeddingService` - OpenAI text-embedding API integration with retry logic
+  - `LocalEmbeddingService` - Local embeddings via @xenova/transformers
+  - `MockEmbeddingService` - Testing service with deterministic embeddings
+  - `createEmbeddingService()` factory function
+  - New embedding configuration environment variables:
+    - `MEMORY_EMBEDDING_PROVIDER` - Provider selection ('openai', 'local', 'none')
+    - `MEMORY_OPENAI_API_KEY` - OpenAI API key
+    - `MEMORY_EMBEDDING_MODEL` - Model selection
+    - `MEMORY_AUTO_INDEX_EMBEDDINGS` - Auto-index toggle
+
+- **Phase 4 Sprint 11: Vector Store Implementation**
+  - New `IVectorStore` interface for vector storage abstraction
+  - `InMemoryVectorStore` - In-memory vector storage with cosine similarity search
+  - `SQLiteVectorStore` - SQLite-backed persistent vector storage
+  - `cosineSimilarity()` utility function for vector comparison
+  - `createVectorStore()` factory function
+  - SQLite embedding storage methods in SQLiteStorage:
+    - `storeEmbedding()`, `getEmbedding()`, `loadAllEmbeddings()`
+    - `removeEmbedding()`, `clearAllEmbeddings()`, `hasEmbedding()`
+    - `getEmbeddingStats()` for statistics
+
+- **Phase 4 Sprint 12: Semantic Search Manager & MCP Tools**
+  - New `SemanticSearch` class orchestrating embeddings and vector search
+  - `entityToText()` helper for entity-to-text conversion
+  - Methods: `indexAll()`, `indexEntity()`, `removeEntity()`, `search()`, `findSimilar()`
+  - 3 new MCP tools for semantic search (54 total tools):
+    - `semantic_search` - Search by semantic similarity
+    - `find_similar_entities` - Find entities similar to a reference
+    - `index_embeddings` - Build/rebuild the semantic index
+  - New tool category `semanticSearch` in toolDefinitions.ts
+  - `semanticSearch` lazy accessor in ManagerContext
+
+- **New Types**
+  - `EmbeddingService`, `SemanticSearchResult`, `IVectorStore`, `VectorSearchResult`
+  - `EmbeddingConfig`, `SemanticIndexOptions`
+
+- **New Tests**
+  - 31 tests for EmbeddingService
+  - 32 tests for VectorStore
+  - 27 tests for SemanticSearch
+
+### Changed
+
+- **Tool Count** - Increased from 51 to 54 tools
+- **Test Count** - 1803 tests (up from 1713)
+- **Source Structure** - search/ now includes EmbeddingService.ts, VectorStore.ts, SemanticSearch.ts (13 files, up from 10)
+- **File Count** - 50 TypeScript files (up from 47)
+- **types/types.ts** - Exports new semantic search types
+- **ManagerContext.ts** - Added semanticSearch lazy accessor (7 managers, up from 6)
+- **toolHandlers.ts** - Added handlers for 3 semantic search tools
+- **toolDefinitions.ts** - Added semanticSearch tool category (~920 lines)
+
 ## [8.56.0] - 2026-01-02
 
 ### Added
