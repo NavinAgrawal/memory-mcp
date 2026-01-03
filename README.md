@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-8.57.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-9.0.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -202,7 +202,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) o
   "mcpServers": {
     "memory": {
       "command": "node",
-      "args": ["<PATH_TO>/memory-mcp/src/memory/dist/index.js"],
+      "args": ["<PATH_TO>/memory-mcp/dist/index.js"],
       "env": {
         "MEMORY_FILE_PATH": "<PATH_TO>/memory.jsonl"
       }
@@ -222,7 +222,7 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "memory": {
       "command": "node",
-      "args": ["/path/to/memory-mcp/src/memory/dist/index.js"]
+      "args": ["/path/to/memory-mcp/dist/index.js"]
     }
   }
 }
@@ -1777,7 +1777,7 @@ Comprehensive documentation organized by category:
   "mcpServers": {
     "memory": {
       "command": "node",
-      "args": ["/path/to/memory-mcp/src/memory/dist/index.js"],
+      "args": ["/path/to/memory-mcp/dist/index.js"],
       "env": {
         "MEMORY_STORAGE_TYPE": "sqlite",
         "MEMORY_FILE_PATH": "/path/to/data/memory.db"
@@ -1840,7 +1840,7 @@ When you set `MEMORY_FILE_PATH`, the server automatically creates related files 
   "mcpServers": {
     "memory": {
       "command": "node",
-      "args": ["/path/to/memory-mcp/src/memory/dist/index.js"],
+      "args": ["/path/to/memory-mcp/dist/index.js"],
       "env": {
         "MEMORY_FILE_PATH": "/path/to/data/memory.jsonl"
       }
@@ -1855,7 +1855,7 @@ When you set `MEMORY_FILE_PATH`, the server automatically creates related files 
   "mcpServers": {
     "memory": {
       "command": "node",
-      "args": ["/path/to/memory-mcp/src/memory/dist/index.js"]
+      "args": ["/path/to/memory-mcp/dist/index.js"]
     }
   }
 }
@@ -1918,9 +1918,8 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/memory/                     # Main source (50 TypeScript files)
+├── src/                            # Main source (50 TypeScript files)
 │   ├── index.ts                    # Entry point
-│   ├── vitest.config.ts            # Test configuration
 │   ├── core/                       # Core managers (11 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
 │   │   ├── EntityManager.ts            # Entity CRUD + hierarchy + archive
@@ -1962,21 +1961,25 @@ memory-mcp/
 │   ├── types/                      # TypeScript definitions (2 files)
 │   │   ├── types.ts                    # All type definitions (consolidated)
 │   │   └── index.ts
-│   ├── utils/                      # Shared utilities (12 files)
-│   │   ├── schemas.ts                  # Zod validation (14 schemas)
-│   │   ├── constants.ts                # Shared constants (SIMILARITY_WEIGHTS)
-│   │   ├── errors.ts                   # Custom error types
-│   │   ├── searchAlgorithms.ts         # Levenshtein + TF-IDF (consolidated)
-│   │   ├── entityUtils.ts              # Entity/tag/date/filter/path utilities
-│   │   ├── formatters.ts               # Response formatting + pagination
-│   │   ├── indexes.ts                  # NameIndex, TypeIndex, RelationIndex
-│   │   ├── compressionUtil.ts          # Brotli compression utilities
-│   │   ├── compressedCache.ts          # LRU cache with compression
-│   │   ├── logger.ts                   # Logging utilities
-│   │   ├── searchCache.ts              # Search result caching
-│   │   └── index.ts
-│   ├── __tests__/                  # Test suite (1803 tests)
-│   └── dist/                       # Compiled output
+│   └── utils/                      # Shared utilities (12 files)
+│       ├── schemas.ts                  # Zod validation (14 schemas)
+│       ├── constants.ts                # Shared constants (SIMILARITY_WEIGHTS)
+│       ├── errors.ts                   # Custom error types
+│       ├── searchAlgorithms.ts         # Levenshtein + TF-IDF (consolidated)
+│       ├── entityUtils.ts              # Entity/tag/date/filter/path utilities
+│       ├── formatters.ts               # Response formatting + pagination
+│       ├── indexes.ts                  # NameIndex, TypeIndex, RelationIndex
+│       ├── compressionUtil.ts          # Brotli compression utilities
+│       ├── compressedCache.ts          # LRU cache with compression
+│       ├── logger.ts                   # Logging utilities
+│       ├── searchCache.ts              # Search result caching
+│       └── index.ts
+├── tests/                          # Test suite (1803 tests, 52 files)
+│   ├── unit/                       # Unit tests
+│   ├── integration/                # Integration tests
+│   ├── e2e/                        # End-to-end tests
+│   └── performance/                # Performance benchmarks
+├── dist/                           # Compiled output
 ├── docs/                           # Documentation
 │   ├── architecture/               # Architecture docs
 │   ├── guides/                     # User guides
@@ -1986,6 +1989,8 @@ memory-mcp/
 │   ├── compress-for-context/       # CTON compression for LLMs
 │   ├── create-dependency-graph/    # Dependency analyzer
 │   └── migrate-from-jsonl-to-sqlite/ # Storage format migration
+├── vitest.config.ts                # Test configuration
+├── tsconfig.json                   # TypeScript configuration
 ├── CHANGELOG.md                    # Version history
 └── README.md                       # This file
 ```
@@ -2030,7 +2035,7 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and
 - **Fixed**: Bug fixes
 - **Security**: Security improvements
 
-**Current version**: v8.57.0 - [View full changelog →](CHANGELOG.md)
+**Current version**: v9.0.0 - [View full changelog →](CHANGELOG.md)
 
 ## License
 

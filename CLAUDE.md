@@ -5,17 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 ```bash
-# Root level commands (delegates to workspace)
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
 npm test              # Run tests with coverage (1803 tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
-npm run clean         # Remove dist/ directories
+npm run clean         # Remove dist/ directory
 npm run docs:deps     # Generate dependency graph
 
 # Run a single test file
-npx vitest run src/memory/__tests__/unit/core/EntityManager.test.ts
+npx vitest run tests/unit/core/EntityManager.test.ts
 
 # Run tests matching a pattern
 npx vitest run -t "should create entities"
@@ -25,7 +24,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **54 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 8.57.0 | **npm:** @danielsimonjr/memory-mcp
+**Version:** 9.1.0 | **npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -51,7 +50,7 @@ This is an enhanced MCP memory server with **54 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/memory/) - 50 TypeScript files
+### Source Structure (src/) - 50 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
@@ -61,9 +60,9 @@ This is an enhanced MCP memory server with **54 tools** (vs 11 in official versi
 | **server/** | 4 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
 | **utils/** | 12 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
-| **root** | 2 | index.ts (entry point), vitest.config.ts |
+| **root** | 1 | index.ts (entry point) |
 
-> **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files
+> **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files, folder structure simplified
 
 ### Key Design Patterns
 
@@ -115,9 +114,9 @@ interface Relation {
 
 ## Entry Points
 
-- **Build output**: `src/memory/dist/index.js`
+- **Build output**: `dist/index.js`
 - **CLI binary**: `mcp-server-memory`
-- **Source entry**: `src/memory/index.ts`
+- **Source entry**: `src/index.ts`
 
 ## Environment Variables
 
@@ -148,7 +147,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `src/memory/__tests__/` (1803 tests, 52 files):
+Tests are in `tests/` (1803 tests, 52 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -194,6 +193,31 @@ Tests are in `src/memory/__tests__/` (1803 tests, 52 files):
 | performance/compression-benchmarks.test.ts | 9 | Compression performance benchmarks |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
+
+### Test Reporting
+
+Custom Vitest reporter generates HTML and JSON reports:
+
+```bash
+# Run tests with reports (default mode: all)
+npm test
+
+# Report modes via environment variable
+VITEST_REPORT_MODE=summary npm test   # Only summary reports
+VITEST_REPORT_MODE=debug npm test     # Only failed test reports
+VITEST_REPORT_MODE=all npm test       # All test reports (default)
+
+# Skip benchmark tests
+SKIP_BENCHMARKS=true npm test
+```
+
+**Report Output Structure:**
+```
+tests/test-results/
+├── json/           # Per-file JSON reports
+├── html/           # Per-file HTML reports
+└── summary/        # Summary JSON + HTML with coverage data
+```
 
 ## Performance & Optimizations
 

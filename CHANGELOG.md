@@ -5,6 +5,73 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.0] - 2026-01-03
+
+### Added
+
+- **Custom Vitest Reporter Integration**
+  - Added `per-file-reporter.js` custom Vitest 4.x reporter from deepthinking-mcp
+  - Generates per-file JSON and HTML test reports in `tests/test-results/`
+  - Generates summary reports with pass/fail statistics
+  - Three report modes via `VITEST_REPORT_MODE` environment variable:
+    - `summary` - Only generate summary reports
+    - `debug` - Generate reports only for failed test files
+    - `all` (default) - Generate reports for all test files
+  - Integrates with coverage data from `coverage-summary.json`
+  - Shows untested files and low coverage files in HTML reports
+
+- **Enhanced Vitest Configuration**
+  - Added custom reporter to `vitest.config.ts`
+  - Added `SKIP_BENCHMARKS` environment variable support
+  - Enhanced coverage reporters: `text`, `json`, `json-summary`, `html`
+  - Coverage reports directory: `./coverage`
+
+### Fixed
+
+- **Test Reliability Improvements**
+  - Fixed `file-path.test.ts` migration tests - corrected path resolution to match `ensureMemoryFilePath()` behavior
+  - Fixed `compression-benchmarks.test.ts` timeout - increased threshold from 30s to 120s for high-quality brotli compression (quality 11 is CPU-intensive)
+
+## [9.0.0] - 2026-01-02
+
+### Changed
+
+- **BREAKING: Major Folder Restructuring** - Simplified project structure to match standard conventions
+  - Moved source files from `src/memory/` to `src/`
+  - Moved tests from `src/memory/__tests__/` to `tests/`
+  - Removed npm workspaces pattern - single package at root
+  - Build output now at `dist/` instead of `src/memory/dist/`
+
+- **Configuration Consolidation**
+  - Merged `src/memory/package.json` into root `package.json`
+  - Updated `tsconfig.json` with new paths (rootDir: `./src`, outDir: `./dist`)
+  - Created root-level `vitest.config.ts` pointing to `tests/` directory
+  - Removed workspace-specific config files
+
+- **Documentation Updates**
+  - Updated `CLAUDE.md` with new paths and structure
+  - Updated `README.md` project structure section
+  - Updated all configuration examples with new paths
+
+- **Import Path Updates**
+  - All 52 test files updated with new import paths (`../../src/core/` etc.)
+  - Dynamic imports in tests updated
+
+### Migration Guide
+
+If upgrading from v8.x:
+
+1. **Configuration paths changed:**
+   - Old: `src/memory/dist/index.js`
+   - New: `dist/index.js`
+
+2. **Import paths for programmatic use:**
+   - No changes needed - exports remain the same
+
+3. **Test file locations:**
+   - Old: `src/memory/__tests__/`
+   - New: `tests/`
+
 ## [8.57.0] - 2026-01-02
 
 ### Added
