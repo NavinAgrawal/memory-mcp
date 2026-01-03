@@ -2,314 +2,388 @@
 
 This document outlines planned performance optimizations, parallel processing opportunities, and new features for memory-mcp.
 
+> **Note**: This codebase already has significant optimizations including NameIndex, TypeIndex, relation caches, pre-computed lowercase values, and search result caching. The items below represent additional opportunities.
+
 ## Table of Contents
 
 - [Performance Optimizations](#performance-optimizations)
-  - [Phase 1: Quick Wins](#phase-1-quick-wins-1-2-days-each)
-  - [Phase 2: Parallel Processing](#phase-2-parallel-processing-3-5-days)
-  - [Phase 3: Advanced Optimizations](#phase-3-advanced-optimizations-1-2-weeks)
+  - [Phase 1: Quick Wins](#phase-1-quick-wins)
+  - [Phase 2: Parallel Processing](#phase-2-parallel-processing)
+  - [Phase 3: Advanced Optimizations](#phase-3-advanced-optimizations)
 - [New Feature Ideas](#new-feature-ideas)
 - [Implementation Priority Matrix](#implementation-priority-matrix)
 - [Files to Modify](#files-to-modify)
 
 ---
 
+## Existing Optimizations (Already Implemented)
+
+Before pursuing new optimizations, note what's already in place:
+
+| Component | Optimization | Location |
+|-----------|--------------|----------|
+| **NameIndex** | O(1) entity lookup by name | `GraphStorage.ts:609` |
+| **TypeIndex** | O(1) entities by type | `GraphStorage.ts` |
+| **RelationCache** | Bidirectional relation lookups | `GraphStorage.ts` |
+| **LowercasedCache** | Pre-computed lowercase for entities | `GraphStorage.ts` |
+| **FuzzySearch Cache** | TTL-based result caching | `FuzzySearch.ts` |
+| **RankedSearch Cache** | Token and document caching | `RankedSearch.ts` |
+| **BooleanSearch Cache** | AST and result caching | `BooleanSearch.ts` |
+
+---
+
 ## Performance Optimizations
 
-### Phase 1: Quick Wins (1-2 days each)
+### Phase 1: Quick Wins
 
-#### 1.1 O(n²) → O(n) Entity Lookups
+#### 1.1 Convert `includes()` to `Set.has()` in Bulk Operations
 
-**Files**: `src/core/EntityManager.ts:158-161`, `src/core/RelationManager.ts:184-190`
+**File**: `src/core/EntityManager.ts`
 
-**Issue**: Using `array.includes()` for entity name lookups in delete operations
+**Issue**: `deleteEntities()` uses `array.includes()` for entity name lookups, which is O(n) per check.
 
+**Location**: Lines 158-161
 ```typescript
-// Current: O(n*m)
+// Current: O(m) per entity where m = entityNames.length
 graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
+graph.relations = graph.relations.filter(
+  r => !entityNames.includes(r.from) && !entityNames.includes(r.to)
+);
 ```
 
-**Fix**: Convert to `Set.has()` for O(1) lookups
-
+**Fix**:
 ```typescript
-// Fixed: O(n)
 const namesToDelete = new Set(entityNames);
 graph.entities = graph.entities.filter(e => !namesToDelete.has(e.name));
+graph.relations = graph.relations.filter(
+  r => !namesToDelete.has(r.from) && !namesToDelete.has(r.to)
+);
 ```
 
-**Impact**: 10-100x speedup on bulk deletes
+**Impact**:
+- Small arrays (<50): Negligible difference
+- Medium arrays (50-500): 2-5x speedup
+- Large arrays (500+): 10-50x speedup
+
+**Other `includes()` locations to review**:
+- Line 349: `addTags()` - tag deduplication (small arrays, low priority)
+- Line 388, 391: `removeTags()` - tag removal (small arrays, low priority)
+- Lines 456, 486, 525-536: Batch tag operations (consider if frequently used with large tag arrays)
 
 ---
 
-#### 1.2 Use NameIndex Instead of Full Graph Loads
+#### 1.2 Use NameIndex in Entity Existence Checks
 
-**Files**: `src/core/EntityManager.ts:337-342, 420-425`
+**Files**: `src/core/EntityManager.ts`
 
-**Issue**: `addTags()` and `setImportance()` load entire graph just to check entity existence
+**Issue**: Several methods call `loadGraph()` then `find()` to check entity existence, when `getEntityByName()` (O(1)) already exists.
 
-**Fix**: Use existing `storage.getEntityByName(name)` which is O(1)
+**Locations**:
+- `addTags()` at line 338-339
+- `setImportance()` at line 419-420
+- `batchUpdate()` at line 306
 
-**Impact**: 2-3x speedup for tag/importance operations
+**Current Pattern**:
+```typescript
+const readGraph = await this.storage.loadGraph();
+const entity = readGraph.entities.find(e => e.name === entityName);
+```
+
+**Improved Pattern**:
+```typescript
+const entity = this.storage.getEntityByName(entityName);
+if (!entity) throw new EntityNotFoundError(entityName);
+```
+
+**Impact**: Eliminates O(n) find() call, uses existing O(1) NameIndex.
+
+**Caveat**: Need to verify that subsequent mutation logic doesn't require the full graph context.
 
 ---
 
-#### 1.3 Build Entity Index Map in batchUpdate
+#### 1.3 Build Lookup Map in batchUpdate
 
 **File**: `src/core/EntityManager.ts:305-316`
 
-**Issue**: Linear search per update in batch operations
+**Issue**: Linear search per update in batch operations.
 
 ```typescript
-for (const { name, updates } of updates) {
-  const entity = graph.entities.find(e => e.name === name); // O(n) per update!
+for (const { name, updates: updateData } of updates) {
+  const entity = graph.entities.find(e => e.name === name); // O(n) per update
 }
 ```
 
-**Fix**: Build lookup map first
-
+**Fix**:
 ```typescript
-const entityIndex = new Map(graph.entities.map((e, i) => [e.name, i]));
-for (const { name, updates } of updates) {
-  const idx = entityIndex.get(name); // O(1)
-  const entity = graph.entities[idx];
+const entityMap = new Map(graph.entities.map(e => [e.name, e]));
+for (const { name, updates: updateData } of updates) {
+  const entity = entityMap.get(name); // O(1)
+  if (!entity) throw new EntityNotFoundError(name);
+  Object.assign(entity, updateData);
+  entity.lastModified = timestamp;
 }
 ```
 
-**Impact**: 5-10x speedup for large batch updates
+**Impact**: O(n + m) instead of O(n × m) where n = entities, m = updates.
 
 ---
 
-### Phase 2: Parallel Processing (3-5 days)
+### Phase 2: Parallel Processing
 
-#### 2.1 Parallelize Graph Algorithms
-
-**File**: `src/core/GraphTraversal.ts:403-426, 447-514, 556-605`
-
-| Algorithm | Current | Optimization |
-|-----------|---------|--------------|
-| Degree Centrality | Sequential loop | `Promise.all()` for entity degree calculations |
-| Betweenness | O(n³) sequential | Parallel source subsets + sampling option |
-| PageRank | 100+ sequential iterations | Parallel score updates per iteration |
-
-**Impact**: 3-6x speedup on graphs with 100+ entities
-
----
-
-#### 2.2 Worker Pool for Fuzzy Search
+#### 2.1 Worker Pool for CPU-Intensive Fuzzy Search
 
 **File**: `src/search/FuzzySearch.ts:199-222`
 
-**Issue**: `levenshteinDistance()` is O(m*n) and CPU-bound, called for every entity-query pair
+**Current State**: Already uses pre-computed lowercase values via `storage.getLowercased()`. The bottleneck is `levenshteinDistance()` calculations for low thresholds.
+
+**When This Matters**:
+- Low threshold (< 0.7) triggers more comparisons
+- Large graphs (1000+ entities)
+- Long observation text requiring word-by-word matching
 
 **Solution**:
-- Use `node:worker_threads` with pool of 4-8 workers
-- Batch entity comparisons and distribute to workers
+- Use `node:worker_threads` with pool of `os.cpus().length` workers
+- Batch entities and distribute Levenshtein calculations
+- Only activate for graphs > 500 entities AND threshold < 0.8
 
-**Impact**: 3-5x speedup for fuzzy search with low thresholds
+**Caveats**:
+- Worker thread overhead may negate gains for small graphs
+- Need benchmarks before implementing
+- Consider WASM-based Levenshtein as lighter alternative
+
+**Estimated Impact**: 2-4x for qualifying workloads (large graphs, low threshold)
 
 ---
 
-#### 2.3 Streaming Exports
+#### 2.2 Streaming Exports for Large Graphs
 
 **File**: `src/features/IOManager.ts`
 
-**Issue**: Large graphs loaded entirely into memory for export
+**Issue**: Export operations build entire output in memory before writing.
 
 **Solution**:
-- Implement streaming writes for JSONL, CSV, GraphML
-- Write to file as entities are processed
+- Stream JSONL: Write entities one per line as processed
+- Stream CSV: Write header, then stream rows
+- Stream GraphML/GEXF: Use XML streaming writer
 
-**Impact**: 50-70% reduction in peak memory for large exports
+**Impact**:
+- Memory: 50-70% reduction in peak memory for exports
+- Speed: Marginal improvement (I/O bound, not compute bound)
+
+**Priority**: Medium - only matters for graphs > 5000 entities
 
 ---
 
-### Phase 3: Advanced Optimizations (1-2 weeks)
-
-#### 3.1 Parallelize Duplicate Detection Merges
-
-**File**: `src/features/CompressionManager.ts:301-330`
-
-**Issue**: Entities merged sequentially with graph reload per merge
-
-**Solution**:
-- Load graph once before loop
-- Use `Promise.all()` for merging independent groups
-- Track mutations across parallel merges
-
-**Impact**: 5-10x speedup for large duplicate groups
-
----
-
-#### 3.2 Pre-compute Observation Sets
-
-**File**: `src/features/CompressionManager.ts:50-56`
-
-**Issue**: Creating lowercase observation sets per comparison
-
-**Solution**:
-- Pre-compute lowercase observation/tag sets during graph loading
-- Cache pre-normalized entity data
-
-**Impact**: 1.5-2x speedup for duplicate detection
-
----
-
-#### 3.3 Betweenness Centrality Approximation
+#### 2.3 Async Betweenness Centrality with Progress
 
 **File**: `src/core/GraphTraversal.ts:437-514`
 
-**Current**: O(n³) exact algorithm (Brandes)
+**Current**: Brandes' algorithm, O(V × E) per source vertex, O(V²E) total.
 
-**Proposed Options**:
-- `approximate: true` - Sample 20% of source entities
-- `importanceThreshold: 5` - Skip low-importance entities
-- `maxIterations: 50` - Cap computation
+**Issue**: For large graphs, this blocks the event loop.
 
-**Impact**: 10x speedup for large graphs with acceptable accuracy
+**Solutions** (in order of complexity):
+
+1. **Chunked Processing**: Process 50 source vertices, yield, continue
+2. **Approximation**: Sample 20% of vertices as sources (configurable)
+3. **Worker Thread**: Offload entire calculation to worker
+
+**NOT Recommended**: `Promise.all()` for parallelizing - the algorithm is inherently sequential per source vertex, and `getRelationsTo/From()` are already O(1) synchronous lookups.
+
+**Estimated Impact**:
+- Chunked: Same total time, but non-blocking
+- Approximation: 5x speedup with ~95% accuracy
+- Worker: Non-blocking, same total time
+
+---
+
+### Phase 3: Advanced Optimizations
+
+#### 3.1 Observation Index
+
+**Concept**: Inverted index mapping observation text to entity names.
+
+```typescript
+// New structure in GraphStorage
+private observationIndex: Map<string, Set<string>>; // word → entity names
+```
+
+**Benefits**:
+- O(1) lookup for "which entities mention keyword X?"
+- Speeds up boolean search with observation clauses
+- Enables efficient observation-based deduplication
+
+**Maintenance Overhead**: Update index on entity create/update/delete.
+
+**Impact**: 2-5x for observation-heavy searches.
+
+---
+
+#### 3.2 Pre-compute Similarity Data for Compression
+
+**File**: `src/features/CompressionManager.ts:50-56`
+
+**Issue**: `calculateEntitySimilarity()` creates new Sets for observations and tags on every comparison.
+
+```typescript
+// Called O(n²) times for n entities in same bucket
+const obs1Set = new Set(e1.observations.map(o => o.toLowerCase()));
+const obs2Set = new Set(e2.observations.map(o => o.toLowerCase()));
+```
+
+**Solution**: Pre-compute normalized Sets once per entity before comparison loop.
+
+```typescript
+interface PreparedEntity {
+  entity: Entity;
+  obsSet: Set<string>;
+  tagSet: Set<string>;
+  nameLower: string;
+}
+```
+
+**Impact**: 1.5-2x speedup for duplicate detection.
+
+---
+
+#### 3.3 Reduce Graph Reloads in compressGraph
+
+**File**: `src/features/CompressionManager.ts:300-338`
+
+**Issue**: Each merge group triggers `loadGraph()` (line 304) and `mergeEntities()` triggers another graph load internally.
+
+**Solution**:
+- Load graph once before the loop
+- Pass graph reference to mergeEntities
+- Save graph once after all merges complete
+
+**Impact**: Reduces I/O from O(n) to O(1) where n = number of duplicate groups.
 
 ---
 
 ## New Feature Ideas
 
-### 4.1 Observation Index
+### 4.1 Transaction Batching API
 
-**Concept**: `Map<observation_text, Set<entity_names>>`
-
-**Benefits**:
-- O(1) lookup for "which entities mention X?"
-- Speeds up boolean/ranked search
-- Lazy-loaded on first observation search
-
-**Impact**: 2-5x speedup for observation-heavy searches
-
----
-
-### 4.2 Transaction Batching API
-
-**Concept**: Reduce mutex overhead for multiple operations
+**Concept**: Reduce mutex overhead for multiple operations.
 
 ```typescript
-await graph.transaction([
-  createEntities([...]),
-  createRelations([...]),
-  addObservations([...])
-]); // Single lock/unlock
+await storage.transaction(async (tx) => {
+  tx.createEntities([...]);
+  tx.createRelations([...]);
+  tx.addObservations([...]);
+}); // Single lock/unlock, single save
 ```
 
-**Impact**: 2-3x speedup for workloads with many small operations
+**Impact**: 2-3x speedup for workloads with many small sequential operations.
 
 ---
 
-### 4.3 Graph Change Events
+### 4.2 Graph Change Events
 
-**Concept**: EventEmitter for reactive updates
+**Concept**: EventEmitter for reactive updates.
 
 ```typescript
 storage.on('entityCreated', (entity) => { ... });
+storage.on('entityUpdated', (entity, changes) => { ... });
 storage.on('relationDeleted', (relation) => { ... });
 ```
 
 **Use Cases**:
 - Real-time index updates
 - External sync hooks
-- Logging/auditing
+- Audit logging
+- Cache invalidation
 
 ---
 
-### 4.4 Incremental Search Index
+### 4.3 Incremental TF-IDF Index
 
-**Concept**: Maintain search indices incrementally instead of rebuilding
+**Current**: TF-IDF index rebuilt on demand.
+
+**Proposed**: Maintain incrementally on entity changes.
 
 **Benefits**:
-- TF-IDF index updated on entity changes
-- No full reindex needed
-- Persistent index across restarts
+- Near-instant ranked search after graph modifications
+- Persistent index across restarts (serialize to file)
 
-**Impact**: Near-instant search on large, frequently-updated graphs
+**Trade-off**: Increased write overhead.
 
 ---
 
-### 4.5 Graph Partitioning
+### 4.4 Query Cost Estimation
 
-**Concept**: Split large graphs into partitions for parallel processing
+**Concept**: Estimate query cost before execution.
 
-**Benefits**:
-- Process partitions in parallel
-- Reduce memory pressure
-- Enable distributed processing
+```typescript
+const cost = searchManager.estimateCost(query, filters);
+// { estimatedMs: 150, complexity: 'medium', suggestions: [...] }
+```
 
 **Use Cases**:
-- Graphs with 10,000+ entities
-- Multi-tenant deployments
-
----
-
-### 4.6 Query Planner
-
-**Concept**: Optimize complex queries before execution
-
-**Features**:
-- Analyze filter selectivity
-- Choose optimal index usage
-- Reorder operations for efficiency
-
-**Impact**: 2-10x speedup for complex multi-filter queries
+- Warn users about expensive queries
+- Auto-optimize filter order
+- Rate limiting based on cost
 
 ---
 
 ## Implementation Priority Matrix
 
-| Phase | Effort | Items | Combined Impact |
-|-------|--------|-------|-----------------|
-| **Phase 1** | 1-2 days | Set-based lookups, NameIndex usage, batch map | 5-20x on bulk ops |
-| **Phase 2** | 3-5 days | Parallel centrality, worker pool, streaming | 3-6x on compute |
-| **Phase 3** | 1-2 weeks | ObservationIndex, approx algorithms, transactions | 2-5x + new features |
-
-### Expected Performance Gains
-
-| Graph Size | Phase 1 | Phase 1+2 | All Phases |
-|------------|---------|-----------|------------|
-| Small (< 100 entities) | 1.5-2x | 2-3x | 3-5x |
-| Medium (100-1000 entities) | 3-5x | 5-8x | 8-15x |
-| Large (1000+ entities) | 5-10x | 10-20x | 20-50x |
+| Priority | Item | Effort | Impact | Risk |
+|----------|------|--------|--------|------|
+| **HIGH** | Set-based lookups in deleteEntities | 1 hour | 10-50x on bulk deletes | Low |
+| **HIGH** | Use NameIndex in existence checks | 2 hours | 2-3x on tag/importance ops | Low |
+| **MEDIUM** | Lookup map in batchUpdate | 1 hour | 2-10x on batch updates | Low |
+| **MEDIUM** | Pre-compute similarity data | 2 hours | 1.5-2x on duplicate detection | Low |
+| **MEDIUM** | Reduce graph reloads in compress | 3 hours | Significant I/O reduction | Medium |
+| **LOW** | Worker pool for fuzzy search | 1-2 days | 2-4x for specific workloads | Medium |
+| **LOW** | Streaming exports | 1 day | Memory reduction only | Low |
+| **LOW** | Observation index | 2-3 days | 2-5x for observation searches | Medium |
 
 ---
 
 ## Files to Modify
 
-| File | Line(s) | Change | Priority |
-|------|---------|--------|----------|
-| `EntityManager.ts` | 78, 158-161, 305-316, 337-342 | Set lookups, NameIndex, map index | HIGH |
-| `RelationManager.ts` | 99-103, 184-190 | Set lookups | HIGH |
-| `GraphTraversal.ts` | 403-426, 447-514, 556-605 | Parallel algorithms | HIGH |
-| `FuzzySearch.ts` | 199-222 | Worker pool | MEDIUM |
-| `CompressionManager.ts` | 50-56, 301-330 | Pre-compute sets, parallel merges | MEDIUM |
-| `IOManager.ts` | Export methods | Streaming writes | MEDIUM |
-| `GraphStorage.ts` | New | ObservationIndex, events | MEDIUM |
-| `SearchManager.ts` | New | Query planner | LOW |
+| File | Lines | Change | Priority |
+|------|-------|--------|----------|
+| `EntityManager.ts` | 158-161 | Set-based delete | HIGH |
+| `EntityManager.ts` | 306, 338-339, 419-420 | Use NameIndex | HIGH |
+| `CompressionManager.ts` | 50-56 | Pre-compute similarity sets | MEDIUM |
+| `CompressionManager.ts` | 300-338 | Reduce graph reloads | MEDIUM |
+| `FuzzySearch.ts` | 199-222 | Worker pool (conditional) | LOW |
+| `IOManager.ts` | Export methods | Streaming writes | LOW |
+| `GraphStorage.ts` | New | Observation index | LOW |
 
 ---
 
 ## Testing & Validation
 
-For each optimization:
+### Before Implementing Any Optimization
 
-1. **Before/After Benchmarks**
-   ```bash
-   npm test -- performance/
-   ```
+1. **Create Benchmark**: Add to `tests/performance/` with baseline measurements
+2. **Profile First**: Use `node --prof` to confirm the bottleneck
+3. **Measure Real Impact**: Run benchmarks before and after
 
-2. **Load Testing** - Create tests with large datasets:
-   - 1000, 5000, 10000 entities
-   - Measure: memory usage, execution time, CPU utilization
+### Benchmark Commands
 
-3. **Profile with Node**
-   ```bash
-   node --prof dist/index.js
-   node --prof-process isolate-*.log > profile.txt
-   ```
+```bash
+# Run existing performance tests
+npm test -- tests/performance/
 
-4. **Regression Testing** - Ensure all existing tests pass after changes
+# Profile specific operation
+node --prof dist/index.js
+node --prof-process isolate-*.log > profile.txt
+
+# Memory profiling
+node --inspect dist/index.js
+# Then use Chrome DevTools Memory tab
+```
+
+### Avoid Premature Optimization
+
+- Only optimize after profiling confirms bottleneck
+- Small graphs (<100 entities) rarely need optimization
+- I/O is often the bottleneck, not CPU
 
 ---
 
@@ -317,11 +391,12 @@ For each optimization:
 
 When implementing optimizations:
 
-1. Create a feature branch: `feat/parallel-centrality`
-2. Add benchmarks before implementing
-3. Document performance gains in PR
-4. Ensure all tests pass
-5. Update this roadmap with completion status
+1. Create benchmark test first
+2. Measure baseline performance
+3. Implement optimization
+4. Measure improved performance
+5. Document gains in PR with actual numbers
+6. Update this roadmap with completion status
 
 ---
 
