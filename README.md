@@ -1723,6 +1723,7 @@ Comprehensive documentation organized by category:
 **Project Information**
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
 - **[Sprint Progress](docs/reports/SPRINT_PROGRESS.md)** - Development progress tracking
+- **[Future Features & Roadmap](docs/roadmap/FUTURE_FEATURES.md)** - Performance optimizations and planned features
 
 ## Configuration
 
