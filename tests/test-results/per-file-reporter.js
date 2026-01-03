@@ -160,9 +160,41 @@ class PerFileReporter {
       }
     });
 
+    // Clean up old reports before generating new ones
+    this.cleanupOldReports();
+
     // Store context for later use
     this.ctx = ctx;
     this.pendingSummaryData = null;
+  }
+
+  /**
+   * Remove old test reports to prevent stale FAIL/PASS reports from accumulating.
+   * Clears all reports from json/, html/, and summary/ directories.
+   */
+  cleanupOldReports() {
+    const dirsToClean = [this.jsonDir, this.htmlDir, this.summaryDir];
+
+    for (const dir of dirsToClean) {
+      if (!fs.existsSync(dir)) continue;
+
+      try {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          // Only remove .json and .html files (report files)
+          if (file.endsWith('.json') || file.endsWith('.html')) {
+            const filePath = path.join(dir, file);
+            try {
+              fs.unlinkSync(filePath);
+            } catch (err) {
+              // Ignore individual file deletion errors
+            }
+          }
+        }
+      } catch (err) {
+        // Ignore directory read errors
+      }
+    }
   }
 
   /**
