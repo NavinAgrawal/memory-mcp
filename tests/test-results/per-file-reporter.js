@@ -29,7 +29,7 @@ class PerFileReporter {
 
   /**
    * Read coverage data from coverage-summary.json
-   * Returns { percentage, untestedFiles } or null if not available
+   * Returns { percentage, untestedFiles, fileCoverage } or null if not available
    */
   readCoverageData() {
     const coverageSummaryPath = path.join(this.coverageDir, 'coverage-summary.json');
@@ -48,6 +48,8 @@ class PerFileReporter {
       // Find files with 0% coverage or very low coverage
       const untestedFiles = [];
       const lowCoverageFiles = [];
+      // Map from normalized source file name to coverage data
+      const fileCoverage = new Map();
 
       for (const [filePath, data] of Object.entries(coverageData)) {
         if (filePath === 'total') continue;
@@ -58,6 +60,16 @@ class PerFileReporter {
 
         // Normalize the file path for display (remove project root)
         const displayPath = filePath.replace(/^.*[/\\]src[/\\]/, 'src/').replace(/\\/g, '/');
+
+        // Extract just the filename (without extension) for matching with test files
+        const fileName = path.basename(filePath).replace(/\.(ts|js|tsx|jsx)$/, '');
+        fileCoverage.set(fileName, {
+          file: displayPath,
+          lines: linePct,
+          statements: stmtPct,
+          functions: data?.functions?.pct ?? 0,
+          branches: data?.branches?.pct ?? 0,
+        });
 
         if (avgPct === 0) {
           untestedFiles.push({
@@ -102,12 +114,42 @@ class PerFileReporter {
         },
         untestedFiles,
         lowCoverageFiles,
+        fileCoverage,
         totalSourceFiles: Object.keys(coverageData).filter(k => k !== 'total').length,
       };
     } catch (err) {
       // Coverage data not available or malformed
       return null;
     }
+  }
+
+  /**
+   * Get coverage for a test file by matching to source file
+   * Test file: EntityManager.test.ts -> Source file: EntityManager.ts
+   */
+  getCoverageForTestFile(testName, fileCoverage) {
+    if (!fileCoverage) return null;
+
+    // Remove common test file suffixes to get source file name
+    const sourceFileName = testName
+      .replace(/\.test$/, '')
+      .replace(/\.spec$/, '')
+      .replace(/-test$/, '')
+      .replace(/-spec$/, '');
+
+    // Try exact match first
+    if (fileCoverage.has(sourceFileName)) {
+      return fileCoverage.get(sourceFileName);
+    }
+
+    // Try case-insensitive match
+    for (const [fileName, coverage] of fileCoverage.entries()) {
+      if (fileName.toLowerCase() === sourceFileName.toLowerCase()) {
+        return coverage;
+      }
+    }
+
+    return null;
   }
 
   onInit(ctx) {
@@ -212,10 +254,11 @@ class PerFileReporter {
     const htmlPath = path.join(this.summaryDir, `${baseName}.html`);
 
     // Create summary object (without coverage initially)
+    const self = this;
     const createSummary = (coverageData) => ({
       timestamp: new Date().toISOString(),
       status: overallStatus,
-      mode: this.mode,
+      mode: self.mode,
       totalFiles: fileReports.length,
       summary: {
         total: totalTests,
@@ -235,15 +278,23 @@ class PerFileReporter {
         untestedFiles: coverageData.untestedFiles,
         lowCoverageFiles: coverageData.lowCoverageFiles,
       } : null,
-      files: fileReports.map(r => ({
-        name: r.testName,
-        file: path.basename(r.name),
-        status: r.status,
-        tests: r.summary.total,
-        passed: r.summary.passed,
-        failed: r.summary.failed,
-        skipped: r.summary.skipped,
-      }))
+      files: fileReports.map(r => {
+        const fileCov = coverageData ? self.getCoverageForTestFile(r.testName, coverageData.fileCoverage) : null;
+        return {
+          name: r.testName,
+          file: path.basename(r.name),
+          status: r.status,
+          tests: r.summary.total,
+          passed: r.summary.passed,
+          failed: r.summary.failed,
+          skipped: r.summary.skipped,
+          coverage: fileCov ? {
+            lines: fileCov.lines,
+            statements: fileCov.statements,
+            sourceFile: fileCov.file,
+          } : null,
+        };
+      })
     });
 
     // Write initial summary (may not have coverage yet)
@@ -423,14 +474,28 @@ class PerFileReporter {
     const statusColor = summary.status === 'PASS' ? '#22c55e' : '#ef4444';
     const statusBg = summary.status === 'PASS' ? '#dcfce7' : '#fef2f2';
 
+    const hasCoverage = summary.coverage !== null;
     const fileRows = summary.files.map(file => {
       const fileStatusColor = file.status === 'PASS' ? '#22c55e' : '#ef4444';
       const fileStatusBg = file.status === 'PASS' ? '#dcfce7' : '#fef2f2';
+
+      // Coverage column
+      let coverageCell = '';
+      if (hasCoverage) {
+        if (file.coverage) {
+          const covPct = file.coverage.lines;
+          const covColor = covPct >= 80 ? '#22c55e' : covPct >= 50 ? '#f59e0b' : '#ef4444';
+          coverageCell = `<td style="padding: 12px 16px; text-align: center; color: ${covColor}; font-weight: 500;" title="${this.escapeHtml(file.coverage.sourceFile)}">${covPct.toFixed(1)}%</td>`;
+        } else {
+          coverageCell = `<td style="padding: 12px 16px; text-align: center; color: #9ca3af;">—</td>`;
+        }
+      }
 
       return `
         <tr>
           <td style="padding: 12px 16px;">${this.escapeHtml(file.name)}</td>
           <td style="padding: 12px 16px;"><span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: ${fileStatusBg}; color: ${fileStatusColor};">${file.status}</span></td>
+          ${coverageCell}
           <td style="padding: 12px 16px; text-align: center;">${file.tests}</td>
           <td style="padding: 12px 16px; text-align: center; color: #22c55e;">${file.passed}</td>
           <td style="padding: 12px 16px; text-align: center; color: #ef4444;">${file.failed}</td>
@@ -604,6 +669,7 @@ class PerFileReporter {
           <tr>
             <th>Test File</th>
             <th style="width: 80px;">Status</th>
+            ${summary.coverage ? '<th style="width: 100px; text-align: center;">Coverage</th>' : ''}
             <th style="width: 80px; text-align: center;">Total</th>
             <th style="width: 80px; text-align: center;">Passed</th>
             <th style="width: 80px; text-align: center;">Failed</th>

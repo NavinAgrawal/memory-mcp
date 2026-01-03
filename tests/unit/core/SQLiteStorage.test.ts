@@ -779,4 +779,422 @@ describe('SQLiteStorage', () => {
       // WAL and SHM files may exist depending on whether checkpoint was run
     });
   });
+
+  describe('Relation Operations', () => {
+    beforeEach(async () => {
+      // Create entities for relation tests
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Charlie', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [
+          { from: 'Alice', to: 'Bob', relationType: 'knows', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { from: 'Alice', to: 'Charlie', relationType: 'manages', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { from: 'Bob', to: 'Charlie', relationType: 'works_with', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+      });
+    });
+
+    describe('getRelationsFrom', () => {
+      it('should return outgoing relations for an entity', async () => {
+        const relations = storage.getRelationsFrom('Alice');
+        expect(relations).toHaveLength(2);
+        expect(relations.every(r => r.from === 'Alice')).toBe(true);
+      });
+
+      it('should return empty array for entity with no outgoing relations', async () => {
+        const relations = storage.getRelationsFrom('Charlie');
+        expect(relations).toHaveLength(0);
+      });
+
+      it('should return empty array for non-existent entity', async () => {
+        const relations = storage.getRelationsFrom('NonExistent');
+        expect(relations).toHaveLength(0);
+      });
+    });
+
+    describe('getRelationsTo', () => {
+      it('should return incoming relations for an entity', async () => {
+        const relations = storage.getRelationsTo('Charlie');
+        expect(relations).toHaveLength(2);
+        expect(relations.every(r => r.to === 'Charlie')).toBe(true);
+      });
+
+      it('should return empty array for entity with no incoming relations', async () => {
+        const relations = storage.getRelationsTo('Alice');
+        expect(relations).toHaveLength(0);
+      });
+
+      it('should return empty array for non-existent entity', async () => {
+        const relations = storage.getRelationsTo('NonExistent');
+        expect(relations).toHaveLength(0);
+      });
+    });
+
+    describe('getRelationsFor', () => {
+      it('should return all relations involving an entity', async () => {
+        const relations = storage.getRelationsFor('Alice');
+        expect(relations).toHaveLength(2);
+      });
+
+      it('should return incoming and outgoing relations for Bob', async () => {
+        const relations = storage.getRelationsFor('Bob');
+        expect(relations).toHaveLength(2);
+        expect(relations.some(r => r.from === 'Alice' && r.to === 'Bob')).toBe(true);
+        expect(relations.some(r => r.from === 'Bob' && r.to === 'Charlie')).toBe(true);
+      });
+
+      it('should cache bidirectional relation lookups', async () => {
+        // First lookup
+        const relations1 = storage.getRelationsFor('Bob');
+        // Second lookup should use cache
+        const relations2 = storage.getRelationsFor('Bob');
+
+        expect(relations1).toEqual(relations2);
+      });
+
+      it('should return empty array for entity with no relations', async () => {
+        await storage.appendEntity({
+          name: 'Lonely',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        const relations = storage.getRelationsFor('Lonely');
+        expect(relations).toHaveLength(0);
+      });
+    });
+
+    describe('hasRelations', () => {
+      it('should return true for entity with relations', async () => {
+        expect(storage.hasRelations('Alice')).toBe(true);
+        expect(storage.hasRelations('Bob')).toBe(true);
+        expect(storage.hasRelations('Charlie')).toBe(true);
+      });
+
+      it('should return false for entity with no relations', async () => {
+        await storage.appendEntity({
+          name: 'Lonely',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        expect(storage.hasRelations('Lonely')).toBe(false);
+      });
+
+      it('should return false for non-existent entity', async () => {
+        expect(storage.hasRelations('NonExistent')).toBe(false);
+      });
+    });
+
+    describe('Bidirectional Cache Invalidation', () => {
+      it('should invalidate cache when new relation is added', async () => {
+        // First lookup to populate cache
+        const relations1 = storage.getRelationsFor('Alice');
+        expect(relations1).toHaveLength(2);
+
+        // Add new relation
+        await storage.appendRelation({
+          from: 'Charlie',
+          to: 'Alice',
+          relationType: 'admires',
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        // Cache should be invalidated
+        const relations2 = storage.getRelationsFor('Alice');
+        expect(relations2).toHaveLength(3);
+      });
+    });
+  });
+
+  describe('Embedding Storage', () => {
+    describe('storeEmbedding', () => {
+      it('should store an embedding vector', async () => {
+        await storage.ensureLoaded();
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        const vector = [0.1, 0.2, 0.3, 0.4, 0.5];
+        storage.storeEmbedding('Alice', vector, 'test-model');
+
+        const retrieved = storage.getEmbedding('Alice');
+        expect(retrieved).not.toBeNull();
+        expect(retrieved).toHaveLength(5);
+      });
+
+      it('should update existing embedding', async () => {
+        await storage.ensureLoaded();
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        storage.storeEmbedding('Alice', [0.1, 0.2], 'model-v1');
+        storage.storeEmbedding('Alice', [0.3, 0.4, 0.5], 'model-v2');
+
+        const retrieved = storage.getEmbedding('Alice');
+        expect(retrieved).toHaveLength(3);
+      });
+
+      it('should throw error if database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+
+        expect(() => {
+          uninitStorage.storeEmbedding('Alice', [0.1], 'model');
+        }).toThrow('Database not initialized');
+      });
+    });
+
+    describe('getEmbedding', () => {
+      it('should retrieve stored embedding', async () => {
+        await storage.ensureLoaded();
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        const vector = [0.1, 0.2, 0.3];
+        storage.storeEmbedding('Alice', vector, 'test-model');
+
+        const retrieved = storage.getEmbedding('Alice');
+        expect(retrieved).not.toBeNull();
+        // Float32 may have slight precision differences
+        expect(retrieved![0]).toBeCloseTo(0.1, 5);
+        expect(retrieved![1]).toBeCloseTo(0.2, 5);
+        expect(retrieved![2]).toBeCloseTo(0.3, 5);
+      });
+
+      it('should return null for non-existent embedding', async () => {
+        await storage.ensureLoaded();
+        const retrieved = storage.getEmbedding('NonExistent');
+        expect(retrieved).toBeNull();
+      });
+
+      it('should return null when database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+        const result = uninitStorage.getEmbedding('Alice');
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('loadAllEmbeddings', () => {
+      it('should load all stored embeddings', async () => {
+        await storage.ensureLoaded();
+        await storage.saveGraph({
+          entities: [
+            { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+            { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          ],
+          relations: [],
+        });
+
+        storage.storeEmbedding('Alice', [0.1, 0.2], 'model');
+        storage.storeEmbedding('Bob', [0.3, 0.4], 'model');
+
+        const embeddings = await storage.loadAllEmbeddings();
+        expect(embeddings).toHaveLength(2);
+        expect(embeddings.map(e => e[0])).toContain('Alice');
+        expect(embeddings.map(e => e[0])).toContain('Bob');
+      });
+
+      it('should return empty array when no embeddings exist', async () => {
+        await storage.ensureLoaded();
+        const embeddings = await storage.loadAllEmbeddings();
+        expect(embeddings).toEqual([]);
+      });
+
+      it('should return empty array when database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+        const embeddings = await uninitStorage.loadAllEmbeddings();
+        expect(embeddings).toEqual([]);
+      });
+    });
+
+    describe('removeEmbedding', () => {
+      it('should remove embedding for entity', async () => {
+        await storage.ensureLoaded();
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        storage.storeEmbedding('Alice', [0.1, 0.2], 'model');
+        expect(storage.hasEmbedding('Alice')).toBe(true);
+
+        storage.removeEmbedding('Alice');
+        expect(storage.hasEmbedding('Alice')).toBe(false);
+      });
+
+      it('should not throw when removing non-existent embedding', async () => {
+        await storage.ensureLoaded();
+        expect(() => storage.removeEmbedding('NonExistent')).not.toThrow();
+      });
+
+      it('should not throw when database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+        expect(() => uninitStorage.removeEmbedding('Alice')).not.toThrow();
+      });
+    });
+
+    describe('clearAllEmbeddings', () => {
+      it('should clear all stored embeddings', async () => {
+        await storage.ensureLoaded();
+        await storage.saveGraph({
+          entities: [
+            { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+            { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          ],
+          relations: [],
+        });
+
+        storage.storeEmbedding('Alice', [0.1], 'model');
+        storage.storeEmbedding('Bob', [0.2], 'model');
+        expect(storage.getEmbeddingStats().count).toBe(2);
+
+        storage.clearAllEmbeddings();
+        expect(storage.getEmbeddingStats().count).toBe(0);
+      });
+
+      it('should not throw when no embeddings exist', async () => {
+        await storage.ensureLoaded();
+        expect(() => storage.clearAllEmbeddings()).not.toThrow();
+      });
+
+      it('should not throw when database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+        expect(() => uninitStorage.clearAllEmbeddings()).not.toThrow();
+      });
+    });
+
+    describe('hasEmbedding', () => {
+      it('should return true for entity with embedding', async () => {
+        await storage.ensureLoaded();
+        await storage.appendEntity({
+          name: 'Alice',
+          entityType: 'person',
+          observations: [],
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        });
+
+        storage.storeEmbedding('Alice', [0.1, 0.2], 'model');
+        expect(storage.hasEmbedding('Alice')).toBe(true);
+      });
+
+      it('should return false for entity without embedding', async () => {
+        await storage.ensureLoaded();
+        expect(storage.hasEmbedding('NonExistent')).toBe(false);
+      });
+
+      it('should return false when database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+        expect(uninitStorage.hasEmbedding('Alice')).toBe(false);
+      });
+    });
+
+    describe('getEmbeddingStats', () => {
+      it('should return correct stats', async () => {
+        await storage.ensureLoaded();
+        await storage.saveGraph({
+          entities: [
+            { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+            { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          ],
+          relations: [],
+        });
+
+        storage.storeEmbedding('Alice', [0.1], 'model-a');
+        storage.storeEmbedding('Bob', [0.2], 'model-b');
+
+        const stats = storage.getEmbeddingStats();
+        expect(stats.count).toBe(2);
+        expect(stats.models).toContain('model-a');
+        expect(stats.models).toContain('model-b');
+      });
+
+      it('should return zero count when no embeddings exist', async () => {
+        await storage.ensureLoaded();
+        const stats = storage.getEmbeddingStats();
+        expect(stats.count).toBe(0);
+        expect(stats.models).toEqual([]);
+      });
+
+      it('should return zero count when database not initialized', async () => {
+        const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+        const stats = uninitStorage.getEmbeddingStats();
+        expect(stats.count).toBe(0);
+        expect(stats.models).toEqual([]);
+      });
+    });
+  });
+
+  describe('Database Operations without Cache', () => {
+    it('should fall back to database query for getRelationsFrom', async () => {
+      await storage.saveGraph({
+        entities: [
+          { name: 'Alice', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+          { name: 'Bob', entityType: 'person', observations: [], createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+        relations: [
+          { from: 'Alice', to: 'Bob', relationType: 'knows', createdAt: new Date().toISOString(), lastModified: new Date().toISOString() },
+        ],
+      });
+
+      // Verify data is accessible
+      const relations = storage.getRelationsFrom('Alice');
+      expect(relations).toHaveLength(1);
+    });
+
+    it('should return empty for uninitialized database queries', async () => {
+      const uninitStorage = new SQLiteStorage(join(testDir, 'uninit.db'));
+
+      expect(uninitStorage.fullTextSearch('test')).toEqual([]);
+      expect(uninitStorage.simpleSearch('test')).toEqual([]);
+    });
+  });
+
+  describe('updateEntity with type change', () => {
+    it('should update type index when entity type changes', async () => {
+      await storage.appendEntity({
+        name: 'Alice',
+        entityType: 'person',
+        observations: [],
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+      });
+
+      // Update type
+      await storage.updateEntity('Alice', { entityType: 'employee' });
+
+      // Check type index is updated
+      const people = storage.getEntitiesByType('person');
+      const employees = storage.getEntitiesByType('employee');
+
+      expect(people).toHaveLength(0);
+      expect(employees).toHaveLength(1);
+      expect(employees[0].name).toBe('Alice');
+    });
+  });
 });

@@ -472,4 +472,173 @@ describe('RankedSearch', () => {
       });
     });
   });
+
+  describe('Index Management', () => {
+    let indexedSearch: RankedSearch;
+
+    beforeEach(() => {
+      // Create RankedSearch with storageDir to enable index management
+      indexedSearch = new RankedSearch(storage, testDir);
+    });
+
+    it('should build and save index', async () => {
+      await indexedSearch.buildIndex();
+
+      // After building, search should use the index
+      const results = await indexedSearch.searchNodesRanked('Python');
+      expect(results.length).toBeGreaterThan(0);
+    });
+
+    it('should throw error when building index without storageDir', async () => {
+      const noIndexSearch = new RankedSearch(storage);
+
+      await expect(noIndexSearch.buildIndex()).rejects.toThrow(
+        'Index manager not initialized. Provide storageDir to constructor.'
+      );
+    });
+
+    it('should update index incrementally', async () => {
+      await indexedSearch.buildIndex();
+
+      // Add new entity
+      await entityManager.createEntities([
+        { name: 'NewEntity', entityType: 'test', observations: ['unique observation'] }
+      ]);
+
+      // Update index for the new entity
+      await indexedSearch.updateIndex(new Set(['NewEntity']));
+
+      // Search should find the new entity
+      const results = await indexedSearch.searchNodesRanked('unique');
+      const newResult = results.find(r => r.entity.name === 'NewEntity');
+      expect(newResult).toBeDefined();
+    });
+
+    it('should skip update when no index manager', async () => {
+      const noIndexSearch = new RankedSearch(storage);
+
+      // Should not throw, just skip
+      await expect(noIndexSearch.updateIndex(new Set(['test']))).resolves.not.toThrow();
+    });
+
+    it('should search with pre-built index', async () => {
+      await indexedSearch.buildIndex();
+
+      const results = await indexedSearch.searchNodesRanked('Python');
+
+      expect(results.length).toBeGreaterThan(0);
+      // Should have scores and matched fields from index-based search
+      results.forEach(result => {
+        expect(result.score).toBeGreaterThan(0);
+        expect(result.matchedFields).toBeDefined();
+      });
+    });
+
+    it('should track name matches when using index', async () => {
+      await indexedSearch.buildIndex();
+
+      const results = await indexedSearch.searchNodesRanked('Alice');
+
+      const aliceResult = results.find(r => r.entity.name === 'Alice');
+      expect(aliceResult).toBeDefined();
+      expect(aliceResult!.matchedFields.name).toBe(true);
+    });
+
+    it('should track entityType matches when using index', async () => {
+      await indexedSearch.buildIndex();
+
+      const results = await indexedSearch.searchNodesRanked('person');
+
+      expect(results.length).toBeGreaterThan(0);
+      const personResults = results.filter(r => r.entity.entityType === 'person');
+      personResults.forEach(result => {
+        expect(result.matchedFields.entityType).toBe(true);
+      });
+    });
+
+    it('should track observation matches when using index', async () => {
+      await indexedSearch.buildIndex();
+
+      const results = await indexedSearch.searchNodesRanked('engineer');
+
+      const aliceResult = results.find(r => r.entity.name === 'Alice');
+      expect(aliceResult).toBeDefined();
+      expect(aliceResult!.matchedFields.observations).toBeDefined();
+      expect(aliceResult!.matchedFields.observations!.length).toBeGreaterThan(0);
+    });
+
+    it('should apply filters when using index', async () => {
+      await indexedSearch.buildIndex();
+
+      const results = await indexedSearch.searchNodesRanked('Python', ['python'], 8);
+
+      expect(results.length).toBeGreaterThan(0);
+      results.forEach(result => {
+        expect(result.entity.tags).toContain('python');
+        expect(result.entity.importance).toBeGreaterThanOrEqual(8);
+      });
+    });
+
+    it('should respect limit when using index', async () => {
+      await indexedSearch.buildIndex();
+
+      const results = await indexedSearch.searchNodesRanked('Python', undefined, undefined, undefined, 2);
+
+      expect(results.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should handle entities not in index', async () => {
+      await indexedSearch.buildIndex();
+
+      // Add new entity without rebuilding index
+      await entityManager.createEntities([
+        { name: 'NotIndexed', entityType: 'test', observations: ['unique term'] }
+      ]);
+
+      // Search for the new entity - it won't be found via index
+      const results = await indexedSearch.searchNodesRanked('NotIndexed');
+
+      // The entity might not be found since it's not indexed
+      // This tests the "entity not in index" branch
+      expect(Array.isArray(results)).toBe(true);
+    });
+  });
+
+  describe('Token Cache', () => {
+    it('should clear token cache', () => {
+      // First search populates cache
+      rankedSearch.searchNodesRanked('Python');
+
+      // Clear should not throw
+      expect(() => rankedSearch.clearTokenCache()).not.toThrow();
+    });
+
+    it('should invalidate cache when entity count changes', async () => {
+      // First search with initial entities
+      await rankedSearch.searchNodesRanked('Python');
+
+      // Add new entity
+      await entityManager.createEntities([
+        { name: 'NewCacheTest', entityType: 'test', observations: ['cache test'] }
+      ]);
+
+      // Second search should detect entity count change and invalidate cache
+      const results = await rankedSearch.searchNodesRanked('cache');
+
+      const newResult = results.find(r => r.entity.name === 'NewCacheTest');
+      expect(newResult).toBeDefined();
+    });
+
+    it('should use cached tokens on repeated searches', async () => {
+      // First search populates cache
+      const results1 = await rankedSearch.searchNodesRanked('Python');
+
+      // Second search should use cache (same entity count)
+      const results2 = await rankedSearch.searchNodesRanked('Python');
+
+      // Results should be the same
+      expect(results1.length).toBe(results2.length);
+      expect(results1[0].entity.name).toBe(results2[0].entity.name);
+    });
+  });
 });

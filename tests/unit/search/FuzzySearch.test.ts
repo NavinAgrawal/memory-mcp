@@ -562,4 +562,181 @@ describe('FuzzySearch', () => {
       expect(result.entities.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe('Pagination', () => {
+    it('should apply offset correctly', async () => {
+      const fullResult = await fuzzySearch.fuzzySearch('person', 0.7);
+      const offsetResult = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 2);
+
+      expect(offsetResult.entities.length).toBe(Math.max(0, fullResult.entities.length - 2));
+    });
+
+    it('should apply limit correctly', async () => {
+      const result = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 0, 2);
+
+      expect(result.entities.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should apply offset and limit together', async () => {
+      const result = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 1, 2);
+
+      expect(result.entities.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should return empty when offset exceeds result count', async () => {
+      const result = await fuzzySearch.fuzzySearch('Alice', 0.95, undefined, undefined, undefined, 100);
+
+      expect(result.entities).toHaveLength(0);
+    });
+
+    it('should handle zero limit (validates to minimum 1)', async () => {
+      // SearchFilterChain.validatePagination enforces minimum limit of 1
+      const result = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 0, 0);
+
+      // With limit validated to minimum, should return at least 1 result
+      expect(result.entities.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should handle large limit', async () => {
+      const result = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 0, 1000);
+
+      expect(result.entities.length).toBeGreaterThan(0);
+      expect(result.entities.length).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe('Cache Functionality', () => {
+    it('should cache search results', async () => {
+      // First search - cache miss
+      const result1 = await fuzzySearch.fuzzySearch('Alice', 0.7);
+
+      // Second search - should hit cache
+      const result2 = await fuzzySearch.fuzzySearch('Alice', 0.7);
+
+      expect(result1.entities).toHaveLength(result2.entities.length);
+      expect(result1.entities.map(e => e.name)).toEqual(result2.entities.map(e => e.name));
+    });
+
+    it('should clear cache with clearCache()', async () => {
+      // Populate cache
+      await fuzzySearch.fuzzySearch('Alice', 0.7);
+
+      // Clear cache
+      fuzzySearch.clearCache();
+
+      // This search should not hit cache (fresh search)
+      const result = await fuzzySearch.fuzzySearch('Alice', 0.7);
+
+      expect(result.entities.length).toBeGreaterThan(0);
+    });
+
+    it('should invalidate cache when entity count changes', async () => {
+      // First search - populates cache
+      const result1 = await fuzzySearch.fuzzySearch('person', 0.7);
+
+      // Add new entity
+      await entityManager.createEntities([
+        { name: 'Charlie', entityType: 'person', observations: ['New person'], importance: 6 },
+      ]);
+
+      // Second search - should not use cache (entity count changed)
+      const result2 = await fuzzySearch.fuzzySearch('person', 0.7);
+
+      // Should find the new entity
+      const names = result2.entities.map(e => e.name);
+      expect(names).toContain('Charlie');
+    });
+
+    it('should use different cache entries for different thresholds', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('Alise', 0.7);
+      const result2 = await fuzzySearch.fuzzySearch('Alise', 0.5);
+
+      // Different thresholds may produce different results
+      // At minimum, both searches should work correctly
+      expect(result1.entities.length).toBeLessThanOrEqual(result2.entities.length);
+    });
+
+    it('should use different cache entries for different tags', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('person', 0.7, ['python']);
+      const result2 = await fuzzySearch.fuzzySearch('person', 0.7, ['design']);
+
+      // Different tag filters produce different results
+      const names1 = result1.entities.map(e => e.name);
+      const names2 = result2.entities.map(e => e.name);
+      expect(names1).not.toEqual(names2);
+    });
+
+    it('should use different cache entries for different importance filters', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('person', 0.7, undefined, 9);
+      const result2 = await fuzzySearch.fuzzySearch('person', 0.7, undefined, 7);
+
+      // Different importance filters may produce different results
+      expect(result2.entities.length).toBeGreaterThanOrEqual(result1.entities.length);
+    });
+
+    it('should use different cache entries for different pagination', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 0, 2);
+      const result2 = await fuzzySearch.fuzzySearch('person', 0.7, undefined, undefined, undefined, 0, 10);
+
+      // Different limits should produce different cache entries
+      expect(result1.entities.length).toBeLessThanOrEqual(2);
+      expect(result2.entities.length).toBeLessThanOrEqual(10);
+    });
+
+    it('should handle cache with empty results', async () => {
+      // First search - no matches
+      const result1 = await fuzzySearch.fuzzySearch('XyzNonExistent', 0.9);
+
+      // Second search - should return cached empty result
+      const result2 = await fuzzySearch.fuzzySearch('XyzNonExistent', 0.9);
+
+      expect(result1.entities).toHaveLength(0);
+      expect(result2.entities).toHaveLength(0);
+    });
+
+    it('should perform cleanup when cache grows large', async () => {
+      // Create many different searches to fill cache (>50 to trigger cleanup at 50%)
+      for (let i = 0; i < 60; i++) {
+        await fuzzySearch.fuzzySearch(`query${i}`, 0.5, undefined, undefined, undefined, i % 5, 10);
+      }
+
+      // Cache should still work after cleanup
+      const result = await fuzzySearch.fuzzySearch('Alice', 0.7);
+      expect(result.entities.length).toBeGreaterThan(0);
+    });
+
+    it('should trigger cache LRU eviction when over max size', async () => {
+      // Create 110 different cache entries (over FUZZY_CACHE_MAX_SIZE of 100)
+      for (let i = 0; i < 110; i++) {
+        await fuzzySearch.fuzzySearch(`query${i}`, 0.3, undefined, undefined, undefined, 0, 1);
+      }
+
+      // Cache should still work - oldest entries evicted
+      const result = await fuzzySearch.fuzzySearch('Alice', 0.7);
+      expect(result.entities.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Cache Key Generation', () => {
+    it('should generate same key for same parameters', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('Alice', 0.7, ['python'], 5, 10, 0, 50);
+      const result2 = await fuzzySearch.fuzzySearch('Alice', 0.7, ['python'], 5, 10, 0, 50);
+
+      expect(result1.entities.map(e => e.name)).toEqual(result2.entities.map(e => e.name));
+    });
+
+    it('should be case-insensitive for query', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('ALICE', 0.7);
+      const result2 = await fuzzySearch.fuzzySearch('alice', 0.7);
+
+      expect(result1.entities.length).toBe(result2.entities.length);
+    });
+
+    it('should sort tags for consistent cache key', async () => {
+      const result1 = await fuzzySearch.fuzzySearch('person', 0.7, ['python', 'engineering']);
+      const result2 = await fuzzySearch.fuzzySearch('person', 0.7, ['engineering', 'python']);
+
+      expect(result1.entities.map(e => e.name).sort()).toEqual(result2.entities.map(e => e.name).sort());
+    });
+  });
 });

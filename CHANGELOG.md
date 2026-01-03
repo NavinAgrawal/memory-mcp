@@ -5,6 +5,34 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.0] - 2026-01-03
+
+### Added
+
+- **New Dedicated Test Files**
+  - `HierarchyManager.test.ts` - 38 tests for parent-child hierarchy operations (98.7% coverage)
+  - `ObservationManager.test.ts` - 28 tests for observation CRUD operations (100% coverage)
+  - `searchAlgorithms.test.ts` - 51 tests for Levenshtein distance and TF-IDF algorithms (100% coverage)
+
+- **Test File Consolidation**
+  - Consolidated `ExportManager.test.ts`, `ImportManager.test.ts`, `BackupManager.test.ts` into `IOManager.test.ts` (152 tests)
+  - Consolidated `validationHelper.test.ts`, `validationUtils.test.ts` into `schemas.test.ts` (76 tests)
+  - Consolidated `levenshtein.test.ts` into `searchAlgorithms.test.ts`
+  - Removed redundant `tagUtils.test.ts` (already covered in `entityUtils.test.ts`)
+  - Renamed `responseFormatter.test.ts` to `formatters.test.ts` to match source file
+
+- **Coverage Reporting Enhancement**
+  - Added per-file coverage percentage column to test summary report
+  - Coverage data mapped from source files to corresponding test files
+  - Color-coded coverage display (green >=80%, yellow 50-80%, red <50%)
+
+### Changed
+
+- Test file count reduced from 57 to 53 through consolidation
+- Total tests increased from 2,004 to 2,109
+- Overall code coverage improved to 93.7%
+- Test file naming now consistently matches source file naming
+
 ## [9.1.0] - 2026-01-03
 
 ### Added
