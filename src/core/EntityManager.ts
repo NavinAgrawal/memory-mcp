@@ -155,9 +155,11 @@ export class EntityManager {
 
     const graph = await this.storage.getGraphForMutation();
 
-    graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
+    // OPTIMIZED: Use Set for O(1) lookups instead of O(n) includes()
+    const namesToDelete = new Set(entityNames);
+    graph.entities = graph.entities.filter(e => !namesToDelete.has(e.name));
     graph.relations = graph.relations.filter(
-      r => !entityNames.includes(r.from) && !entityNames.includes(r.to)
+      r => !namesToDelete.has(r.from) && !namesToDelete.has(r.to)
     );
 
     await this.storage.saveGraph(graph);
@@ -302,12 +304,16 @@ export class EntityManager {
     const timestamp = new Date().toISOString();
     const updatedEntities: Entity[] = [];
 
-    for (const { name, updates: updateData } of updates) {
-      const entity = graph.entities.find(e => e.name === name);
+    // OPTIMIZED: Build Map for O(1) lookups instead of O(n) find() per update
+    const entityIndex = new Map<string, number>();
+    graph.entities.forEach((e, i) => entityIndex.set(e.name, i));
 
-      if (!entity) {
+    for (const { name, updates: updateData } of updates) {
+      const idx = entityIndex.get(name);
+      if (idx === undefined) {
         throw new EntityNotFoundError(name);
       }
+      const entity = graph.entities[idx];
 
       // Apply updates
       Object.assign(entity, updateData);
@@ -334,9 +340,8 @@ export class EntityManager {
    * @throws {EntityNotFoundError} If entity is not found
    */
   async addTags(entityName: string, tags: string[]): Promise<{ entityName: string; addedTags: string[] }> {
-    // Check entity exists using read-only graph
-    const readGraph = await this.storage.loadGraph();
-    const entity = readGraph.entities.find(e => e.name === entityName);
+    // OPTIMIZED: Use O(1) NameIndex lookup instead of loadGraph() + O(n) find()
+    const entity = this.storage.getEntityByName(entityName);
     if (!entity) {
       throw new EntityNotFoundError(entityName);
     }
@@ -415,14 +420,13 @@ export class EntityManager {
       throw new Error(`Importance must be between 0 and 10, got ${importance}`);
     }
 
-    // Check entity exists using read-only graph
-    const readGraph = await this.storage.loadGraph();
-    const entity = readGraph.entities.find(e => e.name === entityName);
+    // OPTIMIZED: Use O(1) NameIndex lookup instead of loadGraph() + O(n) find()
+    const entity = this.storage.getEntityByName(entityName);
     if (!entity) {
       throw new EntityNotFoundError(entityName);
     }
 
-    // OPTIMIZED: Use updateEntity for in-place update + append
+    // Use updateEntity for in-place update + append
     await this.storage.updateEntity(entityName, { importance });
 
     return { entityName, importance };

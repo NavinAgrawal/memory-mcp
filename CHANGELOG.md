@@ -5,6 +5,30 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.0] - 2026-01-03
+
+### Performance Improvements
+
+- **Phase 6: Performance Optimization (Quick Wins)**
+  - **Set-based lookups for deleteEntities** - Replaced `array.includes()` with `Set.has()` for O(1) lookups instead of O(n), resulting in 48% faster bulk deletions
+  - **O(1) NameIndex for entity existence checks** - `addTags` and `setImportance` now use `getEntityByName()` instead of `loadGraph()` + `find()`, eliminating unnecessary graph loads
+  - **Map-based batch updates** - `batchUpdate` now builds a lookup Map once instead of calling `find()` per update, providing 22% improvement on larger batches
+
+### Added
+
+- **Performance Benchmarks**
+  - New `tests/performance/optimization-benchmarks.test.ts` with 10 benchmark tests
+  - Covers deleteEntities, addTags, setImportance, batchUpdate, and NameIndex verification
+  - Baseline and post-optimization metrics documented in `docs/reports/PHASE_6_BASELINE_METRICS.md`
+
+### Internal
+
+- Algorithm complexity improvements:
+  - `deleteEntities`: O(n×m) → O(n+m)
+  - `addTags`: O(n) lookup → O(1) lookup
+  - `setImportance`: O(n) lookup → O(1) lookup
+  - `batchUpdate`: O(n×m) → O(n+m)
+
 ## [9.2.2] - 2026-01-03
 
 ### Added

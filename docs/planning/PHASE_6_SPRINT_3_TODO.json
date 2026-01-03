@@ -4,7 +4,7 @@
   "title": "NameIndex Utilization",
   "priority": "HIGH",
   "effort": "2.25 hours",
-  "status": "pending",
+  "status": "completed",
   "impact": "Eliminate unnecessary graph loads for entity existence checks by using existing O(1) NameIndex where applicable",
   "targetMetrics": {
     "addTagsLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" },
