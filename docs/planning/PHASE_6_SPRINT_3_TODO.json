@@ -3,13 +3,13 @@
   "sprint": 3,
   "title": "NameIndex Utilization",
   "priority": "HIGH",
-  "effort": "2.5 hours",
+  "effort": "2.25 hours",
   "status": "pending",
-  "impact": "Eliminate unnecessary graph loads for entity existence checks by using existing O(1) NameIndex",
+  "impact": "Eliminate unnecessary graph loads for entity existence checks by using existing O(1) NameIndex where applicable",
   "targetMetrics": {
     "addTagsLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" },
     "setImportanceLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" },
-    "removeTagsLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" }
+    "removeTagsLookup": { "current": "getGraphForMutation() + O(n) find()", "target": "Review - different pattern, may not be optimizable" }
   },
   "tasks": [
     {
@@ -20,7 +20,7 @@
       "estimatedHours": 0.75,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 336-357 (approximately)",
+      "location": "Lines 336-357 (addTags method)",
       "testCategories": [
         "All existing addTags tests must pass",
         "Benchmark should show improvement"
@@ -58,7 +58,7 @@
       "estimatedHours": 0.5,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 412-428 (approximately)",
+      "location": "Lines 412-429 (setImportance method)",
       "testCategories": [
         "All existing setImportance tests must pass"
       ],
@@ -85,23 +85,38 @@
     {
       "id": 3,
       "category": "Core",
-      "description": "Optimize removeTags Entity Existence Check - Apply the same optimization pattern to EntityManager.removeTags()",
+      "description": "Analyze removeTags Pattern - Review removeTags implementation to determine if optimization is applicable. Note: removeTags uses getGraphForMutation() + saveGraph() pattern (full graph mutation), not loadGraph() + updateEntity() pattern.",
       "status": "pending",
-      "estimatedHours": 0.5,
+      "estimatedHours": 0.25,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 370-395 (approximately)",
+      "location": "Lines 367-401 (removeTags method)",
       "testCategories": [
-        "All existing removeTags tests must pass"
+        "Verify current implementation pattern"
       ],
+      "currentCode": {
+        "description": "Current implementation uses getGraphForMutation() for full graph mutation",
+        "lines": "const graph = await this.storage.getGraphForMutation();\nconst timestamp = new Date().toISOString();\n\nconst entity = graph.entities.find(e => e.name === entityName);\nif (!entity) {\n  throw new EntityNotFoundError(entityName);\n}\n// ... modifies entity.tags directly ...\nawait this.storage.saveGraph(graph);"
+      },
+      "analysis": {
+        "note": "removeTags uses a different pattern than addTags/setImportance. It calls getGraphForMutation() which returns a mutable graph reference, modifies the entity directly, then calls saveGraph(). This is fundamentally different from the loadGraph() + updateEntity() pattern.",
+        "optimizationOptions": [
+          "Option A: Refactor to use updateEntity() pattern (requires code change beyond simple optimization)",
+          "Option B: Use Set-based lookup within the existing graph reference (replace find() with Map lookup)",
+          "Option C: Keep as-is since getGraphForMutation() already provides direct graph access"
+        ],
+        "recommendation": "Option C - The optimization benefit is minimal here since we already have direct graph access. The find() is only called once per removeTags call, not in a loop. Focus optimization efforts on batch operations instead."
+      },
       "stepByStep": [
-        "Locate removeTags method",
-        "Apply same pattern: remove loadGraph(), use getEntityByName()",
-        "Run: npx vitest run tests/unit/core/EntityManager.test.ts -t 'removeTags'"
+        "Locate removeTags method at line 367",
+        "Verify it uses getGraphForMutation() + saveGraph() pattern",
+        "Document that this method is NOT a candidate for the same optimization as addTags/setImportance",
+        "Update metrics document to note this finding"
       ],
       "acceptanceCriteria": [
-        "removeTags uses getEntityByName() instead of loadGraph() + find()",
-        "All removeTags tests pass"
+        "removeTags implementation pattern documented",
+        "Decision recorded on whether to optimize or skip",
+        "No changes made if optimization not applicable"
       ]
     },
     {
@@ -132,8 +147,9 @@
     }
   ],
   "successCriteria": [
-    "addTags, setImportance, removeTags use getEntityByName()",
-    "No unnecessary loadGraph() calls for existence checks",
+    "addTags and setImportance use getEntityByName() for O(1) lookups",
+    "removeTags pattern analyzed and documented (uses different mutation pattern)",
+    "No unnecessary loadGraph() calls for existence checks in applicable methods",
     "All 2109 tests pass",
     "Benchmark shows improvement for entity operations"
   ],
@@ -143,7 +159,7 @@
   ],
   "filesCreated": [],
   "totalNewTests": 0,
-  "totalEstimatedHours": 2.5,
+  "totalEstimatedHours": 2.25,
   "dependencies": [1],
   "notes": "Can run in parallel with Sprint 2 after Sprint 1 completes. The NameIndex already exists and is maintained by GraphStorage - we're just using it instead of doing redundant O(n) searches. This optimization is especially impactful when called repeatedly (e.g., adding tags to many entities in sequence)."
 }

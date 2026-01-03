@@ -118,7 +118,7 @@
     "docs/reports/PHASE_6_BASELINE_METRICS.md"
   ],
   "filesModified": [],
-  "totalNewTests": 10,
+  "totalNewTests": 8,
   "totalEstimatedHours": 2.5,
   "dependencies": [],
   "notes": "This sprint MUST be completed first. Without baseline metrics, we cannot verify that optimizations actually improve performance. The benchmarks should log times to console so we can compare before/after. NameIndex verification ensures we can safely use it in Sprint 3."

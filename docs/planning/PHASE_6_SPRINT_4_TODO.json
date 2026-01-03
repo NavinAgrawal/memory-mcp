@@ -19,7 +19,7 @@
       "estimatedHours": 0.75,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "batchUpdate method (search for 'async batchUpdate')",
+      "location": "Lines 289-320 (batchUpdate method)",
       "testCategories": [
         "All existing batchUpdate tests must pass",
         "Benchmark should show improvement"
@@ -161,7 +161,7 @@
     "docs/planning/PHASE_6_INDEX.json"
   ],
   "filesCreated": [],
-  "totalNewTests": 5,
+  "totalNewTests": 0,
   "totalEstimatedHours": 2,
   "dependencies": [2, 3],
   "notes": "This sprint completes Phase 6. The batchUpdate optimization follows the same pattern as deleteEntities (Sprint 2) - building a lookup structure once rather than searching repeatedly. After this sprint, all identified 'quick win' optimizations from the Future Features Roadmap will be complete. The version bump to 9.3.0 reflects these performance improvements."

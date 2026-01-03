@@ -19,7 +19,7 @@
       "estimatedHours": 0.75,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 155-165 (approximately)",
+      "location": "Lines 148-164 (deleteEntities method)",
       "testCategories": [
         "All existing deleteEntities tests must pass",
         "Benchmark should show improvement"
@@ -43,7 +43,7 @@
       "acceptanceCriteria": [
         "Set created from entityNames array before filtering",
         "All includes() calls replaced with has() calls",
-        "All 31 EntityManager tests pass",
+        "All 65 EntityManager tests pass",
         "No changes to method signature or return type"
       ]
     },

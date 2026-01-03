@@ -6,8 +6,8 @@
   "created": "2026-01-03",
   "totalSprints": 4,
   "totalTasks": 14,
-  "totalEstimatedHours": 8,
-  "totalNewTests": 15,
+  "totalEstimatedHours": 8.25,
+  "totalNewTests": 8,
   "status": "planning",
   "prerequisites": ["Phase 5 (folder restructuring) complete", "All 2109 tests passing"],
   "targetMetrics": {
@@ -24,7 +24,7 @@
       "focus": "Establish baseline performance metrics before any optimizations",
       "tasks": 3,
       "hours": 2.5,
-      "newTests": 10,
+      "newTests": 8,
       "file": "PHASE_6_SPRINT_1_TODO.json",
       "status": "pending",
       "dependencies": []
@@ -45,9 +45,9 @@
       "sprint": 3,
       "title": "NameIndex Utilization",
       "priority": "HIGH",
-      "focus": "Use existing O(1) NameIndex instead of O(n) find() calls for entity existence checks",
+      "focus": "Use existing O(1) NameIndex instead of O(n) find() calls for entity existence checks where applicable",
       "tasks": 4,
-      "hours": 2.5,
+      "hours": 2.25,
       "newTests": 0,
       "file": "PHASE_6_SPRINT_3_TODO.json",
       "status": "pending",
@@ -60,7 +60,7 @@
       "focus": "Build lookup Maps for batch updates and finalize with version bump",
       "tasks": 4,
       "hours": 2,
-      "newTests": 5,
+      "newTests": 0,
       "file": "PHASE_6_SPRINT_4_TODO.json",
       "status": "pending",
       "dependencies": [2, 3]
@@ -80,7 +80,15 @@
     "docs/reports/PHASE_6_BASELINE_METRICS.md"
   ],
   "filesToModify": [
-    "src/core/EntityManager.ts"
+    "src/core/EntityManager.ts",
+    "docs/reports/PHASE_6_BASELINE_METRICS.md",
+    "package.json",
+    "CHANGELOG.md",
+    "docs/planning/PHASE_6_INDEX.json",
+    "docs/planning/PHASE_6_SPRINT_1_TODO.json",
+    "docs/planning/PHASE_6_SPRINT_2_TODO.json",
+    "docs/planning/PHASE_6_SPRINT_3_TODO.json",
+    "docs/planning/PHASE_6_SPRINT_4_TODO.json"
   ],
   "riskAssessment": [
     { "risk": "Breaking existing behavior", "probability": "Low", "impact": "High", "mitigation": "Comprehensive tests exist (2109 tests)" },
