@@ -7,7 +7,7 @@
   "totalSprints": 4,
   "totalTasks": 14,
   "totalEstimatedHours": 8.25,
-  "totalNewTests": 8,
+  "totalNewTests": 10,
   "status": "completed",
   "completedAt": "2026-01-03",
   "prerequisites": ["Phase 5 (folder restructuring) complete", "All 2109 tests passing"],
@@ -25,7 +25,7 @@
       "focus": "Establish baseline performance metrics before any optimizations",
       "tasks": 3,
       "hours": 2.5,
-      "newTests": 8,
+      "newTests": 10,
       "file": "PHASE_6_SPRINT_1_TODO.json",
       "status": "completed",
       "dependencies": []

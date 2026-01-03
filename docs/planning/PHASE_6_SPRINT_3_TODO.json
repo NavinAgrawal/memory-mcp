@@ -16,11 +16,11 @@
       "id": 1,
       "category": "Core",
       "description": "Optimize addTags Entity Existence Check - Replace loadGraph() + find() with getEntityByName() for O(1) entity lookup in EntityManager.addTags()",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.75,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 336-357 (addTags method)",
+      "location": "Lines 342-362 (addTags method)",
       "testCategories": [
         "All existing addTags tests must pass",
         "Benchmark should show improvement"
@@ -54,11 +54,11 @@
       "id": 2,
       "category": "Core",
       "description": "Optimize setImportance Entity Existence Check - Replace loadGraph() + find() with getEntityByName() for O(1) entity lookup in EntityManager.setImportance()",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.5,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 412-429 (setImportance method)",
+      "location": "Lines 417-433 (setImportance method)",
       "testCategories": [
         "All existing setImportance tests must pass"
       ],
@@ -86,11 +86,11 @@
       "id": 3,
       "category": "Core",
       "description": "Analyze removeTags Pattern - Review removeTags implementation to determine if optimization is applicable. Note: removeTags uses getGraphForMutation() + saveGraph() pattern (full graph mutation), not loadGraph() + updateEntity() pattern.",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.25,
       "agent": "haiku",
       "files": ["src/core/EntityManager.ts"],
-      "location": "Lines 367-401 (removeTags method)",
+      "location": "Lines 372-406 (removeTags method)",
       "testCategories": [
         "Verify current implementation pattern"
       ],
@@ -123,7 +123,7 @@
       "id": 4,
       "category": "Verification",
       "description": "Run Full Test Suite and Update Metrics - Verify all tests pass and update metrics document with Sprint 3 results",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.75,
       "agent": "haiku",
       "files": ["docs/reports/PHASE_6_BASELINE_METRICS.md"],
