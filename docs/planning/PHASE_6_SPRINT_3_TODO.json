@@ -1,0 +1,149 @@
+{
+  "phase": 6,
+  "sprint": 3,
+  "title": "NameIndex Utilization",
+  "priority": "HIGH",
+  "effort": "2.5 hours",
+  "status": "pending",
+  "impact": "Eliminate unnecessary graph loads for entity existence checks by using existing O(1) NameIndex",
+  "targetMetrics": {
+    "addTagsLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" },
+    "setImportanceLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" },
+    "removeTagsLookup": { "current": "loadGraph() + O(n) find()", "target": "O(1) getEntityByName()" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Optimize addTags Entity Existence Check - Replace loadGraph() + find() with getEntityByName() for O(1) entity lookup in EntityManager.addTags()",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts"],
+      "location": "Lines 336-357 (approximately)",
+      "testCategories": [
+        "All existing addTags tests must pass",
+        "Benchmark should show improvement"
+      ],
+      "currentCode": {
+        "description": "Current O(n) implementation",
+        "lines": "const readGraph = await this.storage.loadGraph();\nconst entity = readGraph.entities.find(e => e.name === entityName);\nif (!entity) {\n  throw new EntityNotFoundError(entityName);\n}"
+      },
+      "optimizedCode": {
+        "description": "Optimized O(1) implementation",
+        "lines": "const entity = this.storage.getEntityByName(entityName);\nif (!entity) {\n  throw new EntityNotFoundError(entityName);\n}"
+      },
+      "stepByStep": [
+        "Open src/core/EntityManager.ts",
+        "Locate addTags method (search for 'async addTags')",
+        "Remove or comment out: const readGraph = await this.storage.loadGraph();",
+        "Replace: const entity = readGraph.entities.find(e => e.name === entityName);",
+        "With: const entity = this.storage.getEntityByName(entityName);",
+        "Verify rest of method still works (existingTags access, updateEntity call)",
+        "Run: npx vitest run tests/unit/core/EntityManager.test.ts -t 'addTags'"
+      ],
+      "importantNote": "The entity from getEntityByName() is the same object reference as in the graph. Reads are valid, but we correctly use updateEntity() for mutations - this is already the case in the current code.",
+      "acceptanceCriteria": [
+        "addTags uses getEntityByName() instead of loadGraph() + find()",
+        "No loadGraph() call in addTags method",
+        "All addTags tests pass",
+        "No changes to method signature or return type"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Optimize setImportance Entity Existence Check - Replace loadGraph() + find() with getEntityByName() for O(1) entity lookup in EntityManager.setImportance()",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts"],
+      "location": "Lines 412-428 (approximately)",
+      "testCategories": [
+        "All existing setImportance tests must pass"
+      ],
+      "currentCode": {
+        "description": "Current O(n) implementation",
+        "lines": "const readGraph = await this.storage.loadGraph();\nconst entity = readGraph.entities.find(e => e.name === entityName);\nif (!entity) {\n  throw new EntityNotFoundError(entityName);\n}"
+      },
+      "optimizedCode": {
+        "description": "Optimized O(1) implementation",
+        "lines": "const entity = this.storage.getEntityByName(entityName);\nif (!entity) {\n  throw new EntityNotFoundError(entityName);\n}"
+      },
+      "stepByStep": [
+        "Locate setImportance method (search for 'async setImportance')",
+        "Apply same pattern as addTags",
+        "Remove loadGraph() call, use getEntityByName() instead",
+        "Run: npx vitest run tests/unit/core/EntityManager.test.ts -t 'importance'"
+      ],
+      "acceptanceCriteria": [
+        "setImportance uses getEntityByName() instead of loadGraph() + find()",
+        "All setImportance tests pass",
+        "No changes to method signature or return type"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Optimize removeTags Entity Existence Check - Apply the same optimization pattern to EntityManager.removeTags()",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts"],
+      "location": "Lines 370-395 (approximately)",
+      "testCategories": [
+        "All existing removeTags tests must pass"
+      ],
+      "stepByStep": [
+        "Locate removeTags method",
+        "Apply same pattern: remove loadGraph(), use getEntityByName()",
+        "Run: npx vitest run tests/unit/core/EntityManager.test.ts -t 'removeTags'"
+      ],
+      "acceptanceCriteria": [
+        "removeTags uses getEntityByName() instead of loadGraph() + find()",
+        "All removeTags tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Verification",
+      "description": "Run Full Test Suite and Update Metrics - Verify all tests pass and update metrics document with Sprint 3 results",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": ["docs/reports/PHASE_6_BASELINE_METRICS.md"],
+      "testCategories": [
+        "All 2109 tests must pass"
+      ],
+      "commands": [
+        "npm run typecheck",
+        "npm test",
+        "npx vitest run tests/performance/optimization-benchmarks.test.ts"
+      ],
+      "implementation": {
+        "newSection": "## Post-Optimization Measurements (Sprint 3)",
+        "table": "| Operation | Pre (ms) | Post (ms) | Improvement |"
+      },
+      "acceptanceCriteria": [
+        "All 2109 tests pass",
+        "Post-Sprint-3 metrics documented",
+        "Improvement factors calculated for addTags, setImportance, removeTags"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "addTags, setImportance, removeTags use getEntityByName()",
+    "No unnecessary loadGraph() calls for existence checks",
+    "All 2109 tests pass",
+    "Benchmark shows improvement for entity operations"
+  ],
+  "filesModified": [
+    "src/core/EntityManager.ts",
+    "docs/reports/PHASE_6_BASELINE_METRICS.md"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 0,
+  "totalEstimatedHours": 2.5,
+  "dependencies": [1],
+  "notes": "Can run in parallel with Sprint 2 after Sprint 1 completes. The NameIndex already exists and is maintained by GraphStorage - we're just using it instead of doing redundant O(n) searches. This optimization is especially impactful when called repeatedly (e.g., adding tags to many entities in sequence)."
+}

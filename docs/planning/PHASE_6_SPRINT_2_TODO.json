@@ -1,0 +1,111 @@
+{
+  "phase": 6,
+  "sprint": 2,
+  "title": "Set-Based Lookup Optimization",
+  "priority": "HIGH",
+  "effort": "1.5 hours",
+  "status": "pending",
+  "impact": "10-50x speedup on bulk delete operations by replacing O(n) includes() with O(1) Set.has()",
+  "targetMetrics": {
+    "deleteEntities100from1000": { "current": "O(n×m) = 100K checks", "target": "O(n+m) = 1.1K ops" },
+    "deleteEntities500from2000": { "current": "O(n×m) = 1M checks", "target": "O(n+m) = 2.5K ops" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Optimize deleteEntities with Set - Replace entityNames.includes() with namesToDelete.has() in EntityManager.deleteEntities() for O(1) lookups instead of O(n)",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts"],
+      "location": "Lines 155-165 (approximately)",
+      "testCategories": [
+        "All existing deleteEntities tests must pass",
+        "Benchmark should show improvement"
+      ],
+      "currentCode": {
+        "description": "Current O(n×m) implementation",
+        "lines": "graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));\ngraph.relations = graph.relations.filter(\n  r => !entityNames.includes(r.from) && !entityNames.includes(r.to)\n);"
+      },
+      "optimizedCode": {
+        "description": "Optimized O(n+m) implementation",
+        "lines": "const namesToDelete = new Set(entityNames);\ngraph.entities = graph.entities.filter(e => !namesToDelete.has(e.name));\ngraph.relations = graph.relations.filter(\n  r => !namesToDelete.has(r.from) && !namesToDelete.has(r.to)\n);"
+      },
+      "stepByStep": [
+        "Open src/core/EntityManager.ts",
+        "Locate deleteEntities method (search for 'async deleteEntities')",
+        "Find the lines with entityNames.includes()",
+        "Add 'const namesToDelete = new Set(entityNames);' after getting the graph",
+        "Replace all entityNames.includes() with namesToDelete.has()",
+        "Run: npx vitest run tests/unit/core/EntityManager.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Set created from entityNames array before filtering",
+        "All includes() calls replaced with has() calls",
+        "All 31 EntityManager tests pass",
+        "No changes to method signature or return type"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Verification",
+      "description": "Run Full Test Suite - Ensure the optimization doesn't break any existing functionality across the entire codebase",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": [],
+      "testCategories": [
+        "All 2109 tests must pass",
+        "No TypeScript errors"
+      ],
+      "commands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "acceptanceCriteria": [
+        "npm run typecheck passes with no errors",
+        "All 2109 tests pass",
+        "No new warnings introduced"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Documentation",
+      "description": "Update Benchmark Metrics - Run benchmarks and add Sprint 2 post-optimization metrics to the baseline document with improvement calculations",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["docs/reports/PHASE_6_BASELINE_METRICS.md"],
+      "testCategories": [],
+      "implementation": {
+        "newSection": "## Post-Optimization Measurements (Sprint 2)",
+        "table": "| Operation | Pre (ms) | Post (ms) | Improvement |",
+        "analysis": "Explain O(n×m) to O(n+m) reduction with concrete numbers"
+      },
+      "commands": [
+        "npx vitest run tests/performance/optimization-benchmarks.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Post-optimization metrics documented",
+        "Improvement factor calculated (expected 10-50x)",
+        "Analysis explains the algorithmic improvement"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "deleteEntities uses Set.has() instead of includes()",
+    "All 2109 tests pass",
+    "Benchmark shows measurable improvement for large deletions",
+    "Metrics document updated with Sprint 2 results"
+  ],
+  "filesModified": [
+    "src/core/EntityManager.ts",
+    "docs/reports/PHASE_6_BASELINE_METRICS.md"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 0,
+  "totalEstimatedHours": 1.5,
+  "dependencies": [1],
+  "notes": "This is the highest-impact single change in Phase 6. The Set-based optimization is a classic algorithm improvement. Can run in parallel with Sprint 3 after Sprint 1 completes. The optimization is transparent - same behavior, just faster."
+}

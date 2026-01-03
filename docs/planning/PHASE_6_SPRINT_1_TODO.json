@@ -1,0 +1,125 @@
+{
+  "phase": 6,
+  "sprint": 1,
+  "title": "Benchmark Foundation",
+  "priority": "CRITICAL",
+  "effort": "2.5 hours",
+  "status": "pending",
+  "impact": "Establishes baseline metrics for all optimizations - required to measure actual gains",
+  "targetMetrics": {
+    "deleteEntities": { "baseline": "TBD", "notes": "Measure before optimization" },
+    "addTags": { "baseline": "TBD", "notes": "Measure before optimization" },
+    "setImportance": { "baseline": "TBD", "notes": "Measure before optimization" },
+    "batchUpdate": { "baseline": "TBD", "notes": "Measure before optimization" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Tests",
+      "description": "Create Performance Benchmark Test File - Create tests/performance/optimization-benchmarks.test.ts with benchmarks for deleteEntities, addTags, setImportance, and batchUpdate operations at various scales",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/performance/optimization-benchmarks.test.ts"],
+      "testCategories": [
+        "deleteEntities(100 from 1000)",
+        "deleteEntities(500 from 2000)",
+        "addTags(1 in 1000)",
+        "addTags(50 sequential)",
+        "setImportance(1 in 1000)",
+        "batchUpdate(100 in 500)"
+      ],
+      "implementation": {
+        "helpers": [
+          "createTestEntities(count, prefix) - Creates N test entities",
+          "measureTime(fn) - Measures execution time of async function"
+        ],
+        "testCases": [
+          "should delete 100 entities from 1000 entity graph efficiently",
+          "should delete 500 entities from 2000 entity graph",
+          "should add tags with O(1) entity lookup",
+          "should add tags to 50 entities sequentially",
+          "should set importance with O(1) entity lookup",
+          "should batch update 100 entities efficiently"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Benchmark file created at tests/performance/optimization-benchmarks.test.ts",
+        "All benchmarks run and log baseline times to console",
+        "Benchmarks cover deleteEntities, addTags, setImportance, batchUpdate",
+        "Tests pass with generous initial limits (500ms)",
+        "Console output shows baseline performance numbers"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Documentation",
+      "description": "Document Baseline Performance - Run benchmarks and record baseline metrics in docs/reports/PHASE_6_BASELINE_METRICS.md with analysis of current algorithmic complexity",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["docs/reports/PHASE_6_BASELINE_METRICS.md"],
+      "testCategories": [],
+      "implementation": {
+        "sections": [
+          "Test Environment (machine specs, Node version)",
+          "Baseline Measurements table (operation, parameters, time ms)",
+          "Analysis of why current implementation is slow"
+        ],
+        "runCommand": "npx vitest run tests/performance/optimization-benchmarks.test.ts"
+      },
+      "acceptanceCriteria": [
+        "Baseline metrics documented with actual measurements",
+        "Document created at docs/reports/PHASE_6_BASELINE_METRICS.md",
+        "Analysis explains current O(n²) complexity issues",
+        "Version and date recorded for future comparison"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Verification",
+      "description": "Verify NameIndex API - Confirm getEntityByName() exists in GraphStorage.ts, uses O(1) NameIndex, and is updated on mutations; Add verification tests to benchmark file",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/core/GraphStorage.ts", "tests/performance/optimization-benchmarks.test.ts"],
+      "testCategories": [
+        "NameIndex O(1) lookup verification",
+        "getEntityByName returns undefined for non-existent"
+      ],
+      "implementation": {
+        "expectedFindings": [
+          "getEntityByName() exists at approximately line 609",
+          "Uses this.nameIndex.get(name) for O(1) lookup",
+          "Index is updated in rebuildIndexes() called after graph mutations",
+          "Returns Entity | undefined"
+        ],
+        "verificationTests": [
+          "should have O(1) getEntityByName lookup (100 lookups < 1ms avg)",
+          "should return undefined for non-existent entity"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Confirmed getEntityByName() exists and signature documented",
+        "Confirmed NameIndex is rebuilt after mutations",
+        "Verification tests added to benchmark file",
+        "Tests pass confirming O(1) behavior (<1ms per lookup)"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Benchmark test file created and all tests pass",
+    "Baseline metrics documented with actual numbers",
+    "NameIndex API verified and documented",
+    "Ready for Sprint 2 and 3 optimizations"
+  ],
+  "filesCreated": [
+    "tests/performance/optimization-benchmarks.test.ts",
+    "docs/reports/PHASE_6_BASELINE_METRICS.md"
+  ],
+  "filesModified": [],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 2.5,
+  "dependencies": [],
+  "notes": "This sprint MUST be completed first. Without baseline metrics, we cannot verify that optimizations actually improve performance. The benchmarks should log times to console so we can compare before/after. NameIndex verification ensures we can safely use it in Sprint 3."
+}

@@ -1,0 +1,168 @@
+{
+  "phase": 6,
+  "sprint": 4,
+  "title": "Batch Operation Optimization",
+  "priority": "MEDIUM",
+  "effort": "2 hours",
+  "status": "pending",
+  "impact": "100x speedup on batch update operations by building lookup Maps; Completes Phase 6 performance optimizations",
+  "targetMetrics": {
+    "batchUpdate100in500": { "current": "O(n×m) = 50K find() calls", "target": "O(n+m) = 600 ops" },
+    "batchUpdateEntityLookup": { "current": "O(n) per entity", "target": "O(1) per entity" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Optimize batchUpdate with Lookup Map - Build Map from entity names to array indices before processing updates, replacing O(n) find() calls with O(1) Map lookups",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts"],
+      "location": "batchUpdate method (search for 'async batchUpdate')",
+      "testCategories": [
+        "All existing batchUpdate tests must pass",
+        "Benchmark should show improvement"
+      ],
+      "currentCode": {
+        "description": "Current O(n×m) implementation - finds entity by name for each update",
+        "lines": "for (const update of updates) {\n  const entity = graph.entities.find(e => e.name === update.name);\n  if (entity) {\n    // apply updates\n  }\n}"
+      },
+      "optimizedCode": {
+        "description": "Optimized O(n+m) implementation - build index once, lookup by name",
+        "lines": "// Build index: O(n)\nconst entityIndex = new Map<string, number>();\ngraph.entities.forEach((e, i) => entityIndex.set(e.name, i));\n\n// Process updates: O(m) with O(1) lookups\nfor (const update of updates) {\n  const idx = entityIndex.get(update.name);\n  if (idx !== undefined) {\n    const entity = graph.entities[idx];\n    // apply updates\n  }\n}"
+      },
+      "stepByStep": [
+        "Open src/core/EntityManager.ts",
+        "Locate batchUpdate method (search for 'async batchUpdate')",
+        "After loading the graph, add: const entityIndex = new Map<string, number>();",
+        "Add: graph.entities.forEach((e, i) => entityIndex.set(e.name, i));",
+        "Replace find() loop with indexed lookup using entityIndex.get()",
+        "Use graph.entities[idx] to access the entity",
+        "Run: npx vitest run tests/unit/core/EntityManager.test.ts -t 'batch'"
+      ],
+      "acceptanceCriteria": [
+        "Map built from entity names to indices before update loop",
+        "All find() calls replaced with Map.get() lookups",
+        "All batchUpdate tests pass",
+        "No changes to method signature or return type"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Review Other Batch Operations - Scan EntityManager for any other methods using repeated find() calls that could benefit from Map optimization",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts"],
+      "testCategories": [
+        "Identify optimization candidates",
+        "Document findings"
+      ],
+      "implementation": {
+        "methodsToReview": [
+          "addTagsToMultiple - Check if it loops with find()",
+          "deleteObservations - Check batch capability",
+          "addObservations - Check batch capability"
+        ],
+        "lookFor": [
+          "Loops containing .find(e => e.name ===",
+          "Multiple calls to loadGraph() in sequence",
+          "Any O(n) operation inside a loop"
+        ]
+      },
+      "acceptanceCriteria": [
+        "All methods reviewed for batch optimization opportunities",
+        "Any additional optimizations applied (if found)",
+        "No regressions in existing tests"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Verification",
+      "description": "Final Benchmark and Documentation - Run all benchmarks, document final metrics, calculate improvement factors for all Sprint 2-4 optimizations",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["docs/reports/PHASE_6_BASELINE_METRICS.md"],
+      "testCategories": [
+        "All 2109 tests must pass",
+        "All benchmarks complete"
+      ],
+      "commands": [
+        "npm run typecheck",
+        "npm test",
+        "npx vitest run tests/performance/optimization-benchmarks.test.ts"
+      ],
+      "implementation": {
+        "newSection": "## Final Post-Optimization Summary",
+        "table": "| Operation | Pre (ms) | Post (ms) | Improvement | Algorithm Change |",
+        "sections": [
+          "Sprint 2: Set-Based Lookups",
+          "Sprint 3: NameIndex Utilization",
+          "Sprint 4: Batch Map Lookups",
+          "Overall Phase 6 Impact"
+        ]
+      },
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "All 2109 tests pass",
+        "Final metrics documented with improvement factors",
+        "All algorithm changes explained"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Release",
+      "description": "Version Bump and Phase Completion - Update version to 9.3.0, update CHANGELOG.md with Phase 6 performance improvements, mark phase complete",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["package.json", "CHANGELOG.md", "docs/planning/PHASE_6_INDEX.json"],
+      "testCategories": [],
+      "implementation": {
+        "versionBump": "9.2.1 -> 9.3.0",
+        "changelogEntry": {
+          "version": "9.3.0",
+          "sections": [
+            "### Performance Improvements",
+            "- Set-based lookups for deleteEntities (10-50x faster)",
+            "- O(1) NameIndex for entity existence checks",
+            "- Map-based batch updates (100x faster for large batches)",
+            "### Internal",
+            "- Added performance benchmarks (tests/performance/optimization-benchmarks.test.ts)",
+            "- Documented baseline and post-optimization metrics"
+          ]
+        }
+      },
+      "acceptanceCriteria": [
+        "package.json version updated to 9.3.0",
+        "CHANGELOG.md updated with Phase 6 improvements",
+        "PHASE_6_INDEX.json status changed to 'completed'",
+        "All sprint TODO files status changed to 'completed'",
+        "Git commit with version bump"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "batchUpdate uses Map for O(1) entity lookups",
+    "All batch operations reviewed and optimized where applicable",
+    "All 2109 tests pass",
+    "Final benchmark metrics documented",
+    "Version bumped to 9.3.0",
+    "Phase 6 marked complete"
+  ],
+  "filesModified": [
+    "src/core/EntityManager.ts",
+    "docs/reports/PHASE_6_BASELINE_METRICS.md",
+    "package.json",
+    "CHANGELOG.md",
+    "docs/planning/PHASE_6_INDEX.json"
+  ],
+  "filesCreated": [],
+  "totalNewTests": 5,
+  "totalEstimatedHours": 2,
+  "dependencies": [2, 3],
+  "notes": "This sprint completes Phase 6. The batchUpdate optimization follows the same pattern as deleteEntities (Sprint 2) - building a lookup structure once rather than searching repeatedly. After this sprint, all identified 'quick win' optimizations from the Future Features Roadmap will be complete. The version bump to 9.3.0 reflects these performance improvements."
+}
