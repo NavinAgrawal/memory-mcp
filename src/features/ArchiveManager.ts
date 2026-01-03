@@ -11,7 +11,7 @@
 
 import { promises as fs } from 'fs';
 import { dirname, join } from 'path';
-import type { Entity, ArchiveResultExtended } from '../types/index.js';
+import type { Entity } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { compress, COMPRESSION_CONFIG } from '../utils/index.js';
 

@@ -246,7 +246,7 @@ export class GraphTraversal {
    * Reconstruct path from parent pointers.
    */
   private reconstructPath(
-    source: string,
+    _source: string,
     target: string,
     parents: Map<string, { parent: string; relation: Relation } | null>
   ): PathResult {

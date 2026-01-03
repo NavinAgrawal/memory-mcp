@@ -5,6 +5,25 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.2] - 2026-01-03
+
+### Added
+
+- **Developer Tooling**
+  - Added `/COMMIT` slash command for full project commit workflow
+  - Automates: typecheck, test, version bump, changelog, CLAUDE.md, git commit, push
+  - Supports major/minor/patch version types
+
+- **Documentation**
+  - Added `docs/roadmap/FUTURE_FEATURES.md` with performance optimization roadmap
+  - Linked roadmap from README.md Documentation section
+
+### Fixed
+
+- **TypeScript Strict Mode Compliance**
+  - Fixed unused parameter in `GraphTraversal.ts` (`source` → `_source`)
+  - Removed unused import `ArchiveResultExtended` from `ArchiveManager.ts`
+
 ## [9.2.1] - 2026-01-03
 
 ### Fixed
