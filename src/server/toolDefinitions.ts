@@ -769,6 +769,16 @@ export const toolDefinitions: ToolDefinition[] = [
         },
         topN: { type: 'number', description: 'Number of top entities to return (default: 10)' },
         dampingFactor: { type: 'number', description: 'Damping factor for PageRank (default: 0.85)' },
+        approximate: {
+          type: 'boolean',
+          description: 'Use approximation for faster betweenness centrality (default: false)',
+        },
+        sampleRate: {
+          type: 'number',
+          description: 'Sample rate for approximation (0.0-1.0, default: 0.2)',
+          minimum: 0.01,
+          maximum: 1.0,
+        },
       },
       additionalProperties: false,
     },
@@ -796,7 +806,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: 'export_graph',
-    description: 'Export knowledge graph in various formats with optional brotli compression',
+    description: 'Export knowledge graph in various formats with optional brotli compression and streaming for large graphs',
     inputSchema: {
       type: 'object',
       properties: {
@@ -826,6 +836,15 @@ export const toolDefinitions: ToolDefinition[] = [
           minimum: 0,
           maximum: 11,
           default: 6,
+        },
+        streaming: {
+          type: 'boolean',
+          description: 'Use streaming mode to write directly to file (requires outputPath)',
+          default: false,
+        },
+        outputPath: {
+          type: 'string',
+          description: 'File path for streaming export. Auto-enables streaming for graphs with >= 5000 entities.',
         },
       },
       required: ['format'],

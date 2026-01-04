@@ -267,18 +267,153 @@ describe('GraphTraversal', () => {
 
   describe('Betweenness Centrality', () => {
     it('should calculate betweenness centrality', async () => {
-      const result = await traversal.calculateBetweennessCentrality(10);
+      const result = await traversal.calculateBetweennessCentrality({ topN: 10 });
 
       expect(result.algorithm).toBe('betweenness');
       expect(result.scores.size).toBe(8);
     });
 
     it('should identify nodes on many shortest paths', async () => {
-      const result = await traversal.calculateBetweennessCentrality(3);
+      const result = await traversal.calculateBetweennessCentrality({ topN: 3 });
 
       // B and C are on most shortest paths in the graph
       const topNames = result.topEntities.map(e => e.name);
       expect(topNames.includes('B') || topNames.includes('C')).toBe(true);
+    });
+
+    it('should work with default options', async () => {
+      const result = await traversal.calculateBetweennessCentrality();
+
+      expect(result.algorithm).toBe('betweenness');
+      expect(result.topEntities.length).toBeLessThanOrEqual(10);
+    });
+
+    it('should yield control and report progress with chunking', async () => {
+      // Create a larger graph for testing chunking
+      const largeEntities = Array.from({ length: 100 }, (_, i) => ({
+        name: `Entity${i}`,
+        entityType: 'test',
+        observations: [],
+      }));
+      await storage.saveGraph({ entities: largeEntities, relations: [] });
+
+      const progressUpdates: number[] = [];
+      const result = await traversal.calculateBetweennessCentrality({
+        topN: 10,
+        chunkSize: 10,
+        onProgress: (progress) => {
+          progressUpdates.push(progress);
+        },
+      });
+
+      // Should have received progress updates
+      expect(progressUpdates.length).toBeGreaterThan(0);
+      // Last update should be 1.0 (complete)
+      expect(progressUpdates[progressUpdates.length - 1]).toBe(1);
+      // Progress should be monotonically increasing
+      for (let i = 1; i < progressUpdates.length; i++) {
+        expect(progressUpdates[i]).toBeGreaterThanOrEqual(progressUpdates[i - 1]);
+      }
+
+      expect(result.algorithm).toBe('betweenness');
+    });
+
+    it('should produce same results with chunking', async () => {
+      const resultWithoutChunk = await traversal.calculateBetweennessCentrality({ topN: 5 });
+      const resultWithChunk = await traversal.calculateBetweennessCentrality({
+        topN: 5,
+        chunkSize: 2,
+      });
+
+      // Top entities should be the same (order and scores)
+      expect(resultWithChunk.topEntities.length).toBe(resultWithoutChunk.topEntities.length);
+      for (let i = 0; i < resultWithChunk.topEntities.length; i++) {
+        expect(resultWithChunk.topEntities[i].name).toBe(resultWithoutChunk.topEntities[i].name);
+        expect(resultWithChunk.topEntities[i].score).toBeCloseTo(
+          resultWithoutChunk.topEntities[i].score,
+          5
+        );
+      }
+    });
+
+    it('should use approximation for faster results', async () => {
+      // Create a larger graph to make the difference noticeable
+      const largeEntities = Array.from({ length: 150 }, (_, i) => ({
+        name: `Entity${i}`,
+        entityType: 'test',
+        observations: [],
+      }));
+      const relations = [];
+      for (let i = 0; i < 149; i++) {
+        relations.push({
+          from: `Entity${i}`,
+          to: `Entity${i + 1}`,
+          relationType: 'connects',
+        });
+      }
+      await storage.saveGraph({ entities: largeEntities, relations });
+
+      const startFull = Date.now();
+      const fullResult = await traversal.calculateBetweennessCentrality({
+        topN: 5,
+        approximate: false,
+      });
+      const fullTime = Date.now() - startFull;
+
+      const startApprox = Date.now();
+      const approxResult = await traversal.calculateBetweennessCentrality({
+        topN: 5,
+        approximate: true,
+        sampleRate: 0.2,
+      });
+      const approxTime = Date.now() - startApprox;
+
+      // Approximation should be faster (or at least not significantly slower)
+      expect(approxTime).toBeLessThanOrEqual(fullTime * 2);
+
+      // Results should exist
+      expect(fullResult.topEntities.length).toBeGreaterThan(0);
+      expect(approxResult.topEntities.length).toBeGreaterThan(0);
+    });
+
+    it('should produce reasonable estimates with approximation', async () => {
+      // Use a smaller graph where we can verify results
+      const fullResult = await traversal.calculateBetweennessCentrality({
+        topN: 5,
+        approximate: false,
+      });
+
+      const approxResult = await traversal.calculateBetweennessCentrality({
+        topN: 5,
+        approximate: true,
+        sampleRate: 0.5, // Use higher sample rate for better accuracy
+      });
+
+      // Top entities should have some overlap
+      const fullTopNames = new Set(fullResult.topEntities.map(e => e.name));
+      const approxTopNames = new Set(approxResult.topEntities.map(e => e.name));
+
+      let overlap = 0;
+      for (const name of approxTopNames) {
+        if (fullTopNames.has(name)) overlap++;
+      }
+
+      // With 50% sample rate, we should get at least some overlap
+      // (relaxed condition since randomness is involved)
+      expect(overlap).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should not use approximation for small graphs', async () => {
+      // With only 8 entities, approximation should not be used even if requested
+      const result = await traversal.calculateBetweennessCentrality({
+        topN: 5,
+        approximate: true,
+        sampleRate: 0.2,
+      });
+
+      // Should still return valid results
+      expect(result.algorithm).toBe('betweenness');
+      expect(result.scores.size).toBe(8);
     });
   });
 

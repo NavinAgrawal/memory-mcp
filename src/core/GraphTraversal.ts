@@ -8,6 +8,7 @@
  */
 
 import type {
+  Entity,
   Relation,
   TraversalOptions,
   TraversalResult,
@@ -431,10 +432,24 @@ export class GraphTraversal {
    * Betweenness centrality measures how often a node appears on shortest paths
    * between other nodes. Uses Brandes' algorithm for efficiency.
    *
-   * @param topN - Number of top entities to return (default: 10)
+   * @param options - Configuration options
+   * @param options.topN - Number of top entities to return (default: 10)
+   * @param options.chunkSize - Yield control every N vertices (default: 50)
+   * @param options.onProgress - Progress callback (0.0 to 1.0)
+   * @param options.approximate - Use approximation for faster results (default: false)
+   * @param options.sampleRate - Sample rate for approximation (default: 0.2)
    * @returns CentralityResult with scores and top entities
    */
-  async calculateBetweennessCentrality(topN: number = 10): Promise<CentralityResult> {
+  async calculateBetweennessCentrality(
+    options: {
+      topN?: number;
+      chunkSize?: number;
+      onProgress?: (progress: number) => void;
+      approximate?: boolean;
+      sampleRate?: number;
+    } = {}
+  ): Promise<CentralityResult> {
+    const { topN = 10, chunkSize = 50, onProgress, approximate = false, sampleRate = 0.2 } = options;
     const graph = await this.storage.loadGraph();
     const scores = new Map<string, number>();
 
@@ -443,8 +458,16 @@ export class GraphTraversal {
       scores.set(entity.name, 0);
     }
 
-    // Brandes' algorithm
-    for (const source of graph.entities) {
+    // Determine which sources to process (full or sampled)
+    let sourcesToProcess = graph.entities;
+    if (approximate && graph.entities.length > 100) {
+      const sampleSize = Math.max(10, Math.floor(graph.entities.length * sampleRate));
+      sourcesToProcess = this.sampleEntities(graph.entities, sampleSize);
+    }
+
+    // Brandes' algorithm with chunked processing
+    let processed = 0;
+    for (const source of sourcesToProcess) {
       const stack: string[] = [];
       const predecessors = new Map<string, string[]>();
       const sigma = new Map<string, number>(); // Number of shortest paths
@@ -495,6 +518,31 @@ export class GraphTraversal {
           scores.set(w, scores.get(w)! + delta.get(w)!);
         }
       }
+
+      // Yield control periodically to prevent blocking event loop
+      processed++;
+      if (processed % chunkSize === 0) {
+        // Yield control to allow event loop to process other events
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Report progress
+        if (onProgress) {
+          onProgress(processed / sourcesToProcess.length);
+        }
+      }
+    }
+
+    // Final progress update
+    if (onProgress) {
+      onProgress(1);
+    }
+
+    // Scale scores if using approximation
+    if (approximate && sampleRate < 1.0) {
+      const scaleFactor = 1 / sampleRate;
+      for (const [entity, score] of scores) {
+        scores.set(entity, score * scaleFactor);
+      }
     }
 
     // Normalize scores
@@ -511,6 +559,23 @@ export class GraphTraversal {
       topEntities,
       algorithm: 'betweenness',
     };
+  }
+
+  /**
+   * Sample entities randomly for approximation algorithms.
+   *
+   * @param entities - Array of entities to sample from
+   * @param sampleSize - Number of entities to sample
+   * @returns Array of sampled entities
+   */
+  private sampleEntities(entities: readonly Entity[], sampleSize: number): Entity[] {
+    const shuffled = [...entities];
+    // Fisher-Yates shuffle
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, sampleSize);
   }
 
   /**

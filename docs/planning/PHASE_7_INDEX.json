@@ -1,0 +1,117 @@
+{
+  "phase": 7,
+  "title": "Parallel Processing & Advanced I/O",
+  "description": "Implement parallel processing capabilities and advanced I/O optimizations: streaming exports, worker pool for fuzzy search, async centrality with chunked processing",
+  "version": "1.0.0",
+  "created": "2026-01-03",
+  "totalSprints": 4,
+  "totalTasks": 14,
+  "totalEstimatedHours": 17,
+  "totalNewTests": 25,
+  "status": "planned",
+  "prerequisites": ["Phase 6 (Performance Optimization) complete", "All 2109+ tests passing"],
+  "targetMetrics": {
+    "fuzzySearchLargeGraph": { "current": "Single-threaded O(n)", "target": "Worker pool parallel", "improvement": "2-4x speedup" },
+    "exportLargeGraph": { "current": "All in memory", "target": "Streaming", "improvement": "50-70% less RAM" },
+    "betweennessCentrality": { "current": "Blocking O(V×E)", "target": "Chunked async", "improvement": "Non-blocking" },
+    "peakMemoryExport10K": { "current": "~25MB", "target": "~8MB streaming", "improvement": "3x reduction" }
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Streaming Export Foundation",
+      "priority": "HIGH",
+      "focus": "Create StreamingExporter utility for memory-efficient exports",
+      "tasks": 4,
+      "hours": 4,
+      "newTests": 8,
+      "file": "PHASE_7_SPRINT_1_TODO.json",
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "sprint": 2,
+      "title": "Integrate Streaming into IOManager",
+      "priority": "HIGH",
+      "focus": "Enable streaming for all export operations through IOManager",
+      "tasks": 4,
+      "hours": 3,
+      "newTests": 5,
+      "file": "PHASE_7_SPRINT_2_TODO.json",
+      "status": "pending",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 3,
+      "title": "Worker Pool for Fuzzy Search",
+      "priority": "MEDIUM",
+      "focus": "Parallel Levenshtein distance calculations with worker threads",
+      "tasks": 4,
+      "hours": 6,
+      "newTests": 8,
+      "file": "PHASE_7_SPRINT_3_TODO.json",
+      "status": "pending",
+      "dependencies": [1]
+    },
+    {
+      "sprint": 4,
+      "title": "Async Centrality & Chunked Processing",
+      "priority": "LOW",
+      "focus": "Non-blocking graph analytics with progress callbacks",
+      "tasks": 4,
+      "hours": 4,
+      "newTests": 4,
+      "file": "PHASE_7_SPRINT_4_TODO.json",
+      "status": "pending",
+      "dependencies": [2, 3]
+    }
+  ],
+  "dependencyGraph": {
+    "description": "Sprint dependency order",
+    "mermaid": "graph TD\n    S1[Sprint 1: Streaming Foundation] --> S2[Sprint 2: IOManager Integration]\n    S1 --> S3[Sprint 3: Worker Pool]\n    S2 --> S4[Sprint 4: Async Centrality]\n    S3 --> S4"
+  },
+  "parallelExecutionGroups": [
+    { "group": 1, "sprints": [1], "description": "Foundation - must complete first" },
+    { "group": 2, "sprints": [2, 3], "description": "Can run in parallel after Sprint 1" },
+    { "group": 3, "sprints": [4], "description": "Final integration after Group 2" }
+  ],
+  "filesToCreate": [
+    "src/features/StreamingExporter.ts",
+    "src/workers/levenshteinWorker.ts",
+    "src/workers/WorkerPool.ts",
+    "src/workers/index.ts",
+    "tests/unit/features/StreamingExporter.test.ts",
+    "tests/unit/workers/WorkerPool.test.ts",
+    "tests/integration/streaming-export.test.ts"
+  ],
+  "filesToModify": [
+    "src/utils/constants.ts",
+    "src/types/types.ts",
+    "src/features/index.ts",
+    "src/features/IOManager.ts",
+    "src/search/FuzzySearch.ts",
+    "src/core/GraphTraversal.ts",
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts",
+    "CLAUDE.md"
+  ],
+  "riskAssessment": [
+    { "risk": "Worker thread overhead", "probability": "Medium", "impact": "Low", "mitigation": "Only use for large graphs/low thresholds" },
+    { "risk": "Streaming file corruption", "probability": "Low", "impact": "Medium", "mitigation": "Write atomically, validate on read" },
+    { "risk": "Approximation inaccuracy", "probability": "Medium", "impact": "Low", "mitigation": "Document expected variance" },
+    { "risk": "Memory leaks in workers", "probability": "Low", "impact": "Medium", "mitigation": "Terminate workers after each task" },
+    { "risk": "Event loop blocking", "probability": "Low", "impact": "High", "mitigation": "Test with long-running operations" }
+  ],
+  "agentDistribution": {
+    "sonnet": { "tasks": 0, "description": "All tasks have detailed Haiku instructions" },
+    "haiku": { "tasks": 14, "description": "All tasks with step-by-step implementation guides" }
+  },
+  "technicalNotes": [
+    "Streaming exports use Node.js WriteStream for constant memory",
+    "Worker threads require worker_threads module from Node.js",
+    "Workers are spawned per-task and terminated after completion",
+    "Chunked processing yields control via setImmediate()",
+    "Approximation uses random sampling with scaled results"
+  ],
+  "notes": "Phase 7 focuses on scalability improvements. Streaming exports enable handling graphs larger than available RAM. Worker pool parallelizes CPU-bound fuzzy matching. Chunked centrality prevents UI freezing during analytics. All improvements are backward compatible."
+}

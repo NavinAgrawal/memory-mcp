@@ -1,0 +1,215 @@
+{
+  "phase": 7,
+  "sprint": 1,
+  "title": "Streaming Export Foundation",
+  "priority": "HIGH",
+  "effort": "4 hours",
+  "status": "completed",
+  "impact": "50-70% memory reduction for large exports by streaming data to files instead of building in memory",
+  "targetMetrics": {
+    "memoryUsageExport10K": { "current": "~25MB all in memory", "target": "~8MB streaming buffers" },
+    "exportFormat": { "current": "Build full string", "target": "Stream incrementally" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Create StreamingExporter Utility - Create src/features/StreamingExporter.ts with methods for streaming JSONL and CSV exports",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/features/StreamingExporter.ts"],
+      "testCategories": [
+        "StreamResult interface defined",
+        "streamJSONL method works",
+        "streamCSV method works",
+        "TypeScript compiles"
+      ],
+      "implementation": {
+        "imports": [
+          "import { createWriteStream, WriteStream } from 'fs';",
+          "import { pipeline } from 'stream/promises';",
+          "import { Readable, Transform } from 'stream';",
+          "import type { Entity, Relation, KnowledgeGraph } from '../types/types.js';"
+        ],
+        "interfaces": [
+          {
+            "name": "StreamResult",
+            "fields": ["bytesWritten: number", "entitiesWritten: number", "relationsWritten: number", "durationMs: number"]
+          }
+        ],
+        "methods": [
+          "constructor(filePath: string)",
+          "async streamJSONL(graph: KnowledgeGraph): Promise<StreamResult>",
+          "async streamCSV(graph: KnowledgeGraph): Promise<StreamResult>",
+          "private entityToCSVRow(entity: Entity): string",
+          "private formatBytes(bytes: number): string"
+        ]
+      },
+      "stepByStep": [
+        "Create new file: src/features/StreamingExporter.ts",
+        "Add the imports at the top of the file",
+        "Export the StreamResult interface with all 4 fields",
+        "Create the StreamingExporter class with private filePath property",
+        "Implement constructor that takes filePath and stores it",
+        "Implement streamJSONL: create write stream, iterate entities writing JSON.stringify + newline, iterate relations, wait for stream end",
+        "Implement streamCSV: write header row, iterate entities calling entityToCSVRow, wait for stream end",
+        "Implement entityToCSVRow: escape quotes by doubling, join fields with commas",
+        "Add JSDoc documentation for class and public methods",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "streamJSONL": "async streamJSONL(graph: KnowledgeGraph): Promise<StreamResult> {\n  const start = Date.now();\n  let bytesWritten = 0;\n  let entitiesWritten = 0;\n  let relationsWritten = 0;\n\n  const writeStream = createWriteStream(this.filePath);\n\n  for (const entity of graph.entities) {\n    const line = JSON.stringify(entity) + '\\n';\n    writeStream.write(line);\n    bytesWritten += Buffer.byteLength(line, 'utf-8');\n    entitiesWritten++;\n  }\n\n  for (const relation of graph.relations) {\n    const line = JSON.stringify(relation) + '\\n';\n    writeStream.write(line);\n    bytesWritten += Buffer.byteLength(line, 'utf-8');\n    relationsWritten++;\n  }\n\n  await new Promise<void>((resolve, reject) => {\n    writeStream.end(() => resolve());\n    writeStream.on('error', reject);\n  });\n\n  return { bytesWritten, entitiesWritten, relationsWritten, durationMs: Date.now() - start };\n}",
+        "entityToCSVRow": "private entityToCSVRow(entity: Entity): string {\n  const escape = (s: string) => `\"${s.replace(/\"/g, '\"\"')}\"`;\n  return [\n    escape(entity.name),\n    escape(entity.entityType),\n    escape(entity.observations.join('; ')),\n    escape((entity.tags ?? []).join('; ')),\n    entity.importance?.toString() ?? '',\n    entity.createdAt ?? '',\n    entity.lastModified ?? '',\n  ].join(',');\n}"
+      },
+      "acceptanceCriteria": [
+        "StreamingExporter class created at src/features/StreamingExporter.ts",
+        "StreamResult interface exported",
+        "streamJSONL writes entities and relations as JSONL",
+        "streamCSV writes header and entity rows with proper escaping",
+        "All methods have JSDoc documentation",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Add Streaming Export Constants - Add STREAMING_CONFIG constant to src/utils/constants.ts",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/utils/constants.ts"],
+      "testCategories": [
+        "STREAMING_CONFIG constant exists",
+        "TypeScript compiles"
+      ],
+      "implementation": {
+        "constant": {
+          "name": "STREAMING_CONFIG",
+          "fields": {
+            "STREAMING_THRESHOLD": 5000,
+            "CHUNK_SIZE": 500,
+            "HIGH_WATER_MARK": "64 * 1024",
+            "FLUSH_INTERVAL_MS": 100
+          }
+        }
+      },
+      "stepByStep": [
+        "Open src/utils/constants.ts",
+        "Find the end of the existing constants (after SIMILARITY_WEIGHTS or similar)",
+        "Add a JSDoc comment: /** Streaming export configuration */",
+        "Add: export const STREAMING_CONFIG = { ... } as const;",
+        "Add all 4 fields: STREAMING_THRESHOLD (5000), CHUNK_SIZE (500), HIGH_WATER_MARK (64 * 1024), FLUSH_INTERVAL_MS (100)",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippet": "/**\n * Streaming export configuration\n */\nexport const STREAMING_CONFIG = {\n  /** Minimum entity count to trigger streaming mode */\n  STREAMING_THRESHOLD: 5000,\n  /** Chunk size for batched streaming operations */\n  CHUNK_SIZE: 500,\n  /** High water mark for stream buffers (bytes) */\n  HIGH_WATER_MARK: 64 * 1024,\n  /** Flush interval for long-running streams (ms) */\n  FLUSH_INTERVAL_MS: 100,\n} as const;",
+      "acceptanceCriteria": [
+        "STREAMING_CONFIG constant added to constants.ts",
+        "STREAMING_THRESHOLD set to 5000",
+        "CHUNK_SIZE set to 500",
+        "HIGH_WATER_MARK set to 64KB",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Tests",
+      "description": "Create Streaming Export Unit Tests - Create tests/unit/features/StreamingExporter.test.ts with tests for JSONL and CSV streaming",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/unit/features/StreamingExporter.test.ts"],
+      "testCategories": [
+        "JSONL streaming for small graph",
+        "JSONL streaming for large graph",
+        "JSONL streaming for empty graph",
+        "CSV streaming with header",
+        "CSV streaming with special characters",
+        "Memory efficiency verification"
+      ],
+      "implementation": {
+        "imports": [
+          "import { describe, it, expect, beforeEach, afterEach } from 'vitest';",
+          "import { StreamingExporter } from '../../../src/features/StreamingExporter.js';",
+          "import { promises as fs } from 'fs';",
+          "import { join } from 'path';",
+          "import { tmpdir } from 'os';",
+          "import type { Entity, KnowledgeGraph } from '../../../src/types/types.js';"
+        ],
+        "helpers": [
+          "createTestGraph(entityCount: number): KnowledgeGraph - Creates N test entities with observations and tags"
+        ],
+        "testSuites": [
+          "streamJSONL - 3 tests for small, large, empty graphs",
+          "streamCSV - 2 tests for header and special char escaping",
+          "Memory efficiency - 1 test for large graph memory check"
+        ]
+      },
+      "stepByStep": [
+        "Create new file: tests/unit/features/StreamingExporter.test.ts",
+        "Add all imports at the top",
+        "Create helper function createTestGraph(entityCount) that returns KnowledgeGraph with N entities",
+        "Create describe('StreamingExporter') block",
+        "Add beforeEach to create temp directory using tmpdir() and Date.now() for uniqueness",
+        "Add afterEach to clean up temp directory with fs.rm(testDir, { recursive: true, force: true })",
+        "Add describe('streamJSONL') with 3 tests: small graph (10 entities), large graph (1000 entities), empty graph",
+        "Add describe('streamCSV') with 2 tests: graph with header verification, special characters escaping",
+        "Add describe('Memory efficiency') with 1 test checking memory increase is < 10MB for 5000 entities",
+        "Run: npx vitest run tests/unit/features/StreamingExporter.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/features/StreamingExporter.test.ts",
+        "8+ tests covering JSONL, CSV, and memory efficiency",
+        "Tests verify file content correctness",
+        "Tests verify memory stays bounded",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core",
+      "description": "Update Barrel Export - Export StreamingExporter from src/features/index.ts",
+      "status": "pending",
+      "estimatedHours": 0.15,
+      "agent": "haiku",
+      "files": ["src/features/index.ts"],
+      "testCategories": [
+        "Export statement added",
+        "No circular dependencies",
+        "All tests pass"
+      ],
+      "stepByStep": [
+        "Open src/features/index.ts",
+        "Add: export { StreamingExporter, type StreamResult } from './StreamingExporter.js';",
+        "Run: npm run typecheck",
+        "Run: npm test"
+      ],
+      "acceptanceCriteria": [
+        "StreamingExporter exported from src/features/index.ts",
+        "StreamResult type also exported",
+        "npm run typecheck passes",
+        "All existing tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "StreamingExporter class created with JSONL and CSV methods",
+    "STREAMING_CONFIG constant added to constants.ts",
+    "8+ unit tests created and passing",
+    "StreamingExporter exported from features barrel",
+    "npm run typecheck passes",
+    "All existing 2109+ tests pass"
+  ],
+  "filesCreated": [
+    "src/features/StreamingExporter.ts",
+    "tests/unit/features/StreamingExporter.test.ts"
+  ],
+  "filesModified": [
+    "src/utils/constants.ts",
+    "src/features/index.ts"
+  ],
+  "totalNewTests": 8,
+  "totalEstimatedHours": 4,
+  "dependencies": [],
+  "notes": "This sprint creates the foundation for streaming exports. The StreamingExporter is a standalone utility that can stream graph data to files without loading everything into memory. This enables handling graphs larger than available RAM."
+}

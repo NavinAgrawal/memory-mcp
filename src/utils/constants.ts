@@ -277,3 +277,21 @@ export function getEmbeddingConfig(): {
 
   return { provider, apiKey, model, autoIndex };
 }
+
+// ==================== Streaming Export Configuration (Phase 7 Sprint 1) ====================
+
+/**
+ * Streaming export configuration.
+ *
+ * Controls when to use streaming mode and buffer sizes for optimal memory usage.
+ */
+export const STREAMING_CONFIG = {
+  /** Minimum entity count to trigger streaming mode */
+  STREAMING_THRESHOLD: 5000,
+  /** Chunk size for batched streaming operations */
+  CHUNK_SIZE: 500,
+  /** High water mark for stream buffers (bytes) */
+  HIGH_WATER_MARK: 64 * 1024,
+  /** Flush interval for long-running streams (ms) */
+  FLUSH_INTERVAL_MS: 100,
+} as const;

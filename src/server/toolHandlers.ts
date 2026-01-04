@@ -436,7 +436,17 @@ export const toolHandlers: Record<string, ToolHandler> = {
         : 'both';
       result = await ctx.graphTraversal.calculateDegreeCentrality(direction, topN);
     } else if (algorithm === 'betweenness') {
-      result = await ctx.graphTraversal.calculateBetweennessCentrality(topN);
+      const approximate = args.approximate !== undefined
+        ? validateWithSchema(args.approximate, z.boolean(), 'Invalid approximate value')
+        : false;
+      const sampleRate = args.sampleRate !== undefined
+        ? validateWithSchema(args.sampleRate, z.number().min(0.01).max(1.0), 'Invalid sample rate (0.01-1.0)')
+        : 0.2;
+      result = await ctx.graphTraversal.calculateBetweennessCentrality({
+        topN,
+        approximate,
+        sampleRate,
+      });
     } else {
       const dampingFactor = args.dampingFactor !== undefined
         ? validateWithSchema(args.dampingFactor, z.number().min(0).max(1), 'Invalid damping factor (0-1)')
@@ -449,6 +459,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       algorithm: result.algorithm,
       topEntities: result.topEntities,
       totalEntities: result.scores.size,
+      ...(algorithm === 'betweenness' && args.approximate ? { approximate: true } : {}),
     });
   },
 
@@ -468,6 +479,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const compressionQuality = args.compressionQuality !== undefined
       ? validateWithSchema(args.compressionQuality, z.number().int().min(0).max(11), 'Invalid compression quality (must be 0-11)')
       : undefined;
+    const streaming = args.streaming !== undefined ? validateWithSchema(args.streaming, z.boolean(), 'Invalid streaming value') : undefined;
+    const outputPath = args.outputPath !== undefined ? validateWithSchema(args.outputPath, z.string(), 'Invalid outputPath value') : undefined;
 
     // Get filtered or full graph
     let graph;
@@ -482,12 +495,31 @@ export const toolHandlers: Record<string, ToolHandler> = {
       graph = await ctx.storage.loadGraph();
     }
 
-    // Export with optional compression
+    // Export with optional compression and streaming
     const result = await ctx.ioManager.exportGraphWithCompression(graph, format, {
       filter,
       compress,
       compressionQuality,
+      streaming,
+      outputPath,
     });
+
+    // Return streamed result with metadata
+    if (result.streamed) {
+      return formatToolResponse({
+        format: result.format,
+        entityCount: result.entityCount,
+        relationCount: result.relationCount,
+        compressed: result.compressed,
+        encoding: result.encoding,
+        originalSize: result.originalSize,
+        compressedSize: result.compressedSize,
+        compressionRatio: `${(result.compressionRatio * 100).toFixed(1)}%`,
+        streamed: true,
+        outputPath: result.outputPath,
+        message: result.content,
+      });
+    }
 
     // Return compressed result with metadata, or raw content for uncompressed
     if (result.compressed) {

@@ -11,6 +11,9 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
+import { WorkerPool } from '../workers/WorkerPool.js';
+import { fileURLToPath } from 'url';
+import { dirname, join, sep } from 'path';
 
 /**
  * Default fuzzy search similarity threshold (70% match required).
@@ -42,6 +45,17 @@ const FUZZY_CACHE_MAX_SIZE = 100;
 const FUZZY_CACHE_TTL_MS = 5 * 60 * 1000;
 
 /**
+ * Phase 7 Sprint 3: Minimum number of entities to activate worker pool.
+ */
+const WORKER_MIN_ENTITIES = 500;
+
+/**
+ * Phase 7 Sprint 3: Maximum threshold for worker pool activation.
+ * Higher thresholds have fewer matches, so single-threaded is faster.
+ */
+const WORKER_MAX_THRESHOLD = 0.8;
+
+/**
  * Performs fuzzy search with configurable similarity threshold.
  */
 export class FuzzySearch {
@@ -51,7 +65,34 @@ export class FuzzySearch {
    */
   private fuzzyResultCache: Map<string, FuzzyCacheEntry> = new Map();
 
-  constructor(private storage: GraphStorage) {}
+  /**
+   * Phase 7 Sprint 3: Worker pool for parallel fuzzy search.
+   * Initialized lazily when needed.
+   */
+  private workerPool: WorkerPool<any, any> | null = null;
+
+  /**
+   * Phase 7 Sprint 3: Path to the worker script.
+   */
+  private workerPath: string;
+
+  constructor(private storage: GraphStorage) {
+    // Calculate worker path using ESM module resolution
+    const currentFileUrl = import.meta.url;
+    const currentDir = dirname(fileURLToPath(currentFileUrl));
+
+    // Check if we're running from src/ (during tests) or dist/ (production)
+    const isRunningFromSrc = currentDir.includes(`${sep}src${sep}`);
+
+    if (isRunningFromSrc) {
+      // During tests, worker is in dist/workers/ relative to project root
+      const projectRoot = join(currentDir, '..', '..');
+      this.workerPath = join(projectRoot, 'dist', 'workers', 'levenshteinWorker.js');
+    } else {
+      // In production, worker is in dist/workers/ relative to current dist/search/
+      this.workerPath = join(currentDir, '..', 'workers', 'levenshteinWorker.js');
+    }
+  }
 
   /**
    * Phase 4 Sprint 3: Generate cache key for fuzzy search parameters.
@@ -158,8 +199,19 @@ export class FuzzySearch {
       }
     }
 
-    // Perform fuzzy search
-    const fuzzyMatched = this.performFuzzyMatch(graph.entities, queryLower, threshold);
+    // Phase 7 Sprint 3: Use worker pool for large graphs with low thresholds
+    const shouldUseWorkers =
+      graph.entities.length >= WORKER_MIN_ENTITIES &&
+      threshold < WORKER_MAX_THRESHOLD;
+
+    let fuzzyMatched: Entity[];
+
+    if (shouldUseWorkers) {
+      fuzzyMatched = await this.searchWithWorkers(query, threshold, graph.entities as Entity[]);
+    } else {
+      // Perform single-threaded fuzzy search
+      fuzzyMatched = this.performFuzzyMatch(graph.entities, queryLower, threshold);
+    }
 
     // Apply tag and importance filters using SearchFilterChain
     const filters: SearchFilters = { tags, minImportance, maxImportance };
@@ -245,5 +297,67 @@ export class FuzzySearch {
     const similarity = 1 - distance / maxLength;
 
     return similarity >= threshold;
+  }
+
+  /**
+   * Phase 7 Sprint 3: Perform fuzzy search using worker pool for parallel processing.
+   *
+   * Splits entities into chunks and processes them in parallel using worker threads.
+   *
+   * @param query - Search query
+   * @param threshold - Similarity threshold
+   * @param entities - Entities to search
+   * @returns Array of matched entities
+   */
+  private async searchWithWorkers(
+    query: string,
+    threshold: number,
+    entities: Entity[]
+  ): Promise<Entity[]> {
+    // Initialize worker pool lazily
+    if (!this.workerPool) {
+      this.workerPool = new WorkerPool({
+        workerPath: this.workerPath,
+      });
+    }
+
+    // Split entities into 4 chunks for parallel processing
+    const chunkSize = Math.ceil(entities.length / 4);
+    const chunks: Entity[][] = [];
+    for (let i = 0; i < entities.length; i += chunkSize) {
+      chunks.push(entities.slice(i, i + chunkSize));
+    }
+
+    // Prepare worker inputs with lowercased data
+    const workerInputs = chunks.map(chunk => ({
+      query,
+      threshold,
+      entities: chunk.map(e => ({
+        name: e.name,
+        nameLower: e.name.toLowerCase(),
+        observations: e.observations.map(o => o.toLowerCase()),
+      })),
+    }));
+
+    // Execute all chunks in parallel
+    const results = await this.workerPool.executeAll(workerInputs);
+
+    // Flatten results and extract matched entity names
+    const matchedNames = new Set(results.flat().map(r => r.name));
+
+    // Return entities that matched
+    return entities.filter(e => matchedNames.has(e.name));
+  }
+
+  /**
+   * Phase 7 Sprint 3: Shutdown the worker pool and clean up resources.
+   *
+   * Should be called when FuzzySearch is no longer needed.
+   */
+  async shutdown(): Promise<void> {
+    if (this.workerPool) {
+      await this.workerPool.shutdown();
+      this.workerPool = null;
+    }
   }
 }

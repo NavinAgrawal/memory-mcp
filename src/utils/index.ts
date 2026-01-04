@@ -37,6 +37,7 @@ export {
   GRAPH_LIMITS,
   QUERY_LIMITS,
   COMPRESSION_CONFIG,
+  STREAMING_CONFIG,
   type CompressionQuality,
 } from './constants.js';
 

@@ -778,6 +778,10 @@ export interface ExportOptions {
   compress?: boolean;
   /** Brotli quality level 0-11 (default: 6). Higher = better compression but slower. */
   compressionQuality?: number;
+  /** Whether to use streaming mode for large exports */
+  streaming?: boolean;
+  /** Output file path for streaming mode */
+  outputPath?: string;
 }
 
 /**
@@ -820,6 +824,10 @@ export interface ExportResult {
   compressedSize: number;
   /** Compression ratio (compressedSize / originalSize). Lower is better. */
   compressionRatio: number;
+  /** Whether the export was streamed to a file */
+  streamed?: boolean;
+  /** Output file path if streamed */
+  outputPath?: string;
 }
 
 // ==================== Archive Types ====================

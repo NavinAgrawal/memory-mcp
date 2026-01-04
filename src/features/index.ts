@@ -1,6 +1,7 @@
 /**
  * Features Module Barrel Export
  * Phase 4: Re-extracted specialized managers for single responsibility
+ * Phase 7: Added streaming export utilities
  */
 
 export { TagManager } from './TagManager.js';
@@ -20,3 +21,4 @@ export {
   type ArchiveOptions,
   type ArchiveResult,
 } from './ArchiveManager.js';
+export { StreamingExporter, type StreamResult } from './StreamingExporter.js';

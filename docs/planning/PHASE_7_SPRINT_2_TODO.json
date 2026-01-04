@@ -1,0 +1,203 @@
+{
+  "phase": 7,
+  "sprint": 2,
+  "title": "Integrate Streaming into IOManager",
+  "priority": "HIGH",
+  "effort": "3 hours",
+  "status": "completed",
+  "impact": "Enable streaming for all export operations through the existing IOManager interface",
+  "targetMetrics": {
+    "exportAutoStream": { "current": "Never streams", "target": "Auto-stream for >= 5000 entities" },
+    "exportManualStream": { "current": "Not available", "target": "streaming: true option" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Add Streaming Mode to IOManager.exportGraph - Modify exportGraph to use StreamingExporter for large graphs or when streaming option is set",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/features/IOManager.ts"],
+      "location": "Find 'async exportGraph' method",
+      "testCategories": [
+        "Streaming auto-triggers for large graphs",
+        "Streaming manual option works",
+        "Non-streamable formats fallback",
+        "TypeScript compiles"
+      ],
+      "implementation": {
+        "imports": [
+          "import { StreamingExporter } from './StreamingExporter.js';",
+          "import { STREAMING_CONFIG } from '../utils/constants.js';"
+        ],
+        "newMethod": "streamExport(format, graph, options)",
+        "logic": "Check if shouldStream based on options.streaming or entity count >= threshold"
+      },
+      "stepByStep": [
+        "Open src/features/IOManager.ts",
+        "Add import for StreamingExporter at the top with other imports",
+        "Add import for STREAMING_CONFIG from '../utils/constants.js'",
+        "Find the exportGraph method (search for 'async exportGraph')",
+        "After getting the filtered graph, add logic to check if streaming should be used",
+        "Add: const shouldStream = options?.streaming || (options?.outputPath && graph.entities.length >= STREAMING_CONFIG.STREAMING_THRESHOLD);",
+        "Add: if (shouldStream && options?.outputPath) { return this.streamExport(format, graph, options); }",
+        "Create new private method streamExport(format, graph, options)",
+        "In streamExport: create StreamingExporter with options.outputPath",
+        "Switch on format: 'json' -> streamJSONL (note: JSONL is used for JSON streaming), 'csv' -> streamCSV, default -> fallback to in-memory with fs.writeFile",
+        "Return ExportResult with streamed: true and outputPath set",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "checkStreaming": "const shouldStream = options?.streaming ||\n  (options?.outputPath && graph.entities.length >= STREAMING_CONFIG.STREAMING_THRESHOLD);\n\nif (shouldStream && options?.outputPath) {\n  return this.streamExport(format, graph, options);\n}",
+        "streamExport": "private async streamExport(\n  format: ExportFormat,\n  graph: KnowledgeGraph,\n  options: ExportOptions & { outputPath: string }\n): Promise<ExportResult> {\n  const exporter = new StreamingExporter(options.outputPath);\n  let result: StreamResult;\n\n  switch (format) {\n    case 'json':\n      result = await exporter.streamJSONL(graph);\n      break;\n    case 'csv':\n      result = await exporter.streamCSV(graph);\n      break;\n    default:\n      // Fallback for unsupported streaming formats\n      const content = await this.generateExportContent(format, graph);\n      await fs.writeFile(options.outputPath, content);\n      result = {\n        bytesWritten: Buffer.byteLength(content, 'utf-8'),\n        entitiesWritten: graph.entities.length,\n        relationsWritten: graph.relations.length,\n        durationMs: 0,\n      };\n  }\n\n  return {\n    format,\n    content: `Streamed to ${options.outputPath}`,\n    entityCount: result.entitiesWritten,\n    relationCount: result.relationsWritten,\n    compressed: false,\n    encoding: 'utf-8',\n    originalSize: result.bytesWritten,\n    compressedSize: result.bytesWritten,\n    compressionRatio: 1,\n    streamed: true,\n    outputPath: options.outputPath,\n  };\n}"
+      },
+      "acceptanceCriteria": [
+        "exportGraph checks for streaming conditions",
+        "Streaming auto-triggers for >= 5000 entities with outputPath",
+        "Manual streaming option works with streaming: true",
+        "Unsupported formats fallback gracefully",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Types",
+      "description": "Update ExportResult and ExportOptions Types - Add streaming-related fields to types",
+      "status": "pending",
+      "estimatedHours": 0.33,
+      "agent": "haiku",
+      "files": ["src/types/types.ts"],
+      "location": "Find 'interface ExportResult' and 'interface ExportOptions'",
+      "testCategories": [
+        "ExportResult has streamed field",
+        "ExportResult has outputPath field",
+        "ExportOptions has streaming field",
+        "ExportOptions has outputPath field",
+        "TypeScript compiles"
+      ],
+      "stepByStep": [
+        "Open src/types/types.ts",
+        "Find the ExportResult interface",
+        "Add: streamed?: boolean;",
+        "Add: outputPath?: string;",
+        "Find the ExportOptions interface",
+        "Add: streaming?: boolean;",
+        "Add: outputPath?: string;",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippet": "// In ExportResult interface, add:\nstreamed?: boolean;\noutputPath?: string;\n\n// In ExportOptions interface, add:\nstreaming?: boolean;\noutputPath?: string;",
+      "acceptanceCriteria": [
+        "ExportResult has streamed?: boolean",
+        "ExportResult has outputPath?: string",
+        "ExportOptions has streaming?: boolean",
+        "ExportOptions has outputPath?: string",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Tests",
+      "description": "Add Integration Tests for Streaming Export - Create tests/integration/streaming-export.test.ts",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["tests/integration/streaming-export.test.ts"],
+      "testCategories": [
+        "Small graphs don't auto-stream",
+        "Forced streaming works",
+        "CSV streaming works",
+        "File output is correct"
+      ],
+      "implementation": {
+        "imports": [
+          "import { describe, it, expect, beforeEach, afterEach } from 'vitest';",
+          "import { GraphStorage } from '../../src/core/GraphStorage.js';",
+          "import { IOManager } from '../../src/features/IOManager.js';",
+          "import { promises as fs } from 'fs';",
+          "import { join } from 'path';",
+          "import { tmpdir } from 'os';"
+        ],
+        "testCases": [
+          "should use in-memory export for small graphs (10 entities)",
+          "should stream when explicitly requested (streaming: true)",
+          "should stream CSV format correctly (100 entities)",
+          "should auto-stream for large graphs (5000+ entities, if testing)"
+        ]
+      },
+      "stepByStep": [
+        "Create new file: tests/integration/streaming-export.test.ts",
+        "Add all imports",
+        "Create describe('Streaming Export Integration') block",
+        "Add beforeEach: create temp dir, create GraphStorage and IOManager",
+        "Add afterEach: clean up temp dir",
+        "Test 1: Create 10 entities, export without streaming flag, verify result.streamed is falsy",
+        "Test 2: Create 10 entities, export with streaming: true and outputPath, verify result.streamed is true and file exists",
+        "Test 3: Create 100 entities, export CSV with streaming, verify header and line count",
+        "Run: npx vitest run tests/integration/streaming-export.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Test file created",
+        "4+ integration tests",
+        "Tests verify streaming behavior",
+        "Tests verify file output",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core",
+      "description": "Update export_graph Tool Handler - Add streaming options to the export_graph tool handler in toolHandlers.ts",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/server/toolHandlers.ts"],
+      "location": "Find \"case 'export_graph'\"",
+      "testCategories": [
+        "Handler accepts streaming option",
+        "Handler accepts outputPath option",
+        "Response includes streamed flag",
+        "TypeScript compiles"
+      ],
+      "stepByStep": [
+        "Open src/server/toolHandlers.ts",
+        "Find the export_graph case (search for \"case 'export_graph'\")",
+        "Destructure streaming and outputPath from args",
+        "Pass streaming and outputPath to ioManager.exportGraph options",
+        "In the response, include streamed: result.streamed ?? false",
+        "In the response, include outputPath: result.outputPath",
+        "Conditionally exclude data from response when streamed (don't send file contents back)",
+        "Run: npm run typecheck",
+        "Run: npm test"
+      ],
+      "codeSnippet": "case 'export_graph': {\n  const { format, filter, compress, compressionQuality, streaming, outputPath } = args;\n  const result = await ctx.ioManager.exportGraph(format, {\n    filter,\n    compress,\n    compressionQuality,\n    streaming,\n    outputPath,\n  });\n\n  return {\n    content: [{\n      type: 'text',\n      text: JSON.stringify({\n        format: result.format,\n        entityCount: result.entityCount,\n        relationCount: result.relationCount,\n        compressed: result.compressed,\n        encoding: result.encoding,\n        originalSize: result.originalSize,\n        compressedSize: result.compressedSize,\n        compressionRatio: result.compressionRatio,\n        streamed: result.streamed ?? false,\n        outputPath: result.outputPath,\n        ...(result.streamed ? {} : { data: result.content }),\n      }),\n    }],\n  };\n}",
+      "acceptanceCriteria": [
+        "export_graph handler destructures streaming and outputPath",
+        "Options passed to exportGraph",
+        "Response includes streamed flag",
+        "Data omitted from response when streamed",
+        "npm run typecheck passes",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "IOManager.exportGraph supports streaming mode",
+    "Types updated with streaming fields",
+    "Integration tests pass",
+    "export_graph tool handler updated",
+    "All existing tests pass"
+  ],
+  "filesCreated": [
+    "tests/integration/streaming-export.test.ts"
+  ],
+  "filesModified": [
+    "src/features/IOManager.ts",
+    "src/types/types.ts",
+    "src/server/toolHandlers.ts"
+  ],
+  "totalNewTests": 5,
+  "totalEstimatedHours": 3,
+  "dependencies": [1],
+  "notes": "This sprint integrates the StreamingExporter into the existing IOManager. After this sprint, users can export large graphs efficiently either through automatic threshold detection or explicit streaming option."
+}

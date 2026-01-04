@@ -50,16 +50,17 @@ This is an enhanced MCP memory server with **54 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/) - 50 TypeScript files
+### Source Structure (src/) - 53 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
 | **core/** | 11 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (Phase 4: graph algorithms), index |
-| **features/** | 6 | TagManager (tag aliases), IOManager (import/export/backup), AnalyticsManager, ArchiveManager, CompressionManager, index |
+| **features/** | 7 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (Phase 7: memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, index |
 | **search/** | 13 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, EmbeddingService, VectorStore, SemanticSearch, index |
 | **server/** | 4 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
 | **utils/** | 12 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
+| **workers/** | 3 | WorkerPool (Phase 7: parallel processing), levenshteinWorker (fuzzy search worker), index |
 | **root** | 1 | index.ts (entry point) |
 
 > **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files, folder structure simplified
@@ -140,14 +141,14 @@ interface Relation {
 | **Tag Management** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
 | **Tag Aliases** | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
 | **Hierarchy** | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
-| **Graph Algorithms** | 4 | find_shortest_path, find_all_paths, get_connected_components, get_centrality |
+| **Graph Algorithms** | 4 | find_shortest_path, find_all_paths, get_connected_components, get_centrality (supports chunked processing and approximation for betweenness) |
 | **Analytics** | 2 | get_graph_stats, validate_graph |
 | **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
-| **Import/Export** | 2 | import_graph (3 formats), export_graph (7 formats + compression) |
+| **Import/Export** | 2 | import_graph (3 formats), export_graph (7 formats + compression + streaming for large graphs) |
 
 ## Test Structure
 
-Tests are in `tests/` (1803 tests, 52 files):
+Tests are in `tests/` (2152 tests, 58 files):
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -161,7 +162,7 @@ Tests are in `tests/` (1803 tests, 52 files):
 | unit/core/GraphStorage.test.ts | 10 | JSONL storage layer |
 | unit/core/SQLiteStorage.test.ts | 31 | SQLite storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
-| unit/core/GraphTraversal.test.ts | 34 | Graph traversal algorithms (Phase 4) |
+| unit/core/GraphTraversal.test.ts | 41 | Graph traversal algorithms (Phase 4 + Phase 7 centrality) |
 | unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
 | unit/features/ArchiveManager.test.ts | 42 | Entity archival + compression (via EntityManager) |
 | unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
@@ -191,6 +192,9 @@ Tests are in `tests/` (1803 tests, 52 files):
 | unit/utils/compressedCache.test.ts | 42 | LRU cache with compression |
 | unit/server/responseCompressor.test.ts | 25 | MCP response compression |
 | performance/compression-benchmarks.test.ts | 9 | Compression performance benchmarks |
+| unit/features/StreamingExporter.test.ts | 9 | Streaming export (Phase 7) |
+| integration/streaming-export.test.ts | 6 | Streaming export integration (Phase 7) |
+| unit/workers/WorkerPool.test.ts | 8 | Worker pool for parallel processing (Phase 7) |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 
@@ -236,6 +240,20 @@ tests/test-results/
   - Fuzzy search result cache with TTL (5 minutes) and LRU eviction
   - Boolean search AST cache (50 entries) and result cache (100 entries)
   - Cache management methods: `clearAllCaches()`, `clearFuzzyCache()`, `clearBooleanCache()`, `clearRankedCache()`
+- **Phase 7 Centrality Optimizations**:
+  - Chunked processing for betweenness centrality (yields control every N vertices, default 50)
+  - Progress callbacks for long-running centrality calculations
+  - Approximation mode for betweenness (sampling-based, configurable sample rate 0.01-1.0)
+  - Non-blocking event loop prevents UI freezing on large graphs
+- **Phase 7 Streaming Exports**:
+  - StreamingExporter for memory-efficient large graph exports (JSONL, CSV)
+  - Auto-streaming for graphs >= 5000 entities when outputPath provided
+  - Manual streaming via `streaming: true` option on export_graph tool
+  - 50-70% memory reduction for large exports
+- **Phase 7 Parallel Fuzzy Search**:
+  - WorkerPool for parallel Levenshtein distance calculations
+  - 2-4x speedup for fuzzy search on large graphs (>= 500 entities with threshold < 0.8)
+  - Lazy worker pool initialization to minimize resource usage
 
 ## Server Architecture (v0.44.0+)
 
@@ -244,7 +262,7 @@ tests/test-results/
 - **toolHandlers.ts**: 400 lines - handler registry, dispatch logic, and response compression wrapper
 - **responseCompressor.ts**: 170 lines - automatic brotli compression for large responses (>256KB)
 - **Consolidated constants**: SIMILARITY_WEIGHTS centralized in constants.ts
-- **GraphTraversal.ts**: 500+ lines - BFS, DFS, shortest path, all paths, connected components, centrality (degree, betweenness, PageRank)
+- **GraphTraversal.ts**: 600+ lines - BFS, DFS, shortest path, all paths, connected components, centrality (degree, betweenness with chunking/approximation, PageRank)
 
 ## Dependencies
 

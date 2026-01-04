@@ -28,7 +28,9 @@ import {
   decompress,
   hasBrotliExtension,
   COMPRESSION_CONFIG,
+  STREAMING_CONFIG,
 } from '../utils/index.js';
+import { StreamingExporter, type StreamResult } from './StreamingExporter.js';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -177,6 +179,14 @@ export class IOManager {
     format: ExportFormat,
     options?: ExportOptions
   ): Promise<ExportResult> {
+    // Check if streaming should be used
+    const shouldStream = options?.streaming ||
+      (options?.outputPath && graph.entities.length >= STREAMING_CONFIG.STREAMING_THRESHOLD);
+
+    if (shouldStream && options?.outputPath) {
+      return this.streamExport(format, graph, options as ExportOptions & { outputPath: string });
+    }
+
     // Generate export content using existing method
     const content = this.exportGraph(graph, format);
     const originalSize = Buffer.byteLength(content, 'utf-8');
@@ -220,6 +230,61 @@ export class IOManager {
       originalSize,
       compressedSize: originalSize,
       compressionRatio: 1,
+    };
+  }
+
+  /**
+   * Stream export to a file for large graphs.
+   *
+   * Uses StreamingExporter to write entities and relations incrementally
+   * to avoid loading the entire export content into memory.
+   *
+   * @param format - Export format
+   * @param graph - Knowledge graph to export
+   * @param options - Export options with required outputPath
+   * @returns Export result with streaming metadata
+   * @private
+   */
+  private async streamExport(
+    format: ExportFormat,
+    graph: ReadonlyKnowledgeGraph,
+    options: ExportOptions & { outputPath: string }
+  ): Promise<ExportResult> {
+    const exporter = new StreamingExporter(options.outputPath);
+    let result: StreamResult;
+
+    switch (format) {
+      case 'json':
+        // Use JSONL format for streaming (line-delimited JSON)
+        result = await exporter.streamJSONL(graph);
+        break;
+      case 'csv':
+        result = await exporter.streamCSV(graph);
+        break;
+      default:
+        // Fallback to in-memory export for unsupported streaming formats
+        const content = this.exportGraph(graph, format);
+        await fs.writeFile(options.outputPath, content);
+        result = {
+          bytesWritten: Buffer.byteLength(content, 'utf-8'),
+          entitiesWritten: graph.entities.length,
+          relationsWritten: graph.relations.length,
+          durationMs: 0,
+        };
+    }
+
+    return {
+      format,
+      content: `Streamed to ${options.outputPath}`,
+      entityCount: result.entitiesWritten,
+      relationCount: result.relationsWritten,
+      compressed: false,
+      encoding: 'utf-8',
+      originalSize: result.bytesWritten,
+      compressedSize: result.bytesWritten,
+      compressionRatio: 1,
+      streamed: true,
+      outputPath: options.outputPath,
     };
   }
 

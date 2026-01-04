@@ -1,0 +1,225 @@
+{
+  "phase": 7,
+  "sprint": 4,
+  "title": "Async Centrality & Chunked Processing",
+  "priority": "LOW",
+  "effort": "4 hours",
+  "status": "completed",
+  "impact": "Non-blocking graph analytics for large graphs with progress reporting and approximation mode",
+  "targetMetrics": {
+    "betweennessNonBlocking": { "current": "Blocks event loop", "target": "Yields every chunkSize vertices" },
+    "betweennessApprox": { "current": "Full O(V×E)", "target": "Sampled ~5x faster with 95% accuracy" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Add Chunked Processing to Betweenness Centrality - Modify calculateBetweennessCentrality to yield control periodically with progress callbacks",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/core/GraphTraversal.ts"],
+      "location": "Find 'calculateBetweennessCentrality' method (around line 437)",
+      "testCategories": [
+        "Progress callback fires",
+        "Results identical to non-chunked",
+        "Event loop not blocked",
+        "ChunkSize option works"
+      ],
+      "implementation": {
+        "newOptions": {
+          "chunkSize": "number (default 50)",
+          "onProgress": "(progress: number) => void"
+        },
+        "yieldPattern": "await new Promise(resolve => setImmediate(resolve))"
+      },
+      "stepByStep": [
+        "Open src/core/GraphTraversal.ts",
+        "Find the calculateBetweennessCentrality method (around line 437)",
+        "Modify method signature to accept options object instead of single topN parameter:",
+        "  async calculateBetweennessCentrality(options: { topN?, chunkSize?, onProgress? } = {})",
+        "Destructure: const { topN = 10, chunkSize = 50, onProgress } = options;",
+        "Add 'processed' counter initialized to 0 before the main loop",
+        "Inside the main loop (after processing each source vertex):",
+        "  processed++",
+        "  if (processed % chunkSize === 0) {",
+        "    await new Promise(resolve => setImmediate(resolve));",
+        "    if (onProgress) onProgress(processed / entities.length);",
+        "  }",
+        "At end of loop (before sorting results), call onProgress(1) if defined",
+        "Run: npm run typecheck",
+        "Run: npx vitest run tests/unit/core/GraphTraversal.test.ts -t 'Betweenness'"
+      ],
+      "codeSnippets": {
+        "methodSignature": "async calculateBetweennessCentrality(\n  options: {\n    topN?: number;\n    chunkSize?: number;\n    onProgress?: (progress: number) => void;\n  } = {}\n): Promise<CentralityResult> {\n  const { topN = 10, chunkSize = 50, onProgress } = options;",
+        "yieldControl": "processed++;\n\nif (processed % chunkSize === 0) {\n  // Yield control to allow event loop to process other events\n  await new Promise(resolve => setImmediate(resolve));\n\n  // Report progress\n  if (onProgress) {\n    onProgress(processed / entities.length);\n  }\n}"
+      },
+      "acceptanceCriteria": [
+        "calculateBetweennessCentrality accepts chunkSize option",
+        "Method yields control every chunkSize iterations",
+        "onProgress callback fires with 0-1 progress value",
+        "Results identical to previous implementation",
+        "Existing tests still pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Add Approximation Mode for Betweenness - Add sampling-based approximation for faster results on large graphs",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/core/GraphTraversal.ts"],
+      "location": "Same calculateBetweennessCentrality method",
+      "testCategories": [
+        "Approximation samples subset",
+        "Scores scaled appropriately",
+        "Full mode still works",
+        "Sample rate option works"
+      ],
+      "implementation": {
+        "newOptions": {
+          "approximate": "boolean (default false)",
+          "sampleRate": "number 0.0-1.0 (default 0.2)"
+        },
+        "helperMethod": "sampleEntities(entities, sampleSize): Entity[]"
+      },
+      "stepByStep": [
+        "Open src/core/GraphTraversal.ts",
+        "Add to calculateBetweennessCentrality options: approximate?: boolean; sampleRate?: number;",
+        "Destructure: approximate = false, sampleRate = 0.2",
+        "Add private helper method sampleEntities:",
+        "  private sampleEntities(entities: Entity[], sampleSize: number): Entity[] {",
+        "    const shuffled = [...entities];",
+        "    for (let i = shuffled.length - 1; i > 0; i--) {",
+        "      const j = Math.floor(Math.random() * (i + 1));",
+        "      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];",
+        "    }",
+        "    return shuffled.slice(0, sampleSize);",
+        "  }",
+        "At start of calculateBetweennessCentrality, after getting entities:",
+        "  let sourcesToProcess = entities;",
+        "  if (approximate && entities.length > 100) {",
+        "    const sampleSize = Math.max(10, Math.floor(entities.length * sampleRate));",
+        "    sourcesToProcess = this.sampleEntities(entities, sampleSize);",
+        "  }",
+        "Use sourcesToProcess in the main loop instead of entities",
+        "After computing scores, if approximate: scale by 1/sampleRate",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "sampling": "let sourcesToProcess = entities;\n\nif (approximate && entities.length > 100) {\n  const sampleSize = Math.max(10, Math.floor(entities.length * sampleRate));\n  sourcesToProcess = this.sampleEntities(entities, sampleSize);\n}",
+        "scaling": "if (approximate && sampleRate < 1.0) {\n  const scaleFactor = 1 / sampleRate;\n  for (const [entity, score] of scores) {\n    scores.set(entity, score * scaleFactor);\n  }\n}",
+        "sampleMethod": "private sampleEntities(entities: Entity[], sampleSize: number): Entity[] {\n  const shuffled = [...entities];\n  for (let i = shuffled.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];\n  }\n  return shuffled.slice(0, sampleSize);\n}"
+      },
+      "acceptanceCriteria": [
+        "approximate option enables sampling",
+        "sampleRate controls sample size (0.2 = 20%)",
+        "Scores scaled by 1/sampleRate after computation",
+        "Full computation works with approximate=false",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Update get_centrality Tool for New Options - Add approximate and sampleRate options to the tool schema and handler",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "location": "Find 'get_centrality' in both files",
+      "testCategories": [
+        "Schema has approximate option",
+        "Schema has sampleRate option",
+        "Handler passes options",
+        "Response indicates approximation"
+      ],
+      "stepByStep": [
+        "Open src/server/toolDefinitions.ts",
+        "Find the get_centrality tool definition",
+        "Add to inputSchema properties:",
+        "  approximate: { type: 'boolean', default: false, description: 'Use approximation for faster betweenness centrality' }",
+        "  sampleRate: { type: 'number', default: 0.2, minimum: 0.01, maximum: 1.0, description: 'Sample rate for approximation' }",
+        "Open src/server/toolHandlers.ts",
+        "Find the get_centrality case",
+        "Destructure approximate and sampleRate from args",
+        "For betweenness case, pass: { topN, approximate, sampleRate }",
+        "In response, add: approximate: algorithm === 'betweenness' && approximate",
+        "Run: npm run typecheck",
+        "Run: npm test"
+      ],
+      "codeSnippets": {
+        "schema": "approximate: {\n  type: 'boolean',\n  default: false,\n  description: 'Use approximation for faster betweenness centrality',\n},\nsampleRate: {\n  type: 'number',\n  default: 0.2,\n  minimum: 0.01,\n  maximum: 1.0,\n  description: 'Sample rate for approximation (0.0-1.0)',\n},",
+        "handler": "case 'betweenness':\n  result = await ctx.graphTraversal.calculateBetweennessCentrality({\n    topN,\n    approximate,\n    sampleRate,\n  });\n  break;"
+      },
+      "acceptanceCriteria": [
+        "get_centrality schema has approximate and sampleRate",
+        "Handler passes options to calculateBetweennessCentrality",
+        "Response includes approximate flag",
+        "npm run typecheck passes",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Tests and Update Documentation - Add tests for chunked/approximation modes and update CLAUDE.md",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["tests/unit/core/GraphTraversal.test.ts", "CLAUDE.md"],
+      "testCategories": [
+        "Chunked progress callback fires",
+        "Results same with chunking",
+        "Approximation faster",
+        "Approximation reasonable accuracy"
+      ],
+      "stepByStep": [
+        "Open tests/unit/core/GraphTraversal.test.ts",
+        "Find or create describe('Betweenness Centrality') block",
+        "Add test: 'should yield control and report progress' - create graph, call with onProgress, verify progressCalls > 0",
+        "Add test: 'should produce same results with chunking' - compare results with and without chunkSize",
+        "Add test: 'should complete faster with approximation' - time comparison (can skip with it.skip for CI)",
+        "Add test: 'should produce reasonable estimates' - verify top entities similar to full computation",
+        "Run: npx vitest run tests/unit/core/GraphTraversal.test.ts -t 'Betweenness'",
+        "Open CLAUDE.md",
+        "Find get_centrality documentation in Tool Categories section",
+        "Add note about approximate and sampleRate options",
+        "Add note about chunked processing for large graphs",
+        "Run: npm test"
+      ],
+      "codeSnippets": {
+        "progressTest": "it('should yield control and report progress', async () => {\n  // Create graph with enough vertices for chunking\n  const entities = Array.from({ length: 100 }, (_, i) => ({\n    name: `Entity${i}`,\n    entityType: 'test',\n    observations: [],\n  }));\n  await storage.saveGraph({ entities, relations: [] });\n\n  let progressCalls = 0;\n  await graphTraversal.calculateBetweennessCentrality({\n    chunkSize: 10,\n    onProgress: () => { progressCalls++; },\n  });\n\n  expect(progressCalls).toBeGreaterThan(0);\n});",
+        "approxTest": "it('should complete faster with approximation', async () => {\n  // Create larger graph\n  const entities = Array.from({ length: 200 }, (_, i) => ({\n    name: `Entity${i}`,\n    entityType: 'test',\n    observations: [],\n  }));\n  await storage.saveGraph({ entities, relations: [] });\n\n  const startFull = Date.now();\n  await graphTraversal.calculateBetweennessCentrality({ approximate: false });\n  const fullTime = Date.now() - startFull;\n\n  const startApprox = Date.now();\n  await graphTraversal.calculateBetweennessCentrality({ approximate: true, sampleRate: 0.2 });\n  const approxTime = Date.now() - startApprox;\n\n  expect(approxTime).toBeLessThan(fullTime);\n});"
+      },
+      "acceptanceCriteria": [
+        "4 new tests for betweenness chunking/approximation",
+        "Tests verify progress callback works",
+        "Tests verify approximation faster",
+        "CLAUDE.md updated with new options",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Betweenness centrality yields control periodically",
+    "Progress callback works correctly",
+    "Approximation mode achieves speedup",
+    "Tool schema and handler updated",
+    "Tests pass for new functionality",
+    "Documentation updated"
+  ],
+  "filesCreated": [],
+  "filesModified": [
+    "src/core/GraphTraversal.ts",
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts",
+    "tests/unit/core/GraphTraversal.test.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 4,
+  "totalEstimatedHours": 4,
+  "dependencies": [2, 3],
+  "notes": "This sprint completes Phase 7 with async-friendly graph analytics. Chunked processing prevents UI freezing during long computations. Approximation mode trades accuracy for speed on very large graphs. These improvements are especially important for interactive use cases. IMPORTANT: The current method signature is 'calculateBetweennessCentrality(topN: number = 10)' - this needs to be changed to accept an options object. The current tool handler (toolHandlers.ts:438-439) calls it with 'calculateBetweennessCentrality(topN)' which will need updating to pass the options object."
+}

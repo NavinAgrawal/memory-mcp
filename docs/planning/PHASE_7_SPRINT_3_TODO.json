@@ -1,0 +1,248 @@
+{
+  "phase": 7,
+  "sprint": 3,
+  "title": "Worker Pool for Fuzzy Search",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "completed",
+  "impact": "2-4x speedup for fuzzy search on large graphs by parallelizing Levenshtein distance calculations",
+  "targetMetrics": {
+    "fuzzySearch1000Entities": { "current": "Single-threaded ~200ms", "target": "Parallel ~50-100ms" },
+    "workerActivation": { "current": "Never", "target": ">= 500 entities AND threshold < 0.8" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Create Levenshtein Worker Module - Create src/workers/levenshteinWorker.ts that calculates Levenshtein distances in a worker thread",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/workers/levenshteinWorker.ts"],
+      "testCategories": [
+        "Worker receives data from parentPort",
+        "Levenshtein distance calculated correctly",
+        "Similarity threshold filtering works",
+        "Results posted back to parent"
+      ],
+      "implementation": {
+        "imports": [
+          "import { parentPort, workerData } from 'worker_threads';"
+        ],
+        "interfaces": [
+          "WorkerInput: { query, entities, threshold }",
+          "MatchResult: { name, score, matchedIn }"
+        ],
+        "functions": [
+          "levenshteinDistance(s1, s2): number",
+          "similarity(s1, s2): number - returns 1 - (distance / maxLength)"
+        ]
+      },
+      "stepByStep": [
+        "Create directory: src/workers/",
+        "Create new file: src/workers/levenshteinWorker.ts",
+        "Add import: import { parentPort, workerData } from 'worker_threads';",
+        "Define WorkerInput interface with query (string), entities (array), threshold (number)",
+        "Define MatchResult interface with name, score, matchedIn",
+        "Implement levenshteinDistance function using dynamic programming matrix",
+        "Implement similarity function: 1 - (distance / max(len1, len2))",
+        "Add main worker logic: if (parentPort) { ... }",
+        "Destructure workerData as WorkerInput",
+        "Iterate entities, calculate name similarity, if >= threshold add to results",
+        "If name doesn't match, check observations",
+        "parentPort.postMessage(results) at the end",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "levenshtein": "function levenshteinDistance(s1: string, s2: string): number {\n  const len1 = s1.length;\n  const len2 = s2.length;\n\n  if (len1 === 0) return len2;\n  if (len2 === 0) return len1;\n\n  const matrix: number[][] = [];\n\n  for (let i = 0; i <= len1; i++) {\n    matrix[i] = [i];\n  }\n  for (let j = 0; j <= len2; j++) {\n    matrix[0][j] = j;\n  }\n\n  for (let i = 1; i <= len1; i++) {\n    for (let j = 1; j <= len2; j++) {\n      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;\n      matrix[i][j] = Math.min(\n        matrix[i - 1][j] + 1,\n        matrix[i][j - 1] + 1,\n        matrix[i - 1][j - 1] + cost\n      );\n    }\n  }\n\n  return matrix[len1][len2];\n}",
+        "workerMain": "if (parentPort) {\n  const { query, entities, threshold } = workerData as WorkerInput;\n  const queryLower = query.toLowerCase();\n  const results: MatchResult[] = [];\n\n  for (const entity of entities) {\n    const nameScore = similarity(queryLower, entity.nameLower);\n    if (nameScore >= threshold) {\n      results.push({ name: entity.name, score: nameScore, matchedIn: 'name' });\n      continue;\n    }\n\n    for (const obs of entity.observations) {\n      const obsScore = similarity(queryLower, obs);\n      if (obsScore >= threshold) {\n        results.push({ name: entity.name, score: obsScore, matchedIn: 'observation' });\n        break;\n      }\n    }\n  }\n\n  parentPort.postMessage(results);\n}"
+      },
+      "acceptanceCriteria": [
+        "Worker file created at src/workers/levenshteinWorker.ts",
+        "Levenshtein distance algorithm implemented correctly",
+        "Similarity function returns 0-1 range",
+        "Worker receives workerData and posts results",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Create WorkerPool Manager - Create src/workers/WorkerPool.ts that manages a pool of worker threads",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/workers/WorkerPool.ts", "src/workers/index.ts"],
+      "testCategories": [
+        "Pool respects maxWorkers limit",
+        "Tasks queue when workers busy",
+        "Workers terminated after task",
+        "getStats returns correct values"
+      ],
+      "implementation": {
+        "imports": [
+          "import { Worker } from 'worker_threads';",
+          "import { cpus } from 'os';",
+          "import { fileURLToPath } from 'url';",
+          "import { dirname, join } from 'path';"
+        ],
+        "interfaces": [
+          "WorkerTask<T, R>: { data, resolve, reject }",
+          "PoolOptions: { maxWorkers?, workerPath }"
+        ],
+        "methods": [
+          "constructor(options)",
+          "execute(data): Promise<result>",
+          "executeAll(items): Promise<results[]>",
+          "shutdown(): Promise<void>",
+          "getStats(): { activeWorkers, queueSize, maxWorkers }"
+        ]
+      },
+      "stepByStep": [
+        "Create new file: src/workers/WorkerPool.ts",
+        "Add all imports",
+        "Define WorkerTask interface with data, resolve, reject",
+        "Define PoolOptions interface with optional maxWorkers and required workerPath",
+        "Create WorkerPool class with private workers array, taskQueue array, activeWorkers counter",
+        "Implement constructor: set maxWorkers to options.maxWorkers ?? cpus().length - 1, store workerPath",
+        "Implement execute(data): create Promise, push task to queue, call processQueue, return promise",
+        "Implement executeAll(items): map items to execute calls, return Promise.all",
+        "Implement processQueue: while queue has items AND activeWorkers < maxWorkers, shift task and runTask",
+        "Implement runTask: increment activeWorkers, create Worker with workerData, set up message/error/exit handlers",
+        "On message: resolve task, decrement activeWorkers, terminate worker, processQueue",
+        "On error: reject task, decrement activeWorkers, terminate worker, processQueue",
+        "Implement shutdown: wait loop until activeWorkers is 0",
+        "Implement getStats: return { activeWorkers, queueSize, maxWorkers }",
+        "Create src/workers/index.ts with: export { WorkerPool } from './WorkerPool.js';",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippet": "export class WorkerPool<TInput, TOutput> {\n  private workers: Worker[] = [];\n  private taskQueue: WorkerTask<TInput, TOutput>[] = [];\n  private activeWorkers = 0;\n  private readonly maxWorkers: number;\n  private readonly workerPath: string;\n\n  constructor(options: PoolOptions) {\n    this.maxWorkers = options.maxWorkers ?? Math.max(1, cpus().length - 1);\n    this.workerPath = options.workerPath;\n  }\n\n  async execute(data: TInput): Promise<TOutput> {\n    return new Promise((resolve, reject) => {\n      this.taskQueue.push({ data, resolve, reject });\n      this.processQueue();\n    });\n  }\n\n  private processQueue(): void {\n    while (this.taskQueue.length > 0 && this.activeWorkers < this.maxWorkers) {\n      const task = this.taskQueue.shift();\n      if (task) this.runTask(task);\n    }\n  }\n\n  private runTask(task: WorkerTask<TInput, TOutput>): void {\n    this.activeWorkers++;\n    const worker = new Worker(this.workerPath, { workerData: task.data });\n\n    worker.on('message', (result: TOutput) => {\n      task.resolve(result);\n      this.activeWorkers--;\n      worker.terminate();\n      this.processQueue();\n    });\n\n    worker.on('error', (error) => {\n      task.reject(error);\n      this.activeWorkers--;\n      worker.terminate();\n      this.processQueue();\n    });\n  }\n}",
+      "acceptanceCriteria": [
+        "WorkerPool class created at src/workers/WorkerPool.ts",
+        "Pool limits concurrent workers to maxWorkers",
+        "Tasks queued when all workers busy",
+        "Workers terminated after completing tasks",
+        "Barrel export created at src/workers/index.ts",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Integrate Worker Pool into FuzzySearch - Modify FuzzySearch to use worker pool for large graphs with low thresholds",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/search/FuzzySearch.ts"],
+      "location": "Find 'class FuzzySearch'",
+      "testCategories": [
+        "Workers used for large graphs",
+        "Single-thread for small graphs",
+        "Results consistent both modes",
+        "Worker pool lazy initialized"
+      ],
+      "implementation": {
+        "constants": {
+          "WORKER_MIN_ENTITIES": 500,
+          "WORKER_MAX_THRESHOLD": 0.8
+        },
+        "newMethods": [
+          "searchWithWorkers(query, threshold, entities, filters)",
+          "shutdown()"
+        ]
+      },
+      "stepByStep": [
+        "Open src/search/FuzzySearch.ts",
+        "Add imports: import { WorkerPool } from '../workers/WorkerPool.js';",
+        "Add imports: import { fileURLToPath } from 'url'; import { dirname, join } from 'path';",
+        "Add constants after imports: const WORKER_MIN_ENTITIES = 500; const WORKER_MAX_THRESHOLD = 0.8;",
+        "Add private property: private workerPool: WorkerPool<any, any> | null = null;",
+        "Add private property: private workerPath: string;",
+        "In constructor (or add one if needed): calculate workerPath using fileURLToPath and dirname",
+        "In fuzzySearch method: after getting entities from loadGraph, check if shouldUseWorkers",
+        "shouldUseWorkers = entities.length >= WORKER_MIN_ENTITIES && threshold < WORKER_MAX_THRESHOLD",
+        "If shouldUseWorkers, call searchWithWorkers and return result",
+        "Implement searchWithWorkers method:",
+        "  - Initialize workerPool if null",
+        "  - Split entities into chunks (e.g., 4 chunks)",
+        "  - Create workerInputs array with query, threshold, entities (with lowercased fields)",
+        "  - Call workerPool.executeAll(workerInputs)",
+        "  - Flatten results, create Set of matched names, filter entities",
+        "Implement shutdown method to clean up worker pool",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "shouldUseWorkers": "const shouldUseWorkers =\n  entities.length >= WORKER_MIN_ENTITIES &&\n  threshold < WORKER_MAX_THRESHOLD;\n\nif (shouldUseWorkers) {\n  return this.searchWithWorkers(query, threshold, entities, filters);\n}",
+        "searchWithWorkers": "private async searchWithWorkers(\n  query: string,\n  threshold: number,\n  entities: Entity[],\n  filters?: SearchFilters\n): Promise<Entity[]> {\n  if (!this.workerPool) {\n    this.workerPool = new WorkerPool({\n      workerPath: this.workerPath,\n    });\n  }\n\n  const chunkSize = Math.ceil(entities.length / 4);\n  const chunks: Entity[][] = [];\n  for (let i = 0; i < entities.length; i += chunkSize) {\n    chunks.push(entities.slice(i, i + chunkSize));\n  }\n\n  const workerInputs = chunks.map(chunk => ({\n    query,\n    threshold,\n    entities: chunk.map(e => ({\n      name: e.name,\n      nameLower: e.name.toLowerCase(),\n      observations: e.observations.map(o => o.toLowerCase()),\n    })),\n  }));\n\n  const results = await this.workerPool.executeAll(workerInputs);\n  const matchedNames = new Set(results.flat().map(r => r.name));\n  return entities.filter(e => matchedNames.has(e.name));\n}"
+      },
+      "acceptanceCriteria": [
+        "FuzzySearch uses workers for >= 500 entities with threshold < 0.8",
+        "Small graphs use single-threaded search",
+        "Worker pool only initialized when needed",
+        "shutdown() method cleans up worker pool",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Worker Pool Tests - Create tests/unit/workers/WorkerPool.test.ts with unit tests",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["tests/unit/workers/WorkerPool.test.ts"],
+      "testCategories": [
+        "Pool reports correct stats",
+        "Execute processes task",
+        "ExecuteAll processes multiple",
+        "Workers limited by maxWorkers"
+      ],
+      "implementation": {
+        "imports": [
+          "import { describe, it, expect } from 'vitest';",
+          "import { WorkerPool } from '../../../src/workers/WorkerPool.js';",
+          "import { fileURLToPath } from 'url';",
+          "import { dirname, join } from 'path';"
+        ]
+      },
+      "stepByStep": [
+        "Create directory: tests/unit/workers/",
+        "Create new file: tests/unit/workers/WorkerPool.test.ts",
+        "Add all imports",
+        "Create describe('WorkerPool') block",
+        "Test 1: 'should report correct initial stats' - create pool with maxWorkers: 2, verify stats",
+        "Test 2: 'should respect maxWorkers limit' - verify activeWorkers never exceeds max",
+        "Test 3: 'should queue tasks when workers busy' - verify queueSize increases",
+        "Note: Full worker execution tests may require building the worker first",
+        "Add describe('FuzzySearch with Workers') with placeholder tests for integration",
+        "Run: npx vitest run tests/unit/workers/"
+      ],
+      "acceptanceCriteria": [
+        "Test directory created",
+        "WorkerPool unit tests pass",
+        "Stats verification works",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Levenshtein worker module created and compiles",
+    "WorkerPool manager created with task queuing",
+    "FuzzySearch uses workers for large/low-threshold searches",
+    "Unit tests for WorkerPool pass",
+    "All existing 2109+ tests pass"
+  ],
+  "filesCreated": [
+    "src/workers/levenshteinWorker.ts",
+    "src/workers/WorkerPool.ts",
+    "src/workers/index.ts",
+    "tests/unit/workers/WorkerPool.test.ts"
+  ],
+  "filesModified": [
+    "src/search/FuzzySearch.ts"
+  ],
+  "totalNewTests": 8,
+  "totalEstimatedHours": 6,
+  "dependencies": [1],
+  "notes": "This sprint adds parallel fuzzy search for large graphs. The worker pool spawns workers per-task to avoid memory leaks. Workers are only used when beneficial (large graph + low threshold). Can run in parallel with Sprint 2 after Sprint 1 completes. IMPORTANT: The main fuzzy search method is named 'fuzzySearch()' not 'search()'. The FuzzySearch class already has a constructor that takes GraphStorage - the workerPath calculation should be added to it. Workers require the compiled .js files in dist/, so ensure 'npm run build' completes before testing workers."
+}
