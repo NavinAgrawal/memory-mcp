@@ -1,0 +1,118 @@
+{
+  "phase": 8,
+  "sprint": 3,
+  "title": "Parallel Array Operations",
+  "priority": "MEDIUM",
+  "effort": "2-3 hours",
+  "status": "pending",
+  "impact": "Use workerpool's parallel processing factory functions for bulk entity processing",
+  "targetMetrics": {
+    "bulkOperationSpeed": { "current": "Single-threaded", "target": "Parallel with auto-chunking" },
+    "newCapabilities": { "current": "None", "target": "createParallelFilter, createParallelReduce, createParallelFind" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Analysis",
+      "description": "Identify parallelization opportunities",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "stepByStep": [
+        "Review EntityManager for bulk operations",
+        "Review CompressionManager for duplicate detection",
+        "Review SemanticSearch for similarity calculations",
+        "Review AnalyticsManager for graph statistics",
+        "Identify operations that are CPU-bound and process many items"
+      ],
+      "candidates": [
+        "Duplicate detection in CompressionManager (comparing entities)",
+        "Bulk entity validation",
+        "Semantic similarity calculations across many entities",
+        "Graph statistics aggregation",
+        "Bulk observation processing"
+      ],
+      "acceptanceCriteria": [
+        "At least 2 parallelization candidates identified",
+        "Performance impact estimated"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Implement parallel duplicate detection",
+      "status": "pending",
+      "estimatedHours": 1,
+      "files": ["src/features/CompressionManager.ts"],
+      "location": "findDuplicates method",
+      "stepByStep": [
+        "Open src/features/CompressionManager.ts",
+        "Import workerpool and createParallelFilter from '@danielsimonjr/workerpool'",
+        "Create a shared pool or use the fuzzy search pool",
+        "Use createParallelFilter factory to create parallel filter function",
+        "Add threshold check (e.g., only parallelize for > 1000 entities)",
+        "Run: npm run typecheck",
+        "Run: npm test"
+      ],
+      "codeSnippet": "import workerpool, { createParallelFilter } from '@danielsimonjr/workerpool';\n\n// In findDuplicates:\nif (entities.length > 1000) {\n  // Create parallel filter function\n  const pool = workerpool.pool();\n  const parallelFilter = createParallelFilter(pool, {\n    chunkSize: 100,\n    workerFunction: 'filterDuplicates'\n  });\n  const duplicatePairs = await parallelFilter(\n    entityPairs,\n    (pair) => calculateSimilarity(pair[0], pair[1]) >= threshold\n  );\n  await pool.terminate();\n  return duplicatePairs;\n}",
+      "acceptanceCriteria": [
+        "Duplicate detection parallelized for large graphs",
+        "Threshold prevents overhead for small graphs",
+        "Tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Implement parallel semantic similarity",
+      "status": "pending",
+      "estimatedHours": 1,
+      "files": ["src/search/SemanticSearch.ts"],
+      "location": "findSimilarEntities method",
+      "stepByStep": [
+        "Open src/search/SemanticSearch.ts",
+        "Import createParallelForEach or use pool.exec with chunked entities",
+        "For large entity sets, parallelize similarity calculations",
+        "Add activation threshold",
+        "Benchmark improvement"
+      ],
+      "codeSnippet": "import workerpool from '@danielsimonjr/workerpool';\n\n// Parallel similarity calculation using worker pool\nconst pool = workerpool.pool(similarityWorkerPath, { maxWorkers: workerpool.cpus - 1 });\nconst chunks = chunkArray(entities, Math.ceil(entities.length / (workerpool.cpus - 1)));\nconst results = await Promise.all(\n  chunks.map(chunk => pool.exec('calculateSimilarities', [chunk, queryEmbedding]))\n);\nconst similarities = results.flat();",
+      "acceptanceCriteria": [
+        "Semantic similarity parallelized",
+        "Performance improved for large entity sets"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add benchmarks and tests",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "files": ["tests/performance/parallel-operations.test.ts"],
+      "stepByStep": [
+        "Create new test file for parallel operation benchmarks",
+        "Compare serial vs parallel performance",
+        "Verify correctness of parallel results",
+        "Document performance characteristics"
+      ],
+      "acceptanceCriteria": [
+        "Benchmarks show improvement for large datasets",
+        "Results match serial implementation"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "At least 2 operations parallelized",
+    "Performance improvements documented",
+    "Activation thresholds prevent overhead",
+    "All tests pass"
+  ],
+  "filesModified": [
+    "src/features/CompressionManager.ts",
+    "src/search/SemanticSearch.ts"
+  ],
+  "filesCreated": [
+    "tests/performance/parallel-operations.test.ts"
+  ],
+  "totalEstimatedHours": 3,
+  "notes": "Focus on operations that are CPU-bound and process many items. I/O-bound operations won't benefit from parallelization. Always add activation thresholds to avoid overhead for small datasets."
+}

@@ -1,0 +1,182 @@
+{
+  "phase": 8,
+  "sprint": 1,
+  "title": "Core Workerpool Integration",
+  "priority": "HIGH",
+  "effort": "2-3 hours",
+  "status": "pending",
+  "impact": "Replace custom WorkerPool with mature workerpool library for fuzzy search parallelization",
+  "targetMetrics": {
+    "fuzzySearchPerformance": { "current": "Custom pool", "target": "workerpool with O(1) queues" },
+    "codeLines": { "current": "~100 lines custom", "target": "Library dependency" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Setup",
+      "description": "Add @danielsimonjr/workerpool dependency",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "files": ["package.json"],
+      "stepByStep": [
+        "Run: npm install @danielsimonjr/workerpool",
+        "Verify package.json has dependency",
+        "Run: npm run typecheck"
+      ],
+      "acceptanceCriteria": [
+        "workerpool installed as dependency",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Convert levenshteinWorker.ts to workerpool.worker() format",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "files": ["src/workers/levenshteinWorker.ts"],
+      "location": "Entire file",
+      "stepByStep": [
+        "Open src/workers/levenshteinWorker.ts",
+        "Add import: import workerpool from '@danielsimonjr/workerpool';",
+        "Wrap existing logic in a named function: function searchEntities(data: WorkerInput): MatchResult[]",
+        "Replace parentPort logic with: workerpool.worker({ searchEntities });",
+        "Run: npm run typecheck",
+        "Run: npm run build"
+      ],
+      "codeSnippet": "import workerpool from '@danielsimonjr/workerpool';\n\ninterface WorkerInput { ... }\ninterface MatchResult { ... }\n\nfunction levenshteinDistance(s1: string, s2: string): number { ... }\nfunction similarity(s1: string, s2: string): number { ... }\n\nfunction searchEntities(data: WorkerInput): MatchResult[] {\n  const { query, entities, threshold } = data;\n  const queryLower = query.toLowerCase();\n  const results: MatchResult[] = [];\n  // ... existing search logic ...\n  return results;\n}\n\nworkerpool.worker({ searchEntities });",
+      "acceptanceCriteria": [
+        "Worker exports searchEntities function via workerpool.worker()",
+        "npm run typecheck passes",
+        "npm run build passes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Update FuzzySearch.ts to use workerpool",
+      "status": "pending",
+      "estimatedHours": 1,
+      "files": ["src/search/FuzzySearch.ts"],
+      "location": "Find 'private workerPool' and 'searchWithWorkers' method",
+      "stepByStep": [
+        "Open src/search/FuzzySearch.ts",
+        "Replace import { WorkerPool } from '../workers/WorkerPool.js'; with import workerpool from '@danielsimonjr/workerpool';",
+        "Change type: private workerPool: workerpool.Pool | null = null;",
+        "Update searchWithWorkers to use pool.exec():",
+        "  if (!this.workerPool) { this.workerPool = workerpool.pool(this.workerPath, { maxWorkers: workerpool.cpus - 1, workerType: 'thread' }); }",
+        "  const results = await Promise.all(chunks.map(chunk => this.workerPool!.exec('searchEntities', [{ query, threshold, entities: chunk }])));",
+        "Update shutdown to use pool.terminate()",
+        "Run: npm run typecheck"
+      ],
+      "acceptanceCriteria": [
+        "FuzzySearch uses workerpool.pool() instead of custom WorkerPool",
+        "searchWithWorkers uses pool.exec()",
+        "shutdown uses pool.terminate()",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Core",
+      "description": "Update workers/index.ts exports",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "files": ["src/workers/index.ts"],
+      "stepByStep": [
+        "Open src/workers/index.ts",
+        "Remove or comment out WorkerPool export",
+        "Re-export workerpool types if needed",
+        "Run: npm run typecheck"
+      ],
+      "acceptanceCriteria": [
+        "Barrel export updated",
+        "No broken imports",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Tests",
+      "description": "Update WorkerPool.test.ts for workerpool",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "files": ["tests/unit/workers/WorkerPool.test.ts"],
+      "stepByStep": [
+        "Open tests/unit/workers/WorkerPool.test.ts",
+        "Update imports to use workerpool",
+        "Modify tests to use workerpool API (pool.exec, pool.stats, pool.terminate)",
+        "Ensure all tests still validate expected behavior",
+        "Run: npx vitest run tests/unit/workers/"
+      ],
+      "acceptanceCriteria": [
+        "Tests use workerpool API",
+        "All worker pool tests pass",
+        "Fuzzy search integration tests pass"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Cleanup",
+      "description": "Deprecate or remove custom WorkerPool.ts",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "files": ["src/workers/WorkerPool.ts"],
+      "stepByStep": [
+        "Option A: Delete src/workers/WorkerPool.ts",
+        "Option B: Add @deprecated JSDoc and keep for reference",
+        "Update any remaining imports",
+        "Run: npm run typecheck",
+        "Run: npm test"
+      ],
+      "acceptanceCriteria": [
+        "WorkerPool.ts removed or deprecated",
+        "No broken imports",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 7,
+      "category": "Docs",
+      "description": "Update CLAUDE.md documentation",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "files": ["CLAUDE.md"],
+      "stepByStep": [
+        "Open CLAUDE.md",
+        "Update Dependencies section to add @danielsimonjr/workerpool",
+        "Update Phase 7 Parallel Fuzzy Search section to reference workerpool",
+        "Update workers/ module description if WorkerPool.ts is removed",
+        "Update file counts if needed"
+      ],
+      "acceptanceCriteria": [
+        "CLAUDE.md reflects workerpool integration",
+        "Dependencies section updated",
+        "Workers module description accurate"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "@danielsimonjr/workerpool dependency added",
+    "levenshteinWorker uses workerpool.worker() format",
+    "FuzzySearch uses workerpool.pool()",
+    "All existing tests pass",
+    "npm run typecheck passes",
+    "npm test passes"
+  ],
+  "filesCreated": [],
+  "filesModified": [
+    "package.json",
+    "package-lock.json",
+    "src/workers/levenshteinWorker.ts",
+    "src/search/FuzzySearch.ts",
+    "src/workers/index.ts",
+    "tests/unit/workers/WorkerPool.test.ts",
+    "CLAUDE.md"
+  ],
+  "filesRemoved": [
+    "src/workers/WorkerPool.ts (optional)"
+  ],
+  "totalEstimatedHours": 3.25,
+  "notes": "This sprint focuses on a drop-in replacement of the custom WorkerPool with workerpool. The API is similar enough that the migration should be straightforward. The main changes are: (1) worker registration via workerpool.worker(), (2) task execution via pool.exec(), and (3) pool termination via pool.terminate()."
+}

@@ -1,0 +1,112 @@
+{
+  "phase": 8,
+  "sprint": 4,
+  "title": "Advanced Scheduling (Optional)",
+  "priority": "LOW",
+  "effort": "2-3 hours",
+  "status": "pending",
+  "impact": "Evaluate and implement AdvancedPool for optimal task distribution",
+  "targetMetrics": {
+    "workerUtilization": { "current": "FIFO scheduling", "target": "Intelligent scheduling" },
+    "cacheLocality": { "current": "None", "target": "Task affinity for related queries" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Analysis",
+      "description": "Evaluate AdvancedPool benefits for memory-mcp",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "stepByStep": [
+        "Review AdvancedPool documentation",
+        "Identify use cases that would benefit from advanced scheduling",
+        "Consider: Is task affinity useful for repeated similar queries?",
+        "Consider: Would work stealing help for uneven task distributions?",
+        "Document findings and recommendation"
+      ],
+      "workerChoiceStrategies": [
+        "round-robin: Even distribution (default)",
+        "least-busy: Best for I/O-bound tasks",
+        "least-used: Balance by task count",
+        "fair-share: Balance by execution time",
+        "weighted-round-robin: Custom worker weights"
+      ],
+      "acceptanceCriteria": [
+        "Benefits documented",
+        "Recommendation made (implement or skip)"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Implement AdvancedPool if beneficial",
+      "status": "pending",
+      "estimatedHours": 1,
+      "files": ["src/search/FuzzySearch.ts"],
+      "stepByStep": [
+        "If analysis recommends implementation:",
+        "Import advancedPool from '@danielsimonjr/workerpool'",
+        "Replace workerpool.pool() with advancedPool()",
+        "Configure appropriate strategy (likely 'least-busy' for search)",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippet": "import { advancedPool, cpus } from '@danielsimonjr/workerpool';\n\nthis.workerPool = advancedPool(this.workerPath, {\n  maxWorkers: cpus - 1,\n  workerType: 'thread',\n  workerChoiceStrategy: 'least-busy',\n  enableWorkStealing: true\n});",
+      "acceptanceCriteria": [
+        "AdvancedPool configured if beneficial",
+        "Appropriate strategy selected"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Add task affinity for related searches",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "files": ["src/search/FuzzySearch.ts"],
+      "stepByStep": [
+        "If task affinity is beneficial:",
+        "Import TaskAffinityRouter and createAffinityKey from '@danielsimonjr/workerpool'",
+        "Create TaskAffinityRouter instance with the pool",
+        "Generate affinity key from search query (e.g., first few characters)",
+        "Use affinityRouter.execWithAffinity() instead of pool.exec()",
+        "This routes similar queries to same worker for cache locality"
+      ],
+      "codeSnippet": "import { TaskAffinityRouter, createAffinityKey } from '@danielsimonjr/workerpool';\n\n// Create affinity router\nconst affinityRouter = new TaskAffinityRouter(this.workerPool);\n\n// Route similar queries to same worker\nconst affinityKey = createAffinityKey(query.substring(0, 3).toLowerCase());\nawait affinityRouter.execWithAffinity(affinityKey, 'searchEntities', [data]);",
+      "acceptanceCriteria": [
+        "Task affinity implemented if beneficial",
+        "Similar queries routed to same worker"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Benchmark advanced scheduling",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "files": ["tests/performance/advanced-scheduling.test.ts"],
+      "stepByStep": [
+        "Create benchmark comparing basic pool vs AdvancedPool",
+        "Test with various workloads (uniform, skewed, bursty)",
+        "Measure worker utilization",
+        "Document when advanced scheduling helps"
+      ],
+      "acceptanceCriteria": [
+        "Benchmarks completed",
+        "Performance characteristics documented"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "AdvancedPool evaluated",
+    "Implemented if beneficial, documented if not",
+    "Performance comparison available"
+  ],
+  "filesModified": [
+    "src/search/FuzzySearch.ts"
+  ],
+  "filesCreated": [
+    "tests/performance/advanced-scheduling.test.ts"
+  ],
+  "totalEstimatedHours": 3,
+  "notes": "This sprint is optional. AdvancedPool adds complexity and may not provide significant benefits for memory-mcp's use cases. The standard pool with FIFO scheduling may be sufficient. Evaluate before implementing."
+}

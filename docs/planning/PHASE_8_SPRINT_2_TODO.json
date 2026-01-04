@@ -1,0 +1,105 @@
+{
+  "phase": 8,
+  "sprint": 2,
+  "title": "Enhanced Error Handling",
+  "priority": "MEDIUM",
+  "effort": "1-2 hours",
+  "status": "pending",
+  "impact": "Leverage workerpool's robust error handling, timeouts, and cancellation support",
+  "targetMetrics": {
+    "errorRecovery": { "current": "Basic", "target": "Auto-recovery from worker crashes" },
+    "timeoutSupport": { "current": "None", "target": "Configurable per-task timeouts" },
+    "cancellation": { "current": "None", "target": "Task cancellation support" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Add timeout support for fuzzy search",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "files": ["src/search/FuzzySearch.ts"],
+      "location": "searchWithWorkers method",
+      "stepByStep": [
+        "Open src/search/FuzzySearch.ts",
+        "Add timeout to pool.exec() calls:",
+        "  const results = await Promise.all(chunks.map(chunk => this.workerPool!.exec('searchEntities', [data]).timeout(30000)));",
+        "Consider making timeout configurable via options parameter",
+        "Add try/catch for TimeoutError",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippet": "import { TimeoutError } from '@danielsimonjr/workerpool';\n\ntry {\n  const results = await Promise.all(\n    chunks.map(chunk =>\n      this.workerPool!.exec('searchEntities', [{ query, threshold, entities: chunk }])\n        .timeout(30000) // 30 second timeout\n    )\n  );\n} catch (error) {\n  if (error instanceof TimeoutError) {\n    console.warn('Fuzzy search timed out, falling back to single-threaded');\n    return this.performFuzzyMatch(entities, queryLower, threshold);\n  }\n  throw error;\n}",
+      "acceptanceCriteria": [
+        "Timeout applied to worker tasks",
+        "TimeoutError caught and handled",
+        "Fallback to single-threaded on timeout"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Add cancellation support",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "files": ["src/search/FuzzySearch.ts"],
+      "stepByStep": [
+        "Consider adding AbortController support to fuzzySearch method",
+        "Store pending task promises for potential cancellation",
+        "Add cancelPendingSearches() method if needed",
+        "Handle CancellationError appropriately"
+      ],
+      "codeSnippet": "// Optional: Add cancellation support\nprivate pendingTasks: workerpool.Promise<any>[] = [];\n\nasync cancelPendingSearches(): Promise<void> {\n  for (const task of this.pendingTasks) {\n    task.cancel();\n  }\n  this.pendingTasks = [];\n}",
+      "acceptanceCriteria": [
+        "Tasks can be cancelled",
+        "CancellationError handled gracefully"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Add error logging for worker crashes",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "files": ["src/search/FuzzySearch.ts"],
+      "stepByStep": [
+        "Add error event listener to pool (if supported)",
+        "Log worker crash events for debugging",
+        "Workerpool auto-restarts crashed workers"
+      ],
+      "acceptanceCriteria": [
+        "Worker crashes logged",
+        "System continues functioning after worker crash"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add tests for error handling",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "files": ["tests/unit/search/FuzzySearch.test.ts"],
+      "stepByStep": [
+        "Add test for timeout handling",
+        "Add test for graceful degradation on worker failure",
+        "Verify fallback to single-threaded works",
+        "Run: npx vitest run tests/unit/search/FuzzySearch.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Timeout test passes",
+        "Error recovery test passes"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "Timeouts configured for worker tasks",
+    "Graceful fallback on timeout or worker crash",
+    "Error logging implemented",
+    "Tests verify error handling"
+  ],
+  "filesModified": [
+    "src/search/FuzzySearch.ts",
+    "tests/unit/search/FuzzySearch.test.ts"
+  ],
+  "totalEstimatedHours": 2,
+  "notes": "Workerpool handles many error cases automatically (worker crashes, etc.). This sprint focuses on making those features visible and configurable in memory-mcp."
+}
