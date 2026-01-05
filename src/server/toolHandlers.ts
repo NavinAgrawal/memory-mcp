@@ -392,7 +392,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ? validateWithSchema(args.relationTypes, z.array(z.string()), 'Invalid relation types')
       : undefined;
 
-    const result = ctx.graphTraversal.findShortestPath(source, target, { direction, relationTypes });
+    const result = await ctx.graphTraversal.findShortestPath(source, target, { direction, relationTypes });
     if (!result) {
       return formatTextResponse(`No path found between "${source}" and "${target}"`);
     }
@@ -412,7 +412,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ? validateWithSchema(args.relationTypes, z.array(z.string()), 'Invalid relation types')
       : undefined;
 
-    const results = ctx.graphTraversal.findAllPaths(source, target, maxDepth, { direction, relationTypes });
+    const results = await ctx.graphTraversal.findAllPaths(source, target, maxDepth, { direction, relationTypes });
     return formatToolResponse({ paths: results, count: results.length });
   },
 

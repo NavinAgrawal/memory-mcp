@@ -145,8 +145,8 @@ describe('GraphTraversal', () => {
   });
 
   describe('Shortest Path', () => {
-    it('should find shortest path between two nodes', () => {
-      const result = traversal.findShortestPath('A', 'D');
+    it('should find shortest path between two nodes', async () => {
+      const result = await traversal.findShortestPath('A', 'D');
 
       expect(result).not.toBeNull();
       expect(result!.path).toEqual(['A', 'B', 'C', 'D']);
@@ -154,8 +154,8 @@ describe('GraphTraversal', () => {
       expect(result!.relations).toHaveLength(3);
     });
 
-    it('should return path of length 0 for same source and target', () => {
-      const result = traversal.findShortestPath('A', 'A');
+    it('should return path of length 0 for same source and target', async () => {
+      const result = await traversal.findShortestPath('A', 'A');
 
       expect(result).not.toBeNull();
       expect(result!.path).toEqual(['A']);
@@ -163,20 +163,20 @@ describe('GraphTraversal', () => {
       expect(result!.relations).toHaveLength(0);
     });
 
-    it('should return null when no path exists', () => {
-      const result = traversal.findShortestPath('A', 'H'); // H is isolated
+    it('should return null when no path exists', async () => {
+      const result = await traversal.findShortestPath('A', 'H'); // H is isolated
 
       expect(result).toBeNull();
     });
 
-    it('should return null for non-existent entities', () => {
-      expect(traversal.findShortestPath('A', 'NonExistent')).toBeNull();
-      expect(traversal.findShortestPath('NonExistent', 'A')).toBeNull();
+    it('should return null for non-existent entities', async () => {
+      expect(await traversal.findShortestPath('A', 'NonExistent')).toBeNull();
+      expect(await traversal.findShortestPath('NonExistent', 'A')).toBeNull();
     });
 
-    it('should respect relationTypes filter', () => {
+    it('should respect relationTypes filter', async () => {
       // Only follow 'connects' relations, not 'branches'
-      const result = traversal.findShortestPath('A', 'E', { relationTypes: ['connects'] });
+      const result = await traversal.findShortestPath('A', 'E', { relationTypes: ['connects'] });
 
       // Should not find path to E via 'branches' relation
       expect(result).toBeNull();
@@ -184,8 +184,8 @@ describe('GraphTraversal', () => {
   });
 
   describe('All Paths', () => {
-    it('should find all paths between two nodes', () => {
-      const results = traversal.findAllPaths('A', 'D');
+    it('should find all paths between two nodes', async () => {
+      const results = await traversal.findAllPaths('A', 'D');
 
       expect(results.length).toBeGreaterThanOrEqual(1);
       // The direct path should be there
@@ -194,20 +194,20 @@ describe('GraphTraversal', () => {
       expect(directPath!.path).toEqual(['A', 'B', 'C', 'D']);
     });
 
-    it('should respect maxDepth', () => {
+    it('should respect maxDepth', async () => {
       // With maxDepth 2, we can't reach D (which is at depth 3)
-      const results = traversal.findAllPaths('A', 'D', 2);
+      const results = await traversal.findAllPaths('A', 'D', 2);
 
       expect(results).toHaveLength(0);
     });
 
-    it('should return empty array for non-existent entities', () => {
-      expect(traversal.findAllPaths('A', 'NonExistent')).toHaveLength(0);
-      expect(traversal.findAllPaths('NonExistent', 'A')).toHaveLength(0);
+    it('should return empty array for non-existent entities', async () => {
+      expect(await traversal.findAllPaths('A', 'NonExistent')).toHaveLength(0);
+      expect(await traversal.findAllPaths('NonExistent', 'A')).toHaveLength(0);
     });
 
-    it('should find paths with different lengths', () => {
-      const results = traversal.findAllPaths('A', 'G');
+    it('should find paths with different lengths', async () => {
+      const results = await traversal.findAllPaths('A', 'G');
 
       expect(results.length).toBeGreaterThanOrEqual(1);
       // Path: A -> B -> E -> G

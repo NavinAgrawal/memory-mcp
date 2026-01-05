@@ -50,7 +50,11 @@ export class GraphTraversal {
     entityName: string,
     options: TraversalOptions = {}
   ): Array<{ neighbor: string; relation: Relation }> {
-    const opts = { ...DEFAULT_OPTIONS, ...options };
+    // Filter out undefined values before merging with defaults
+    const definedOptions = Object.fromEntries(
+      Object.entries(options).filter(([, v]) => v !== undefined)
+    );
+    const opts = { ...DEFAULT_OPTIONS, ...definedOptions };
     const neighbors: Array<{ neighbor: string; relation: Relation }> = [];
 
     // Get relations based on direction
@@ -63,7 +67,7 @@ export class GraphTraversal {
     }
 
     // Filter by relation types if specified
-    if (opts.relationTypes.length > 0) {
+    if (opts.relationTypes && opts.relationTypes.length > 0) {
       const typeSet = new Set(opts.relationTypes.map(t => t.toLowerCase()));
       relations = relations.filter(r => typeSet.has(r.relationType.toLowerCase()));
     }
@@ -76,7 +80,7 @@ export class GraphTraversal {
       if (neighbor === entityName) continue;
 
       // Filter by entity types if specified
-      if (opts.entityTypes.length > 0) {
+      if (opts.entityTypes && opts.entityTypes.length > 0) {
         const entity = this.storage.getEntityByName(neighbor);
         if (!entity) continue;
         const typeSet = new Set(opts.entityTypes.map(t => t.toLowerCase()));
@@ -197,11 +201,14 @@ export class GraphTraversal {
    * @param options - Traversal options
    * @returns PathResult if path exists, null otherwise
    */
-  findShortestPath(
+  async findShortestPath(
     source: string,
     target: string,
     options: TraversalOptions = {}
-  ): PathResult | null {
+  ): Promise<PathResult | null> {
+    // Ensure graph is loaded to populate indexes
+    await this.storage.loadGraph();
+
     // Validate entities exist
     if (!this.storage.hasEntity(source) || !this.storage.hasEntity(target)) {
       return null;
@@ -282,12 +289,15 @@ export class GraphTraversal {
    * @param options - Traversal options
    * @returns Array of PathResult objects for all found paths
    */
-  findAllPaths(
+  async findAllPaths(
     source: string,
     target: string,
     maxDepth: number = 5,
     options: TraversalOptions = {}
-  ): PathResult[] {
+  ): Promise<PathResult[]> {
+    // Ensure graph is loaded to populate indexes
+    await this.storage.loadGraph();
+
     // Validate entities exist
     if (!this.storage.hasEntity(source) || !this.storage.hasEntity(target)) {
       return [];

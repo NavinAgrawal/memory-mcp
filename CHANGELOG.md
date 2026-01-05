@@ -5,6 +5,22 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.6.1] - 2026-01-05
+
+### Fixed
+
+- **Graph Algorithm Bugs** - Fixed `find_shortest_path` and `find_all_paths` MCP tools
+  - Made `findShortestPath()` and `findAllPaths()` async methods
+  - Added `await this.storage.loadGraph()` to ensure indexes are populated before traversal
+  - Fixed `getNeighborsWithRelations()` to filter out undefined options before merging with defaults
+  - Added defensive checks for `relationTypes` and `entityTypes` arrays
+  - Updated unit tests to use async/await for path-finding methods
+
+### Tests
+
+- Updated 9 tests in `GraphTraversal.test.ts` to use async/await
+- All 2267 tests passing
+
 ## [9.6.0] - 2026-01-04
 
 ### Added
