@@ -632,11 +632,11 @@ export function validateFilePath(filePath: string, baseDir: string = process.cwd
 }
 
 /**
- * Default memory file path (in same directory as compiled code).
+ * Default memory file path (in project root directory, outside dist/).
  */
 export const defaultMemoryPath = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../memory.jsonl'
+  '../../memory.jsonl'
 );
 
 /**
@@ -676,7 +676,7 @@ export async function ensureMemoryFilePath(): Promise<string> {
   // No custom path set, check for backward compatibility migration
   const oldMemoryPath = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
-    '../memory.json'
+    '../../memory.json'
   );
   const newMemoryPath = defaultMemoryPath;
 

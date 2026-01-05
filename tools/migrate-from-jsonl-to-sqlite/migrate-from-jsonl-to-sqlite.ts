@@ -51,6 +51,105 @@ interface MigrationOptions {
   verbose?: boolean;
 }
 
+interface TimestampValidationResult {
+  entitiesWithMissingCreatedAt: string[];
+  entitiesWithMissingLastModified: string[];
+  relationsWithMissingCreatedAt: number;
+  relationsWithMissingLastModified: number;
+}
+
+/**
+ * Validates timestamps in the graph and logs warnings for missing values.
+ * Returns counts of entities/relations with missing timestamps.
+ */
+function validateTimestamps(graph: KnowledgeGraph, verbose: boolean): TimestampValidationResult {
+  const result: TimestampValidationResult = {
+    entitiesWithMissingCreatedAt: [],
+    entitiesWithMissingLastModified: [],
+    relationsWithMissingCreatedAt: 0,
+    relationsWithMissingLastModified: 0,
+  };
+
+  // Check entities
+  for (const entity of graph.entities) {
+    if (!entity.createdAt) {
+      result.entitiesWithMissingCreatedAt.push(entity.name);
+    }
+    if (!entity.lastModified) {
+      result.entitiesWithMissingLastModified.push(entity.name);
+    }
+  }
+
+  // Check relations
+  for (const relation of graph.relations) {
+    if (!relation.createdAt) {
+      result.relationsWithMissingCreatedAt++;
+    }
+    if (!relation.lastModified) {
+      result.relationsWithMissingLastModified++;
+    }
+  }
+
+  // Log warnings
+  const hasIssues =
+    result.entitiesWithMissingCreatedAt.length > 0 ||
+    result.entitiesWithMissingLastModified.length > 0 ||
+    result.relationsWithMissingCreatedAt > 0 ||
+    result.relationsWithMissingLastModified > 0;
+
+  if (hasIssues) {
+    console.log('\n⚠️  Timestamp Validation Warnings:');
+
+    if (result.entitiesWithMissingCreatedAt.length > 0) {
+      console.log(
+        `   ${result.entitiesWithMissingCreatedAt.length} entities missing createdAt timestamp`
+      );
+      if (verbose && result.entitiesWithMissingCreatedAt.length <= 10) {
+        for (const name of result.entitiesWithMissingCreatedAt) {
+          console.log(`     - ${name}`);
+        }
+      } else if (verbose) {
+        for (const name of result.entitiesWithMissingCreatedAt.slice(0, 10)) {
+          console.log(`     - ${name}`);
+        }
+        console.log(`     ... and ${result.entitiesWithMissingCreatedAt.length - 10} more`);
+      }
+    }
+
+    if (result.entitiesWithMissingLastModified.length > 0) {
+      console.log(
+        `   ${result.entitiesWithMissingLastModified.length} entities missing lastModified timestamp`
+      );
+      if (verbose && result.entitiesWithMissingLastModified.length <= 10) {
+        for (const name of result.entitiesWithMissingLastModified) {
+          console.log(`     - ${name}`);
+        }
+      } else if (verbose) {
+        for (const name of result.entitiesWithMissingLastModified.slice(0, 10)) {
+          console.log(`     - ${name}`);
+        }
+        console.log(`     ... and ${result.entitiesWithMissingLastModified.length - 10} more`);
+      }
+    }
+
+    if (result.relationsWithMissingCreatedAt > 0) {
+      console.log(
+        `   ${result.relationsWithMissingCreatedAt} relations missing createdAt timestamp`
+      );
+    }
+
+    if (result.relationsWithMissingLastModified > 0) {
+      console.log(
+        `   ${result.relationsWithMissingLastModified} relations missing lastModified timestamp`
+      );
+    }
+
+    console.log('   Missing timestamps will be set to current date/time during migration.');
+  }
+
+  return result;
+}
+
 interface EntityRow {
   name: string;
   entityType: string;
@@ -224,7 +323,11 @@ function loadFromSqlite(filePath: string): KnowledgeGraph {
   }
 }
 
-function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
+function saveToSqlite(
+  filePath: string,
+  graph: KnowledgeGraph,
+  migrationTimestamp: string
+): void {
   const absolutePath = resolve(filePath);
   const dir = dirname(absolutePath);
 
@@ -319,6 +422,9 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
     db.pragma('foreign_keys = OFF');
 
     // Use transaction for atomicity
+    // Note: We use explicit null/undefined checks instead of || to avoid
+    // accidentally replacing empty strings or other falsy values.
+    // Missing timestamps are replaced with the migration timestamp.
     const insertEntities = db.transaction((entities: Entity[]) => {
       const insertEntity = db.prepare(`
         INSERT INTO entities (name, entityType, observations, tags, importance, parentId, createdAt, lastModified)
@@ -326,6 +432,16 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
       `);
 
       for (const entity of entities) {
+        // Use original timestamp if present, otherwise use migration timestamp
+        const createdAt =
+          entity.createdAt !== null && entity.createdAt !== undefined
+            ? entity.createdAt
+            : migrationTimestamp;
+        const lastModified =
+          entity.lastModified !== null && entity.lastModified !== undefined
+            ? entity.lastModified
+            : migrationTimestamp;
+
         insertEntity.run(
           entity.name,
           entity.entityType,
@@ -333,8 +449,8 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
           entity.tags ? JSON.stringify(entity.tags) : null,
           entity.importance ?? null,
           entity.parentId ?? null,
-          entity.createdAt || new Date().toISOString(),
-          entity.lastModified || new Date().toISOString()
+          createdAt,
+          lastModified
         );
       }
     });
@@ -346,12 +462,22 @@ function saveToSqlite(filePath: string, graph: KnowledgeGraph): void {
       `);
 
       for (const relation of relations) {
+        // Use original timestamp if present, otherwise use migration timestamp
+        const createdAt =
+          relation.createdAt !== null && relation.createdAt !== undefined
+            ? relation.createdAt
+            : migrationTimestamp;
+        const lastModified =
+          relation.lastModified !== null && relation.lastModified !== undefined
+            ? relation.lastModified
+            : migrationTimestamp;
+
         insertRelation.run(
           relation.from,
           relation.to,
           relation.relationType,
-          relation.createdAt || new Date().toISOString(),
-          relation.lastModified || new Date().toISOString()
+          createdAt,
+          lastModified
         );
       }
     });
@@ -424,13 +550,20 @@ function migrate(options: MigrationOptions): void {
 
     console.log(`   Found ${entityCount} entities and ${relationCount} relations`);
 
+    // Validate timestamps and warn about missing values
+    validateTimestamps(graph, verbose);
+
+    // Generate a single migration timestamp for consistency
+    // All entities/relations with missing timestamps will get this same value
+    const migrationTimestamp = new Date().toISOString();
+
     // Write to target
     console.log('\n💾 Writing to target...');
 
     if (toType === 'jsonl') {
       saveToJsonl(to, graph);
     } else {
-      saveToSqlite(to, graph);
+      saveToSqlite(to, graph, migrationTimestamp);
     }
 
     // Verify by reading back
@@ -545,11 +678,13 @@ FEATURES:
   - FTS5 full-text search index created automatically
   - WAL mode for better performance
   - Atomic transactions for data integrity
+  - Timestamp validation with warnings for missing values
 
 NOTES:
   - The target file will be created if it doesn't exist
   - If the target file exists, it will be overwritten
   - Migration preserves all entities, relations, and metadata
+  - Missing timestamps (null/undefined) are set to migration time with warnings
   - Saved searches and tag aliases are NOT migrated (they use separate files)
 `);
 }

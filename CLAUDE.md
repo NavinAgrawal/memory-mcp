@@ -99,6 +99,8 @@ interface Relation {
 
 ### Storage Options
 
+Data files are stored in the **project root directory** (not in `dist/`):
+
 **JSONL (Default):**
 - `memory.jsonl` - Main graph (entities + relations)
 - `memory-saved-searches.jsonl` - Saved search queries
