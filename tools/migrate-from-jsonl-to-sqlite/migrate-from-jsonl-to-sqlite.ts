@@ -500,6 +500,33 @@ function saveToSqlite(
 // Migration Logic
 // ============================================================================
 
+/**
+ * Resolves file path, checking both specified location and legacy dist/ location.
+ * Returns the path where the file actually exists, or the original path if not found.
+ */
+function resolveFilePath(filePath: string): string {
+  const absolutePath = resolve(filePath);
+
+  // If file exists at specified path, use it
+  if (existsSync(absolutePath)) {
+    return absolutePath;
+  }
+
+  // Check if this might be a file that was in dist/ (old default location)
+  const fileName = absolutePath.split(/[/\\]/).pop() || '';
+  const dir = dirname(absolutePath);
+  const legacyPath = resolve(dir, 'dist', fileName);
+
+  if (existsSync(legacyPath)) {
+    console.log(`\n📍 Note: File not found at ${absolutePath}`);
+    console.log(`   Found at legacy location: ${legacyPath}`);
+    return legacyPath;
+  }
+
+  // Return original path (will fail later with appropriate error)
+  return absolutePath;
+}
+
 function detectStorageType(filePath: string): 'jsonl' | 'sqlite' {
   const ext = extname(filePath).toLowerCase();
   if (ext === '.jsonl' || ext === '.json') {
@@ -515,7 +542,10 @@ function detectStorageType(filePath: string): 'jsonl' | 'sqlite' {
 function migrate(options: MigrationOptions): void {
   const { from, to, verbose = false } = options;
 
-  const fromType = detectStorageType(from);
+  // Resolve source path, checking legacy dist/ location if needed
+  const resolvedFrom = resolveFilePath(from);
+
+  const fromType = detectStorageType(resolvedFrom);
   const toType = detectStorageType(to);
 
   if (fromType === toType) {
@@ -525,7 +555,7 @@ function migrate(options: MigrationOptions): void {
 
   if (verbose) {
     console.log(`Migrating from ${fromType.toUpperCase()} to ${toType.toUpperCase()}`);
-    console.log(`  Source: ${resolve(from)}`);
+    console.log(`  Source: ${resolvedFrom}`);
     console.log(`  Target: ${resolve(to)}`);
   }
 
@@ -535,9 +565,9 @@ function migrate(options: MigrationOptions): void {
     let graph: KnowledgeGraph;
 
     if (fromType === 'jsonl') {
-      graph = loadFromJsonl(from);
+      graph = loadFromJsonl(resolvedFrom);
     } else {
-      graph = loadFromSqlite(from);
+      graph = loadFromSqlite(resolvedFrom);
     }
 
     const entityCount = graph.entities.length;
@@ -588,7 +618,7 @@ function migrate(options: MigrationOptions): void {
 
     console.log('\n✨ Migration completed successfully!');
     console.log(`   Migrated ${entityCount} entities and ${relationCount} relations`);
-    console.log(`   From: ${from} (${fromType})`);
+    console.log(`   From: ${resolvedFrom} (${fromType})`);
     console.log(`   To:   ${to} (${toType})`);
 
     if (toType === 'sqlite') {

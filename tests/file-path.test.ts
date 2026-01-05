@@ -6,18 +6,35 @@ import { ensureMemoryFilePath, defaultMemoryPath } from '../src/index.js';
 
 describe('ensureMemoryFilePath', () => {
   // The ensureMemoryFilePath function uses paths relative to src/utils/entityUtils.ts
-  // So oldMemoryPath = src/memory.json and newMemoryPath = src/memory.jsonl
-  const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-  const oldMemoryPath = path.join(srcDir, 'memory.json');
-  const newMemoryPath = path.join(srcDir, 'memory.jsonl');
+  // After relocation, paths are now in project root (../../ from dist/utils/)
+  // So oldMemoryPath = memory.json and newMemoryPath = memory.jsonl in project root
+  const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const oldMemoryPath = path.join(projectRoot, 'memory.json');
+  const newMemoryPath = path.join(projectRoot, 'memory.jsonl');
 
   let originalEnv: string | undefined;
+  let existingMemoryContent: string | null = null;
+  let existingMemoryJsonContent: string | null = null;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Save original environment variable
     originalEnv = process.env.MEMORY_FILE_PATH;
     // Delete environment variable
     delete process.env.MEMORY_FILE_PATH;
+
+    // Backup existing files if they exist (to preserve real data)
+    try {
+      existingMemoryContent = await fs.readFile(newMemoryPath, 'utf-8');
+      await fs.unlink(newMemoryPath);
+    } catch {
+      existingMemoryContent = null;
+    }
+    try {
+      existingMemoryJsonContent = await fs.readFile(oldMemoryPath, 'utf-8');
+      await fs.unlink(oldMemoryPath);
+    } catch {
+      existingMemoryJsonContent = null;
+    }
   });
 
   afterEach(async () => {
@@ -38,6 +55,14 @@ describe('ensureMemoryFilePath', () => {
       await fs.unlink(newMemoryPath);
     } catch {
       // Ignore if file doesn't exist
+    }
+
+    // Restore original files if they existed
+    if (existingMemoryContent !== null) {
+      await fs.writeFile(newMemoryPath, existingMemoryContent);
+    }
+    if (existingMemoryJsonContent !== null) {
+      await fs.writeFile(oldMemoryPath, existingMemoryJsonContent);
     }
   });
 

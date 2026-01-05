@@ -5,6 +5,31 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.6.2] - 2026-01-05
+
+### Fixed
+
+- **Memory File Location** - Relocated default memory file path from `dist/` to project root
+  - Updated `defaultMemoryPath` in `entityUtils.ts` to use `../../memory.jsonl`
+  - Updated legacy `memory.json` migration path accordingly
+  - Data files now stored in project root: `memory.jsonl`, `memory-saved-searches.jsonl`, `memory-tag-aliases.jsonl`
+
+- **Migration Tool Enhancements** - Improved `migrate-from-jsonl-to-sqlite` tool
+  - Added `resolveFilePath()` function to check legacy `dist/` location for source files
+  - Added timestamp validation with warnings for missing `createdAt`/`lastModified` values
+  - Uses explicit `null`/`undefined` checks instead of `||` operator to preserve original timestamps
+  - All missing timestamps now get consistent migration timestamp
+
+- **File Path Tests** - Updated `file-path.test.ts` to match new project root location
+  - Tests now backup and restore existing `memory.jsonl` to avoid data loss
+  - Updated paths from `src/` to project root
+
+### Changed
+
+- **Commit Workflow** - Added memory graph update step to `/COMMIT` slash command
+  - Step 9 now updates project memory nodes after each commit
+  - Documents version bumps, features, fixes, and architectural changes
+
 ## [9.6.1] - 2026-01-05
 
 ### Fixed

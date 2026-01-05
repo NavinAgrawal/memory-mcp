@@ -300,12 +300,17 @@ Comprehensive docs in `docs/` directory:
    - Add observations to existing entities
    - Create relations to connect knowledge
 
-3. **At session end**: Persist key learnings
+3. **After every commit**: Update project memory nodes
+   - Add observations for version bumps, new features, bug fixes
+   - Record architectural changes and important decisions
+   - Keep project nodes current with latest changes
+
+4. **At session end**: Persist key learnings
    - Summarize accomplishments
    - Record user preferences observed
    - Note unfinished tasks or next steps
 
-4. **Periodically**: Maintain graph hygiene
+5. **Periodically**: Maintain graph hygiene
    - Use `find_duplicates` to identify redundant entries
    - Use `compress_graph` to merge similar entities
    - Update importance scores to prioritize valuable knowledge
