@@ -1,0 +1,311 @@
+{
+  "phase": 9,
+  "sprint": 1,
+  "title": "Observation Index",
+  "priority": "HIGH",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "10-50x speedup for observation-based searches by creating an inverted index mapping words to entity names",
+  "targetMetrics": {
+    "observationLookup": { "current": "O(n) linear scan of all entities", "target": "O(1) index lookup" },
+    "booleanSearchWithObservations": { "current": "~100ms for 1000 entities", "target": "~10ms" },
+    "memoryOverhead": { "current": "None", "target": "< 1MB for 1000 entities" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Create ObservationIndex Class - Add an ObservationIndex class to src/utils/indexes.ts that maps words from observations to entity names for O(1) lookup",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/utils/indexes.ts"],
+      "testCategories": [
+        "ObservationIndex class defined",
+        "add() method works",
+        "remove() method works",
+        "getEntitiesWithWord() returns correct entities",
+        "getEntitiesWithAnyWord() returns union",
+        "getEntitiesWithAllWords() returns intersection",
+        "tokenize() normalizes and splits correctly"
+      ],
+      "implementation": {
+        "classStructure": {
+          "name": "ObservationIndex",
+          "privateFields": [
+            "index: Map<string, Set<string>> - maps word to entity names",
+            "entityObservations: Map<string, Set<string>> - tracks words per entity for removal"
+          ],
+          "publicMethods": [
+            "add(entityName: string, observations: string[]): void",
+            "remove(entityName: string): void",
+            "getEntitiesWithWord(word: string): Set<string>",
+            "getEntitiesWithAnyWord(words: string[]): Set<string>",
+            "getEntitiesWithAllWords(words: string[]): Set<string>",
+            "clear(): void",
+            "getStats(): { wordCount: number; entityCount: number }"
+          ],
+          "privateMethods": [
+            "tokenize(text: string): string[] - normalize to lowercase, split on non-alphanumeric, filter words < 2 chars"
+          ]
+        }
+      },
+      "stepByStep": [
+        "Open src/utils/indexes.ts",
+        "Find the existing index classes (NameIndex, TypeIndex, LowercaseCache, RelationIndex)",
+        "Add JSDoc comment for ObservationIndex: /** Inverted index mapping observation keywords to entity names. Enables O(1) lookup for 'which entities mention word X?' Words are normalized to lowercase and split on whitespace/punctuation. */",
+        "Create the class: export class ObservationIndex { ... }",
+        "Add private fields: private index: Map<string, Set<string>> = new Map(); private entityObservations: Map<string, Set<string>> = new Map();",
+        "Implement tokenize(): return text.toLowerCase().split(/[^a-z0-9]+/).filter(word => word.length >= 2);",
+        "Implement add(): For each observation, tokenize it, then for each word add entityName to index.get(word), also track in entityObservations",
+        "Implement remove(): Get words from entityObservations, delete entityName from index.get(word), cleanup empty sets",
+        "Implement getEntitiesWithWord(): return this.index.get(word.toLowerCase()) ?? new Set()",
+        "Implement getEntitiesWithAnyWord(): union of all getEntitiesWithWord results",
+        "Implement getEntitiesWithAllWords(): intersection - start with first word's entities, filter by each subsequent word",
+        "Implement clear(): this.index.clear(); this.entityObservations.clear();",
+        "Implement getStats(): return { wordCount: this.index.size, entityCount: this.entityObservations.size }",
+        "Update the module exports at bottom to include ObservationIndex",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "tokenize": "private tokenize(text: string): string[] {\n  return text\n    .toLowerCase()\n    .split(/[^a-z0-9]+/)\n    .filter(word => word.length >= 2);\n}",
+        "add": "add(entityName: string, observations: string[]): void {\n  const entityWords = new Set<string>();\n\n  for (const observation of observations) {\n    const words = this.tokenize(observation);\n    for (const word of words) {\n      entityWords.add(word);\n      if (!this.index.has(word)) {\n        this.index.set(word, new Set());\n      }\n      this.index.get(word)!.add(entityName);\n    }\n  }\n\n  this.entityObservations.set(entityName, entityWords);\n}",
+        "remove": "remove(entityName: string): void {\n  const words = this.entityObservations.get(entityName);\n  if (!words) return;\n\n  for (const word of words) {\n    const entities = this.index.get(word);\n    if (entities) {\n      entities.delete(entityName);\n      if (entities.size === 0) {\n        this.index.delete(word);\n      }\n    }\n  }\n\n  this.entityObservations.delete(entityName);\n}",
+        "getEntitiesWithAllWords": "getEntitiesWithAllWords(words: string[]): Set<string> {\n  if (words.length === 0) return new Set();\n\n  let result = new Set(this.getEntitiesWithWord(words[0]));\n\n  for (let i = 1; i < words.length && result.size > 0; i++) {\n    const wordEntities = this.getEntitiesWithWord(words[i]);\n    result = new Set([...result].filter(e => wordEntities.has(e)));\n  }\n\n  return result;\n}"
+      },
+      "acceptanceCriteria": [
+        "ObservationIndex class added to src/utils/indexes.ts",
+        "All 7 methods implemented (add, remove, getEntitiesWithWord, getEntitiesWithAnyWord, getEntitiesWithAllWords, clear, getStats)",
+        "tokenize() normalizes to lowercase and filters words < 2 chars",
+        "Class exported from the module",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Integrate ObservationIndex into GraphStorage - Add the ObservationIndex to GraphStorage and ensure it's updated on entity create/update/delete operations via rebuildIndexes()",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/core/GraphStorage.ts"],
+      "testCategories": [
+        "observationIndex property exists",
+        "rebuildIndexes updates observationIndex",
+        "getEntitiesByObservationWord public method works",
+        "getEntitiesByAnyObservationWord works",
+        "getEntitiesByAllObservationWords works"
+      ],
+      "implementation": {
+        "imports": "Update import to include ObservationIndex: import { NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex } from '../utils/indexes.js';",
+        "property": "private observationIndex: ObservationIndex = new ObservationIndex();",
+        "rebuildIndexesUpdate": "this.observationIndex.clear(); then inside entity loop: this.observationIndex.add(entity.name, entity.observations);",
+        "publicMethods": [
+          "getEntitiesByObservationWord(word: string): Set<string>",
+          "getEntitiesByAnyObservationWord(words: string[]): Set<string>",
+          "getEntitiesByAllObservationWords(words: string[]): Set<string>",
+          "getObservationIndexStats(): { wordCount: number; entityCount: number }"
+        ]
+      },
+      "stepByStep": [
+        "Open src/core/GraphStorage.ts",
+        "Find the imports at the top (around line 14)",
+        "Update the import to include ObservationIndex: import { NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex } from '../utils/indexes.js';",
+        "Find the existing index properties (around line 68-83)",
+        "Add after relationIndex: private observationIndex: ObservationIndex = new ObservationIndex();",
+        "Add JSDoc: /** O(1) observation word lookup by entity. Maps words in observations to entity names. */",
+        "Find the rebuildIndexes method (search for 'rebuildIndexes')",
+        "At the start of rebuildIndexes, add: this.observationIndex.clear();",
+        "Inside the entity loop in rebuildIndexes, add: this.observationIndex.add(entity.name, entity.observations);",
+        "Find a good location for public methods (after existing getter methods)",
+        "Add getEntitiesByObservationWord with JSDoc: /** Get entities that have observations containing the given word. Uses the observation index for O(1) lookup. */",
+        "Add getEntitiesByAnyObservationWord with JSDoc",
+        "Add getEntitiesByAllObservationWords with JSDoc",
+        "Add getObservationIndexStats with JSDoc",
+        "Run: npm run typecheck",
+        "Run: npx vitest run tests/unit/core/GraphStorage.test.ts"
+      ],
+      "codeSnippets": {
+        "property": "/**\n * O(1) observation word lookup by entity.\n * Maps words in observations to entity names.\n */\nprivate observationIndex: ObservationIndex = new ObservationIndex();",
+        "rebuildAdd": "// Inside the entity loop:\nthis.observationIndex.add(entity.name, entity.observations);",
+        "getMethod": "/**\n * Get entities that have observations containing the given word.\n * Uses the observation index for O(1) lookup.\n *\n * @param word - Word to search for in observations\n * @returns Set of entity names\n */\ngetEntitiesByObservationWord(word: string): Set<string> {\n  return this.observationIndex.getEntitiesWithWord(word);\n}"
+      },
+      "acceptanceCriteria": [
+        "ObservationIndex property added to GraphStorage",
+        "Import updated to include ObservationIndex",
+        "rebuildIndexes() clears and rebuilds observation index",
+        "getEntitiesByObservationWord() public method added",
+        "getEntitiesByAnyObservationWord() and getEntitiesByAllObservationWords() added",
+        "getObservationIndexStats() added",
+        "npm run typecheck passes",
+        "All existing GraphStorage tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Tests",
+      "description": "Create ObservationIndex Unit Tests - Create comprehensive unit tests for the ObservationIndex class covering add, remove, lookup, and performance",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/unit/utils/observationIndex.test.ts"],
+      "testCategories": [
+        "add and getEntitiesWithWord - 6 tests",
+        "remove - 3 tests",
+        "getEntitiesWithAnyWord - 2 tests",
+        "getEntitiesWithAllWords - 3 tests",
+        "clear - 1 test",
+        "getStats - 1 test",
+        "performance - 1 test"
+      ],
+      "implementation": {
+        "imports": [
+          "import { describe, it, expect, beforeEach } from 'vitest';",
+          "import { ObservationIndex } from '../../../src/utils/indexes.js';"
+        ],
+        "testSuites": [
+          {
+            "name": "add and getEntitiesWithWord",
+            "tests": [
+              "should index single word observations",
+              "should handle multiple entities with same word",
+              "should normalize to lowercase",
+              "should split on punctuation",
+              "should filter out short words (less than 2 chars)",
+              "should return empty set for unknown word"
+            ]
+          },
+          {
+            "name": "remove",
+            "tests": [
+              "should remove entity from index",
+              "should clean up empty word entries",
+              "should handle removing non-existent entity"
+            ]
+          },
+          {
+            "name": "getEntitiesWithAnyWord",
+            "tests": [
+              "should return union of entities matching any word",
+              "should return empty for no matching words"
+            ]
+          },
+          {
+            "name": "getEntitiesWithAllWords",
+            "tests": [
+              "should return intersection of entities matching all words",
+              "should return empty for no matching all words",
+              "should return empty for empty words array"
+            ]
+          },
+          {
+            "name": "clear",
+            "tests": ["should remove all entries"]
+          },
+          {
+            "name": "getStats",
+            "tests": ["should return correct counts"]
+          },
+          {
+            "name": "performance",
+            "tests": ["should handle large number of entities efficiently"]
+          }
+        ]
+      },
+      "stepByStep": [
+        "Create new file: tests/unit/utils/observationIndex.test.ts",
+        "Add imports at the top",
+        "Create describe('ObservationIndex') block",
+        "Add let index: ObservationIndex; declaration",
+        "Add beforeEach(() => { index = new ObservationIndex(); });",
+        "Create describe('add and getEntitiesWithWord') with 6 tests",
+        "Test 1: should index single word observations - add Entity1 with ['hello world'], verify both words return Entity1",
+        "Test 2: should handle multiple entities - add 2 entities with 'hello', verify both returned",
+        "Test 3: should normalize to lowercase - add ['Hello World'], query 'hello' and 'HELLO'",
+        "Test 4: should split on punctuation - add ['hello,world;test!data'], verify all 4 words work",
+        "Test 5: should filter short words - add ['a b cd ef'], verify 'a' returns empty, 'cd' works",
+        "Test 6: should return empty for unknown - query 'nonexistent'",
+        "Create describe('remove') with 3 tests",
+        "Test: remove entity, verify word no longer returns it",
+        "Test: cleanup empty entries after last entity removed",
+        "Test: removing non-existent doesn't throw",
+        "Create describe('getEntitiesWithAnyWord') with 2 tests",
+        "Create describe('getEntitiesWithAllWords') with 3 tests",
+        "Create describe('clear') with 1 test",
+        "Create describe('getStats') with 1 test",
+        "Create describe('performance') with 1 test - add 1000 entities, verify 100 lookups < 50ms",
+        "Run: npx vitest run tests/unit/utils/observationIndex.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/utils/observationIndex.test.ts",
+        "17 total tests covering all ObservationIndex functionality",
+        "Tests verify O(1) lookup performance",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Feature",
+      "description": "Update BooleanSearch to Use ObservationIndex - Modify BooleanSearch to use the ObservationIndex for faster observation-based queries when searching for simple terms",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/search/BooleanSearch.ts"],
+      "testCategories": [
+        "Uses observation index for simple term lookups",
+        "Falls back to linear scan for regex patterns",
+        "Performance improvement for observation queries"
+      ],
+      "implementation": {
+        "locationHint": "Find where observation search happens - look for code that iterates over entities checking observations",
+        "optimizationPattern": "Before iterating all entities, check if the search term is simple (no regex, no wildcards). If simple, use storage.getEntitiesByObservationWord() to get candidate entities first, then filter by those"
+      },
+      "stepByStep": [
+        "Open src/search/BooleanSearch.ts",
+        "Search for 'observation' to find where observations are searched",
+        "Identify the method that evaluates observation-based queries (likely evaluateNode or similar)",
+        "Add a helper method: private isSimpleTerm(term: string): boolean - returns true if term has no regex/wildcard chars",
+        "Modify the observation search logic:",
+        "  1. Check if term is simple using isSimpleTerm()",
+        "  2. If simple, get candidate entities using this.storage.getEntitiesByObservationWord(term)",
+        "  3. Filter those candidates by the full match criteria",
+        "  4. If not simple (regex/wildcard), use existing linear scan",
+        "Add JSDoc comments explaining the optimization",
+        "Run: npm run typecheck",
+        "Run: npx vitest run tests/unit/search/BooleanSearch.test.ts"
+      ],
+      "codeSnippets": {
+        "isSimpleTerm": "/**\n * Check if a search term is simple (no regex or wildcards).\n * Simple terms can use the O(1) observation index.\n */\nprivate isSimpleTerm(term: string): boolean {\n  const specialChars = /[.*+?^${}()|[\\]\\\\]/;\n  return !specialChars.test(term);\n}",
+        "optimizedLookup": "// In evaluateBooleanQuery TERM case for observation field:\n// Use observation index for simple terms (O(1) vs O(n))\nif (this.isSimpleTerm(value)) {\n  const candidateNames = this.storage.getEntitiesByObservationWord(value);\n  if (candidateNames.has(entity.name)) {\n    return true; // O(1) check\n  }\n  return false;\n}\n\n// Fall back to linear scan for complex patterns (uses lowercased cache)"
+      },
+      "acceptanceCriteria": [
+        "BooleanSearch uses ObservationIndex for simple term lookups",
+        "isSimpleTerm() helper method added",
+        "Falls back to linear scan for complex patterns (regex, wildcards)",
+        "Optimization is documented with comments",
+        "npm run typecheck passes",
+        "All existing BooleanSearch tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "ObservationIndex class created with all required methods",
+    "GraphStorage integrates ObservationIndex and rebuilds on mutations",
+    "17+ unit tests created and passing",
+    "BooleanSearch uses index for simple observation queries",
+    "npm run typecheck passes",
+    "All existing 2209+ tests pass"
+  ],
+  "filesCreated": [
+    "tests/unit/utils/observationIndex.test.ts"
+  ],
+  "filesModified": [
+    "src/utils/indexes.ts",
+    "src/core/GraphStorage.ts",
+    "src/search/BooleanSearch.ts"
+  ],
+  "totalNewTests": 17,
+  "totalEstimatedHours": 6,
+  "dependencies": [],
+  "notes": "This sprint creates an inverted index for observations, enabling O(1) lookup for 'which entities mention word X?' queries. This dramatically speeds up boolean search with observation clauses and enables efficient observation-based deduplication. The index is maintained automatically by GraphStorage and integrated into BooleanSearch for transparent performance improvement."
+}

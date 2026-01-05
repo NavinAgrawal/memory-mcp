@@ -1,0 +1,338 @@
+{
+  "phase": 9,
+  "sprint": 2,
+  "title": "Pre-computed Similarity Data",
+  "priority": "MEDIUM",
+  "effort": "4 hours",
+  "status": "pending",
+  "impact": "1.5-2x speedup for duplicate detection by pre-computing normalized Sets once per entity instead of creating them repeatedly during O(n²) comparisons",
+  "targetMetrics": {
+    "calculateEntitySimilarity": { "current": "Creates 4 new Sets per comparison", "target": "Uses pre-computed Sets, 0 allocations" },
+    "findDuplicates1000Entities": { "current": "~500ms with repeated Set creation", "target": "~250ms with pre-computed data" },
+    "memoryChurn": { "current": "High - many short-lived Set objects", "target": "Low - Sets created once and reused" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Create PreparedEntity Interface and Helper Methods - Define a PreparedEntity interface that holds pre-computed normalized data and add helper methods to prepare entities for efficient similarity comparisons",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts"],
+      "testCategories": [
+        "PreparedEntity interface defined",
+        "prepareEntity() method works",
+        "prepareEntities() bulk method works"
+      ],
+      "implementation": {
+        "interface": {
+          "name": "PreparedEntity",
+          "fields": [
+            "entity: Entity - Original entity reference",
+            "nameLower: string - Lowercase name for comparison",
+            "typeLower: string - Lowercase entity type",
+            "observationSet: Set<string> - Set of lowercase observations",
+            "tagSet: Set<string> - Set of lowercase tags"
+          ]
+        },
+        "methods": [
+          "private prepareEntity(entity: Entity): PreparedEntity",
+          "private prepareEntities(entities: Entity[]): Map<string, PreparedEntity>"
+        ]
+      },
+      "stepByStep": [
+        "Open src/features/CompressionManager.ts",
+        "Find the imports section at the top (around line 10)",
+        "After the imports and before the class, add the PreparedEntity interface with JSDoc:",
+        "  /**",
+        "   * Entity data pre-processed for efficient similarity comparisons.",
+        "   * Pre-computes normalized Sets once to avoid repeated creation during O(n²) comparisons.",
+        "   */",
+        "  interface PreparedEntity {",
+        "    entity: Entity;",
+        "    nameLower: string;",
+        "    typeLower: string;",
+        "    observationSet: Set<string>;",
+        "    tagSet: Set<string>;",
+        "  }",
+        "Find the CompressionManager class (around line 19)",
+        "After the constructor, add the prepareEntity method:",
+        "  /**",
+        "   * Prepare an entity for efficient similarity comparisons.",
+        "   * Pre-computes all normalized data to avoid repeated computation.",
+        "   */",
+        "  private prepareEntity(entity: Entity): PreparedEntity {",
+        "    return {",
+        "      entity,",
+        "      nameLower: entity.name.toLowerCase(),",
+        "      typeLower: entity.entityType.toLowerCase(),",
+        "      observationSet: new Set(entity.observations.map(o => o.toLowerCase())),",
+        "      tagSet: new Set((entity.tags ?? []).map(t => t.toLowerCase())),",
+        "    };",
+        "  }",
+        "Add the prepareEntities bulk method:",
+        "  /**",
+        "   * Prepare multiple entities for efficient similarity comparisons.",
+        "   * Use this before batch comparison operations.",
+        "   */",
+        "  private prepareEntities(entities: Entity[]): Map<string, PreparedEntity> {",
+        "    const prepared = new Map<string, PreparedEntity>();",
+        "    for (const entity of entities) {",
+        "      prepared.set(entity.name, this.prepareEntity(entity));",
+        "    }",
+        "    return prepared;",
+        "  }",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "interface": "/**\n * Entity data pre-processed for efficient similarity comparisons.\n * Pre-computes normalized Sets once to avoid repeated creation during O(n²) comparisons.\n */\ninterface PreparedEntity {\n  /** Original entity reference */\n  entity: Entity;\n  /** Lowercase name for comparison */\n  nameLower: string;\n  /** Lowercase entity type */\n  typeLower: string;\n  /** Set of lowercase observations */\n  observationSet: Set<string>;\n  /** Set of lowercase tags */\n  tagSet: Set<string>;\n}",
+        "prepareEntity": "/**\n * Prepare an entity for efficient similarity comparisons.\n * Pre-computes all normalized data to avoid repeated computation.\n *\n * @param entity - The entity to prepare\n * @returns PreparedEntity with pre-computed data\n */\nprivate prepareEntity(entity: Entity): PreparedEntity {\n  return {\n    entity,\n    nameLower: entity.name.toLowerCase(),\n    typeLower: entity.entityType.toLowerCase(),\n    observationSet: new Set(entity.observations.map(o => o.toLowerCase())),\n    tagSet: new Set((entity.tags ?? []).map(t => t.toLowerCase())),\n  };\n}",
+        "prepareEntities": "/**\n * Prepare multiple entities for efficient similarity comparisons.\n * Use this before batch comparison operations.\n *\n * @param entities - Entities to prepare\n * @returns Map of entity name to PreparedEntity\n */\nprivate prepareEntities(entities: Entity[]): Map<string, PreparedEntity> {\n  const prepared = new Map<string, PreparedEntity>();\n  for (const entity of entities) {\n    prepared.set(entity.name, this.prepareEntity(entity));\n  }\n  return prepared;\n}"
+      },
+      "acceptanceCriteria": [
+        "PreparedEntity interface defined with all 5 fields",
+        "prepareEntity() method creates pre-computed data correctly",
+        "prepareEntities() creates Map of entity name to PreparedEntity",
+        "All fields are properly typed",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Create Optimized calculatePreparedSimilarity Method - Add a new similarity calculation method that uses PreparedEntity to avoid repeated Set creation, and add a helper for efficient set intersection size calculation",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts"],
+      "testCategories": [
+        "calculatePreparedSimilarity returns correct scores",
+        "setIntersectionSize calculates correctly",
+        "Results match original calculateEntitySimilarity"
+      ],
+      "implementation": {
+        "methods": [
+          "private calculatePreparedSimilarity(p1: PreparedEntity, p2: PreparedEntity): number",
+          "private setIntersectionSize(a: Set<string>, b: Set<string>): number"
+        ],
+        "keyDifferences": [
+          "Uses pre-computed nameLower instead of calling toLowerCase()",
+          "Uses pre-computed typeLower for type comparison",
+          "Uses pre-computed observationSet instead of creating new Set",
+          "Uses pre-computed tagSet instead of creating new Set",
+          "Uses setIntersectionSize helper to avoid creating intermediate Set"
+        ]
+      },
+      "stepByStep": [
+        "Open src/features/CompressionManager.ts",
+        "Find the existing calculateEntitySimilarity method (around line 32)",
+        "Add the setIntersectionSize helper method before calculateEntitySimilarity:",
+        "  /**",
+        "   * Efficiently calculate intersection size of two Sets without creating a new Set.",
+        "   * Iterates over the smaller set for O(min(m,n)) complexity.",
+        "   */",
+        "  private setIntersectionSize(a: Set<string>, b: Set<string>): number {",
+        "    const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];",
+        "    let count = 0;",
+        "    for (const item of smaller) {",
+        "      if (larger.has(item)) count++;",
+        "    }",
+        "    return count;",
+        "  }",
+        "Add the calculatePreparedSimilarity method after calculateEntitySimilarity:",
+        "  /**",
+        "   * Calculate similarity between two prepared entities.",
+        "   * OPTIMIZED: Uses pre-computed Sets to avoid O(n) set creation per comparison.",
+        "   *",
+        "   * @param p1 - First prepared entity",
+        "   * @param p2 - Second prepared entity",
+        "   * @returns Similarity score from 0 (completely different) to 1 (identical)",
+        "   */",
+        "  calculatePreparedSimilarity(p1: PreparedEntity, p2: PreparedEntity): number {",
+        "    let score = 0;",
+        "    let factors = 0;",
+        "",
+        "    // Name similarity (Levenshtein-based) - use pre-computed lowercase",
+        "    const nameDistance = levenshteinDistance(p1.nameLower, p2.nameLower);",
+        "    const maxNameLength = Math.max(p1.nameLower.length, p2.nameLower.length);",
+        "    const nameSimilarity = 1 - nameDistance / maxNameLength;",
+        "    score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;",
+        "    factors += SIMILARITY_WEIGHTS.NAME;",
+        "",
+        "    // Type similarity (exact match) - use pre-computed lowercase",
+        "    if (p1.typeLower === p2.typeLower) {",
+        "      score += SIMILARITY_WEIGHTS.TYPE;",
+        "    }",
+        "    factors += SIMILARITY_WEIGHTS.TYPE;",
+        "",
+        "    // Observation overlap (Jaccard similarity) - use pre-computed Sets",
+        "    const obsIntersectionSize = this.setIntersectionSize(p1.observationSet, p2.observationSet);",
+        "    const obsUnionSize = p1.observationSet.size + p2.observationSet.size - obsIntersectionSize;",
+        "    const observationSimilarity = obsUnionSize > 0 ? obsIntersectionSize / obsUnionSize : 0;",
+        "    score += observationSimilarity * SIMILARITY_WEIGHTS.OBSERVATIONS;",
+        "    factors += SIMILARITY_WEIGHTS.OBSERVATIONS;",
+        "",
+        "    // Tag overlap (Jaccard similarity) - use pre-computed Sets",
+        "    if (p1.tagSet.size > 0 || p2.tagSet.size > 0) {",
+        "      const tagIntersectionSize = this.setIntersectionSize(p1.tagSet, p2.tagSet);",
+        "      const tagUnionSize = p1.tagSet.size + p2.tagSet.size - tagIntersectionSize;",
+        "      const tagSimilarity = tagUnionSize > 0 ? tagIntersectionSize / tagUnionSize : 0;",
+        "      score += tagSimilarity * SIMILARITY_WEIGHTS.TAGS;",
+        "      factors += SIMILARITY_WEIGHTS.TAGS;",
+        "    }",
+        "",
+        "    return factors > 0 ? score / factors : 0;",
+        "  }",
+        "Update the JSDoc on the original calculateEntitySimilarity to note the optimized alternative:",
+        "  Add note: '* NOTE: For batch comparisons, use prepareEntities() + calculatePreparedSimilarity() for better performance.'",
+        "Run: npm run typecheck"
+      ],
+      "codeSnippets": {
+        "setIntersectionSize": "/**\n * Efficiently calculate intersection size of two Sets without creating a new Set.\n * Iterates over the smaller set for O(min(m,n)) complexity.\n */\nprivate setIntersectionSize(a: Set<string>, b: Set<string>): number {\n  // Always iterate over smaller set\n  const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];\n  let count = 0;\n  for (const item of smaller) {\n    if (larger.has(item)) count++;\n  }\n  return count;\n}",
+        "calculatePreparedSimilarity": "/**\n * Calculate similarity between two prepared entities.\n * OPTIMIZED: Uses pre-computed Sets to avoid O(n) set creation per comparison.\n *\n * @param p1 - First prepared entity\n * @param p2 - Second prepared entity\n * @returns Similarity score from 0 (completely different) to 1 (identical)\n */\nprivate calculatePreparedSimilarity(p1: PreparedEntity, p2: PreparedEntity): number {\n  let score = 0;\n  let factors = 0;\n\n  // Name similarity (Levenshtein-based) - use pre-computed lowercase\n  const nameDistance = levenshteinDistance(p1.nameLower, p2.nameLower);\n  const maxNameLength = Math.max(p1.nameLower.length, p2.nameLower.length);\n  const nameSimilarity = 1 - nameDistance / maxNameLength;\n  score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;\n  factors += SIMILARITY_WEIGHTS.NAME;\n\n  // Type similarity (exact match) - use pre-computed lowercase\n  if (p1.typeLower === p2.typeLower) {\n    score += SIMILARITY_WEIGHTS.TYPE;\n  }\n  factors += SIMILARITY_WEIGHTS.TYPE;\n\n  // Observation overlap (Jaccard similarity) - use pre-computed Sets\n  const obsIntersectionSize = this.setIntersectionSize(p1.observationSet, p2.observationSet);\n  const obsUnionSize = p1.observationSet.size + p2.observationSet.size - obsIntersectionSize;\n  const observationSimilarity = obsUnionSize > 0 ? obsIntersectionSize / obsUnionSize : 0;\n  score += observationSimilarity * SIMILARITY_WEIGHTS.OBSERVATIONS;\n  factors += SIMILARITY_WEIGHTS.OBSERVATIONS;\n\n  // Tag overlap (Jaccard similarity) - use pre-computed Sets\n  if (p1.tagSet.size > 0 || p2.tagSet.size > 0) {\n    const tagIntersectionSize = this.setIntersectionSize(p1.tagSet, p2.tagSet);\n    const tagUnionSize = p1.tagSet.size + p2.tagSet.size - tagIntersectionSize;\n    const tagSimilarity = tagUnionSize > 0 ? tagIntersectionSize / tagUnionSize : 0;\n    score += tagSimilarity * SIMILARITY_WEIGHTS.TAGS;\n    factors += SIMILARITY_WEIGHTS.TAGS;\n  }\n\n  return factors > 0 ? score / factors : 0;\n}"
+      },
+      "acceptanceCriteria": [
+        "calculatePreparedSimilarity() method added using pre-computed Sets",
+        "setIntersectionSize() helper method added to avoid creating intermediate Set",
+        "Original calculateEntitySimilarity() preserved for backward compatibility",
+        "JSDoc documentation added noting the optimized alternative",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Core",
+      "description": "Update findDuplicates to Use Prepared Entities - Modify the findDuplicates method to prepare all entities once before the comparison loop and use the optimized similarity calculation",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts"],
+      "testCategories": [
+        "Prepares entities once before loop",
+        "Uses calculatePreparedSimilarity for comparisons",
+        "Results match original findDuplicates"
+      ],
+      "implementation": {
+        "keyChanges": [
+          "Call prepareEntities() once at the start with all entities",
+          "In the comparison loop, use preparedEntities.get(name) instead of entity",
+          "Call calculatePreparedSimilarity(prepared1, prepared2) instead of calculateEntitySimilarity(entity1, entity2)"
+        ]
+      },
+      "stepByStep": [
+        "Open src/features/CompressionManager.ts",
+        "Find the findDuplicates method (around line 85)",
+        "After the line 'const graph = await this.storage.loadGraph();', add:",
+        "  // OPTIMIZATION: Pre-prepare all entities once before comparisons",
+        "  const preparedEntities = this.prepareEntities(graph.entities);",
+        "Find the inner comparison loop where calculateEntitySimilarity is called (around line 141)",
+        "Before the comparison, get the prepared entities:",
+        "  // OPTIMIZATION: Use prepared entity for comparison",
+        "  const prepared1 = preparedEntities.get(entity1.name)!;",
+        "Inside the loop for entity2, add:",
+        "  // OPTIMIZATION: Use prepared entity and optimized similarity",
+        "  const prepared2 = preparedEntities.get(entity2.name)!;",
+        "Change the similarity calculation from:",
+        "  const similarity = this.calculateEntitySimilarity(entity1, entity2);",
+        "To:",
+        "  const similarity = this.calculatePreparedSimilarity(prepared1, prepared2);",
+        "Move the prepared1 lookup outside the inner loop for efficiency:",
+        "  const prepared1 = preparedEntities.get(entity1.name)!; // Before inner loop",
+        "Run: npm run typecheck",
+        "Run: npx vitest run tests/unit/features/CompressionManager.test.ts"
+      ],
+      "codeSnippets": {
+        "preparation": "// OPTIMIZATION: Pre-prepare all entities once before comparisons\nconst preparedEntities = this.prepareEntities(graph.entities);",
+        "lookup": "// OPTIMIZATION: Use prepared entity for comparison\nconst prepared1 = preparedEntities.get(entity1.name)!;\n\nfor (let j = 0; j < candidateEntities.length; j++) {\n  const entity2 = candidateEntities[j];\n  if (entity1.name === entity2.name || processed.has(entity2.name)) continue;\n\n  // OPTIMIZATION: Use prepared entity and optimized similarity\n  const prepared2 = preparedEntities.get(entity2.name)!;\n  const similarity = this.calculatePreparedSimilarity(prepared1, prepared2);\n\n  if (similarity >= threshold) {\n    group.push(entity2.name);\n    processed.add(entity2.name);\n  }\n}"
+      },
+      "acceptanceCriteria": [
+        "prepareEntities() called once at start of findDuplicates",
+        "Comparison loop uses calculatePreparedSimilarity",
+        "prepared1 lookup is outside inner loop for efficiency",
+        "TypeScript compilation passes",
+        "All existing CompressionManager tests pass",
+        "Results are identical to original implementation"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Tests",
+      "description": "Add Benchmark Tests for Similarity Optimization - Add benchmark tests to verify the pre-computed similarity optimization provides measurable performance improvement",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["tests/performance/optimization-benchmarks.test.ts"],
+      "testCategories": [
+        "Benchmark shows performance improvement",
+        "Results are correct",
+        "Timing is logged for comparison"
+      ],
+      "implementation": {
+        "testDescription": "Create entities with observations and tags, run findDuplicates, measure time, verify results"
+      },
+      "stepByStep": [
+        "Open tests/performance/optimization-benchmarks.test.ts",
+        "Find the end of the existing test suites",
+        "Add a new describe block: describe('Pre-computed Similarity Optimization', () => { ... });",
+        "Add imports if needed at the top: import { CompressionManager } from '../../src/features/CompressionManager.js';",
+        "Create the test:",
+        "  it('should complete findDuplicates efficiently with prepared entities', async () => {",
+        "    // Create temp storage",
+        "    const testPath = join(tmpdir(), `bench-sim-${Date.now()}.jsonl`);",
+        "    const storage = new GraphStorage(testPath);",
+        "    ",
+        "    // Create 50 entities with observations and tags",
+        "    const entities = Array.from({ length: 50 }, (_, i) => ({",
+        "      name: `Entity${i}`,",
+        "      entityType: i % 5 === 0 ? 'special' : 'common',",
+        "      observations: [`Observation ${i}`, `Data point ${i % 10}`, `Detail about item ${i}`],",
+        "      tags: [`tag${i % 10}`, 'benchmark', `category${i % 5}`],",
+        "    }));",
+        "    ",
+        "    await storage.saveGraph({ entities, relations: [] });",
+        "    ",
+        "    const manager = new CompressionManager(storage);",
+        "    ",
+        "    // Time findDuplicates",
+        "    const start = Date.now();",
+        "    const duplicates = await manager.findDuplicates(0.7);",
+        "    const duration = Date.now() - start;",
+        "    ",
+        "    console.log(`findDuplicates (50 entities, optimized): ${duration}ms`);",
+        "    ",
+        "    // Should complete in reasonable time (< 500ms)",
+        "    expect(duration).toBeLessThan(500);",
+        "    ",
+        "    // Cleanup",
+        "    await fs.unlink(testPath).catch(() => {});",
+        "  });",
+        "Run: npx vitest run tests/performance/optimization-benchmarks.test.ts -t 'Pre-computed'"
+      ],
+      "acceptanceCriteria": [
+        "Benchmark test added to optimization-benchmarks.test.ts",
+        "Test measures and logs findDuplicates performance",
+        "Test verifies reasonable timing (< 500ms for 50 entities)",
+        "Test passes"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "PreparedEntity interface and helper methods created",
+    "calculatePreparedSimilarity() method implemented using pre-computed Sets",
+    "setIntersectionSize() helper avoids intermediate Set creation",
+    "findDuplicates() prepares entities once and uses optimized similarity",
+    "Benchmark test verifies performance improvement",
+    "npm run typecheck passes",
+    "All existing 2209+ tests pass"
+  ],
+  "filesCreated": [],
+  "filesModified": [
+    "src/features/CompressionManager.ts",
+    "tests/performance/optimization-benchmarks.test.ts"
+  ],
+  "totalNewTests": 1,
+  "totalEstimatedHours": 4,
+  "dependencies": [],
+  "notes": "This sprint optimizes the duplicate detection performance by pre-computing normalized data (lowercase strings, Sets) once per entity before the O(n²) comparison loop. The original calculateEntitySimilarity creates 4 new Sets per comparison - with 100 entities that's potentially 40,000 Set creations. By pre-computing once, we reduce this to 100 Set creations. The setIntersectionSize helper further avoids creating a third Set for the intersection calculation."
+}

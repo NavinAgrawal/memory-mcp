@@ -1,0 +1,262 @@
+{
+  "phase": 9,
+  "sprint": 3,
+  "title": "Reduce Graph Reloads in compressGraph",
+  "priority": "MEDIUM",
+  "effort": "4 hours",
+  "status": "pending",
+  "impact": "10x I/O reduction for compress_graph operations by loading the graph once and passing it to all merge operations instead of reloading for each merge group",
+  "targetMetrics": {
+    "compressGraph10Groups": { "current": "10+ loadGraph calls, 10+ saveGraph calls", "target": "2 loadGraph calls, 1 saveGraph call" },
+    "ioOperations": { "current": "O(n) where n = merge groups", "target": "O(1) constant" },
+    "diskReads": { "current": "~100KB per group read", "target": "~100KB total" }
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "category": "Core",
+      "description": "Refactor mergeEntities for External Graph - Modify the mergeEntities method to accept an optional pre-loaded graph parameter and a skipSave option, allowing it to operate on an already-loaded graph instead of reloading each time",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts"],
+      "testCategories": [
+        "mergeEntities works with provided graph",
+        "mergeEntities works with skipSave option",
+        "Backward compatible without options",
+        "Entity merging logic unchanged"
+      ],
+      "implementation": {
+        "signatureChange": "Add optional options parameter with graph and skipSave fields",
+        "behaviorChange": [
+          "If options.graph provided, use it instead of calling loadGraph()",
+          "If options.skipSave is true, don't save at the end (caller will save)",
+          "Default behavior unchanged when no options provided"
+        ]
+      },
+      "stepByStep": [
+        "Open src/features/CompressionManager.ts",
+        "Find the mergeEntities method (around line 160, search for 'async mergeEntities')",
+        "Note the current signature: async mergeEntities(entityNames: string[]): Promise<Entity>",
+        "Change the signature to accept options:",
+        "  async mergeEntities(",
+        "    entityNames: string[],",
+        "    options: {",
+        "      graph?: KnowledgeGraph;",
+        "      skipSave?: boolean;",
+        "    } = {}",
+        "  ): Promise<Entity>",
+        "Update the JSDoc to document new options:",
+        "  * @param options - Optional configuration",
+        "  * @param options.graph - Pre-loaded graph to use (avoids reload)",
+        "  * @param options.skipSave - If true, don't save (caller will save)",
+        "Inside the method, change the graph loading line from:",
+        "  const graph = await this.storage.loadGraph();",
+        "To:",
+        "  // Use provided graph or load fresh",
+        "  const graph = options.graph ?? await this.storage.loadGraph();",
+        "Find the saveGraph call at the end of the method (search for 'saveGraph')",
+        "Wrap it in a condition:",
+        "  // Save unless caller said to skip",
+        "  if (!options.skipSave) {",
+        "    await this.storage.saveGraph(graph);",
+        "  }",
+        "Make sure KnowledgeGraph is imported if not already (check imports at top)",
+        "Run: npm run typecheck",
+        "Run: npx vitest run tests/unit/features/CompressionManager.test.ts -t 'merge'"
+      ],
+      "codeSnippets": {
+        "signature": "/**\n * Merge multiple entities into one, combining their observations and tags.\n *\n * @param entityNames - Array of entity names to merge (first becomes primary)\n * @param options - Optional configuration\n * @param options.graph - Pre-loaded graph to use (avoids reload)\n * @param options.skipSave - If true, don't save (caller will save)\n * @returns The merged entity\n * @throws EntityNotFoundError if any entity doesn't exist\n * @throws InsufficientEntitiesError if fewer than 2 entities provided\n */\nasync mergeEntities(\n  entityNames: string[],\n  options: {\n    graph?: KnowledgeGraph;\n    skipSave?: boolean;\n  } = {}\n): Promise<Entity> {",
+        "graphLoading": "// Use provided graph or load fresh\nconst graph = options.graph ?? await this.storage.loadGraph();",
+        "conditionalSave": "// Save unless caller said to skip\nif (!options.skipSave) {\n  await this.storage.saveGraph(graph);\n}"
+      },
+      "acceptanceCriteria": [
+        "mergeEntities accepts optional options parameter",
+        "Uses provided graph when options.graph is given",
+        "Skips save when options.skipSave is true",
+        "Default behavior unchanged (loads graph, saves after)",
+        "TypeScript compilation passes",
+        "All existing merge tests pass"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Core",
+      "description": "Optimize compressGraph Method - Refactor the compressGraph method to load the graph once at the start, pass it to all merge operations with skipSave, and save only once at the end",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts"],
+      "testCategories": [
+        "Loads graph only twice (findDuplicates + compressGraph)",
+        "Saves graph only once at end",
+        "All merge operations use same graph instance",
+        "Results match original implementation"
+      ],
+      "implementation": {
+        "keyChanges": [
+          "Load graph once after findDuplicates",
+          "Pass graph to each mergeEntities call with skipSave: true",
+          "Save graph once after all merges complete",
+          "Count observations before/after using the same graph instance"
+        ]
+      },
+      "stepByStep": [
+        "Open src/features/CompressionManager.ts",
+        "Find the compressGraph method (around line 260, search for 'async compressGraph')",
+        "The current implementation has these issues:",
+        "  - Inside the for loop, it calls loadGraph() for preGraph observation counting",
+        "  - mergeEntities internally calls loadGraph() and saveGraph()",
+        "Refactor the method as follows:",
+        "",
+        "Step 1: After findDuplicates, load the graph once:",
+        "  // OPTIMIZATION: Load graph once for all operations",
+        "  const graph = await this.storage.loadGraph();",
+        "  const initialSize = JSON.stringify(graph).length;",
+        "",
+        "Step 2: In the for loop, remove the preGraph loading:",
+        "  // OLD: const preGraph = await this.storage.loadGraph();",
+        "  // NEW: Use the already-loaded graph",
+        "",
+        "Step 3: Count observations using the same graph:",
+        "  let totalObservationsBefore = 0;",
+        "  for (const name of group) {",
+        "    const entity = graph.entities.find(e => e.name === name);",
+        "    if (entity) {",
+        "      totalObservationsBefore += entity.observations.length;",
+        "    }",
+        "  }",
+        "",
+        "Step 4: Pass graph to mergeEntities with skipSave:",
+        "  const mergedEntity = await this.mergeEntities(group, {",
+        "    graph,",
+        "    skipSave: true,",
+        "  });",
+        "",
+        "Step 5: After the loop, save once:",
+        "  // OPTIMIZATION: Save once after all merges complete",
+        "  await this.storage.saveGraph(graph);",
+        "",
+        "Step 6: Calculate final size using the same graph (already modified in memory):",
+        "  const finalSize = JSON.stringify(graph).length;",
+        "  result.spaceFreed = initialSize - finalSize;",
+        "",
+        "Add JSDoc noting the optimization:",
+        "  * OPTIMIZED: Loads graph once, performs all merges, saves once.",
+        "",
+        "Run: npm run typecheck",
+        "Run: npx vitest run tests/unit/features/CompressionManager.test.ts"
+      ],
+      "codeSnippets": {
+        "loadOnce": "// Find duplicates first\nconst duplicateGroups = await this.findDuplicates(threshold);\n\n// OPTIMIZATION: Load graph once for all operations\nconst graph = await this.storage.loadGraph();\nconst initialSize = JSON.stringify(graph).length;",
+        "mergeCall": "// OPTIMIZATION: Pass graph and skip individual saves\nconst mergedEntity = await this.mergeEntities(group, {\n  graph,\n  skipSave: true,\n});",
+        "saveOnce": "// OPTIMIZATION: Save once after all merges complete\nawait this.storage.saveGraph(graph);\n\n// Calculate space saved (graph already modified in memory)\nconst finalSize = JSON.stringify(graph).length;\nresult.spaceFreed = initialSize - finalSize;",
+        "fullMethod": "/**\n * Compress the graph by merging duplicate entities.\n * OPTIMIZED: Loads graph once, performs all merges, saves once.\n *\n * @param threshold - Similarity threshold for duplicates\n * @param dryRun - If true, only report what would happen\n * @returns Compression result with statistics\n */\nasync compressGraph(\n  threshold: number = DEFAULT_DUPLICATE_THRESHOLD,\n  dryRun: boolean = false\n): Promise<CompressionResult> {\n  const duplicateGroups = await this.findDuplicates(threshold);\n\n  // OPTIMIZATION: Load graph once for all operations\n  const graph = await this.storage.loadGraph();\n  const initialSize = JSON.stringify(graph).length;\n\n  const result: CompressionResult = {\n    duplicatesFound: duplicateGroups.reduce((sum, group) => sum + group.length, 0),\n    entitiesMerged: 0,\n    observationsCompressed: 0,\n    relationsConsolidated: 0,\n    spaceFreed: 0,\n    mergedEntities: [],\n  };\n\n  if (dryRun) {\n    for (const group of duplicateGroups) {\n      result.mergedEntities.push({\n        kept: group[0],\n        merged: group.slice(1),\n      });\n      result.entitiesMerged += group.length - 1;\n    }\n    return result;\n  }\n\n  // Merge all duplicates using the same graph instance\n  for (const group of duplicateGroups) {\n    try {\n      // Count observations before merge using loaded graph\n      let totalObservationsBefore = 0;\n      for (const name of group) {\n        const entity = graph.entities.find(e => e.name === name);\n        if (entity) {\n          totalObservationsBefore += entity.observations.length;\n        }\n      }\n\n      // OPTIMIZATION: Pass graph and skip individual saves\n      const mergedEntity = await this.mergeEntities(group, {\n        graph,\n        skipSave: true,\n      });\n\n      const observationsAfter = mergedEntity.observations.length;\n      result.observationsCompressed += totalObservationsBefore - observationsAfter;\n\n      result.mergedEntities.push({\n        kept: group[0],\n        merged: group.slice(1),\n      });\n      result.entitiesMerged += group.length - 1;\n    } catch (error) {\n      console.error(`Failed to merge group ${group}:`, error);\n    }\n  }\n\n  // OPTIMIZATION: Save once after all merges complete\n  await this.storage.saveGraph(graph);\n\n  const finalSize = JSON.stringify(graph).length;\n  result.spaceFreed = initialSize - finalSize;\n  result.relationsConsolidated = result.entitiesMerged;\n\n  return result;\n}"
+      },
+      "acceptanceCriteria": [
+        "compressGraph loads graph once after findDuplicates",
+        "All mergeEntities calls use the same graph instance",
+        "mergeEntities called with skipSave: true",
+        "Graph saved only once at the end",
+        "Observation counting uses the loaded graph, not a new load",
+        "TypeScript compilation passes",
+        "All existing compression tests pass"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Tests",
+      "description": "Add Integration Tests for Reduced Graph Reloads - Create integration tests that verify the reduced graph reload behavior using spies to count loadGraph and saveGraph calls",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["tests/integration/compression-optimization.test.ts"],
+      "testCategories": [
+        "Verifies loadGraph called minimal times",
+        "Verifies saveGraph called only once",
+        "Verifies correct merge results",
+        "Verifies graceful error handling"
+      ],
+      "implementation": {
+        "spyStrategy": "Use vi.spyOn to count loadGraph and saveGraph calls",
+        "testScenarios": [
+          "Multiple merge groups should only load graph twice (findDuplicates + compressGraph)",
+          "Should only save once at end",
+          "Merge results should be correct",
+          "Errors in one group shouldn't corrupt graph"
+        ]
+      },
+      "stepByStep": [
+        "Create new file: tests/integration/compression-optimization.test.ts",
+        "Add imports:",
+        "  import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';",
+        "  import { GraphStorage } from '../../src/core/GraphStorage.js';",
+        "  import { CompressionManager } from '../../src/features/CompressionManager.js';",
+        "  import { promises as fs } from 'fs';",
+        "  import { join } from 'path';",
+        "  import { tmpdir } from 'os';",
+        "Add describe block:",
+        "  describe('Compression Optimization - Reduced Graph Reloads', () => {",
+        "Add test variables:",
+        "  let testDir: string;",
+        "  let storage: GraphStorage;",
+        "  let compressionManager: CompressionManager;",
+        "Add beforeEach to create temp directory and storage:",
+        "  beforeEach(async () => {",
+        "    testDir = join(tmpdir(), `compress-opt-${Date.now()}-${Math.random().toString(36).slice(2)}`);",
+        "    await fs.mkdir(testDir, { recursive: true });",
+        "    const storagePath = join(testDir, 'test.jsonl');",
+        "    storage = new GraphStorage(storagePath);",
+        "    compressionManager = new CompressionManager(storage);",
+        "  });",
+        "Add afterEach to clean up:",
+        "  afterEach(async () => {",
+        "    try { await fs.rm(testDir, { recursive: true, force: true }); } catch { }",
+        "  });",
+        "Add test 1: should only load graph minimal times for multiple merge groups",
+        "  Create 6 entities forming 3 duplicate pairs",
+        "  Spy on loadGraph and saveGraph",
+        "  Call compressGraph",
+        "  Expect loadGraph called 2 times (findDuplicates + compressGraph)",
+        "  Expect saveGraph called 1 time",
+        "Add test 2: should correctly merge all groups in single transaction",
+        "  Verify final graph state has correct entities",
+        "  Verify merged entities are removed",
+        "Add test 3: should handle failures gracefully without corrupting graph",
+        "  Verify graph is still valid after operation",
+        "Run: npx vitest run tests/integration/compression-optimization.test.ts"
+      ],
+      "codeSnippets": {
+        "testWithSpies": "it('should only load graph twice for multiple merge groups', async () => {\n  // Create entities with duplicates in multiple groups\n  const entities = [\n    { name: 'Entity1', entityType: 'test', observations: ['obs1'] },\n    { name: 'Entity1Copy', entityType: 'test', observations: ['obs1', 'extra'] },\n    { name: 'Entity2', entityType: 'test', observations: ['obs2'] },\n    { name: 'Entity2Copy', entityType: 'test', observations: ['obs2', 'extra2'] },\n    { name: 'Entity3', entityType: 'test', observations: ['obs3'] },\n    { name: 'Entity3Copy', entityType: 'test', observations: ['obs3', 'extra3'] },\n  ];\n\n  await storage.saveGraph({ entities, relations: [] });\n\n  // Spy on loadGraph and saveGraph to count calls\n  const loadSpy = vi.spyOn(storage, 'loadGraph');\n  const saveSpy = vi.spyOn(storage, 'saveGraph');\n\n  // Compress with high threshold to force merges\n  await compressionManager.compressGraph(0.7, false);\n\n  // Should only have 2 loads: 1 for findDuplicates, 1 for compressGraph\n  expect(loadSpy).toHaveBeenCalledTimes(2);\n\n  // Should only save once at the end\n  expect(saveSpy).toHaveBeenCalledTimes(1);\n});",
+        "testMergeResults": "it('should correctly merge all groups in single transaction', async () => {\n  const entities = [\n    { name: 'Alpha', entityType: 'person', observations: ['works at company'] },\n    { name: 'AlphaCopy', entityType: 'person', observations: ['works at company', 'loves coding'] },\n    { name: 'Beta', entityType: 'person', observations: ['manager role'] },\n    { name: 'BetaCopy', entityType: 'person', observations: ['manager role', 'leads team'] },\n  ];\n\n  await storage.saveGraph({ entities, relations: [] });\n\n  const result = await compressionManager.compressGraph(0.7, false);\n\n  expect(result.entitiesMerged).toBeGreaterThan(0);\n\n  const finalGraph = await storage.loadGraph();\n  expect(finalGraph.entities.length).toBe(2);\n  expect(finalGraph.entities.find(e => e.name === 'Alpha')).toBeDefined();\n  expect(finalGraph.entities.find(e => e.name === 'Beta')).toBeDefined();\n  expect(finalGraph.entities.find(e => e.name === 'AlphaCopy')).toBeUndefined();\n});"
+      },
+      "acceptanceCriteria": [
+        "Integration test file created at tests/integration/compression-optimization.test.ts",
+        "Tests use vi.spyOn to verify loadGraph and saveGraph call counts",
+        "Tests verify loadGraph called only 2 times total",
+        "Tests verify saveGraph called only 1 time",
+        "Tests verify correct merge results",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "mergeEntities accepts optional graph and skipSave options",
+    "compressGraph loads graph only twice (findDuplicates + main operation)",
+    "compressGraph saves graph only once at the end",
+    "All merge operations use the same graph instance",
+    "Integration tests verify reduced I/O with spies",
+    "npm run typecheck passes",
+    "All existing 2209+ tests pass"
+  ],
+  "filesCreated": [
+    "tests/integration/compression-optimization.test.ts"
+  ],
+  "filesModified": [
+    "src/features/CompressionManager.ts"
+  ],
+  "totalNewTests": 3,
+  "totalEstimatedHours": 4,
+  "dependencies": [],
+  "notes": "This sprint reduces I/O operations in compressGraph from O(n) to O(1) where n is the number of duplicate groups. Previously, each merge group triggered multiple loadGraph and saveGraph calls. After optimization, the graph is loaded once, all merges operate on the same in-memory instance, and it's saved once at the end. This dramatically improves performance for graphs with many duplicate groups. NOTE: This sprint is independent of Sprint 1 and Sprint 2 - all three can run in parallel."
+}

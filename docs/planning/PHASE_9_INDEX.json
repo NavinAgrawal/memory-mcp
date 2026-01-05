@@ -1,0 +1,124 @@
+{
+  "phase": 9,
+  "title": "Advanced Optimizations",
+  "version": "1.0.0",
+  "created": "2026-01-04",
+  "status": "planned",
+  "description": "Phase 9 implements advanced optimizations from the Future Features Roadmap (Phase 3). These enhancements target CPU-intensive operations in duplicate detection, compression, and search, enabling memory-mcp to scale efficiently for complex knowledge graph operations.",
+  "sourceDocument": "docs/roadmap/FUTURE_FEATURES.md - Phase 3: Advanced Optimizations",
+  "prerequisites": [
+    "Phase 8 (Workerpool Integration) complete",
+    "All 2209+ tests passing",
+    "npm run typecheck passes"
+  ],
+  "targetMetrics": {
+    "observationLookup": { "current": "O(n) linear scan", "target": "O(1) index lookup", "improvement": "10-50x" },
+    "entitySimilarityCalc": { "current": "Creates 4 Sets per comparison", "target": "Pre-computed once", "improvement": "1.5-2x" },
+    "compressGraphIO": { "current": "O(n) graph loads per group", "target": "O(1) constant", "improvement": "10x" },
+    "duplicateDetection1000": { "current": "~500ms", "target": "~250ms", "improvement": "2x" }
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Observation Index",
+      "file": "PHASE_9_SPRINT_1_TODO.json",
+      "priority": "HIGH",
+      "effort": "6 hours",
+      "status": "pending",
+      "tasks": 4,
+      "impact": "10-50x speedup for observation-based searches",
+      "keyDeliverables": [
+        "ObservationIndex class in indexes.ts",
+        "GraphStorage integration with observation index",
+        "BooleanSearch using observation index",
+        "17+ unit tests for observation index"
+      ]
+    },
+    {
+      "sprint": 2,
+      "title": "Pre-computed Similarity Data",
+      "file": "PHASE_9_SPRINT_2_TODO.json",
+      "priority": "MEDIUM",
+      "effort": "4 hours",
+      "status": "pending",
+      "tasks": 4,
+      "impact": "1.5-2x speedup for duplicate detection",
+      "keyDeliverables": [
+        "PreparedEntity interface",
+        "calculatePreparedSimilarity() method",
+        "setIntersectionSize() helper",
+        "findDuplicates using prepared entities",
+        "Benchmark test for similarity optimization"
+      ]
+    },
+    {
+      "sprint": 3,
+      "title": "Reduce Graph Reloads in compressGraph",
+      "file": "PHASE_9_SPRINT_3_TODO.json",
+      "priority": "MEDIUM",
+      "effort": "4 hours",
+      "status": "pending",
+      "tasks": 3,
+      "impact": "10x I/O reduction for compress_graph operations",
+      "keyDeliverables": [
+        "mergeEntities with optional graph/skipSave",
+        "compressGraph optimized to load once, save once",
+        "Integration tests with spies verifying I/O reduction"
+      ]
+    }
+  ],
+  "totalTasks": 11,
+  "totalEstimatedHours": 14,
+  "totalNewTests": 21,
+  "filesCreated": [
+    "tests/unit/utils/observationIndex.test.ts",
+    "tests/integration/compression-optimization.test.ts"
+  ],
+  "filesModified": [
+    "src/utils/indexes.ts",
+    "src/core/GraphStorage.ts",
+    "src/search/BooleanSearch.ts",
+    "src/features/CompressionManager.ts",
+    "tests/performance/optimization-benchmarks.test.ts"
+  ],
+  "sprintDependencies": {
+    "parallelGroup1": ["Sprint 1", "Sprint 2", "Sprint 3"],
+    "notes": "All three sprints are independent and can run in parallel. Sprint 1 optimizes observation searches, Sprint 2 optimizes similarity calculations, Sprint 3 optimizes I/O operations."
+  },
+  "riskAssessment": [
+    {
+      "risk": "ObservationIndex memory overhead",
+      "probability": "Medium",
+      "impact": "Low",
+      "mitigation": "Only index words >= 2 chars, lazy build"
+    },
+    {
+      "risk": "PreparedEntity cache invalidation",
+      "probability": "Low",
+      "impact": "Medium",
+      "mitigation": "Always prepare fresh for each operation"
+    },
+    {
+      "risk": "Merge transaction failure",
+      "probability": "Low",
+      "impact": "High",
+      "mitigation": "Catch errors, skip failed groups, log warnings"
+    },
+    {
+      "risk": "Backward compatibility",
+      "probability": "Low",
+      "impact": "Medium",
+      "mitigation": "Keep original methods, add optimized variants"
+    }
+  ],
+  "successCriteria": [
+    "All 2209+ existing tests pass",
+    "21 new tests created and passing",
+    "No TypeScript compilation errors",
+    "No performance regressions for simple operations",
+    "Observation lookups are O(1) verified by benchmarks",
+    "Duplicate detection 1.5-2x faster verified by benchmarks",
+    "compressGraph I/O reduced to O(1) verified by spies"
+  ],
+  "rollbackPlan": "Each optimization is isolated. If issues found:\n1. Observation Index: Remove index property and integration, restore linear scans\n2. Pre-computed Similarity: Revert findDuplicates to use calculateEntitySimilarity\n3. Reduced Reloads: Remove options from mergeEntities, restore multiple loads/saves"
+}
