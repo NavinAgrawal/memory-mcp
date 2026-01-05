@@ -219,3 +219,32 @@ export {
   defaultMemoryPath,
   ensureMemoryFilePath,
 } from './entityUtils.js';
+
+// ==================== Parallel Utilities ====================
+export {
+  parallelMap,
+  parallelFilter,
+  getPoolStats,
+  shutdownParallelUtils,
+} from './parallelUtils.js';
+
+// ==================== Task Scheduler ====================
+export {
+  // Types and Enums
+  TaskPriority,
+  TaskStatus,
+  type Task,
+  type TaskResult,
+  type ProgressCallback,
+  type BatchOptions,
+  type QueueStats,
+  // Task Queue
+  TaskQueue,
+  // Batch Processing
+  batchProcess,
+  rateLimitedProcess,
+  withRetry,
+  // Rate Limiting
+  debounce,
+  throttle,
+} from './taskScheduler.js';

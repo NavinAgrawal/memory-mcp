@@ -4,7 +4,8 @@
   "title": "Advanced Scheduling (Optional)",
   "priority": "LOW",
   "effort": "2-3 hours",
-  "status": "pending",
+  "status": "completed",
+  "completedAt": "2026-01-04",
   "impact": "Evaluate and implement AdvancedPool for optimal task distribution",
   "targetMetrics": {
     "workerUtilization": { "current": "FIFO scheduling", "target": "Intelligent scheduling" },
@@ -15,7 +16,7 @@
       "id": 1,
       "category": "Analysis",
       "description": "Evaluate AdvancedPool benefits for memory-mcp",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.5,
       "stepByStep": [
         "Review AdvancedPool documentation",
@@ -40,7 +41,7 @@
       "id": 2,
       "category": "Core",
       "description": "Implement AdvancedPool if beneficial",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1,
       "files": ["src/search/FuzzySearch.ts"],
       "stepByStep": [
@@ -60,7 +61,7 @@
       "id": 3,
       "category": "Core",
       "description": "Add task affinity for related searches",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.75,
       "files": ["src/search/FuzzySearch.ts"],
       "stepByStep": [
@@ -81,7 +82,7 @@
       "id": 4,
       "category": "Tests",
       "description": "Benchmark advanced scheduling",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.75,
       "files": ["tests/performance/advanced-scheduling.test.ts"],
       "stepByStep": [

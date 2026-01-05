@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm install           # Install all dependencies
 npm run build         # Build TypeScript → JavaScript
-npm test              # Run tests with coverage (2109 tests)
+npm test              # Run tests with coverage
 npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directory
@@ -24,7 +24,7 @@ npx vitest run -t "should create entities"
 
 This is an enhanced MCP memory server with **54 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
-**Version:** 9.2.2 | **npm:** @danielsimonjr/memory-mcp
+**npm:** @danielsimonjr/memory-mcp
 
 ### Layered Architecture
 
@@ -54,16 +54,16 @@ This is an enhanced MCP memory server with **54 tools** (vs 11 in official versi
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 11 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (Phase 4: graph algorithms), index |
-| **features/** | 7 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (Phase 7: memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, index |
+| **core/** | 11 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (graph algorithms), index |
+| **features/** | 7 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, index |
 | **search/** | 13 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, EmbeddingService, VectorStore, SemanticSearch, index |
-| **server/** | 4 | MCPServer.ts (67 lines), toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
+| **server/** | 4 | MCPServer.ts, toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
 | **utils/** | 12 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
-| **workers/** | 3 | WorkerPool (Phase 7: parallel processing), levenshteinWorker (fuzzy search worker), index |
+| **workers/** | 3 | levenshteinWorker (workerpool-based fuzzy search worker), index |
 | **root** | 1 | index.ts (entry point) |
 
-> **Phase 5 Cleanup**: utils/ consolidated from 17→10 files, types/ from 7→2 files, folder structure simplified
+> **Note**: utils/ consolidated to 10 files, types/ consolidated to 2 files for maintainability
 
 ### Key Design Patterns
 
@@ -104,7 +104,7 @@ interface Relation {
 - `memory-saved-searches.jsonl` - Saved search queries
 - `memory-tag-aliases.jsonl` - Tag synonym mappings
 
-**SQLite (Optional - Phase 8):**
+**SQLite (Optional):**
 - `memory.db` - SQLite database with all data
 - Configure via `MEMORY_STORAGE_TYPE=sqlite` environment variable
 - Uses better-sqlite3 (native SQLite) for 3-10x faster performance
@@ -148,7 +148,7 @@ interface Relation {
 
 ## Test Structure
 
-Tests are in `tests/` (2152 tests, 58 files):
+Tests are in `tests/`:
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
@@ -162,7 +162,7 @@ Tests are in `tests/` (2152 tests, 58 files):
 | unit/core/GraphStorage.test.ts | 10 | JSONL storage layer |
 | unit/core/SQLiteStorage.test.ts | 31 | SQLite storage layer |
 | unit/core/RelationManager.test.ts | 24 | Relation operations |
-| unit/core/GraphTraversal.test.ts | 41 | Graph traversal algorithms (Phase 4 + Phase 7 centrality) |
+| unit/core/GraphTraversal.test.ts | 41 | Graph traversal algorithms (BFS, DFS, centrality) |
 | unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
 | unit/features/ArchiveManager.test.ts | 42 | Entity archival + compression (via EntityManager) |
 | unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
@@ -179,9 +179,9 @@ Tests are in `tests/` (2152 tests, 58 files):
 | unit/search/SearchFilterChain.test.ts | 48 | Filter logic |
 | unit/search/SearchSuggestions.test.ts | 24 | "Did you mean?" |
 | unit/search/TFIDFIndexManager.test.ts | 38 | TF-IDF indexing |
-| unit/search/EmbeddingService.test.ts | 31 | Embedding service abstraction (Phase 4) |
-| unit/search/VectorStore.test.ts | 32 | Vector storage & similarity search (Phase 4) |
-| unit/search/SemanticSearch.test.ts | 27 | Semantic search manager (Phase 4) |
+| unit/search/EmbeddingService.test.ts | 31 | Embedding service abstraction |
+| unit/search/VectorStore.test.ts | 32 | Vector storage & similarity search |
+| unit/search/SemanticSearch.test.ts | 27 | Semantic search manager |
 | unit/utils/entityUtils.test.ts | 32 | Entity utilities |
 | unit/utils/indexes.test.ts | 24 | Search indexes |
 | unit/utils/levenshtein.test.ts | 12 | String distance |
@@ -192,9 +192,9 @@ Tests are in `tests/` (2152 tests, 58 files):
 | unit/utils/compressedCache.test.ts | 42 | LRU cache with compression |
 | unit/server/responseCompressor.test.ts | 25 | MCP response compression |
 | performance/compression-benchmarks.test.ts | 9 | Compression performance benchmarks |
-| unit/features/StreamingExporter.test.ts | 9 | Streaming export (Phase 7) |
-| integration/streaming-export.test.ts | 6 | Streaming export integration (Phase 7) |
-| unit/workers/WorkerPool.test.ts | 8 | Worker pool for parallel processing (Phase 7) |
+| unit/features/StreamingExporter.test.ts | 9 | Streaming export |
+| integration/streaming-export.test.ts | 6 | Streaming export integration |
+| unit/workers/WorkerPool.test.ts | 8 | Worker pool for parallel processing |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 
@@ -225,49 +225,28 @@ tests/test-results/
 
 ## Performance & Optimizations
 
-- **O(1) read operations** - Direct cache access without copying (Sprint 1)
-- **O(1) single-entity writes** - Append-only file operations (Sprint 2)
-- **Append-only update pattern** - File deduplication on load
+- **O(1) read operations** via direct cache access
+- **O(1) single-entity writes** via append-only file operations
 - In-memory caching with write-through invalidation
-- 50x faster duplicate detection using two-level bucketing
-- Lazy TF-IDF index loading
-- Lazy manager initialization (6 managers load on-demand)
+- Lazy manager initialization (managers load on-demand)
 - Batch operations support via TransactionManager
-- Handles 2000+ entities efficiently
-- **Phase 4 Search Caching**:
-  - Bidirectional relation cache with O(1) repeated lookups
-  - RankedSearch token cache with entity count invalidation
-  - Fuzzy search result cache with TTL (5 minutes) and LRU eviction
-  - Boolean search AST cache (50 entries) and result cache (100 entries)
-  - Cache management methods: `clearAllCaches()`, `clearFuzzyCache()`, `clearBooleanCache()`, `clearRankedCache()`
-- **Phase 7 Centrality Optimizations**:
-  - Chunked processing for betweenness centrality (yields control every N vertices, default 50)
-  - Progress callbacks for long-running centrality calculations
-  - Approximation mode for betweenness (sampling-based, configurable sample rate 0.01-1.0)
-  - Non-blocking event loop prevents UI freezing on large graphs
-- **Phase 7 Streaming Exports**:
-  - StreamingExporter for memory-efficient large graph exports (JSONL, CSV)
-  - Auto-streaming for graphs >= 5000 entities when outputPath provided
-  - Manual streaming via `streaming: true` option on export_graph tool
-  - 50-70% memory reduction for large exports
-- **Phase 7 Parallel Fuzzy Search**:
-  - WorkerPool for parallel Levenshtein distance calculations
-  - 2-4x speedup for fuzzy search on large graphs (>= 500 entities with threshold < 0.8)
-  - Lazy worker pool initialization to minimize resource usage
+- Search caching with TTL and LRU eviction
+- Streaming exports for large graphs (>= 5000 entities)
+- Parallel fuzzy search via worker pool
 
-## Server Architecture (v0.44.0+)
+## Server Architecture
 
-- **MCPServer.ts**: 66 lines (reduced from 907, 92.6% reduction)
-- **toolDefinitions.ts**: 920 lines - all 54 tool schemas organized by category (including Graph Algorithms and Semantic Search)
-- **toolHandlers.ts**: 400 lines - handler registry, dispatch logic, and response compression wrapper
-- **responseCompressor.ts**: 170 lines - automatic brotli compression for large responses (>256KB)
-- **Consolidated constants**: SIMILARITY_WEIGHTS centralized in constants.ts
-- **GraphTraversal.ts**: 600+ lines - BFS, DFS, shortest path, all paths, connected components, centrality (degree, betweenness with chunking/approximation, PageRank)
+- **MCPServer.ts**: Main server entry point
+- **toolDefinitions.ts**: All 54 tool schemas organized by category
+- **toolHandlers.ts**: Handler registry and dispatch logic
+- **responseCompressor.ts**: Automatic brotli compression for large responses (>256KB)
+- **GraphTraversal.ts**: Graph algorithms (BFS, DFS, shortest path, centrality)
 
 ## Dependencies
 
 **Production:**
 - @modelcontextprotocol/sdk: ^1.21.1
+- @danielsimonjr/workerpool: Worker pool management
 - better-sqlite3: ^11.7.0
 - zod: ^4.1.13
 

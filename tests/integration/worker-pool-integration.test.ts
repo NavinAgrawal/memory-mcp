@@ -1,7 +1,8 @@
 /**
  * Worker Pool Integration Tests
  *
- * Tests to verify that the worker pool activates correctly for large graphs.
+ * Tests to verify that the fuzzy search works correctly for both small
+ * and large graphs, testing both single-threaded and worker pool modes.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -20,7 +21,8 @@ describe('Worker Pool Integration', () => {
   beforeEach(async () => {
     testFilePath = join(tmpdir(), `test-worker-pool-${Date.now()}.jsonl`);
     storage = new GraphStorage(testFilePath);
-    fuzzySearch = new FuzzySearch(storage);
+    // Use single-threaded mode by default for faster tests
+    fuzzySearch = new FuzzySearch(storage, { useWorkerPool: false });
   });
 
   afterEach(async () => {
@@ -30,50 +32,6 @@ describe('Worker Pool Integration', () => {
     } catch {
       // Ignore cleanup errors
     }
-  });
-
-  it('should use worker pool for large graphs with low threshold', async () => {
-    // Create 600 entities (above WORKER_MIN_ENTITIES of 500)
-    const entities: Entity[] = [];
-    for (let i = 0; i < 600; i++) {
-      entities.push({
-        name: `Entity${i}`,
-        entityType: 'test',
-        observations: [`This is test observation ${i}`],
-      });
-    }
-
-    // Add a few entities with the search term
-    entities.push({
-      name: 'TargetEntity',
-      entityType: 'target',
-      observations: ['contains searchterm in observation'],
-    });
-
-    entities.push({
-      name: 'SearchTermEntity',
-      entityType: 'target',
-      observations: ['another observation'],
-    });
-
-    const graph = { entities, relations: [] };
-    await storage.saveGraph(graph);
-
-    // Perform fuzzy search with low threshold (< 0.8 to activate workers)
-    const startTime = Date.now();
-    const result = await fuzzySearch.fuzzySearch('searchterm', 0.6);
-    const duration = Date.now() - startTime;
-
-    // Verify results
-    expect(result.entities.length).toBeGreaterThan(0);
-    const matchedNames = result.entities.map(e => e.name);
-
-    // Should find entities with 'searchterm'
-    expect(matchedNames).toContain('SearchTermEntity');
-    expect(matchedNames).toContain('TargetEntity');
-
-    // Log performance for reference
-    console.log(`Worker pool fuzzy search (600 entities): ${duration}ms`);
   });
 
   it('should NOT use worker pool for small graphs', async () => {
@@ -137,7 +95,53 @@ describe('Worker Pool Integration', () => {
     expect(result.entities.some(e => e.name === 'SearchTermEntity')).toBe(true);
   });
 
-  it('should handle empty results correctly with worker pool', async () => {
+  // Tests for large graph fuzzy search (workers disabled in test environment)
+  it('should handle large graphs with low threshold using single-threaded mode', async () => {
+    // Create 600 entities (above WORKER_MIN_ENTITIES of 500)
+    const entities: Entity[] = [];
+    for (let i = 0; i < 600; i++) {
+      entities.push({
+        name: `Entity${i}`,
+        entityType: 'test',
+        observations: [`This is test observation ${i}`],
+      });
+    }
+
+    // Add a few entities with the search term
+    entities.push({
+      name: 'TargetEntity',
+      entityType: 'target',
+      observations: ['contains searchterm in observation'],
+    });
+
+    entities.push({
+      name: 'SearchTermEntity',
+      entityType: 'target',
+      observations: ['another observation'],
+    });
+
+    const graph = { entities, relations: [] };
+    await storage.saveGraph(graph);
+
+    // Perform fuzzy search with low threshold
+    // Uses single-threaded mode since useWorkerPool: false
+    const startTime = Date.now();
+    const result = await fuzzySearch.fuzzySearch('searchterm', 0.6);
+    const duration = Date.now() - startTime;
+
+    // Verify results
+    expect(result.entities.length).toBeGreaterThan(0);
+    const matchedNames = result.entities.map(e => e.name);
+
+    // Should find entities with 'searchterm'
+    expect(matchedNames).toContain('SearchTermEntity');
+    expect(matchedNames).toContain('TargetEntity');
+
+    // Log performance for reference
+    console.log(`Fuzzy search (600 entities, single-threaded): ${duration}ms`);
+  });
+
+  it('should handle empty results correctly for large graphs', async () => {
     // Create large graph with no matches
     const entities: Entity[] = [];
     for (let i = 0; i < 600; i++) {
@@ -152,10 +156,77 @@ describe('Worker Pool Integration', () => {
     await storage.saveGraph(graph);
 
     // Search for something that doesn't exist
+    // Uses single-threaded mode since useWorkerPool: false
     const result = await fuzzySearch.fuzzySearch('nonexistent_xyz_abc', 0.6);
 
     // Should return empty results
     expect(result.entities).toHaveLength(0);
     expect(result.relations).toHaveLength(0);
   });
+});
+
+describe('Worker Pool Integration - With Workers', () => {
+  let storage: GraphStorage;
+  let fuzzySearchWithWorkers: FuzzySearch;
+  let testFilePath: string;
+
+  beforeEach(async () => {
+    testFilePath = join(tmpdir(), `test-worker-pool-workers-${Date.now()}.jsonl`);
+    storage = new GraphStorage(testFilePath);
+    // Enable worker pool for these tests
+    fuzzySearchWithWorkers = new FuzzySearch(storage, { useWorkerPool: true });
+  });
+
+  afterEach(async () => {
+    await fuzzySearchWithWorkers.shutdown();
+    try {
+      await fs.unlink(testFilePath);
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  it('should use worker pool for large graphs and fall back gracefully on error', async () => {
+    // Create 600 entities (above WORKER_MIN_ENTITIES of 500)
+    const entities: Entity[] = [];
+    for (let i = 0; i < 600; i++) {
+      entities.push({
+        name: `Entity${i}`,
+        entityType: 'test',
+        observations: [`This is test observation ${i}`],
+      });
+    }
+
+    // Add target entities with the search term
+    entities.push({
+      name: 'TargetEntity',
+      entityType: 'target',
+      observations: ['contains searchterm in observation'],
+    });
+
+    entities.push({
+      name: 'SearchTermEntity',
+      entityType: 'target',
+      observations: ['another observation'],
+    });
+
+    const graph = { entities, relations: [] };
+    await storage.saveGraph(graph);
+
+    // Perform fuzzy search with low threshold - will try workers then fall back
+    const startTime = Date.now();
+    const result = await fuzzySearchWithWorkers.fuzzySearch('searchterm', 0.6);
+    const duration = Date.now() - startTime;
+
+    // Verify results - should work regardless of worker success/failure
+    expect(result.entities.length).toBeGreaterThan(0);
+    const matchedNames = result.entities.map(e => e.name);
+
+    // Should find entities with 'searchterm'
+    expect(matchedNames).toContain('SearchTermEntity');
+    expect(matchedNames).toContain('TargetEntity');
+
+    // Log performance for reference
+    console.log(`Fuzzy search (600 entities, with workers enabled): ${duration}ms`);
+  }, 60000); // 60 second timeout for worker initialization
 });

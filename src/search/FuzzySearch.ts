@@ -2,6 +2,7 @@
  * Fuzzy Search
  *
  * Search with typo tolerance using Levenshtein distance similarity.
+ * Uses workerpool for parallel processing on large datasets.
  *
  * @module search/FuzzySearch
  */
@@ -11,7 +12,7 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
-import { WorkerPool } from '../workers/WorkerPool.js';
+import workerpool, { type Pool } from '@danielsimonjr/workerpool/modern';
 import { fileURLToPath } from 'url';
 import { dirname, join, sep } from 'path';
 
@@ -56,6 +57,27 @@ const WORKER_MIN_ENTITIES = 500;
 const WORKER_MAX_THRESHOLD = 0.8;
 
 /**
+ * Match result from worker.
+ */
+interface MatchResult {
+  name: string;
+  score: number;
+  matchedIn: 'name' | 'observation';
+}
+
+/**
+ * Options for FuzzySearch constructor.
+ */
+export interface FuzzySearchOptions {
+  /**
+   * Whether to use worker pool for parallel processing.
+   * Set to false for testing or when workers are not available.
+   * Default: true
+   */
+  useWorkerPool?: boolean;
+}
+
+/**
  * Performs fuzzy search with configurable similarity threshold.
  */
 export class FuzzySearch {
@@ -66,17 +88,24 @@ export class FuzzySearch {
   private fuzzyResultCache: Map<string, FuzzyCacheEntry> = new Map();
 
   /**
-   * Phase 7 Sprint 3: Worker pool for parallel fuzzy search.
+   * Phase 8: Worker pool using workerpool library.
    * Initialized lazily when needed.
    */
-  private workerPool: WorkerPool<any, any> | null = null;
+  private workerPool: Pool | null = null;
 
   /**
    * Phase 7 Sprint 3: Path to the worker script.
    */
   private workerPath: string;
 
-  constructor(private storage: GraphStorage) {
+  /**
+   * Phase 8: Whether to use worker pool for parallel processing.
+   * Can be disabled for testing or when workers are not available.
+   */
+  private useWorkerPool: boolean;
+
+  constructor(private storage: GraphStorage, options: FuzzySearchOptions = {}) {
+    this.useWorkerPool = options.useWorkerPool ?? true;
     // Calculate worker path using ESM module resolution
     const currentFileUrl = import.meta.url;
     const currentDir = dirname(fileURLToPath(currentFileUrl));
@@ -200,7 +229,9 @@ export class FuzzySearch {
     }
 
     // Phase 7 Sprint 3: Use worker pool for large graphs with low thresholds
+    // Phase 8: Respect useWorkerPool flag for testing
     const shouldUseWorkers =
+      this.useWorkerPool &&
       graph.entities.length >= WORKER_MIN_ENTITIES &&
       threshold < WORKER_MAX_THRESHOLD;
 
@@ -300,9 +331,10 @@ export class FuzzySearch {
   }
 
   /**
-   * Phase 7 Sprint 3: Perform fuzzy search using worker pool for parallel processing.
+   * Phase 8: Perform fuzzy search using workerpool for parallel processing.
    *
    * Splits entities into chunks and processes them in parallel using worker threads.
+   * Falls back to single-threaded search if worker execution fails.
    *
    * @param query - Search query
    * @param threshold - Similarity threshold
@@ -314,49 +346,74 @@ export class FuzzySearch {
     threshold: number,
     entities: Entity[]
   ): Promise<Entity[]> {
-    // Initialize worker pool lazily
-    if (!this.workerPool) {
-      this.workerPool = new WorkerPool({
-        workerPath: this.workerPath,
-      });
+    try {
+      // Initialize worker pool lazily using workerpool
+      if (!this.workerPool) {
+        // Enable ESM module support for Node.js 20+
+        // The 'type: module' option is needed for ESM workers but may not be in @types/node
+        const workerThreadOpts = { type: 'module' } as Record<string, unknown>;
+        this.workerPool = workerpool.pool(this.workerPath, {
+          maxWorkers: Math.max(1, workerpool.cpus - 1),
+          workerType: 'thread',
+          workerThreadOpts,
+        });
+      }
+
+      // Split entities into chunks based on CPU count
+      const numWorkers = Math.max(1, workerpool.cpus - 1);
+      const chunkSize = Math.ceil(entities.length / numWorkers);
+      const chunks: Entity[][] = [];
+      for (let i = 0; i < entities.length; i += chunkSize) {
+        chunks.push(entities.slice(i, i + chunkSize));
+      }
+
+      // Prepare worker inputs with lowercased data
+      const workerInputs = chunks.map(chunk => ({
+        query,
+        threshold,
+        entities: chunk.map(e => ({
+          name: e.name,
+          nameLower: e.name.toLowerCase(),
+          observations: e.observations.map(o => o.toLowerCase()),
+        })),
+      }));
+
+      // Execute all chunks in parallel using workerpool with timeout
+      const WORKER_TIMEOUT_MS = 30000; // 30 seconds
+      const results = await Promise.all(
+        workerInputs.map(input =>
+          this.workerPool!.exec('searchEntities', [input])
+            .timeout(WORKER_TIMEOUT_MS) as Promise<MatchResult[]>
+        )
+      );
+
+      // Flatten results and extract matched entity names
+      const matchedNames = new Set(results.flat().map(r => r.name));
+
+      // Return entities that matched
+      return entities.filter(e => matchedNames.has(e.name));
+    } catch (error) {
+      // Worker execution failed - fall back to single-threaded mode
+      console.warn(
+        `Worker pool execution failed, falling back to single-threaded fuzzy search: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+
+      // Use the existing single-threaded implementation
+      const queryLower = query.toLowerCase();
+      return this.performFuzzyMatch(entities, queryLower, threshold);
     }
-
-    // Split entities into 4 chunks for parallel processing
-    const chunkSize = Math.ceil(entities.length / 4);
-    const chunks: Entity[][] = [];
-    for (let i = 0; i < entities.length; i += chunkSize) {
-      chunks.push(entities.slice(i, i + chunkSize));
-    }
-
-    // Prepare worker inputs with lowercased data
-    const workerInputs = chunks.map(chunk => ({
-      query,
-      threshold,
-      entities: chunk.map(e => ({
-        name: e.name,
-        nameLower: e.name.toLowerCase(),
-        observations: e.observations.map(o => o.toLowerCase()),
-      })),
-    }));
-
-    // Execute all chunks in parallel
-    const results = await this.workerPool.executeAll(workerInputs);
-
-    // Flatten results and extract matched entity names
-    const matchedNames = new Set(results.flat().map(r => r.name));
-
-    // Return entities that matched
-    return entities.filter(e => matchedNames.has(e.name));
   }
 
   /**
-   * Phase 7 Sprint 3: Shutdown the worker pool and clean up resources.
+   * Phase 8: Shutdown the worker pool and clean up resources.
    *
    * Should be called when FuzzySearch is no longer needed.
    */
   async shutdown(): Promise<void> {
     if (this.workerPool) {
-      await this.workerPool.shutdown();
+      await this.workerPool.terminate();
       this.workerPool = null;
     }
   }

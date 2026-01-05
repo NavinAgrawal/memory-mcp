@@ -4,7 +4,8 @@
   "title": "Core Workerpool Integration",
   "priority": "HIGH",
   "effort": "2-3 hours",
-  "status": "pending",
+  "status": "completed",
+  "completedAt": "2026-01-04",
   "impact": "Replace custom WorkerPool with mature workerpool library for fuzzy search parallelization",
   "targetMetrics": {
     "fuzzySearchPerformance": { "current": "Custom pool", "target": "workerpool with O(1) queues" },
@@ -15,7 +16,7 @@
       "id": 1,
       "category": "Setup",
       "description": "Add @danielsimonjr/workerpool dependency",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.25,
       "files": ["package.json"],
       "stepByStep": [
@@ -32,7 +33,7 @@
       "id": 2,
       "category": "Core",
       "description": "Convert levenshteinWorker.ts to workerpool.worker() format",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.5,
       "files": ["src/workers/levenshteinWorker.ts"],
       "location": "Entire file",
@@ -55,7 +56,7 @@
       "id": 3,
       "category": "Core",
       "description": "Update FuzzySearch.ts to use workerpool",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 1,
       "files": ["src/search/FuzzySearch.ts"],
       "location": "Find 'private workerPool' and 'searchWithWorkers' method",
@@ -80,7 +81,7 @@
       "id": 4,
       "category": "Core",
       "description": "Update workers/index.ts exports",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.25,
       "files": ["src/workers/index.ts"],
       "stepByStep": [
@@ -99,7 +100,7 @@
       "id": 5,
       "category": "Tests",
       "description": "Update WorkerPool.test.ts for workerpool",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.75,
       "files": ["tests/unit/workers/WorkerPool.test.ts"],
       "stepByStep": [
@@ -119,7 +120,7 @@
       "id": 6,
       "category": "Cleanup",
       "description": "Deprecate or remove custom WorkerPool.ts",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.25,
       "files": ["src/workers/WorkerPool.ts"],
       "stepByStep": [
@@ -139,7 +140,7 @@
       "id": 7,
       "category": "Docs",
       "description": "Update CLAUDE.md documentation",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.25,
       "files": ["CLAUDE.md"],
       "stepByStep": [

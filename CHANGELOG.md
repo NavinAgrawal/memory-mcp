@@ -5,6 +5,72 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.5.0] - 2026-01-04
+
+### Added
+
+- **Phase 8: Workerpool Integration** - Complete ESM worker support
+  - **Sprint 1: Core Integration** - Replaced custom WorkerPool with `@danielsimonjr/workerpool` library
+    - Converted `levenshteinWorker.ts` to use `workerpool.worker()` format
+    - Updated `FuzzySearch.ts` to use `workerpool.pool()` and `pool.exec()`
+    - Import via `@danielsimonjr/workerpool/modern` for ESM compatibility
+  - **Sprint 2: Enhanced Error Handling** - Added robust error handling with fallback
+    - 30-second timeout per worker task via `.timeout()`
+    - Try/catch with automatic fallback to single-threaded `performFuzzyMatch()`
+    - Graceful degradation when workers fail
+  - **Sprint 3: Parallel Array Operations** - New `parallelUtils.ts` module
+    - `parallelMap<T, R>()` - Map items in parallel chunks
+    - `parallelFilter<T>()` - Filter items in parallel chunks
+    - `getPoolStats()` - Worker pool statistics
+    - `shutdownParallelUtils()` - Clean up resources
+    - Automatic fallback to single-threaded for small arrays (< 200 items)
+  - **Sprint 4: Advanced Scheduling** - New `taskScheduler.ts` module
+    - `TaskQueue` - Priority-based task queue (CRITICAL > HIGH > NORMAL > LOW)
+    - `batchProcess()` - Parallel batch processing with progress callbacks
+    - `rateLimitedProcess()` - Rate-limited sequential processing
+    - `withRetry()` - Exponential backoff retry logic
+    - `debounce()` / `throttle()` - Function rate limiting utilities
+
+### Fixed
+
+- **ESM Worker Support** - Fixed workerpool library to support ES modules in Node.js 20+
+  - Added `type` to allowed `workerThreadOptsNames` in workerpool library
+  - FuzzySearch now passes `workerThreadOpts: { type: 'module' }` to load ESM workers
+  - All worker pool tests now pass without skipping
+
+### Changed
+
+- `src/workers/index.ts` now exports Pool and PoolStats types from workerpool
+- `WorkerPool.ts` marked as deprecated (kept for backwards compatibility)
+
+### Tests
+
+- Added `tests/unit/utils/taskScheduler.test.ts` - 39 tests
+- Added `tests/unit/utils/parallelUtils.test.ts` - 18 tests
+- Updated `tests/unit/workers/WorkerPool.test.ts` - 7 tests for workerpool API
+- Updated `tests/integration/worker-pool-integration.test.ts` - 5 tests (including worker-enabled test)
+- Total test count: 2209 passing (0 skipped)
+
+## [9.4.0] - 2026-01-04
+
+### Added
+
+- **Phase 7: Scalability & Performance Optimizations**
+  - **Centrality Optimizations**
+    - Chunked processing for betweenness centrality (yields control every N vertices, default 50)
+    - Progress callbacks for long-running centrality calculations
+    - Approximation mode for betweenness (sampling-based, configurable sample rate 0.01-1.0)
+    - Non-blocking event loop prevents UI freezing on large graphs
+  - **Streaming Exports**
+    - New `StreamingExporter` for memory-efficient large graph exports (JSONL, CSV)
+    - Auto-streaming for graphs >= 5000 entities when outputPath provided
+    - Manual streaming via `streaming: true` option on export_graph tool
+    - 50-70% memory reduction for large exports
+  - **Parallel Fuzzy Search**
+    - Worker pool for parallel Levenshtein distance calculations
+    - 2-4x speedup for fuzzy search on large graphs (>= 500 entities with threshold < 0.8)
+    - Lazy worker pool initialization to minimize resource usage
+
 ## [9.3.0] - 2026-01-03
 
 ### Performance Improvements

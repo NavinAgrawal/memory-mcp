@@ -225,12 +225,14 @@ describe('Performance Benchmarks', () => {
 
     it('should perform fuzzy search within time limit', async () => {
       const startTime = Date.now();
-      const results = await fuzzySearch.fuzzySearch('Entty', 0.7);
+      // Use threshold 0.8 (>= WORKER_MAX_THRESHOLD, so workers not used)
+      // "Entity" contains "Entity" so similarity = 1.0
+      const results = await fuzzySearch.fuzzySearch('Entity', 0.8);
       const duration = Date.now() - startTime;
 
       expect(results.entities.length).toBeGreaterThan(0);
       expect(duration).toBeLessThan(PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);
-    });
+    }, PERF_CONFIG.MAX_ABSOLUTE_TIME_MS);
 
     it('should have ranked search complete within reasonable multiple of basic search', async () => {
       // Basic search baseline

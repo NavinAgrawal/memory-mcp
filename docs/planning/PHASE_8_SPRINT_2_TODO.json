@@ -4,7 +4,8 @@
   "title": "Enhanced Error Handling",
   "priority": "MEDIUM",
   "effort": "1-2 hours",
-  "status": "pending",
+  "status": "completed",
+  "completedAt": "2026-01-04",
   "impact": "Leverage workerpool's robust error handling, timeouts, and cancellation support",
   "targetMetrics": {
     "errorRecovery": { "current": "Basic", "target": "Auto-recovery from worker crashes" },
@@ -16,7 +17,7 @@
       "id": 1,
       "category": "Core",
       "description": "Add timeout support for fuzzy search",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.5,
       "files": ["src/search/FuzzySearch.ts"],
       "location": "searchWithWorkers method",
@@ -39,7 +40,7 @@
       "id": 2,
       "category": "Core",
       "description": "Add cancellation support",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.5,
       "files": ["src/search/FuzzySearch.ts"],
       "stepByStep": [
@@ -58,7 +59,7 @@
       "id": 3,
       "category": "Core",
       "description": "Add error logging for worker crashes",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.25,
       "files": ["src/search/FuzzySearch.ts"],
       "stepByStep": [
@@ -75,7 +76,7 @@
       "id": 4,
       "category": "Tests",
       "description": "Add tests for error handling",
-      "status": "pending",
+      "status": "completed",
       "estimatedHours": 0.75,
       "files": ["tests/unit/search/FuzzySearch.test.ts"],
       "stepByStep": [

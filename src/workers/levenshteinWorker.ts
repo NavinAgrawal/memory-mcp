@@ -2,11 +2,12 @@
  * Levenshtein Worker
  *
  * Worker thread for calculating Levenshtein distances in parallel.
+ * Uses workerpool for worker management.
  *
  * @module workers/levenshteinWorker
  */
 
-import { parentPort, workerData } from 'worker_threads';
+import workerpool from '@danielsimonjr/workerpool/modern';
 
 /**
  * Input data structure for the worker.
@@ -100,10 +101,13 @@ function similarity(s1: string, s2: string): number {
 }
 
 /**
- * Main worker logic: process entities and find fuzzy matches.
+ * Search entities for fuzzy matches.
+ *
+ * @param data - Worker input containing query, entities, and threshold
+ * @returns Array of match results
  */
-if (parentPort) {
-  const { query, entities, threshold } = workerData as WorkerInput;
+function searchEntities(data: WorkerInput): MatchResult[] {
+  const { query, entities, threshold } = data;
   const queryLower = query.toLowerCase();
   const results: MatchResult[] = [];
 
@@ -125,6 +129,11 @@ if (parentPort) {
     }
   }
 
-  // Send results back to parent thread
-  parentPort.postMessage(results);
+  return results;
 }
+
+// Register worker methods with workerpool
+// Cast to satisfy workerpool's generic type signature
+workerpool.worker({
+  searchEntities: searchEntities as (...args: unknown[]) => unknown,
+});
