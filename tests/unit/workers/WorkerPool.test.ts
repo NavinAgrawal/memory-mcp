@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import workerpool from '@danielsimonjr/workerpool/modern';
+import workerpool from '@danielsimonjr/workerpool';
 
 describe('Workerpool Integration', () => {
   describe('Pool API', () => {

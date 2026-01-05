@@ -7,7 +7,7 @@
  * @module utils/taskScheduler
  */
 
-import workerpool from '@danielsimonjr/workerpool/modern';
+import workerpool from '@danielsimonjr/workerpool';
 
 // ==================== Types ====================
 

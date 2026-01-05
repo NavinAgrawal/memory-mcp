@@ -7,9 +7,14 @@
  * @module features/CompressionManager
  */
 
-import type { Entity, Relation, CompressionResult, KnowledgeGraph } from '../types/index.js';
+import type { Entity, Relation, CompressionResult, KnowledgeGraph, LongRunningOperationOptions } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { levenshteinDistance } from '../utils/index.js';
+import {
+  levenshteinDistance,
+  checkCancellation,
+  createProgressReporter,
+  createProgress,
+} from '../utils/index.js';
 import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
 import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
 
@@ -186,15 +191,31 @@ export class CompressionManager {
    * 2. Within each type, buckets by name prefix (first 2 chars normalized)
    * 3. Only compares entities within same or adjacent buckets
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
    * Complexity: O(n·k) where k is average bucket size (typically << n)
    *
    * @param threshold - Similarity threshold (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Array of duplicate groups (each group has similar entities)
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    */
-  async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]> {
+  async findDuplicates(
+    threshold: number = DEFAULT_DUPLICATE_THRESHOLD,
+    options?: LongRunningOperationOptions
+  ): Promise<string[][]> {
+    // Check for early cancellation
+    checkCancellation(options?.signal, 'findDuplicates');
+
     const graph = await this.storage.loadGraph();
     const duplicateGroups: string[][] = [];
     const processed = new Set<string>();
+
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(options?.onProgress);
+    const totalEntities = graph.entities.length;
+    let processedCount = 0;
+    reportProgress?.(createProgress(0, totalEntities, 'findDuplicates'));
 
     // OPTIMIZATION: Pre-prepare all entities once before comparisons
     const preparedEntities = this.prepareEntities(graph.entities);
@@ -211,8 +232,15 @@ export class CompressionManager {
 
     // Step 2: For each type bucket, sub-bucket by name prefix
     for (const entities of typeMap.values()) {
+      // Check for cancellation between type buckets
+      checkCancellation(options?.signal, 'findDuplicates');
+
       // Skip single-entity types (no duplicates possible)
-      if (entities.length < 2) continue;
+      if (entities.length < 2) {
+        processedCount += entities.length;
+        reportProgress?.(createProgress(processedCount, totalEntities, 'findDuplicates'));
+        continue;
+      }
 
       // Create name prefix buckets (first 2 chars, normalized)
       const prefixMap = new Map<string, Entity[]>();
@@ -228,6 +256,9 @@ export class CompressionManager {
       const prefixKeys = Array.from(prefixMap.keys()).sort();
 
       for (let bucketIdx = 0; bucketIdx < prefixKeys.length; bucketIdx++) {
+        // Check for cancellation between prefix buckets
+        checkCancellation(options?.signal, 'findDuplicates');
+
         const currentPrefix = prefixKeys[bucketIdx];
         const currentBucket = prefixMap.get(currentPrefix)!;
 
@@ -265,9 +296,15 @@ export class CompressionManager {
             duplicateGroups.push(group);
             processed.add(entity1.name);
           }
+
+          processedCount++;
+          reportProgress?.(createProgress(processedCount, totalEntities, 'findDuplicates'));
         }
       }
     }
+
+    // Report completion
+    reportProgress?.(createProgress(totalEntities, totalEntities, 'findDuplicates'));
 
     return duplicateGroups;
   }
@@ -398,12 +435,39 @@ export class CompressionManager {
    * Compress the knowledge graph by finding and merging duplicates.
    * OPTIMIZED: Loads graph once, performs all merges, saves once.
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
    * @param threshold - Similarity threshold for duplicate detection (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD
    * @param dryRun - If true, only report what would be compressed without applying changes
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Compression result with statistics
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    */
-  async compressGraph(threshold: number = DEFAULT_DUPLICATE_THRESHOLD, dryRun: boolean = false): Promise<CompressionResult> {
-    const duplicateGroups = await this.findDuplicates(threshold);
+  async compressGraph(
+    threshold: number = DEFAULT_DUPLICATE_THRESHOLD,
+    dryRun: boolean = false,
+    options?: LongRunningOperationOptions
+  ): Promise<CompressionResult> {
+    // Check for early cancellation
+    checkCancellation(options?.signal, 'compressGraph');
+
+    // Setup progress reporter (we'll use phases: 50% finding duplicates, 50% merging)
+    const reportProgress = createProgressReporter(options?.onProgress);
+    reportProgress?.(createProgress(0, 100, 'compressGraph'));
+
+    // Phase 1: Find duplicates (0-50% progress)
+    const duplicateGroups = await this.findDuplicates(threshold, {
+      signal: options?.signal,
+      onProgress: (p) => {
+        // Map findDuplicates progress (0-100%) to compressGraph progress (0-50%)
+        const compressProgress = Math.round(p.percentage * 0.5);
+        reportProgress?.(createProgress(compressProgress, 100, 'finding duplicates'));
+      },
+    });
+
+    // Check for cancellation after finding duplicates
+    checkCancellation(options?.signal, 'compressGraph');
+    reportProgress?.(createProgress(50, 100, 'compressGraph'));
 
     // OPTIMIZATION: Load graph once for all operations
     const graph = await this.storage.getGraphForMutation();
@@ -426,11 +490,19 @@ export class CompressionManager {
         });
         result.entitiesMerged += group.length - 1;
       }
+      reportProgress?.(createProgress(100, 100, 'compressGraph'));
       return result;
     }
 
+    // Phase 2: Merge duplicates (50-100% progress)
+    const totalGroups = duplicateGroups.length;
+    let mergedGroups = 0;
+
     // Merge all duplicates using the same graph instance
     for (const group of duplicateGroups) {
+      // Check for cancellation between merges
+      checkCancellation(options?.signal, 'compressGraph');
+
       try {
         // Count observations before merge using loaded graph
         let totalObservationsBefore = 0;
@@ -459,7 +531,15 @@ export class CompressionManager {
         // Skip groups that fail to merge
         console.error(`Failed to merge group ${group}:`, error);
       }
+
+      mergedGroups++;
+      // Map merge progress (0-100%) to compressGraph progress (50-100%)
+      const mergeProgress = totalGroups > 0 ? Math.round(50 + (mergedGroups / totalGroups) * 50) : 100;
+      reportProgress?.(createProgress(mergeProgress, 100, 'merging entities'));
     }
+
+    // Check for cancellation before final save
+    checkCancellation(options?.signal, 'compressGraph');
 
     // OPTIMIZATION: Save once after all merges complete
     await this.storage.saveGraph(graph);
@@ -467,6 +547,9 @@ export class CompressionManager {
     const finalSize = JSON.stringify(graph).length;
     result.spaceFreed = initialSize - finalSize;
     result.relationsConsolidated = result.entitiesMerged;
+
+    // Report completion
+    reportProgress?.(createProgress(100, 100, 'compressGraph'));
 
     return result;
   }

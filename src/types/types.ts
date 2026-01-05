@@ -1367,4 +1367,53 @@ export interface SemanticIndexOptions {
 
   /** Batch size for embedding API calls */
   batchSize?: number;
+
+  /** AbortSignal for cancellation support (Phase 9B) */
+  signal?: AbortSignal;
+}
+
+// ==================== Long-Running Operation Types (Phase 9B) ====================
+
+import type { ProgressCallback, TaskPriority } from '../utils/taskScheduler.js';
+
+/**
+ * Phase 9B: Options for long-running operations supporting progress and cancellation.
+ *
+ * Used by operations that may take significant time and benefit from
+ * user feedback and interruptibility.
+ *
+ * @example
+ * ```typescript
+ * // Basic usage with progress tracking
+ * const entities = await manager.createEntities(data, {
+ *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+ * });
+ *
+ * // With cancellation support
+ * const controller = new AbortController();
+ * const promise = manager.importGraph('json', data, 'merge', false, {
+ *   signal: controller.signal,
+ *   onProgress: (p) => updateProgressBar(p.percentage),
+ * });
+ * // Later: controller.abort();
+ * ```
+ */
+export interface LongRunningOperationOptions {
+  /**
+   * Progress callback for tracking operation progress.
+   * Called periodically with completion status.
+   */
+  onProgress?: ProgressCallback;
+
+  /**
+   * AbortSignal for cancellation support.
+   * When aborted, the operation will throw OperationCancelledError.
+   */
+  signal?: AbortSignal;
+
+  /**
+   * Priority for queued operations (optional).
+   * Higher priority operations are processed first.
+   */
+  priority?: TaskPriority;
 }

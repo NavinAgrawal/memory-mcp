@@ -11,9 +11,15 @@
 
 import { promises as fs } from 'fs';
 import { dirname, join } from 'path';
-import type { Entity } from '../types/index.js';
+import type { Entity, LongRunningOperationOptions } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
-import { compress, COMPRESSION_CONFIG } from '../utils/index.js';
+import {
+  compress,
+  COMPRESSION_CONFIG,
+  checkCancellation,
+  createProgressReporter,
+  createProgress,
+} from '../utils/index.js';
 
 /**
  * Criteria for archiving entities.
@@ -29,8 +35,9 @@ export interface ArchiveCriteria {
 
 /**
  * Options for archive operations.
+ * Phase 9B: Extended with LongRunningOperationOptions.
  */
-export interface ArchiveOptions {
+export interface ArchiveOptions extends LongRunningOperationOptions {
   /** Dry run mode - preview without making changes */
   dryRun?: boolean;
   /** Whether to save archived entities to a compressed file (default: true) */
@@ -83,9 +90,12 @@ export class ArchiveManager {
    * being removed from the active graph. Use `saveToFile: false` to
    * skip creating the archive file.
    *
+   * Phase 9B: Supports progress tracking and cancellation via options.
+   *
    * @param criteria - Archiving criteria
-   * @param options - Archive options (dryRun, saveToFile)
+   * @param options - Archive options (dryRun, saveToFile, onProgress, signal)
    * @returns Archive result with count, entity names, and compression stats
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    *
    * @example
    * ```typescript
@@ -99,6 +109,13 @@ export class ArchiveManager {
    *
    * // Preview without making changes
    * const preview = await manager.archiveEntities(criteria, { dryRun: true });
+   *
+   * // With progress tracking and cancellation (Phase 9B)
+   * const controller = new AbortController();
+   * const result = await manager.archiveEntities(criteria, {
+   *   signal: controller.signal,
+   *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+   * });
    * ```
    */
   async archiveEntities(
@@ -110,11 +127,26 @@ export class ArchiveManager {
       ? { dryRun: options, saveToFile: true }
       : { saveToFile: true, ...options };
 
+    // Check for early cancellation
+    checkCancellation(opts.signal, 'archiveEntities');
+
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(opts.onProgress);
+    reportProgress?.(createProgress(0, 100, 'archiveEntities'));
+
     // Use read-only graph for analysis
     const readGraph = await this.storage.loadGraph();
     const toArchive: Entity[] = [];
+    const totalEntities = readGraph.entities.length;
+    let processedEntities = 0;
+
+    // Phase 1: Identify entities to archive (0-40% progress)
+    reportProgress?.(createProgress(5, 100, 'analyzing entities'));
 
     for (const entity of readGraph.entities) {
+      // Check for cancellation periodically
+      checkCancellation(opts.signal, 'archiveEntities');
+
       let shouldArchive = false;
 
       // Check age criteria
@@ -146,10 +178,18 @@ export class ArchiveManager {
       if (shouldArchive) {
         toArchive.push(entity);
       }
+
+      processedEntities++;
+      // Map analysis progress (0-100%) to overall progress (0-40%)
+      const analysisProgress = totalEntities > 0 ? Math.round((processedEntities / totalEntities) * 40) : 40;
+      reportProgress?.(createProgress(analysisProgress, 100, 'analyzing entities'));
     }
+
+    reportProgress?.(createProgress(40, 100, 'analysis complete'));
 
     // Dry run - return preview without changes
     if (opts.dryRun) {
+      reportProgress?.(createProgress(100, 100, 'archiveEntities'));
       return {
         archived: toArchive.length,
         entityNames: toArchive.map(e => e.name),
@@ -158,25 +198,39 @@ export class ArchiveManager {
 
     // No entities to archive
     if (toArchive.length === 0) {
+      reportProgress?.(createProgress(100, 100, 'archiveEntities'));
       return {
         archived: 0,
         entityNames: [],
       };
     }
 
-    // Save to compressed archive file
+    // Check for cancellation before archiving
+    checkCancellation(opts.signal, 'archiveEntities');
+
+    // Phase 2: Save to compressed archive file (40-80% progress)
     let archivePath: string | undefined;
     let originalSize: number | undefined;
     let compressedSize: number | undefined;
     let compressionRatio: number | undefined;
 
     if (opts.saveToFile) {
+      reportProgress?.(createProgress(50, 100, 'compressing archive'));
       const archiveResult = await this.saveToArchive(toArchive);
       archivePath = archiveResult.archivePath;
       originalSize = archiveResult.originalSize;
       compressedSize = archiveResult.compressedSize;
       compressionRatio = archiveResult.compressionRatio;
+      reportProgress?.(createProgress(80, 100, 'archive saved'));
+    } else {
+      reportProgress?.(createProgress(80, 100, 'skipped archive file'));
     }
+
+    // Check for cancellation before graph modification
+    checkCancellation(opts.signal, 'archiveEntities');
+
+    // Phase 3: Remove from main graph (80-100% progress)
+    reportProgress?.(createProgress(85, 100, 'updating graph'));
 
     // Get mutable copy for write operation
     const graph = await this.storage.getGraphForMutation();
@@ -188,6 +242,9 @@ export class ArchiveManager {
       r => !archiveNames.has(r.from) && !archiveNames.has(r.to)
     );
     await this.storage.saveGraph(graph);
+
+    // Report completion
+    reportProgress?.(createProgress(100, 100, 'archiveEntities'));
 
     return {
       archived: toArchive.length,

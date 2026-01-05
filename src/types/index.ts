@@ -67,4 +67,6 @@ export type {
   VectorSearchResult,
   EmbeddingConfig,
   SemanticIndexOptions,
+  // Phase 9B: Long-running operation types
+  LongRunningOperationOptions,
 } from './types.js';

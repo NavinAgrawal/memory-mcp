@@ -8,7 +8,7 @@
  */
 
 // Re-export workerpool types for convenience
-export type { Pool, PoolStats } from '@danielsimonjr/workerpool/modern';
+export type { Pool, PoolStats } from '@danielsimonjr/workerpool';
 
 // Re-export levenshtein worker types and functions for testing
 export type { WorkerInput, MatchResult } from './levenshteinWorker.js';
