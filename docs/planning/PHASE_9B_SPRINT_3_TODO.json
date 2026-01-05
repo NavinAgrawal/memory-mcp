@@ -1,0 +1,387 @@
+{
+  "phase": "9B",
+  "sprint": 3,
+  "title": "Polish, Graph Traversal, and Documentation",
+  "priority": "medium",
+  "effort": "2 days",
+  "status": "planned",
+  "impact": "Medium - Completes TaskScheduler integration and adds comprehensive documentation",
+  "targetMetrics": {
+    "graphTraversal": {
+      "current": "findAllPaths uses DFS without cancellation",
+      "target": "findAllPaths supports AbortSignal cancellation"
+    },
+    "streamingExporter": {
+      "current": "No progress reporting during streaming exports",
+      "target": "Progress callback for entity/relation streaming"
+    },
+    "documentation": {
+      "current": "TaskScheduler documented in CLAUDE.md only",
+      "target": "Comprehensive guide in docs/ with examples and patterns"
+    },
+    "testCoverage": {
+      "current": "Basic TaskScheduler tests exist",
+      "target": "Integration tests for all new progress/cancellation features"
+    }
+  },
+  "tasks": [
+    {
+      "id": "9B.3.1",
+      "category": "integration",
+      "title": "Add Cancellation Support to GraphTraversal.findAllPaths",
+      "description": "Add AbortSignal cancellation support to GraphTraversal.findAllPaths() method. This long-running DFS operation can be slow for deeply connected graphs and needs cancellation support.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/core/GraphTraversal.ts", "tests/unit/core/GraphTraversal.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Enable cancellation of path-finding operations that may take a long time in densely connected graphs.",
+        "keyDecisions": [
+          "Add signal to TraversalOptions (affects all traversal methods)",
+          "Check cancellation at the start of each DFS recursion",
+          "Return partial paths found before cancellation",
+          "Add 'cancelled' field to return type"
+        ],
+        "currentCode": {
+          "file": "src/core/GraphTraversal.ts",
+          "lines": "292-342",
+          "signature": "async findAllPaths(source: string, target: string, maxDepth: number = 5, options: TraversalOptions = {}): Promise<PathResult[]>"
+        },
+        "existingTraversalOptions": {
+          "file": "src/types/types.ts",
+          "fields": ["direction?: 'incoming' | 'outgoing' | 'both'", "maxDepth?: number", "relationTypes?: string[]", "entityTypes?: string[]"]
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Update TraversalOptions in src/types/types.ts",
+          "details": "Add signal field: signal?: AbortSignal;\nAdd onProgress field: onProgress?: (pathsFound: number) => void;"
+        },
+        {
+          "step": 2,
+          "action": "Import checkAborted in GraphTraversal.ts",
+          "details": "Add: import { checkAborted } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Create AllPathsResult interface",
+          "details": "interface AllPathsResult {\n  paths: PathResult[];\n  cancelled?: boolean;\n  pathsExplored?: number;\n}"
+        },
+        {
+          "step": 4,
+          "action": "Update findAllPaths return type",
+          "details": "Change return type to: Promise<AllPathsResult>"
+        },
+        {
+          "step": 5,
+          "action": "Add cancellation check in dfsAllPaths helper",
+          "details": "At the start of dfsAllPaths function: checkAborted(opts.signal, 'findAllPaths');"
+        },
+        {
+          "step": 6,
+          "action": "Track paths explored for progress reporting",
+          "details": "Add counter: let pathsExplored = 0;\nIncrement on each path found and call: opts.onProgress?.(allPaths.length);"
+        },
+        {
+          "step": 7,
+          "action": "Handle cancellation gracefully",
+          "details": "Wrap DFS call in try-catch. If cancelled, return: { paths: allPaths, cancelled: true, pathsExplored }"
+        },
+        {
+          "step": 8,
+          "action": "Update findShortestPath for consistency",
+          "details": "Add cancellation check at start: checkAborted(options?.signal, 'findShortestPath');\nCheck in BFS loop every 100 iterations."
+        },
+        {
+          "step": 9,
+          "action": "Add tests for path-finding cancellation",
+          "details": "Test cancellation returns partial paths, test progress callback is invoked"
+        }
+      ],
+      "codeSnippets": {
+        "updatedTraversalOptions": "/**\n * Options for graph traversal operations.\n */\nexport interface TraversalOptions {\n  /** Direction to traverse: 'incoming', 'outgoing', or 'both' (default) */\n  direction?: 'incoming' | 'outgoing' | 'both';\n  /** Maximum depth to traverse */\n  maxDepth?: number;\n  /** Filter by relation types */\n  relationTypes?: string[];\n  /** Filter by entity types */\n  entityTypes?: string[];\n  /** AbortSignal for cancellation support */\n  signal?: AbortSignal;\n  /** Progress callback for path-finding (receives count of paths found) */\n  onProgress?: (pathsFound: number) => void;\n}",
+        "allPathsResult": "/**\n * Result of findAllPaths operation.\n */\nexport interface AllPathsResult {\n  /** All paths found */\n  paths: PathResult[];\n  /** Whether operation was cancelled */\n  cancelled?: boolean;\n  /** Number of paths explored before completion/cancellation */\n  pathsExplored?: number;\n}",
+        "findAllPathsWithCancellation": "async findAllPaths(\n  source: string,\n  target: string,\n  maxDepth: number = 5,\n  options: TraversalOptions = {}\n): Promise<AllPathsResult> {\n  // Ensure graph is loaded\n  await this.storage.loadGraph();\n\n  // Validate entities exist\n  if (!this.storage.hasEntity(source) || !this.storage.hasEntity(target)) {\n    return { paths: [], pathsExplored: 0 };\n  }\n\n  const opts = { ...DEFAULT_OPTIONS, ...options };\n  const allPaths: PathResult[] = [];\n  const currentPath: string[] = [source];\n  const currentRelations: Relation[] = [];\n  const visited = new Set<string>([source]);\n  let pathsExplored = 0;\n\n  const dfsAllPaths = (current: string, depth: number) => {\n    // Check cancellation at each recursion\n    checkAborted(opts.signal, 'findAllPaths');\n\n    if (depth > maxDepth) return;\n\n    if (current === target && depth > 0) {\n      allPaths.push({\n        path: [...currentPath],\n        length: currentPath.length - 1,\n        relations: [...currentRelations],\n      });\n      pathsExplored++;\n      opts.onProgress?.(allPaths.length);\n      return;\n    }\n\n    // ... rest of existing DFS logic ...\n  };\n\n  try {\n    dfsAllPaths(source, 0);\n    return { paths: allPaths, pathsExplored };\n  } catch (error) {\n    if (error instanceof Error && error.message.includes('cancelled')) {\n      return { paths: allPaths, cancelled: true, pathsExplored };\n    }\n    throw error;\n  }\n}"
+      },
+      "acceptanceCriteria": [
+        "TraversalOptions includes signal and onProgress fields",
+        "AllPathsResult type created with paths, cancelled, pathsExplored fields",
+        "findAllPaths checks cancellation at each recursion",
+        "findAllPaths returns partial paths when cancelled",
+        "findShortestPath checks cancellation during BFS",
+        "Progress callback receives path count updates",
+        "All existing traversal tests pass (with return type updates)",
+        "New cancellation tests pass"
+      ]
+    },
+    {
+      "id": "9B.3.2",
+      "category": "integration",
+      "title": "Add Progress Callback to StreamingExporter",
+      "description": "Add progress callback support to StreamingExporter.streamJSONL() and streamCSV() methods. This enables tracking progress during large streaming exports.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/features/StreamingExporter.ts", "tests/unit/features/StreamingExporter.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Enable progress tracking during streaming exports, showing entity/relation export progress.",
+        "keyDecisions": [
+          "Create StreamOptions interface with onProgress callback",
+          "Report progress after each entity batch (every 100 entities)",
+          "Include bytes written in progress message",
+          "Add 'cancelled' support for future extensibility"
+        ],
+        "currentCode": {
+          "streamJSONL": {
+            "file": "src/features/StreamingExporter.ts",
+            "lines": "81-117",
+            "signature": "async streamJSONL(graph: ReadonlyKnowledgeGraph): Promise<StreamResult>"
+          },
+          "streamCSV": {
+            "file": "src/features/StreamingExporter.ts",
+            "lines": "135-168",
+            "signature": "async streamCSV(graph: ReadonlyKnowledgeGraph): Promise<StreamResult>"
+          }
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create StreamOptions interface",
+          "details": "export interface StreamOptions {\n  onProgress?: (current: number, total: number, message?: string) => void;\n  signal?: AbortSignal;\n}"
+        },
+        {
+          "step": 2,
+          "action": "Update streamJSONL signature",
+          "details": "async streamJSONL(graph: ReadonlyKnowledgeGraph, options?: StreamOptions): Promise<StreamResult>"
+        },
+        {
+          "step": 3,
+          "action": "Add progress reporting in streamJSONL entity loop",
+          "details": "Every 100 entities: if (entitiesWritten % 100 === 0) {\n  options?.onProgress?.(entitiesWritten, total, `Wrote ${bytesWritten} bytes`);\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add progress for relation writing phase",
+          "details": "Before relations: options?.onProgress?.(entityCount, total, 'Writing relations');\nEvery 100 relations: options?.onProgress?.(entityCount + relationsWritten, total);"
+        },
+        {
+          "step": 5,
+          "action": "Add cancellation check between entity batches",
+          "details": "Every 100 entities: if (options?.signal?.aborted) throw new Error('Export cancelled');"
+        },
+        {
+          "step": 6,
+          "action": "Update streamCSV similarly",
+          "details": "Same progress and cancellation pattern for CSV export"
+        },
+        {
+          "step": 7,
+          "action": "Add 'cancelled' field to StreamResult",
+          "details": "Add to interface: cancelled?: boolean;"
+        },
+        {
+          "step": 8,
+          "action": "Handle cancellation gracefully",
+          "details": "Close stream properly on cancellation. Return partial result with cancelled: true."
+        },
+        {
+          "step": 9,
+          "action": "Add tests for streaming progress and cancellation",
+          "details": "Test progress callback invocation, test cancellation stops export"
+        }
+      ],
+      "codeSnippets": {
+        "streamOptions": "/**\n * Options for streaming export operations.\n */\nexport interface StreamOptions {\n  /** Progress callback (current items, total items, message) */\n  onProgress?: (current: number, total: number, message?: string) => void;\n  /** AbortSignal for cancellation support */\n  signal?: AbortSignal;\n}",
+        "updatedStreamResult": "/**\n * Result summary from a streaming export operation.\n */\nexport interface StreamResult {\n  /** Total bytes written to the output file */\n  bytesWritten: number;\n  /** Number of entities written */\n  entitiesWritten: number;\n  /** Number of relations written */\n  relationsWritten: number;\n  /** Duration of the export operation in milliseconds */\n  durationMs: number;\n  /** Whether export was cancelled */\n  cancelled?: boolean;\n}",
+        "streamJSONLWithProgress": "async streamJSONL(\n  graph: ReadonlyKnowledgeGraph,\n  options?: StreamOptions\n): Promise<StreamResult> {\n  const start = Date.now();\n  let bytesWritten = 0;\n  let entitiesWritten = 0;\n  let relationsWritten = 0;\n  const total = graph.entities.length + graph.relations.length;\n\n  const writeStream = createWriteStream(this.filePath);\n\n  try {\n    // Write entities with progress\n    for (const entity of graph.entities) {\n      // Check cancellation\n      if (options?.signal?.aborted) {\n        throw new Error('Export cancelled');\n      }\n\n      const line = JSON.stringify(entity) + '\\n';\n      writeStream.write(line);\n      bytesWritten += Buffer.byteLength(line, 'utf-8');\n      entitiesWritten++;\n\n      // Report progress every 100 entities\n      if (entitiesWritten % 100 === 0) {\n        options?.onProgress?.(\n          entitiesWritten,\n          total,\n          `Exported ${entitiesWritten} entities (${bytesWritten} bytes)`\n        );\n      }\n    }\n\n    // Notify start of relations phase\n    options?.onProgress?.(entitiesWritten, total, 'Exporting relations...');\n\n    // Write relations with progress\n    for (const relation of graph.relations) {\n      if (options?.signal?.aborted) {\n        throw new Error('Export cancelled');\n      }\n\n      const line = JSON.stringify(relation) + '\\n';\n      writeStream.write(line);\n      bytesWritten += Buffer.byteLength(line, 'utf-8');\n      relationsWritten++;\n\n      if (relationsWritten % 100 === 0) {\n        options?.onProgress?.(entitiesWritten + relationsWritten, total);\n      }\n    }\n\n    // Final progress\n    options?.onProgress?.(total, total, 'Export complete');\n\n    // Wait for stream to finish\n    await new Promise<void>((resolve, reject) => {\n      writeStream.end(() => resolve());\n      writeStream.on('error', reject);\n    });\n\n    return {\n      bytesWritten,\n      entitiesWritten,\n      relationsWritten,\n      durationMs: Date.now() - start,\n    };\n  } catch (error) {\n    // Close stream properly\n    await new Promise<void>(resolve => writeStream.end(resolve));\n\n    if (error instanceof Error && error.message.includes('cancelled')) {\n      return {\n        bytesWritten,\n        entitiesWritten,\n        relationsWritten,\n        durationMs: Date.now() - start,\n        cancelled: true,\n      };\n    }\n    throw error;\n  }\n}"
+      },
+      "acceptanceCriteria": [
+        "StreamOptions interface created with onProgress and signal",
+        "StreamResult includes optional 'cancelled' field",
+        "streamJSONL accepts optional StreamOptions parameter",
+        "streamCSV accepts optional StreamOptions parameter",
+        "Progress callback receives updates every 100 items",
+        "AbortSignal cancellation stops export and returns partial result",
+        "All existing streaming tests pass",
+        "New progress/cancellation tests pass"
+      ]
+    },
+    {
+      "id": "9B.3.3",
+      "category": "documentation",
+      "title": "Create TaskScheduler Integration Guide",
+      "description": "Create comprehensive documentation for the TaskScheduler utilities and the new progress/cancellation patterns used across all managers. This guide helps developers understand how to use and extend these patterns.",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "haiku",
+      "files": ["docs/guides/TASK_SCHEDULER.md"],
+      "testCategories": [],
+      "implementation": {
+        "purpose": "Provide comprehensive documentation for TaskScheduler utilities and async operation patterns.",
+        "keyDecisions": [
+          "Include overview of all TaskScheduler utilities",
+          "Document async types and their usage patterns",
+          "Provide examples for each manager's progress/cancellation features",
+          "Include performance considerations and best practices"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create docs/guides/TASK_SCHEDULER.md",
+          "details": "Create the file with the structure outlined in codeSnippets.documentationStructure"
+        },
+        {
+          "step": 2,
+          "action": "Write Overview section",
+          "details": "Explain TaskScheduler purpose, available utilities (batchProcess, withRetry, debounce, throttle, TaskQueue)"
+        },
+        {
+          "step": 3,
+          "action": "Write Async Types section",
+          "details": "Document ProgressCallback, CancellableOptions, AsyncOperationOptions, BatchProgressOptions, CancellableResult"
+        },
+        {
+          "step": 4,
+          "action": "Write Manager Integration section",
+          "details": "Document each manager's progress/cancellation capabilities with code examples:\n- EntityManager.createEntities\n- CompressionManager.findDuplicates/compressGraph\n- IOManager.importGraph\n- ArchiveManager.archiveEntities\n- SemanticSearch.indexAll\n- TransactionManager.commit\n- GraphTraversal.findAllPaths\n- StreamingExporter.streamJSONL/streamCSV"
+        },
+        {
+          "step": 5,
+          "action": "Write Best Practices section",
+          "details": "Include guidelines for:\n- When to use each utility\n- Progress reporting patterns\n- Cancellation handling\n- Event loop yielding\n- Error handling with cancellation"
+        },
+        {
+          "step": 6,
+          "action": "Write Performance Considerations section",
+          "details": "Document performance implications of progress callbacks, batch sizes, setImmediate yielding"
+        },
+        {
+          "step": 7,
+          "action": "Add cross-references to CLAUDE.md",
+          "details": "Update CLAUDE.md to reference the new guide in the ## Documentation section"
+        }
+      ],
+      "codeSnippets": {
+        "documentationStructure": "# TaskScheduler Integration Guide\n\n## Overview\n\nThe TaskScheduler module provides utilities for managing asynchronous operations,\nbatch processing, rate limiting, and progress tracking across the memory-mcp codebase.\n\n## Table of Contents\n\n1. [Core Utilities](#core-utilities)\n   - batchProcess\n   - withRetry\n   - debounce\n   - throttle\n   - TaskQueue\n\n2. [Async Operation Types](#async-operation-types)\n   - ProgressCallback\n   - CancellableOptions\n   - AsyncOperationOptions\n   - BatchProgressOptions\n   - CancellableResult\n\n3. [Manager Integrations](#manager-integrations)\n   - EntityManager\n   - CompressionManager\n   - IOManager\n   - ArchiveManager\n   - SemanticSearch\n   - TransactionManager\n   - GraphTraversal\n   - StreamingExporter\n\n4. [Best Practices](#best-practices)\n\n5. [Performance Considerations](#performance-considerations)\n\n## Core Utilities\n\n### batchProcess\n\nProcess items in batches with optional delay between batches.\n\n```typescript\nimport { batchProcess } from './utils/index.js';\n\nconst results = await batchProcess(\n  items,\n  async (batch) => processItems(batch),\n  {\n    batchSize: 50,\n    onProgress: (processed, total) => console.log(`${processed}/${total}`)\n  }\n);\n```\n\n### withRetry\n\nRetry an operation with exponential backoff.\n\n```typescript\nimport { withRetry } from './utils/index.js';\n\nconst result = await withRetry(\n  async () => fetchData(),\n  {\n    maxRetries: 3,\n    initialDelay: 1000,\n    maxDelay: 10000\n  }\n);\n```\n\n### debounce / throttle\n\nRate limit function calls.\n\n```typescript\nimport { debounce, throttle } from './utils/index.js';\n\nconst debouncedSave = debounce(save, 500);\nconst throttledUpdate = throttle(update, 1000);\n```\n\n## Async Operation Types\n\n### ProgressCallback\n\n```typescript\ntype ProgressCallback = (current: number, total: number, message?: string) => void;\n```\n\n### CancellableOptions\n\n```typescript\ninterface CancellableOptions {\n  signal?: AbortSignal;\n}\n```\n\n### AsyncOperationOptions\n\n```typescript\ninterface AsyncOperationOptions extends CancellableOptions {\n  onProgress?: ProgressCallback;\n}\n```\n\n### CancellableResult\n\n```typescript\ninterface CancellableResult<T> {\n  result?: T;\n  cancelled: boolean;\n  processedCount?: number;\n}\n```\n\n## Manager Integrations\n\n### EntityManager.createEntities\n\n```typescript\nconst controller = new AbortController();\n\nconst result = await entityManager.createEntities(entities, {\n  batchSize: 50,\n  onProgress: (current, total, message) => {\n    console.log(`Creating entities: ${current}/${total}`);\n  },\n  signal: controller.signal\n});\n\nif (result.cancelled) {\n  console.log(`Cancelled after creating ${result.processedCount} entities`);\n}\n```\n\n... (continue for each manager)\n\n## Best Practices\n\n1. **Always handle cancellation gracefully** - Return partial results when possible\n2. **Use appropriate batch sizes** - 50-100 items is usually optimal\n3. **Report progress meaningfully** - Include context in progress messages\n4. **Yield control periodically** - Use setImmediate every 100 items\n5. **Preserve atomicity when needed** - TransactionManager does not support mid-commit cancellation\n\n## Performance Considerations\n\n- Progress callbacks add minimal overhead (~0.01ms per call)\n- setImmediate yielding adds ~4ms per yield (every 100 items)\n- AbortSignal checks are O(1) and negligible\n- For very large operations (10000+ items), consider larger batch sizes"
+      },
+      "acceptanceCriteria": [
+        "docs/guides/TASK_SCHEDULER.md exists",
+        "All core utilities are documented with examples",
+        "All async types are documented with usage patterns",
+        "Each manager integration is documented with code examples",
+        "Best practices section provides actionable guidance",
+        "Performance considerations section covers overhead",
+        "CLAUDE.md updated to reference the new guide"
+      ]
+    },
+    {
+      "id": "9B.3.4",
+      "category": "testing",
+      "title": "Add Integration Tests for Progress and Cancellation",
+      "description": "Create comprehensive integration tests that verify progress callbacks and cancellation work correctly across multiple managers in realistic scenarios.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["tests/integration/task-scheduler.test.ts"],
+      "testCategories": ["integration"],
+      "implementation": {
+        "purpose": "Ensure TaskScheduler integration works correctly across all managers in realistic end-to-end scenarios.",
+        "keyDecisions": [
+          "Test progress callback consistency across managers",
+          "Test cancellation behavior with real data",
+          "Test partial result handling",
+          "Test performance impact of progress reporting"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create tests/integration/task-scheduler.test.ts",
+          "details": "Create the file with test structure for all managers"
+        },
+        {
+          "step": 2,
+          "action": "Add test utilities",
+          "details": "Create helpers: createTestGraph(size), collectProgress(), createAbortAfter(ms)"
+        },
+        {
+          "step": 3,
+          "action": "Add EntityManager integration test",
+          "details": "Test: Create 500 entities with progress tracking, verify progress increases monotonically"
+        },
+        {
+          "step": 4,
+          "action": "Add EntityManager cancellation test",
+          "details": "Test: Start creating 1000 entities, abort after 100ms, verify partial results"
+        },
+        {
+          "step": 5,
+          "action": "Add CompressionManager integration test",
+          "details": "Test: Create graph with duplicates, run findDuplicates with progress, verify two-phase progress in compressGraph"
+        },
+        {
+          "step": 6,
+          "action": "Add IOManager integration test",
+          "details": "Test: Import large JSON with progress, verify parsing and merging phases reported"
+        },
+        {
+          "step": 7,
+          "action": "Add combined workflow test",
+          "details": "Test: Import -> Create -> Compress -> Export pipeline with progress tracking throughout"
+        },
+        {
+          "step": 8,
+          "action": "Add performance test",
+          "details": "Test: Compare operation time with and without progress callback, verify overhead < 5%"
+        }
+      ],
+      "codeSnippets": {
+        "testStructure": "import { describe, it, expect, beforeEach, afterEach } from 'vitest';\nimport { promises as fs } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';\nimport { EntityManager } from '../../src/core/EntityManager.js';\nimport { CompressionManager } from '../../src/features/CompressionManager.js';\nimport { IOManager } from '../../src/features/IOManager.js';\nimport { GraphStorage } from '../../src/core/GraphStorage.js';\nimport type { Entity } from '../../src/types/index.js';\n\ndescribe('TaskScheduler Integration', () => {\n  let testDir: string;\n  let storage: GraphStorage;\n  let entityManager: EntityManager;\n  let compressionManager: CompressionManager;\n  let ioManager: IOManager;\n\n  beforeEach(async () => {\n    testDir = await fs.mkdtemp(join(tmpdir(), 'task-scheduler-test-'));\n    storage = new GraphStorage(join(testDir, 'test.jsonl'));\n    entityManager = new EntityManager(storage);\n    compressionManager = new CompressionManager(storage);\n    ioManager = new IOManager(storage);\n  });\n\n  afterEach(async () => {\n    await fs.rm(testDir, { recursive: true, force: true });\n  });\n\n  // Helper: Create test entities\n  function createTestEntities(count: number): Entity[] {\n    return Array.from({ length: count }, (_, i) => ({\n      name: `Entity${i}`,\n      entityType: 'test',\n      observations: [`Observation for entity ${i}`]\n    }));\n  }\n\n  // Helper: Collect progress updates\n  function createProgressCollector(): {\n    calls: [number, number, string | undefined][];\n    callback: (c: number, t: number, m?: string) => void;\n  } {\n    const calls: [number, number, string | undefined][] = [];\n    return {\n      calls,\n      callback: (c, t, m) => calls.push([c, t, m])\n    };\n  }\n\n  // Helper: Create AbortController that aborts after delay\n  function createDelayedAbort(ms: number): AbortController {\n    const controller = new AbortController();\n    setTimeout(() => controller.abort(), ms);\n    return controller;\n  }\n\n  describe('EntityManager.createEntities', () => {\n    it('should report progress during bulk creation', async () => {\n      const { calls, callback } = createProgressCollector();\n      const entities = createTestEntities(200);\n\n      const result = await entityManager.createEntities(entities, {\n        batchSize: 50,\n        onProgress: callback\n      });\n\n      expect(result.cancelled).toBe(false);\n      expect(result.result?.length).toBe(200);\n      expect(calls.length).toBeGreaterThanOrEqual(4);\n      // Progress should be monotonically increasing\n      for (let i = 1; i < calls.length; i++) {\n        expect(calls[i][0]).toBeGreaterThanOrEqual(calls[i-1][0]);\n      }\n    });\n\n    it('should return partial results on cancellation', async () => {\n      const controller = createDelayedAbort(50);\n      const entities = createTestEntities(1000);\n\n      const result = await entityManager.createEntities(entities, {\n        batchSize: 25,\n        signal: controller.signal\n      });\n\n      expect(result.cancelled).toBe(true);\n      expect(result.processedCount).toBeLessThan(1000);\n      expect(result.processedCount).toBeGreaterThan(0);\n    });\n  });\n\n  describe('CompressionManager', () => {\n    it('should report progress during duplicate detection', async () => {\n      // Create entities with duplicates\n      const entities = [\n        ...createTestEntities(100),\n        ...createTestEntities(100).map(e => ({ ...e, name: `Dup${e.name}` }))\n      ];\n      await entityManager.createEntities(entities);\n\n      const { calls, callback } = createProgressCollector();\n      const result = await compressionManager.findDuplicates({\n        threshold: 0.8,\n        onProgress: callback\n      });\n\n      expect(result.cancelled).toBe(false);\n      expect(calls.length).toBeGreaterThan(0);\n    });\n  });\n\n  describe('Combined Workflow', () => {\n    it('should track progress through import -> compress -> export pipeline', async () => {\n      const progressPhases: string[] = [];\n\n      // Phase 1: Import\n      const importData = JSON.stringify({\n        entities: createTestEntities(100),\n        relations: []\n      });\n      await ioManager.importGraph({\n        format: 'json',\n        data: importData,\n        onProgress: (c, t, m) => {\n          if (m && !progressPhases.includes('import')) {\n            progressPhases.push('import');\n          }\n        }\n      });\n\n      // Phase 2: Compress\n      await compressionManager.compressGraph({\n        threshold: 0.9,\n        onProgress: (c, t, m) => {\n          if (!progressPhases.includes('compress')) {\n            progressPhases.push('compress');\n          }\n        }\n      });\n\n      // Verify all phases were tracked\n      expect(progressPhases).toContain('import');\n      expect(progressPhases).toContain('compress');\n    });\n  });\n\n  describe('Performance', () => {\n    it('should have minimal overhead from progress callbacks', async () => {\n      const entities = createTestEntities(500);\n\n      // Time without progress\n      const startNoProgress = Date.now();\n      await entityManager.createEntities(entities);\n      const timeNoProgress = Date.now() - startNoProgress;\n\n      // Reset storage\n      storage.clearCache();\n      await fs.writeFile(join(testDir, 'test.jsonl'), '');\n\n      // Time with progress\n      const startWithProgress = Date.now();\n      await entityManager.createEntities(entities, {\n        onProgress: () => {}\n      });\n      const timeWithProgress = Date.now() - startWithProgress;\n\n      // Progress overhead should be < 20% (generous for CI variability)\n      const overhead = (timeWithProgress - timeNoProgress) / timeNoProgress;\n      expect(overhead).toBeLessThan(0.2);\n    });\n  });\n});"
+      },
+      "acceptanceCriteria": [
+        "tests/integration/task-scheduler.test.ts exists",
+        "EntityManager progress and cancellation tests pass",
+        "CompressionManager progress tests pass",
+        "Combined workflow test verifies end-to-end progress tracking",
+        "Performance test verifies overhead < 20%",
+        "All tests run successfully with npm test"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "GraphTraversal.findAllPaths supports cancellation",
+    "StreamingExporter supports progress and cancellation",
+    "Comprehensive documentation in docs/guides/TASK_SCHEDULER.md",
+    "Integration tests cover all major managers",
+    "npm test passes with all new tests",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": [
+    "docs/guides/TASK_SCHEDULER.md",
+    "tests/integration/task-scheduler.test.ts"
+  ],
+  "filesModified": [
+    "src/core/GraphTraversal.ts",
+    "src/features/StreamingExporter.ts",
+    "src/types/types.ts",
+    "tests/unit/core/GraphTraversal.test.ts",
+    "tests/unit/features/StreamingExporter.test.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 9,
+  "dependencies": ["Sprint 9B.1 (async types)", "Sprint 9B.2 (manager integrations)"],
+  "notes": [
+    "Sprint 3 depends on both Sprint 1 and Sprint 2 being complete",
+    "Documentation should be comprehensive enough for new developers",
+    "Integration tests should use realistic data sizes (100-1000 items)",
+    "Performance tests should account for CI environment variability",
+    "Consider adding visual progress examples to documentation"
+  ]
+}
