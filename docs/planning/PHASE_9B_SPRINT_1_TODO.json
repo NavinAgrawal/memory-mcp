@@ -1,0 +1,376 @@
+{
+  "phase": "9B",
+  "sprint": 1,
+  "title": "Foundation and Core Integrations",
+  "priority": "high",
+  "effort": "3 days",
+  "status": "planned",
+  "impact": "High - Establishes common types and integrates TaskScheduler with core managers",
+  "targetMetrics": {
+    "progressCallback": {
+      "current": "Custom or none in most managers",
+      "target": "Unified ProgressCallback type used by all long-running operations"
+    },
+    "cancellation": {
+      "current": "No cancellation support",
+      "target": "AbortSignal support in EntityManager, CompressionManager, IOManager"
+    },
+    "codeReuse": {
+      "current": "Scattered utility functions",
+      "target": "Centralized batchProcess() and withRetry() usage"
+    }
+  },
+  "tasks": [
+    {
+      "id": "9B.1.1",
+      "category": "type-consolidation",
+      "title": "Create Common Progress and Cancellation Types",
+      "description": "Create new file src/types/async.ts with unified types for progress reporting and task cancellation. These types will be re-exported from src/types/index.ts for consistent usage across all managers.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/types/async.ts", "src/types/index.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Provide consistent type definitions for async operations across the codebase, enabling uniform progress reporting and cancellation patterns.",
+        "keyDecisions": [
+          "ProgressCallback should accept (current, total, message?) parameters",
+          "CancellableOptions should include optional 'signal: AbortSignal'",
+          "BatchProgressOptions combines BatchOptions with ProgressCallback",
+          "All types should be documented with JSDoc examples"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/types/async.ts",
+          "details": "Create the file with the new type definitions. See codeSnippets.newAsyncTypes for the exact content."
+        },
+        {
+          "step": 2,
+          "action": "Update src/types/index.ts to export the new types",
+          "details": "Add export statement: export * from './async.js';"
+        },
+        {
+          "step": 3,
+          "action": "Verify the exports work correctly",
+          "details": "Run 'npm run typecheck' to ensure no type errors and exports are accessible."
+        }
+      ],
+      "codeSnippets": {
+        "newAsyncTypes": "/**\n * Async Operation Types\n *\n * Unified types for progress reporting, cancellation, and batch processing\n * across all managers. These types enable consistent async patterns.\n *\n * @module types/async\n */\n\n/**\n * Callback for reporting progress of long-running operations.\n *\n * @param current - Current progress count (e.g., items processed)\n * @param total - Total expected count\n * @param message - Optional status message\n *\n * @example\n * ```typescript\n * const onProgress: ProgressCallback = (current, total, message) => {\n *   console.log(`Progress: ${current}/${total} - ${message}`);\n * };\n * ```\n */\nexport type ProgressCallback = (current: number, total: number, message?: string) => void;\n\n/**\n * Options for operations that support cancellation.\n *\n * @example\n * ```typescript\n * const controller = new AbortController();\n * await manager.longOperation({ signal: controller.signal });\n * // Later: controller.abort();\n * ```\n */\nexport interface CancellableOptions {\n  /** AbortSignal for cancellation support */\n  signal?: AbortSignal;\n}\n\n/**\n * Options for operations that support progress reporting.\n */\nexport interface ProgressOptions {\n  /** Callback for progress updates */\n  onProgress?: ProgressCallback;\n}\n\n/**\n * Combined options for cancellable operations with progress.\n */\nexport interface AsyncOperationOptions extends CancellableOptions, ProgressOptions {}\n\n/**\n * Options for batch processing operations.\n *\n * @example\n * ```typescript\n * const options: BatchProgressOptions = {\n *   batchSize: 50,\n *   onProgress: (c, t) => console.log(`${c}/${t}`),\n *   signal: controller.signal\n * };\n * ```\n */\nexport interface BatchProgressOptions extends AsyncOperationOptions {\n  /** Number of items to process per batch (default: 50) */\n  batchSize?: number;\n  /** Delay between batches in ms (default: 0) */\n  delayBetweenBatches?: number;\n}\n\n/**\n * Result of a cancellable operation.\n */\nexport interface CancellableResult<T> {\n  /** The result value if completed */\n  result?: T;\n  /** Whether the operation was cancelled */\n  cancelled: boolean;\n  /** Items processed before cancellation (if applicable) */\n  processedCount?: number;\n}\n\n/**\n * Check if an AbortSignal is aborted and throw if so.\n *\n * @param signal - AbortSignal to check\n * @param operation - Name of the operation (for error message)\n * @throws {Error} If signal is aborted\n */\nexport function checkAborted(signal: AbortSignal | undefined, operation: string): void {\n  if (signal?.aborted) {\n    throw new Error(`${operation} was cancelled`);\n  }\n}\n\n/**\n * Helper to check cancellation and yield control periodically.\n *\n * @param signal - AbortSignal to check\n * @param operation - Name of the operation\n * @param yieldEvery - Yield control every N items (default: 100)\n * @param current - Current item count\n * @returns Promise that resolves if not cancelled\n */\nexport async function checkAbortedAndYield(\n  signal: AbortSignal | undefined,\n  operation: string,\n  yieldEvery: number = 100,\n  current: number = 0\n): Promise<void> {\n  checkAborted(signal, operation);\n  if (current > 0 && current % yieldEvery === 0) {\n    await new Promise(resolve => setImmediate(resolve));\n  }\n}"
+      },
+      "acceptanceCriteria": [
+        "src/types/async.ts exists with all type definitions",
+        "Types are properly exported from src/types/index.ts",
+        "npm run typecheck passes with no errors",
+        "JSDoc comments include examples for each type"
+      ]
+    },
+    {
+      "id": "9B.1.2",
+      "category": "integration",
+      "title": "Integrate TaskScheduler with EntityManager.createEntities",
+      "description": "Add progress callback and cancellation support to EntityManager.createEntities() method using the new async types. This is a critical method used during bulk entity creation.",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts", "tests/unit/core/EntityManager.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Enable progress tracking and cancellation during bulk entity creation, improving UX for large imports.",
+        "keyDecisions": [
+          "Add optional BatchProgressOptions parameter to createEntities",
+          "Report progress after each batch of entities is processed",
+          "Support AbortSignal for cancellation mid-operation",
+          "Maintain backward compatibility - existing calls should work unchanged"
+        ],
+        "currentCode": {
+          "file": "src/core/EntityManager.ts",
+          "lines": "65-121",
+          "signature": "async createEntities(entities: Entity[]): Promise<Entity[]>"
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Import the new async types in EntityManager.ts",
+          "details": "Add import at top of file: import { type BatchProgressOptions, type CancellableResult, checkAborted } from '../types/index.js';"
+        },
+        {
+          "step": 2,
+          "action": "Update createEntities method signature",
+          "details": "Change signature to: async createEntities(entities: Entity[], options?: BatchProgressOptions): Promise<CancellableResult<Entity[]>>"
+        },
+        {
+          "step": 3,
+          "action": "Add cancellation check at start of method",
+          "details": "Add: checkAborted(options?.signal, 'createEntities'); after validating input"
+        },
+        {
+          "step": 4,
+          "action": "Implement batched processing with progress",
+          "details": "Replace the single-pass loop with batched processing using batchSize (default 50). After each batch: 1) checkAborted, 2) call onProgress callback, 3) yield control with setImmediate"
+        },
+        {
+          "step": 5,
+          "action": "Return CancellableResult with created entities",
+          "details": "Return { result: createdEntities, cancelled: false, processedCount: createdEntities.length }"
+        },
+        {
+          "step": 6,
+          "action": "Handle cancellation gracefully",
+          "details": "Wrap in try-catch. If Error message contains 'cancelled', return { cancelled: true, processedCount: processed }"
+        },
+        {
+          "step": 7,
+          "action": "Update existing tests to handle new return type",
+          "details": "Tests should access result.result instead of result directly. Add .result to assertions."
+        },
+        {
+          "step": 8,
+          "action": "Add new tests for progress and cancellation",
+          "details": "Add tests: 1) 'should call onProgress during creation', 2) 'should stop when signal is aborted', 3) 'should return partial results on cancellation'"
+        }
+      ],
+      "codeSnippets": {
+        "updatedMethod": "async createEntities(\n  entities: Entity[],\n  options?: BatchProgressOptions\n): Promise<CancellableResult<Entity[]>> {\n  // Validate input\n  if (!entities || entities.length === 0) {\n    return { result: [], cancelled: false, processedCount: 0 };\n  }\n\n  checkAborted(options?.signal, 'createEntities');\n\n  const batchSize = options?.batchSize ?? 50;\n  const createdEntities: Entity[] = [];\n  const graph = await this.storage.getGraphForMutation();\n  const timestamp = new Date().toISOString();\n  const total = entities.length;\n\n  try {\n    for (let i = 0; i < entities.length; i += batchSize) {\n      checkAborted(options?.signal, 'createEntities');\n\n      const batch = entities.slice(i, i + batchSize);\n\n      for (const entity of batch) {\n        // ... existing validation and creation logic ...\n        const newEntity = { ...normalized, createdAt: timestamp, lastModified: timestamp };\n        graph.entities.push(newEntity);\n        createdEntities.push(newEntity);\n      }\n\n      // Report progress\n      options?.onProgress?.(Math.min(i + batchSize, total), total, `Created ${createdEntities.length} entities`);\n\n      // Yield control to event loop\n      if (i + batchSize < entities.length) {\n        await new Promise(resolve => setImmediate(resolve));\n      }\n    }\n\n    await this.storage.saveGraph(graph);\n    return { result: createdEntities, cancelled: false, processedCount: createdEntities.length };\n  } catch (error) {\n    if (error instanceof Error && error.message.includes('cancelled')) {\n      // Save partial progress\n      if (createdEntities.length > 0) {\n        await this.storage.saveGraph(graph);\n      }\n      return { result: createdEntities, cancelled: true, processedCount: createdEntities.length };\n    }\n    throw error;\n  }\n}",
+        "newTests": "describe('createEntities with BatchProgressOptions', () => {\n  it('should call onProgress during creation', async () => {\n    const progressCalls: [number, number][] = [];\n    const entities = Array.from({ length: 100 }, (_, i) => ({\n      name: `Entity${i}`,\n      entityType: 'test',\n      observations: []\n    }));\n\n    const result = await entityManager.createEntities(entities, {\n      batchSize: 25,\n      onProgress: (current, total) => progressCalls.push([current, total])\n    });\n\n    expect(result.cancelled).toBe(false);\n    expect(progressCalls.length).toBeGreaterThanOrEqual(4);\n    expect(progressCalls[progressCalls.length - 1][0]).toBe(100);\n  });\n\n  it('should stop when signal is aborted', async () => {\n    const controller = new AbortController();\n    const entities = Array.from({ length: 200 }, (_, i) => ({\n      name: `Entity${i}`,\n      entityType: 'test',\n      observations: []\n    }));\n\n    // Abort after first batch\n    setTimeout(() => controller.abort(), 10);\n\n    const result = await entityManager.createEntities(entities, {\n      batchSize: 25,\n      signal: controller.signal\n    });\n\n    expect(result.cancelled).toBe(true);\n    expect(result.processedCount).toBeLessThan(200);\n  });\n});"
+      },
+      "acceptanceCriteria": [
+        "createEntities accepts optional BatchProgressOptions parameter",
+        "Progress callback is invoked after each batch",
+        "AbortSignal cancellation stops processing and returns partial results",
+        "Existing tests pass (with minor updates for new return type)",
+        "New tests for progress and cancellation pass",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "9B.1.3",
+      "category": "integration",
+      "title": "Integrate TaskScheduler with CompressionManager",
+      "description": "Add progress callback and cancellation support to CompressionManager.findDuplicates() and compressGraph() methods. These are long-running O(n²) operations that benefit most from progress tracking.",
+      "status": "pending",
+      "estimatedHours": 4,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts", "tests/unit/features/CompressionManager.test.ts"],
+      "testCategories": ["unit", "performance"],
+      "implementation": {
+        "purpose": "Enable progress tracking during duplicate detection and graph compression, which can be slow for large graphs.",
+        "keyDecisions": [
+          "findDuplicates should report progress per type bucket processed",
+          "compressGraph should report progress for both detection and merge phases",
+          "Support cancellation between buckets (not mid-bucket)",
+          "Return enhanced result with timing and cancellation info"
+        ],
+        "currentCode": {
+          "findDuplicates": {
+            "file": "src/features/CompressionManager.ts",
+            "lines": "194-273",
+            "signature": "async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]>"
+          },
+          "compressGraph": {
+            "file": "src/features/CompressionManager.ts",
+            "lines": "405-472",
+            "signature": "async compressGraph(threshold: number = DEFAULT_DUPLICATE_THRESHOLD, dryRun: boolean = false): Promise<CompressionResult>"
+          }
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Import async types in CompressionManager.ts",
+          "details": "Add: import { type AsyncOperationOptions, type CancellableResult, checkAborted } from '../types/index.js';"
+        },
+        {
+          "step": 2,
+          "action": "Create FindDuplicatesOptions interface",
+          "details": "interface FindDuplicatesOptions extends AsyncOperationOptions { threshold?: number; }"
+        },
+        {
+          "step": 3,
+          "action": "Update findDuplicates signature",
+          "details": "async findDuplicates(options?: FindDuplicatesOptions | number): Promise<CancellableResult<string[][]>>"
+        },
+        {
+          "step": 4,
+          "action": "Handle legacy number parameter for backward compatibility",
+          "details": "At start: const opts = typeof options === 'number' ? { threshold: options } : (options ?? {});\nconst threshold = opts.threshold ?? DEFAULT_DUPLICATE_THRESHOLD;"
+        },
+        {
+          "step": 5,
+          "action": "Add progress reporting per type bucket",
+          "details": "Count total type buckets before loop. After each bucket: opts.onProgress?.(processedBuckets, totalBuckets, `Processing type: ${typeName}`);"
+        },
+        {
+          "step": 6,
+          "action": "Add cancellation check between buckets",
+          "details": "At start of typeMap.values() loop: checkAborted(opts.signal, 'findDuplicates');"
+        },
+        {
+          "step": 7,
+          "action": "Update return to CancellableResult",
+          "details": "return { result: duplicateGroups, cancelled: false, processedCount: duplicateGroups.length };"
+        },
+        {
+          "step": 8,
+          "action": "Create CompressGraphOptions interface",
+          "details": "interface CompressGraphOptions extends AsyncOperationOptions { threshold?: number; dryRun?: boolean; }"
+        },
+        {
+          "step": 9,
+          "action": "Update compressGraph to use options object",
+          "details": "async compressGraph(options?: CompressGraphOptions): Promise<CancellableResult<CompressionResult>>"
+        },
+        {
+          "step": 10,
+          "action": "Add two-phase progress in compressGraph",
+          "details": "Phase 1 (0-50%): duplicate detection. Phase 2 (50-100%): merging. Pass progress callback to findDuplicates that scales to 0-50%."
+        },
+        {
+          "step": 11,
+          "action": "Add cancellation support between merge operations",
+          "details": "In the duplicateGroups loop, check cancellation before each merge: checkAborted(opts.signal, 'compressGraph');"
+        },
+        {
+          "step": 12,
+          "action": "Add tests for progress and cancellation",
+          "details": "Test progress callback receives expected calls, test cancellation stops mid-operation"
+        }
+      ],
+      "codeSnippets": {
+        "findDuplicatesOptions": "/**\n * Options for findDuplicates operation.\n */\nexport interface FindDuplicatesOptions extends AsyncOperationOptions {\n  /** Similarity threshold (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD */\n  threshold?: number;\n}",
+        "compressGraphOptions": "/**\n * Options for compressGraph operation.\n */\nexport interface CompressGraphOptions extends AsyncOperationOptions {\n  /** Similarity threshold (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD */\n  threshold?: number;\n  /** If true, only report what would be compressed */\n  dryRun?: boolean;\n}"
+      },
+      "acceptanceCriteria": [
+        "findDuplicates accepts FindDuplicatesOptions with progress and signal",
+        "compressGraph accepts CompressGraphOptions with progress and signal",
+        "Legacy calls with number parameter still work",
+        "Progress callback shows two-phase progress in compressGraph",
+        "Cancellation returns partial results with cancelled: true",
+        "All existing tests pass (with minor return type updates)",
+        "New progress/cancellation tests pass"
+      ]
+    },
+    {
+      "id": "9B.1.4",
+      "category": "integration",
+      "title": "Integrate TaskScheduler with IOManager.importGraph",
+      "description": "Add progress callback and cancellation support to IOManager.importGraph() method. This enables tracking progress during large graph imports.",
+      "status": "pending",
+      "estimatedHours": 3,
+      "agent": "haiku",
+      "files": ["src/features/IOManager.ts", "tests/unit/features/ImportManager.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Enable progress tracking during graph imports, which can be slow for large datasets.",
+        "keyDecisions": [
+          "Report progress in two phases: parsing (0-30%) and merging (30-100%)",
+          "Support cancellation after parsing before merge",
+          "Support cancellation between entity/relation merges",
+          "Return enhanced ImportResult with cancellation info"
+        ],
+        "currentCode": {
+          "file": "src/features/IOManager.ts",
+          "lines": "578-612",
+          "signature": "async importGraph(format: ImportFormat, data: string, mergeStrategy: MergeStrategy = 'skip', dryRun: boolean = false): Promise<ImportResult>"
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Import async types in IOManager.ts",
+          "details": "Add: import { type AsyncOperationOptions, type ProgressCallback, checkAborted } from '../types/index.js';"
+        },
+        {
+          "step": 2,
+          "action": "Create ImportGraphOptions interface",
+          "details": "export interface ImportGraphOptions extends AsyncOperationOptions {\n  format: ImportFormat;\n  data: string;\n  mergeStrategy?: MergeStrategy;\n  dryRun?: boolean;\n}"
+        },
+        {
+          "step": 3,
+          "action": "Add overloaded importGraph signature",
+          "details": "Add overload: async importGraph(options: ImportGraphOptions): Promise<ImportResult>;\nKeep original signature for backward compatibility"
+        },
+        {
+          "step": 4,
+          "action": "Detect which overload is being used",
+          "details": "if (typeof arguments[0] === 'object' && 'format' in arguments[0]) { // new options style } else { // legacy parameters }"
+        },
+        {
+          "step": 5,
+          "action": "Add Phase 1 progress for parsing",
+          "details": "After successful parsing: onProgress?.(30, 100, `Parsed ${importedGraph.entities.length} entities`);"
+        },
+        {
+          "step": 6,
+          "action": "Add cancellation check after parsing",
+          "details": "checkAborted(signal, 'importGraph');"
+        },
+        {
+          "step": 7,
+          "action": "Update mergeImportedGraph to accept options",
+          "details": "private async mergeImportedGraph(importedGraph, mergeStrategy, dryRun, options?: { signal?: AbortSignal; onProgress?: ProgressCallback })"
+        },
+        {
+          "step": 8,
+          "action": "Add Phase 2 progress during merge",
+          "details": "In entity loop: const progress = 30 + (entityIndex / total * 70); onProgress?.(Math.floor(progress), 100, `Merging entity ${entityIndex + 1}/${total}`);"
+        },
+        {
+          "step": 9,
+          "action": "Add cancellation checks in merge loop",
+          "details": "Every 50 entities: checkAborted(signal, 'importGraph');"
+        },
+        {
+          "step": 10,
+          "action": "Add tests for import progress and cancellation",
+          "details": "Test that progress callback receives expected phases, test cancellation returns partial import"
+        }
+      ],
+      "codeSnippets": {
+        "importGraphOptions": "/**\n * Options for importGraph operation.\n */\nexport interface ImportGraphOptions extends AsyncOperationOptions {\n  /** Import format */\n  format: ImportFormat;\n  /** Data to import */\n  data: string;\n  /** How to handle conflicts (default: 'skip') */\n  mergeStrategy?: MergeStrategy;\n  /** Preview changes without applying (default: false) */\n  dryRun?: boolean;\n}",
+        "enhancedImportResult": "/**\n * Extended import result with cancellation info.\n */\nexport interface EnhancedImportResult extends ImportResult {\n  /** Whether import was cancelled */\n  cancelled?: boolean;\n  /** Duration in milliseconds */\n  durationMs?: number;\n}"
+      },
+      "acceptanceCriteria": [
+        "importGraph accepts ImportGraphOptions with progress and signal",
+        "Legacy 4-parameter calls still work unchanged",
+        "Progress callback shows parsing (0-30%) and merging (30-100%) phases",
+        "Cancellation after parsing returns empty result",
+        "Cancellation during merging returns partial results",
+        "All existing import tests pass",
+        "New progress/cancellation tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "Common async types established in src/types/async.ts",
+    "EntityManager, CompressionManager, and IOManager support progress callbacks",
+    "All three managers support AbortSignal cancellation",
+    "Backward compatibility maintained for all existing API calls",
+    "npm test passes with all new tests",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": ["src/types/async.ts"],
+  "filesModified": [
+    "src/types/index.ts",
+    "src/core/EntityManager.ts",
+    "src/features/CompressionManager.ts",
+    "src/features/IOManager.ts",
+    "tests/unit/core/EntityManager.test.ts",
+    "tests/unit/features/CompressionManager.test.ts",
+    "tests/unit/features/ImportManager.test.ts"
+  ],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 12,
+  "dependencies": [],
+  "notes": [
+    "Backward compatibility is critical - all existing tests must pass",
+    "Use CancellableResult<T> wrapper for methods that support cancellation",
+    "Progress callbacks should use (current, total, message?) signature consistently",
+    "Prefer setImmediate for yielding control to avoid blocking event loop",
+    "Test with large datasets (1000+ entities) to verify progress/cancellation works"
+  ]
+}
