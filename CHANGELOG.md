@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - GraphStorage integration with automatic index maintenance on entity add/update/remove
     - Methods: `getEntitiesByObservationWord()`, `getEntitiesByAnyObservationWord()`, `getEntitiesByAllObservationWords()`
     - BooleanSearch optimization using index as fast positive path for simple terms
-    - 17 new unit tests in `observationIndex.test.ts`
+    - 17 new unit tests for ObservationIndex in `indexes.test.ts`
   - **Sprint 2: Pre-computed Similarity Data** - 1.5-2x faster duplicate detection
     - New `PreparedEntity` interface with pre-computed lowercase strings and Sets
     - `prepareEntity()` and `prepareEntities()` methods for batch preparation
@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
-- Added `tests/unit/utils/observationIndex.test.ts` - 17 tests
+- Added 17 ObservationIndex tests to `tests/unit/utils/indexes.test.ts` (now 65 tests total)
 - Added `tests/integration/compression-optimization.test.ts` - 3 tests
 - Added `tests/unit/workers/levenshteinWorker.test.ts` - 37 tests for worker functions
 - Added benchmark test for pre-computed similarity
@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `levenshteinWorker.ts` now exports functions for direct testing
 - `workers/index.ts` re-exports worker types and functions
 - Workers module now has 100% test coverage
+- Consolidated ObservationIndex tests into `indexes.test.ts` (matching source file convention)
 
 ## [9.5.0] - 2026-01-04
 
