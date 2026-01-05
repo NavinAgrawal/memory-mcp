@@ -4,7 +4,7 @@
   "title": "Observation Index",
   "priority": "HIGH",
   "effort": "6 hours",
-  "status": "pending",
+  "status": "complete",
   "impact": "10-50x speedup for observation-based searches by creating an inverted index mapping words to entity names",
   "targetMetrics": {
     "observationLookup": { "current": "O(n) linear scan of all entities", "target": "O(1) index lookup" },

@@ -4,7 +4,7 @@
   "title": "Pre-computed Similarity Data",
   "priority": "MEDIUM",
   "effort": "4 hours",
-  "status": "pending",
+  "status": "complete",
   "impact": "1.5-2x speedup for duplicate detection by pre-computing normalized Sets once per entity instead of creating them repeatedly during O(n²) comparisons",
   "targetMetrics": {
     "calculateEntitySimilarity": { "current": "Creates 4 new Sets per comparison", "target": "Uses pre-computed Sets, 0 allocations" },

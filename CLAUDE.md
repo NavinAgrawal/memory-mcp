@@ -227,12 +227,15 @@ tests/test-results/
 
 - **O(1) read operations** via direct cache access
 - **O(1) single-entity writes** via append-only file operations
+- **O(1) observation lookups** via ObservationIndex (inverted index mapping words to entities)
 - In-memory caching with write-through invalidation
 - Lazy manager initialization (managers load on-demand)
 - Batch operations support via TransactionManager
 - Search caching with TTL and LRU eviction
 - Streaming exports for large graphs (>= 5000 entities)
 - Parallel fuzzy search via worker pool
+- Pre-computed similarity data for 1.5-2x faster duplicate detection
+- Optimized compressGraph with single load/save (10x I/O reduction)
 
 ## Server Architecture
 
