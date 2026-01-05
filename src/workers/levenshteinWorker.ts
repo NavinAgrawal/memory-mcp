@@ -12,7 +12,7 @@ import workerpool from '@danielsimonjr/workerpool/modern';
 /**
  * Input data structure for the worker.
  */
-interface WorkerInput {
+export interface WorkerInput {
   /** Search query string */
   query: string;
   /** Array of entities to search */
@@ -28,7 +28,7 @@ interface WorkerInput {
 /**
  * Match result returned by the worker.
  */
-interface MatchResult {
+export interface MatchResult {
   /** Entity name that matched */
   name: string;
   /** Similarity score (0.0 to 1.0) */
@@ -46,7 +46,7 @@ interface MatchResult {
  * @param s2 - Second string
  * @returns Levenshtein distance (number of edits)
  */
-function levenshteinDistance(s1: string, s2: string): number {
+export function levenshteinDistance(s1: string, s2: string): number {
   const len1 = s1.length;
   const len2 = s2.length;
 
@@ -87,7 +87,7 @@ function levenshteinDistance(s1: string, s2: string): number {
  * @param s2 - Second string
  * @returns Similarity score (0.0 to 1.0, where 1.0 is identical)
  */
-function similarity(s1: string, s2: string): number {
+export function similarity(s1: string, s2: string): number {
   // Exact match
   if (s1 === s2) return 1.0;
 
@@ -106,7 +106,7 @@ function similarity(s1: string, s2: string): number {
  * @param data - Worker input containing query, entities, and threshold
  * @returns Array of match results
  */
-function searchEntities(data: WorkerInput): MatchResult[] {
+export function searchEntities(data: WorkerInput): MatchResult[] {
   const { query, entities, threshold } = data;
   const queryLower = query.toLowerCase();
   const results: MatchResult[] = [];

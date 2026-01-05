@@ -39,8 +39,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `tests/unit/utils/observationIndex.test.ts` - 17 tests
 - Added `tests/integration/compression-optimization.test.ts` - 3 tests
+- Added `tests/unit/workers/levenshteinWorker.test.ts` - 37 tests for worker functions
 - Added benchmark test for pre-computed similarity
-- Total test count: 2230 passing
+- Total test count: 2267 passing
+
+### Removed
+
+- Deprecated `WorkerPool.ts` - replaced by `@danielsimonjr/workerpool` in Phase 8
+
+### Changed
+
+- `levenshteinWorker.ts` now exports functions for direct testing
+- `workers/index.ts` re-exports worker types and functions
+- Workers module now has 100% test coverage
 
 ## [9.5.0] - 2026-01-04
 
