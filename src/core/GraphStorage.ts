@@ -11,7 +11,7 @@ import { promises as fs } from 'fs';
 import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
-import { NameIndex, TypeIndex, LowercaseCache, RelationIndex } from '../utils/indexes.js';
+import { NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex } from '../utils/indexes.js';
 
 /**
  * GraphStorage manages persistence of the knowledge graph to disk.
@@ -81,6 +81,12 @@ export class GraphStorage implements IGraphStorage {
    * O(1) relation lookup by entity name.
    */
   private relationIndex: RelationIndex = new RelationIndex();
+
+  /**
+   * O(1) observation word lookup by entity.
+   * Maps words in observations to entity names.
+   */
+  private observationIndex: ObservationIndex = new ObservationIndex();
 
   /**
    * Create a new GraphStorage instance.
@@ -243,6 +249,12 @@ export class GraphStorage implements IGraphStorage {
     this.nameIndex.build(entities);
     this.typeIndex.build(entities);
     this.lowercaseCache.build(entities);
+
+    // Build observation index
+    this.observationIndex.clear();
+    for (const entity of entities) {
+      this.observationIndex.add(entity.name, entity.observations);
+    }
   }
 
   /**
@@ -260,6 +272,7 @@ export class GraphStorage implements IGraphStorage {
     this.typeIndex.clear();
     this.lowercaseCache.clear();
     this.relationIndex.clear();
+    this.observationIndex.clear();
   }
 
   /**
@@ -330,6 +343,7 @@ export class GraphStorage implements IGraphStorage {
       this.nameIndex.add(entity);
       this.typeIndex.add(entity);
       this.lowercaseCache.set(entity);
+      this.observationIndex.add(entity.name, entity.observations);
 
       this.pendingAppends++;
 
@@ -560,6 +574,10 @@ export class GraphStorage implements IGraphStorage {
         this.typeIndex.updateType(entityName, oldType, updates.entityType);
       }
       this.lowercaseCache.set(entity); // Recompute lowercase
+      if (updates.observations) {
+        this.observationIndex.remove(entityName); // Remove old observations
+        this.observationIndex.add(entityName, entity.observations); // Add new observations
+      }
 
       this.pendingAppends++;
 
@@ -708,5 +726,56 @@ export class GraphStorage implements IGraphStorage {
    */
   hasRelations(entityName: string): boolean {
     return this.relationIndex.hasRelations(entityName);
+  }
+
+  // ==================== Observation Index Accessors ====================
+
+  /**
+   * Get entities that have observations containing the given word.
+   * Uses the observation index for O(1) lookup.
+   *
+   * OPTIMIZED: Uses ObservationIndex for constant-time lookup instead of
+   * linear scan through all entities and their observations.
+   *
+   * @param word - Word to search for in observations
+   * @returns Set of entity names
+   */
+  getEntitiesByObservationWord(word: string): Set<string> {
+    return this.observationIndex.getEntitiesWithWord(word);
+  }
+
+  /**
+   * Get entities that have observations containing ANY of the given words (union).
+   * Uses the observation index for O(1) lookup per word.
+   *
+   * OPTIMIZED: Uses ObservationIndex for constant-time lookups.
+   *
+   * @param words - Array of words to search for
+   * @returns Set of entity names containing any of the words
+   */
+  getEntitiesByAnyObservationWord(words: string[]): Set<string> {
+    return this.observationIndex.getEntitiesWithAnyWord(words);
+  }
+
+  /**
+   * Get entities that have observations containing ALL of the given words (intersection).
+   * Uses the observation index for O(1) lookup per word.
+   *
+   * OPTIMIZED: Uses ObservationIndex for constant-time lookups and set intersection.
+   *
+   * @param words - Array of words that must all be present
+   * @returns Set of entity names containing all of the words
+   */
+  getEntitiesByAllObservationWords(words: string[]): Set<string> {
+    return this.observationIndex.getEntitiesWithAllWords(words);
+  }
+
+  /**
+   * Get statistics about the observation index.
+   *
+   * @returns Object with wordCount and entityCount
+   */
+  getObservationIndexStats(): { wordCount: number; entityCount: number } {
+    return this.observationIndex.getStats();
   }
 }

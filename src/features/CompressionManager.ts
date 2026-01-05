@@ -7,11 +7,28 @@
  * @module features/CompressionManager
  */
 
-import type { Entity, Relation, CompressionResult } from '../types/index.js';
+import type { Entity, Relation, CompressionResult, KnowledgeGraph } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/index.js';
 import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
 import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
+
+/**
+ * Entity data pre-processed for efficient similarity comparisons.
+ * Pre-computes normalized Sets once to avoid repeated creation during O(n²) comparisons.
+ */
+interface PreparedEntity {
+  /** Original entity reference */
+  entity: Entity;
+  /** Lowercase name for comparison */
+  nameLower: string;
+  /** Lowercase entity type */
+  typeLower: string;
+  /** Set of lowercase observations */
+  observationSet: Set<string>;
+  /** Set of lowercase tags */
+  tagSet: Set<string>;
+}
 
 /**
  * Manages compression operations for the knowledge graph.
@@ -20,10 +37,44 @@ export class CompressionManager {
   constructor(private storage: GraphStorage) {}
 
   /**
+   * Prepare an entity for efficient similarity comparisons.
+   * Pre-computes all normalized data to avoid repeated computation.
+   *
+   * @param entity - The entity to prepare
+   * @returns PreparedEntity with pre-computed data
+   */
+  private prepareEntity(entity: Entity): PreparedEntity {
+    return {
+      entity,
+      nameLower: entity.name.toLowerCase(),
+      typeLower: entity.entityType.toLowerCase(),
+      observationSet: new Set(entity.observations.map(o => o.toLowerCase())),
+      tagSet: new Set((entity.tags ?? []).map(t => t.toLowerCase())),
+    };
+  }
+
+  /**
+   * Prepare multiple entities for efficient similarity comparisons.
+   * Use this before batch comparison operations.
+   *
+   * @param entities - Entities to prepare
+   * @returns Map of entity name to PreparedEntity
+   */
+  private prepareEntities(entities: readonly Entity[]): Map<string, PreparedEntity> {
+    const prepared = new Map<string, PreparedEntity>();
+    for (const entity of entities) {
+      prepared.set(entity.name, this.prepareEntity(entity));
+    }
+    return prepared;
+  }
+
+  /**
    * Calculate similarity between two entities using multiple heuristics.
    *
    * Uses configurable weights defined in SIMILARITY_WEIGHTS constant.
    * See SIMILARITY_WEIGHTS for the breakdown of scoring factors.
+   *
+   * NOTE: For batch comparisons, use prepareEntities() + calculatePreparedSimilarity() for better performance.
    *
    * @param e1 - First entity
    * @param e2 - Second entity
@@ -70,6 +121,64 @@ export class CompressionManager {
   }
 
   /**
+   * Efficiently calculate intersection size of two Sets without creating a new Set.
+   * Iterates over the smaller set for O(min(m,n)) complexity.
+   */
+  private setIntersectionSize(a: Set<string>, b: Set<string>): number {
+    // Always iterate over smaller set
+    const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
+    let count = 0;
+    for (const item of smaller) {
+      if (larger.has(item)) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Calculate similarity between two prepared entities.
+   * OPTIMIZED: Uses pre-computed Sets to avoid O(n) set creation per comparison.
+   *
+   * @param p1 - First prepared entity
+   * @param p2 - Second prepared entity
+   * @returns Similarity score from 0 (completely different) to 1 (identical)
+   */
+  private calculatePreparedSimilarity(p1: PreparedEntity, p2: PreparedEntity): number {
+    let score = 0;
+    let factors = 0;
+
+    // Name similarity (Levenshtein-based) - use pre-computed lowercase
+    const nameDistance = levenshteinDistance(p1.nameLower, p2.nameLower);
+    const maxNameLength = Math.max(p1.nameLower.length, p2.nameLower.length);
+    const nameSimilarity = 1 - nameDistance / maxNameLength;
+    score += nameSimilarity * SIMILARITY_WEIGHTS.NAME;
+    factors += SIMILARITY_WEIGHTS.NAME;
+
+    // Type similarity (exact match) - use pre-computed lowercase
+    if (p1.typeLower === p2.typeLower) {
+      score += SIMILARITY_WEIGHTS.TYPE;
+    }
+    factors += SIMILARITY_WEIGHTS.TYPE;
+
+    // Observation overlap (Jaccard similarity) - use pre-computed Sets
+    const obsIntersectionSize = this.setIntersectionSize(p1.observationSet, p2.observationSet);
+    const obsUnionSize = p1.observationSet.size + p2.observationSet.size - obsIntersectionSize;
+    const observationSimilarity = obsUnionSize > 0 ? obsIntersectionSize / obsUnionSize : 0;
+    score += observationSimilarity * SIMILARITY_WEIGHTS.OBSERVATIONS;
+    factors += SIMILARITY_WEIGHTS.OBSERVATIONS;
+
+    // Tag overlap (Jaccard similarity) - use pre-computed Sets
+    if (p1.tagSet.size > 0 || p2.tagSet.size > 0) {
+      const tagIntersectionSize = this.setIntersectionSize(p1.tagSet, p2.tagSet);
+      const tagUnionSize = p1.tagSet.size + p2.tagSet.size - tagIntersectionSize;
+      const tagSimilarity = tagUnionSize > 0 ? tagIntersectionSize / tagUnionSize : 0;
+      score += tagSimilarity * SIMILARITY_WEIGHTS.TAGS;
+      factors += SIMILARITY_WEIGHTS.TAGS;
+    }
+
+    return factors > 0 ? score / factors : 0;
+  }
+
+  /**
    * Find duplicate entities in the graph based on similarity threshold.
    *
    * OPTIMIZED: Uses bucketing strategies to reduce O(n²) comparisons:
@@ -86,6 +195,9 @@ export class CompressionManager {
     const graph = await this.storage.loadGraph();
     const duplicateGroups: string[][] = [];
     const processed = new Set<string>();
+
+    // OPTIMIZATION: Pre-prepare all entities once before comparisons
+    const preparedEntities = this.prepareEntities(graph.entities);
 
     // Step 1: Bucket entities by type (reduces comparisons drastically)
     const typeMap = new Map<string, Entity[]>();
@@ -132,13 +244,17 @@ export class CompressionManager {
           const entity1 = currentBucket[i];
           if (processed.has(entity1.name)) continue;
 
+          // OPTIMIZATION: Use prepared entity for comparison
+          const prepared1 = preparedEntities.get(entity1.name)!;
           const group: string[] = [entity1.name];
 
           for (let j = 0; j < candidateEntities.length; j++) {
             const entity2 = candidateEntities[j];
             if (entity1.name === entity2.name || processed.has(entity2.name)) continue;
 
-            const similarity = this.calculateEntitySimilarity(entity1, entity2);
+            // OPTIMIZATION: Use prepared entity and optimized similarity
+            const prepared2 = preparedEntities.get(entity2.name)!;
+            const similarity = this.calculatePreparedSimilarity(prepared1, prepared2);
             if (similarity >= threshold) {
               group.push(entity2.name);
               processed.add(entity2.name);
@@ -170,16 +286,27 @@ export class CompressionManager {
    *
    * @param entityNames - Names of entities to merge (first one is kept)
    * @param targetName - Optional new name for merged entity (default: first entity name)
+   * @param options - Optional configuration
+   * @param options.graph - Pre-loaded graph to use (avoids reload)
+   * @param options.skipSave - If true, don't save (caller will save)
    * @returns The merged entity
    * @throws {InsufficientEntitiesError} If less than 2 entities provided
    * @throws {EntityNotFoundError} If any entity not found
    */
-  async mergeEntities(entityNames: string[], targetName?: string): Promise<Entity> {
+  async mergeEntities(
+    entityNames: string[],
+    targetName?: string,
+    options: {
+      graph?: KnowledgeGraph;
+      skipSave?: boolean;
+    } = {}
+  ): Promise<Entity> {
     if (entityNames.length < 2) {
       throw new InsufficientEntitiesError('merging', 2, entityNames.length);
     }
 
-    const graph = await this.storage.getGraphForMutation();
+    // Use provided graph or load fresh
+    const graph = options.graph ?? await this.storage.getGraphForMutation();
     const entitiesToMerge = entityNames.map(name => {
       const entity = graph.entities.find(e => e.name === name);
       if (!entity) {
@@ -260,22 +387,27 @@ export class CompressionManager {
     const mergeNames = new Set(mergeEntities.map(e => e.name));
     graph.entities = graph.entities.filter(e => !mergeNames.has(e.name));
 
-    await this.storage.saveGraph(graph);
+    // Save unless caller said to skip
+    if (!options.skipSave) {
+      await this.storage.saveGraph(graph);
+    }
     return keepEntity;
   }
 
   /**
    * Compress the knowledge graph by finding and merging duplicates.
+   * OPTIMIZED: Loads graph once, performs all merges, saves once.
    *
    * @param threshold - Similarity threshold for duplicate detection (0.0 to 1.0), default DEFAULT_DUPLICATE_THRESHOLD
    * @param dryRun - If true, only report what would be compressed without applying changes
    * @returns Compression result with statistics
    */
   async compressGraph(threshold: number = DEFAULT_DUPLICATE_THRESHOLD, dryRun: boolean = false): Promise<CompressionResult> {
-    const initialGraph = await this.storage.loadGraph();
-    const initialSize = JSON.stringify(initialGraph).length;
-
     const duplicateGroups = await this.findDuplicates(threshold);
+
+    // OPTIMIZATION: Load graph once for all operations
+    const graph = await this.storage.getGraphForMutation();
+    const initialSize = JSON.stringify(graph).length;
     const result: CompressionResult = {
       duplicatesFound: duplicateGroups.reduce((sum, group) => sum + group.length, 0),
       entitiesMerged: 0,
@@ -297,25 +429,25 @@ export class CompressionManager {
       return result;
     }
 
-    // Actually merge duplicates
+    // Merge all duplicates using the same graph instance
     for (const group of duplicateGroups) {
       try {
-        // Count total observations across all entities in group BEFORE merging
-        const preGraph = await this.storage.loadGraph();
+        // Count observations before merge using loaded graph
         let totalObservationsBefore = 0;
         for (const name of group) {
-          const entity = preGraph.entities.find(e => e.name === name);
+          const entity = graph.entities.find(e => e.name === name);
           if (entity) {
             totalObservationsBefore += entity.observations.length;
           }
         }
 
-        const mergedEntity = await this.mergeEntities(group);
+        // OPTIMIZATION: Pass graph and skip individual saves
+        const mergedEntity = await this.mergeEntities(group, undefined, {
+          graph,
+          skipSave: true,
+        });
 
-        // Count unique observations AFTER merging (deduplicated)
         const observationsAfter = mergedEntity.observations.length;
-
-        // The difference is the number of duplicate observations removed
         result.observationsCompressed += totalObservationsBefore - observationsAfter;
 
         result.mergedEntities.push({
@@ -329,10 +461,12 @@ export class CompressionManager {
       }
     }
 
-    // Calculate space saved
-    const finalGraph = await this.storage.loadGraph();
-    const finalSize = JSON.stringify(finalGraph).length;
+    // OPTIMIZATION: Save once after all merges complete
+    await this.storage.saveGraph(graph);
+
+    const finalSize = JSON.stringify(graph).length;
     result.spaceFreed = initialSize - finalSize;
+    result.relationsConsolidated = result.entitiesMerged;
 
     return result;
   }

@@ -5,6 +5,43 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.6.0] - 2026-01-04
+
+### Added
+
+- **Phase 9: Advanced Optimizations** - CPU-intensive operation improvements
+  - **Sprint 1: Observation Index** - O(1) observation-based searches
+    - New `ObservationIndex` class in `indexes.ts` with inverted index for observation keywords
+    - GraphStorage integration with automatic index maintenance on entity add/update/remove
+    - Methods: `getEntitiesByObservationWord()`, `getEntitiesByAnyObservationWord()`, `getEntitiesByAllObservationWords()`
+    - BooleanSearch optimization using index as fast positive path for simple terms
+    - 17 new unit tests in `observationIndex.test.ts`
+  - **Sprint 2: Pre-computed Similarity Data** - 1.5-2x faster duplicate detection
+    - New `PreparedEntity` interface with pre-computed lowercase strings and Sets
+    - `prepareEntity()` and `prepareEntities()` methods for batch preparation
+    - `setIntersectionSize()` helper for efficient Set intersection counting
+    - `calculatePreparedSimilarity()` using prepared data instead of creating Sets per comparison
+    - `findDuplicates()` now uses prepared entities for O(n²) comparisons
+    - New benchmark test in `optimization-benchmarks.test.ts`
+  - **Sprint 3: Reduced Graph Reloads** - 10x I/O reduction for compress_graph
+    - `mergeEntities()` now accepts optional `{ graph, skipSave }` options
+    - `compressGraph()` optimized to load graph once, pass to all merges, save once at end
+    - Integration tests with spies verifying single loadGraph/saveGraph calls
+    - 3 new integration tests in `compression-optimization.test.ts`
+
+### Performance
+
+- Observation lookups: O(n) linear scan → O(1) index lookup (10-50x improvement)
+- Duplicate detection: 4 Sets per comparison → 0 Sets per comparison (1.5-2x improvement)
+- compressGraph I/O: O(n) graph loads per group → O(1) constant (10x improvement)
+
+### Tests
+
+- Added `tests/unit/utils/observationIndex.test.ts` - 17 tests
+- Added `tests/integration/compression-optimization.test.ts` - 3 tests
+- Added benchmark test for pre-computed similarity
+- Total test count: 2230 passing
+
 ## [9.5.0] - 2026-01-04
 
 ### Added

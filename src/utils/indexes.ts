@@ -6,6 +6,7 @@
  * - TypeIndex: O(1) entities by type
  * - LowercaseCache: Pre-computed lowercase strings to avoid repeated toLowerCase()
  * - RelationIndex: O(1) relation lookup by entity name (from/to)
+ * - ObservationIndex: O(1) observation word lookup by entity
  *
  * @module utils/indexes
  */
@@ -444,5 +445,144 @@ export class RelationIndex {
       this.toIndex.set(relation.to, toSet);
     }
     toSet.add(relation);
+  }
+}
+
+/**
+ * Inverted index mapping observation keywords to entity names.
+ * Enables O(1) lookup for 'which entities mention word X?' queries.
+ * Words are normalized to lowercase and split on whitespace/punctuation.
+ */
+export class ObservationIndex {
+  private index: Map<string, Set<string>> = new Map();
+  private entityObservations: Map<string, Set<string>> = new Map();
+
+  /**
+   * Add an entity's observations to the index.
+   * Tokenizes observations into words and creates reverse mapping.
+   *
+   * @param entityName - Name of the entity
+   * @param observations - Array of observation strings
+   */
+  add(entityName: string, observations: string[]): void {
+    const entityWords = new Set<string>();
+
+    for (const observation of observations) {
+      const words = this.tokenize(observation);
+      for (const word of words) {
+        entityWords.add(word);
+        if (!this.index.has(word)) {
+          this.index.set(word, new Set());
+        }
+        this.index.get(word)!.add(entityName);
+      }
+    }
+
+    this.entityObservations.set(entityName, entityWords);
+  }
+
+  /**
+   * Remove an entity from the index.
+   * Cleans up all word mappings for this entity.
+   *
+   * @param entityName - Name of the entity to remove
+   */
+  remove(entityName: string): void {
+    const words = this.entityObservations.get(entityName);
+    if (!words) return;
+
+    for (const word of words) {
+      const entities = this.index.get(word);
+      if (entities) {
+        entities.delete(entityName);
+        if (entities.size === 0) {
+          this.index.delete(word);
+        }
+      }
+    }
+
+    this.entityObservations.delete(entityName);
+  }
+
+  /**
+   * Get all entities that have observations containing the given word.
+   * Word matching is case-insensitive.
+   *
+   * @param word - Word to search for
+   * @returns Set of entity names containing this word
+   */
+  getEntitiesWithWord(word: string): Set<string> {
+    return this.index.get(word.toLowerCase()) ?? new Set();
+  }
+
+  /**
+   * Get all entities that have observations containing ANY of the given words (union).
+   *
+   * @param words - Array of words to search for
+   * @returns Set of entity names containing any of the words
+   */
+  getEntitiesWithAnyWord(words: string[]): Set<string> {
+    const result = new Set<string>();
+    for (const word of words) {
+      const entities = this.getEntitiesWithWord(word);
+      for (const entity of entities) {
+        result.add(entity);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Get all entities that have observations containing ALL of the given words (intersection).
+   *
+   * @param words - Array of words that must all be present
+   * @returns Set of entity names containing all of the words
+   */
+  getEntitiesWithAllWords(words: string[]): Set<string> {
+    if (words.length === 0) return new Set();
+
+    let result = new Set(this.getEntitiesWithWord(words[0]));
+
+    for (let i = 1; i < words.length && result.size > 0; i++) {
+      const wordEntities = this.getEntitiesWithWord(words[i]);
+      result = new Set([...result].filter(e => wordEntities.has(e)));
+    }
+
+    return result;
+  }
+
+  /**
+   * Clear all entries from the index.
+   */
+  clear(): void {
+    this.index.clear();
+    this.entityObservations.clear();
+  }
+
+  /**
+   * Get statistics about the index.
+   *
+   * @returns Object with wordCount and entityCount
+   */
+  getStats(): { wordCount: number; entityCount: number } {
+    return {
+      wordCount: this.index.size,
+      entityCount: this.entityObservations.size,
+    };
+  }
+
+  /**
+   * Tokenize text into searchable words.
+   * Normalizes to lowercase, splits on non-alphanumeric characters,
+   * and filters out words less than 2 characters.
+   *
+   * @param text - Text to tokenize
+   * @returns Array of normalized words
+   */
+  private tokenize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(word => word.length >= 2);
   }
 }

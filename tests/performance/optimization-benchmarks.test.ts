@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GraphStorage } from '../../src/core/GraphStorage.js';
 import { EntityManager } from '../../src/core/EntityManager.js';
+import { CompressionManager } from '../../src/features/CompressionManager.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -271,6 +272,44 @@ describe('Phase 6 Optimization Benchmarks', () => {
     it('should return undefined for non-existent entity', () => {
       const result = storage.getEntityByName('NonExistentEntity');
       expect(result).toBeUndefined();
+    });
+  });
+
+  // ============================================================
+  // Pre-computed Similarity Optimization (Phase 9 Sprint 2)
+  // Uses prepared entities to avoid repeated Set creation in O(n²) comparisons
+  // ============================================================
+
+  describe('Pre-computed Similarity Optimization', () => {
+    it('should complete findDuplicates efficiently with prepared entities', async () => {
+      // Create temp storage
+      const testPath = join(tmpdir(), `bench-sim-${Date.now()}.jsonl`);
+      const storage = new GraphStorage(testPath);
+
+      // Create 50 entities with observations and tags
+      const entities = Array.from({ length: 50 }, (_, i) => ({
+        name: `Entity${i}`,
+        entityType: i % 5 === 0 ? 'special' : 'common',
+        observations: [`Observation ${i}`, `Data point ${i % 10}`, `Detail about item ${i}`],
+        tags: [`tag${i % 10}`, 'benchmark', `category${i % 5}`],
+      }));
+
+      await storage.saveGraph({ entities, relations: [] });
+
+      const manager = new CompressionManager(storage);
+
+      // Time findDuplicates
+      const start = Date.now();
+      const duplicates = await manager.findDuplicates(0.7);
+      const duration = Date.now() - start;
+
+      console.log(`findDuplicates (50 entities, optimized): ${duration}ms`);
+
+      // Should complete in reasonable time (< 500ms)
+      expect(duration).toBeLessThan(500);
+
+      // Cleanup
+      await fs.unlink(testPath).catch(() => {});
     });
   });
 });

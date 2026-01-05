@@ -413,6 +413,19 @@ export class BooleanSearch {
               return lowercased ? lowercased.entityType.includes(value) : entity.entityType.toLowerCase().includes(value);
             case 'observation':
             case 'observations':
+              // OPTIMIZED: Use observation index for simple single-word terms (O(1) vs O(n))
+              // The index only matches complete words, not substrings, so we can only
+              // use it as a quick positive check. If not found in index, fall through
+              // to substring matching for compatibility.
+              if (this.isSimpleTerm(value) && !value.includes(' ')) {
+                const candidateNames = this.storage.getEntitiesByObservationWord(value);
+                if (candidateNames.has(entity.name)) {
+                  return true; // O(1) positive match
+                }
+                // Not found in index - entity doesn't have this complete word,
+                // but might contain it as substring - fall through to check
+              }
+              // Linear scan for substring matches, phrases, and patterns
               return lowercased
                 ? lowercased.observations.some(obs => obs.includes(value))
                 : entity.observations.some(obs => obs.toLowerCase().includes(value));
@@ -431,6 +444,15 @@ export class BooleanSearch {
         return this.entityMatchesTerm(entity, value, lowercased);
       }
     }
+  }
+
+  /**
+   * Check if a search term is simple (no regex or wildcards).
+   * Simple terms can use the O(1) observation index.
+   */
+  private isSimpleTerm(term: string): boolean {
+    const specialChars = /[.*+?^${}()|\\[\]]/;
+    return !specialChars.test(term);
   }
 
   /**
