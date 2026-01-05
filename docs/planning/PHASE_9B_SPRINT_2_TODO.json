@@ -3,17 +3,17 @@
   "sprint": 2,
   "title": "Medium Priority Integrations",
   "priority": "medium",
-  "effort": "2 days",
+  "effort": "6 hours",
   "status": "planned",
   "impact": "Medium - Extends TaskScheduler integration to ArchiveManager, SemanticSearch, and TransactionManager",
   "targetMetrics": {
     "archiveProgress": {
       "current": "No progress reporting during archive operations",
-      "target": "Progress callback for entity evaluation and archival"
+      "target": "Progress callback for entity evaluation and archival phases"
     },
     "semanticSearchCancellation": {
       "current": "indexAll has onProgress but no cancellation",
-      "target": "Full AbortSignal support for indexAll and search operations"
+      "target": "Full AbortSignal support for indexAll"
     },
     "transactionProgress": {
       "current": "No progress during commit",
@@ -24,114 +24,93 @@
     {
       "id": "9B.2.1",
       "category": "integration",
-      "title": "Integrate TaskScheduler with ArchiveManager",
-      "description": "Add progress callback and cancellation support to ArchiveManager.archiveEntities() method. This enables tracking progress during large archive operations.",
+      "title": "Enhance ArchiveManager with Progress and Cancellation",
+      "description": "Add progress callback and cancellation support to ArchiveManager.archiveEntities() method using the LongRunningOperationOptions interface.",
       "status": "pending",
-      "estimatedHours": 3,
+      "estimatedHours": 1.5,
       "agent": "haiku",
       "files": ["src/features/ArchiveManager.ts", "tests/unit/features/ArchiveManager.test.ts"],
       "testCategories": ["unit"],
       "implementation": {
         "purpose": "Enable progress tracking and cancellation during entity archival, improving UX for large archive operations.",
         "keyDecisions": [
-          "Report progress in two phases: evaluation (0-50%) and archival (50-100%)",
-          "Support cancellation between phases and during archival",
-          "Extend ArchiveOptions interface with AsyncOperationOptions",
-          "Return enhanced result with cancellation info"
+          "Extend existing ArchiveOptions interface with LongRunningOperationOptions fields",
+          "Report two-phase progress: evaluation (0-50%) and archival (50-100%)",
+          "Support cancellation between phases and during evaluation",
+          "Keep original return type ArchiveResult (NOT CancellableResult wrapper)"
         ],
         "currentCode": {
-          "file": "src/features/ArchiveManager.ts",
-          "lines": "104-200",
           "signature": "async archiveEntities(criteria: ArchiveCriteria, options: ArchiveOptions | boolean = {}): Promise<ArchiveResult>"
         }
       },
       "stepByStep": [
         {
           "step": 1,
-          "action": "Import async types in ArchiveManager.ts",
-          "details": "Add: import { type AsyncOperationOptions, checkAborted } from '../types/index.js';"
+          "action": "Import utilities in ArchiveManager.ts",
+          "details": "Import checkCancellation, createProgressReporter, createProgress from utils/index.js"
         },
         {
           "step": 2,
           "action": "Extend ArchiveOptions interface",
-          "details": "Update interface: export interface ArchiveOptions extends AsyncOperationOptions {\n  dryRun?: boolean;\n  saveToFile?: boolean;\n}"
+          "details": "Add onProgress?: ProgressCallback and signal?: AbortSignal to the interface"
         },
         {
           "step": 3,
-          "action": "Add progress reporting during entity evaluation",
-          "details": "In the evaluation loop (lines 117-149), report progress: opts.onProgress?.(entityIndex, total, 'Evaluating entities');\nScale to 0-50% range: const progress = Math.floor((entityIndex / total) * 50);"
+          "action": "Add progress reporting during entity evaluation phase (0-50%)",
+          "details": "Report progress every 50 entities during the evaluation loop"
         },
         {
           "step": 4,
           "action": "Add cancellation check during evaluation",
-          "details": "Every 100 entities: if (entityIndex % 100 === 0) checkAborted(opts.signal, 'archiveEntities');"
+          "details": "Check cancellation every 100 entities: checkCancellation(opts.signal, 'archiveEntities')"
         },
         {
           "step": 5,
-          "action": "Add progress for archive phase",
-          "details": "After saveToArchive completes: opts.onProgress?.(75, 100, 'Writing archive file');\nAfter graph save: opts.onProgress?.(100, 100, 'Archive complete');"
+          "action": "Add progress for archive phase (50-100%)",
+          "details": "Report progress at 75% after saveToArchive, 100% after completion"
         },
         {
           "step": 6,
           "action": "Add cancellation check before archive write",
-          "details": "Before calling saveToArchive: checkAborted(opts.signal, 'archiveEntities');"
+          "details": "checkCancellation before calling saveToArchive"
         },
         {
           "step": 7,
-          "action": "Handle cancellation in result",
-          "details": "Wrap in try-catch. If cancelled, return: { archived: 0, entityNames: [], cancelled: true }"
-        },
-        {
-          "step": 8,
-          "action": "Add 'cancelled' field to ArchiveResult interface",
-          "details": "Add to interface: cancelled?: boolean;"
-        },
-        {
-          "step": 9,
-          "action": "Add tests for progress and cancellation",
-          "details": "Test progress callback is called during both phases, test cancellation stops operation"
+          "action": "Run tests and add new test cases",
+          "details": "Verify backward compatibility, add progress/cancellation tests"
         }
       ],
-      "codeSnippets": {
-        "extendedArchiveOptions": "/**\n * Options for archive operations.\n * Extended with progress and cancellation support.\n */\nexport interface ArchiveOptions extends AsyncOperationOptions {\n  /** Dry run mode - preview without making changes */\n  dryRun?: boolean;\n  /** Whether to save archived entities to a compressed file (default: true) */\n  saveToFile?: boolean;\n}",
-        "extendedArchiveResult": "/**\n * Result of archive operation.\n */\nexport interface ArchiveResult {\n  /** Number of entities archived */\n  archived: number;\n  /** Names of archived entities */\n  entityNames: string[];\n  /** Path to the archive file (if created) */\n  archivePath?: string;\n  /** Original size of archive data in bytes */\n  originalSize?: number;\n  /** Compressed size in bytes */\n  compressedSize?: number;\n  /** Compression ratio */\n  compressionRatio?: number;\n  /** Whether operation was cancelled */\n  cancelled?: boolean;\n}",
-        "progressInEvaluation": "// In evaluation loop\nlet entityIndex = 0;\nfor (const entity of readGraph.entities) {\n  // Report progress (0-50% for evaluation phase)\n  if (entityIndex % 50 === 0) {\n    opts.onProgress?.(\n      Math.floor((entityIndex / readGraph.entities.length) * 50),\n      100,\n      `Evaluating entity ${entityIndex + 1}/${readGraph.entities.length}`\n    );\n  }\n  \n  // Check cancellation\n  if (entityIndex % 100 === 0) {\n    checkAborted(opts.signal, 'archiveEntities');\n  }\n  \n  // ... existing evaluation logic ...\n  \n  entityIndex++;\n}"
-      },
       "acceptanceCriteria": [
-        "ArchiveOptions extends AsyncOperationOptions",
-        "ArchiveResult includes optional 'cancelled' field",
+        "ArchiveOptions extended with onProgress and signal fields",
         "Progress callback receives updates during evaluation (0-50%) and archival (50-100%)",
-        "AbortSignal cancellation stops the operation at safe points",
+        "AbortSignal cancellation throws OperationCancelledError at safe points",
         "Legacy calls with boolean parameter still work",
-        "All existing archive tests pass",
-        "New progress/cancellation tests pass"
+        "All existing archive tests pass (backward compatible)",
+        "TypeScript compilation passes"
       ]
     },
     {
       "id": "9B.2.2",
       "category": "integration",
-      "title": "Add AbortSignal Support to SemanticSearch",
-      "description": "Enhance SemanticSearch.indexAll() to support AbortSignal cancellation. The method already has onProgress callback via SemanticIndexOptions, but needs cancellation support.",
+      "title": "Add AbortSignal Support to SemanticSearch.indexAll()",
+      "description": "Enhance SemanticSearch.indexAll() to support AbortSignal cancellation. The method already has onProgress callback via SemanticIndexOptions, so only cancellation support is needed.",
       "status": "pending",
-      "estimatedHours": 2,
+      "estimatedHours": 1.5,
       "agent": "haiku",
       "files": ["src/search/SemanticSearch.ts", "src/types/types.ts", "tests/unit/search/SemanticSearch.test.ts"],
       "testCategories": ["unit"],
       "implementation": {
         "purpose": "Enable cancellation of semantic indexing operations, which can be slow for large graphs due to embedding API calls.",
         "keyDecisions": [
-          "Add 'signal' field to SemanticIndexOptions",
+          "Add 'signal' field to SemanticIndexOptions interface",
           "Check cancellation between batches in indexAll",
-          "Support cancellation in search method for long-running queries",
-          "Return indexed count in case of cancellation"
+          "Throw OperationCancelledError when aborted",
+          "Keep original return type (no CancellableResult wrapper)"
         ],
         "currentCode": {
-          "file": "src/search/SemanticSearch.ts",
-          "lines": "98-161",
           "signature": "async indexAll(graph: ReadonlyKnowledgeGraph, options: SemanticIndexOptions = {}): Promise<{ indexed: number; skipped: number; errors: number }>"
         },
         "existingSemanticIndexOptions": {
-          "file": "src/types/types.ts",
           "fields": ["forceReindex?: boolean", "onProgress?: (current: number, total: number) => void", "batchSize?: number"]
         }
       },
@@ -139,62 +118,43 @@
         {
           "step": 1,
           "action": "Update SemanticIndexOptions in src/types/types.ts",
-          "details": "Add signal field: signal?: AbortSignal;"
+          "details": "Add signal?: AbortSignal field to the interface"
         },
         {
           "step": 2,
-          "action": "Import checkAborted in SemanticSearch.ts",
-          "details": "Add: import { checkAborted } from '../types/index.js'; (after we add it to types/async.ts)"
+          "action": "Import checkCancellation in SemanticSearch.ts",
+          "details": "Import from utils/index.js"
         },
         {
           "step": 3,
-          "action": "Add cancellation check in indexAll batch loop",
-          "details": "At the start of the for loop processing batches (line 126): checkAborted(options.signal, 'indexAll');"
+          "action": "Add cancellation check at start of indexAll",
+          "details": "checkCancellation(options.signal, 'indexAll')"
         },
         {
           "step": 4,
-          "action": "Add 'cancelled' field to indexAll return type",
-          "details": "Change return type to: Promise<{ indexed: number; skipped: number; errors: number; cancelled?: boolean }>"
+          "action": "Add cancellation check in batch processing loop",
+          "details": "At the start of each batch iteration, check for cancellation"
         },
         {
           "step": 5,
-          "action": "Handle cancellation gracefully",
-          "details": "Wrap batch processing in try-catch. If cancelled, return current stats with cancelled: true"
-        },
-        {
-          "step": 6,
-          "action": "Add cancellation support to search method",
-          "details": "Add optional signal parameter: async search(graph, query, limit?, minSimilarity?, signal?: AbortSignal)\nCheck cancellation after embedding generation: checkAborted(signal, 'semanticSearch');"
-        },
-        {
-          "step": 7,
           "action": "Add tests for indexAll cancellation",
-          "details": "Test that aborting signal mid-indexing returns partial results with cancelled: true"
-        },
-        {
-          "step": 8,
-          "action": "Add tests for search cancellation",
-          "details": "Test that aborting during search throws cancellation error"
+          "details": "Test that aborting signal throws OperationCancelledError"
         }
       ],
-      "codeSnippets": {
-        "updatedSemanticIndexOptions": "/**\n * Options for semantic indexing operations.\n */\nexport interface SemanticIndexOptions {\n  /** Force re-indexing of already indexed entities */\n  forceReindex?: boolean;\n  /** Progress callback (current, total) */\n  onProgress?: (current: number, total: number) => void;\n  /** Batch size for embedding API calls (default: 10) */\n  batchSize?: number;\n  /** AbortSignal for cancellation support */\n  signal?: AbortSignal;\n}",
-        "indexAllWithCancellation": "async indexAll(\n  graph: ReadonlyKnowledgeGraph,\n  options: SemanticIndexOptions = {}\n): Promise<{ indexed: number; skipped: number; errors: number; cancelled?: boolean }> {\n  const { forceReindex = false, onProgress, batchSize = EMBEDDING_DEFAULTS.DEFAULT_BATCH_SIZE, signal } = options;\n\n  let indexed = 0;\n  let skipped = 0;\n  let errors = 0;\n\n  // ... existing setup ...\n\n  try {\n    for (let i = 0; i < toIndex.length; i += batchSize) {\n      // Check cancellation between batches\n      checkAborted(signal, 'indexAll');\n\n      const batch = toIndex.slice(i, i + batchSize);\n      // ... existing batch processing ...\n    }\n\n    return { indexed, skipped, errors };\n  } catch (error) {\n    if (error instanceof Error && error.message.includes('cancelled')) {\n      return { indexed, skipped, errors, cancelled: true };\n    }\n    throw error;\n  }\n}"
-      },
       "acceptanceCriteria": [
         "SemanticIndexOptions includes 'signal' field",
         "indexAll checks AbortSignal between batches",
-        "indexAll returns cancelled: true when aborted",
-        "search method accepts optional AbortSignal",
-        "Existing semantic search tests pass",
-        "New cancellation tests pass"
+        "Cancellation throws OperationCancelledError",
+        "Existing progress tracking (onProgress) still works",
+        "All existing semantic search tests pass",
+        "TypeScript compilation passes"
       ]
     },
     {
       "id": "9B.2.3",
       "category": "integration",
-      "title": "Integrate TaskScheduler with TransactionManager",
-      "description": "Add progress callback support to TransactionManager.commit() method. This enables tracking progress during transaction execution, which is useful for transactions with many operations.",
+      "title": "Add Progress Callback to TransactionManager.commit()",
+      "description": "Add progress callback support to TransactionManager.commit() method. Note: Cancellation is intentionally NOT supported to maintain atomic transaction semantics.",
       "status": "pending",
       "estimatedHours": 2,
       "agent": "haiku",
@@ -203,28 +163,27 @@
       "implementation": {
         "purpose": "Enable progress tracking during transaction commits, showing operation-by-operation progress for large transactions.",
         "keyDecisions": [
-          "Add CommitOptions interface with progress callback",
+          "Create CommitOptions interface with onProgress?: ProgressCallback only",
+          "Do NOT support cancellation (atomic semantics - use rollback() before commit if needed)",
           "Report progress after each operation in commit()",
-          "Do NOT support cancellation mid-commit (atomic semantics)",
-          "Progress format: (operationIndex, totalOperations, operationDescription)"
+          "Keep original return type TransactionResult"
         ],
         "currentCode": {
-          "file": "src/core/TransactionManager.ts",
-          "lines": "260-309",
           "signature": "async commit(): Promise<TransactionResult>"
         },
-        "atomicityNote": "Transactions must be atomic - either all operations succeed or all fail. Therefore, we do NOT support cancellation during commit. The user should call rollback() if they want to cancel before commit."
+        "newSignature": "async commit(options?: CommitOptions): Promise<TransactionResult>",
+        "atomicityNote": "Transactions must be atomic - either all operations succeed or all fail. Cancellation during commit would violate atomicity. Users should call rollback() before commit if they want to cancel."
       },
       "stepByStep": [
         {
           "step": 1,
-          "action": "Import ProgressCallback type",
-          "details": "Add: import { type ProgressCallback } from '../types/index.js';"
+          "action": "Import ProgressCallback type in TransactionManager.ts",
+          "details": "Import from utils/taskScheduler.js"
         },
         {
           "step": 2,
           "action": "Create CommitOptions interface",
-          "details": "export interface CommitOptions {\n  /** Progress callback for tracking operation execution */\n  onProgress?: ProgressCallback;\n}"
+          "details": "interface CommitOptions { onProgress?: ProgressCallback; } - Note: NO signal field"
         },
         {
           "step": 3,
@@ -233,38 +192,33 @@
         },
         {
           "step": 4,
-          "action": "Add progress reporting in operation loop",
-          "details": "After each applyOperation call (line 278): options?.onProgress?.(\n  operationsExecuted,\n  this.operations.length,\n  `Applied ${operation.type}`\n);"
+          "action": "Add initial progress report",
+          "details": "Report 0% at start with message 'Starting transaction'"
         },
         {
           "step": 5,
-          "action": "Add initial progress report",
-          "details": "Before starting: options?.onProgress?.(0, this.operations.length, 'Starting transaction');"
+          "action": "Add progress reporting in operation loop",
+          "details": "After each applyOperation call, report progress with operation type"
         },
         {
           "step": 6,
           "action": "Add final progress report",
-          "details": "After save: options?.onProgress?.(operationsExecuted, this.operations.length, 'Transaction committed');"
+          "details": "Report 100% after save with message 'Transaction committed'"
         },
         {
           "step": 7,
           "action": "Add test for commit progress",
-          "details": "Test that progress callback receives calls for each operation in transaction"
+          "details": "Test that progress callback receives calls for each operation"
         }
       ],
-      "codeSnippets": {
-        "commitOptions": "/**\n * Options for transaction commit.\n * \n * Note: Cancellation is NOT supported during commit to maintain atomic semantics.\n * Use rollback() before commit if you need to cancel.\n */\nexport interface CommitOptions {\n  /** Progress callback for tracking operation execution */\n  onProgress?: ProgressCallback;\n}",
-        "commitWithProgress": "async commit(options?: CommitOptions): Promise<TransactionResult> {\n  this.ensureInTransaction();\n\n  try {\n    // Create backup for rollback\n    const backupResult = await this.ioManager.createBackup({\n      description: 'Transaction backup (auto-created)',\n    });\n    this.transactionBackup = backupResult.path;\n\n    // Load mutable copy of graph\n    const graph = await this.storage.getGraphForMutation();\n    const timestamp = new Date().toISOString();\n    const total = this.operations.length;\n\n    // Initial progress\n    options?.onProgress?.(0, total, 'Starting transaction');\n\n    // Apply all operations\n    let operationsExecuted = 0;\n    for (const operation of this.operations) {\n      this.applyOperation(graph, operation, timestamp);\n      operationsExecuted++;\n      \n      // Report progress\n      options?.onProgress?.(\n        operationsExecuted,\n        total,\n        `Applied ${operation.type.replace('_', ' ').toLowerCase()}`\n      );\n    }\n\n    // Save the modified graph\n    await this.storage.saveGraph(graph);\n\n    // Final progress\n    options?.onProgress?.(total, total, 'Transaction committed');\n\n    // ... rest of cleanup ...\n  } catch (error) {\n    // ... existing error handling ...\n  }\n}",
-        "newTest": "describe('commit with progress', () => {\n  it('should call onProgress for each operation', async () => {\n    const progressCalls: [number, number, string][] = [];\n    \n    txManager.begin();\n    txManager.createEntity({ name: 'A', entityType: 'test', observations: [] });\n    txManager.createEntity({ name: 'B', entityType: 'test', observations: [] });\n    txManager.createRelation({ from: 'A', to: 'B', relationType: 'knows' });\n    \n    const result = await txManager.commit({\n      onProgress: (current, total, message) => {\n        progressCalls.push([current, total, message ?? '']);\n      }\n    });\n    \n    expect(result.success).toBe(true);\n    expect(progressCalls.length).toBeGreaterThanOrEqual(4); // start + 3 ops + end\n    expect(progressCalls[0]).toEqual([0, 3, 'Starting transaction']);\n    expect(progressCalls[progressCalls.length - 1][2]).toContain('committed');\n  });\n});"
-      },
       "acceptanceCriteria": [
-        "CommitOptions interface exists with onProgress callback",
+        "CommitOptions interface exists with onProgress callback (NO signal)",
         "commit() accepts optional CommitOptions parameter",
         "Progress callback receives updates after each operation",
-        "Progress includes operation type in message",
-        "Existing transaction tests pass",
-        "New progress test passes",
-        "Note: No cancellation support (by design for atomic semantics)"
+        "Progress includes operation type in currentTaskId",
+        "Existing transaction tests pass (backward compatible)",
+        "TypeScript compilation passes",
+        "Documentation clearly states no cancellation support (by design)"
       ]
     }
   ],
@@ -272,8 +226,8 @@
     "All three tasks completed with passing tests",
     "ArchiveManager supports progress and cancellation",
     "SemanticSearch.indexAll supports AbortSignal cancellation",
-    "TransactionManager.commit supports progress callback",
-    "All existing tests pass",
+    "TransactionManager.commit supports progress callback (no cancellation by design)",
+    "All existing tests pass (backward compatible)",
     "npm run typecheck passes"
   ],
   "filesCreated": [],
@@ -287,13 +241,13 @@
     "tests/unit/core/TransactionManager.test.ts"
   ],
   "totalNewTests": 8,
-  "totalEstimatedHours": 7,
-  "dependencies": ["9B.1.1 (async types must be created first)"],
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 9B.1 (operationUtils and LongRunningOperationOptions must exist)"],
   "notes": [
-    "Sprint 2 depends on Sprint 1 Task 9B.1.1 for async types",
-    "TransactionManager intentionally does NOT support cancellation during commit",
+    "Sprint 2 depends on Sprint 1 Task 9B.1.1 for operationUtils",
+    "TransactionManager intentionally does NOT support cancellation during commit (atomic semantics)",
     "SemanticSearch already has onProgress, just needs signal added",
     "ArchiveManager progress should reflect both evaluation and archival phases",
-    "Test with mock embedding service for SemanticSearch tests to avoid API calls"
+    "Use the existing ProgressCallback type from taskScheduler.ts"
   ]
 }
