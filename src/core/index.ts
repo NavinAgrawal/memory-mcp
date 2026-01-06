@@ -17,7 +17,10 @@ export { ManagerContext as KnowledgeGraphManager } from './ManagerContext.js';
 export {
   TransactionManager,
   OperationType,
+  BatchTransaction,
   type TransactionOperation,
   type TransactionResult,
 } from './TransactionManager.js';
 export { createStorage, createStorageFromPath } from './StorageFactory.js';
+// Phase 10 Sprint 2: Graph change events
+export { GraphEventEmitter } from './GraphEventEmitter.js';

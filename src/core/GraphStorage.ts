@@ -12,6 +12,8 @@ import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 import { NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex } from '../utils/indexes.js';
+import { BatchTransaction } from './TransactionManager.js';
+import { GraphEventEmitter } from './GraphEventEmitter.js';
 
 /**
  * GraphStorage manages persistence of the knowledge graph to disk.
@@ -89,11 +91,43 @@ export class GraphStorage implements IGraphStorage {
   private observationIndex: ObservationIndex = new ObservationIndex();
 
   /**
+   * Phase 10 Sprint 2: Event emitter for graph change notifications.
+   * Allows external systems to subscribe to graph changes.
+   */
+  private eventEmitter: GraphEventEmitter = new GraphEventEmitter();
+
+  /**
    * Create a new GraphStorage instance.
    *
    * @param memoryFilePath - Absolute path to the JSONL file
    */
   constructor(private memoryFilePath: string) {}
+
+  // ==================== Phase 10 Sprint 2: Event Emitter Access ====================
+
+  /**
+   * Get the event emitter for subscribing to graph changes.
+   *
+   * @returns GraphEventEmitter instance
+   *
+   * @example
+   * ```typescript
+   * const storage = new GraphStorage('/data/memory.jsonl');
+   *
+   * // Subscribe to entity creation events
+   * storage.events.on('entity:created', (event) => {
+   *   console.log(`Entity ${event.entity.name} created`);
+   * });
+   *
+   * // Subscribe to all events
+   * storage.events.onAny((event) => {
+   *   console.log(`Graph event: ${event.type}`);
+   * });
+   * ```
+   */
+  get events(): GraphEventEmitter {
+    return this.eventEmitter;
+  }
 
   // ==================== Durable File Operations ====================
 
@@ -231,11 +265,17 @@ export class GraphStorage implements IGraphStorage {
       // Build indexes from loaded data
       this.buildEntityIndexes(graph.entities);
       this.buildRelationIndex(graph.relations);
+
+      // Phase 10 Sprint 2: Emit graph:loaded event
+      this.eventEmitter.emitGraphLoaded(graph.entities.length, graph.relations.length);
     } catch (error) {
       // File doesn't exist - create empty graph
       if (error instanceof Error && 'code' in error && (error as any).code === 'ENOENT') {
         this.cache = { entities: [], relations: [] };
         this.clearIndexes();
+
+        // Phase 10 Sprint 2: Emit graph:loaded event for empty graph
+        this.eventEmitter.emitGraphLoaded(0, 0);
         return;
       }
       throw error;
@@ -350,6 +390,9 @@ export class GraphStorage implements IGraphStorage {
       // Clear search caches
       clearAllSearchCaches();
 
+      // Phase 10 Sprint 2: Emit entity:created event
+      this.eventEmitter.emitEntityCreated(entity);
+
       // Trigger compaction if threshold reached
       if (this.pendingAppends >= this.compactionThreshold) {
         await this.compactInternal();
@@ -403,6 +446,9 @@ export class GraphStorage implements IGraphStorage {
 
       // Clear search caches
       clearAllSearchCaches();
+
+      // Phase 10 Sprint 2: Emit relation:created event
+      this.eventEmitter.emitRelationCreated(relation);
 
       // Trigger compaction if threshold reached
       if (this.pendingAppends >= this.compactionThreshold) {
@@ -492,6 +538,9 @@ export class GraphStorage implements IGraphStorage {
 
     // Clear all search caches since graph data has changed
     clearAllSearchCaches();
+
+    // Phase 10 Sprint 2: Emit graph:saved event
+    this.eventEmitter.emitGraphSaved(graph.entities.length, graph.relations.length);
   }
 
   /**
@@ -528,6 +577,14 @@ export class GraphStorage implements IGraphStorage {
       const entity = this.cache!.entities[entityIndex];
       const oldType = entity.entityType;
       const timestamp = new Date().toISOString();
+
+      // Phase 10 Sprint 2: Capture previous values for event
+      const previousValues: Partial<Entity> = {};
+      for (const key of Object.keys(updates) as Array<keyof Entity>) {
+        if (key in entity) {
+          previousValues[key] = entity[key] as any;
+        }
+      }
 
       // Build the updated entity data for file write BEFORE modifying cache
       // This ensures cache consistency if file write fails
@@ -583,6 +640,9 @@ export class GraphStorage implements IGraphStorage {
 
       // Clear search caches
       clearAllSearchCaches();
+
+      // Phase 10 Sprint 2: Emit entity:updated event
+      this.eventEmitter.emitEntityUpdated(entityName, updates, previousValues);
 
       // Trigger compaction if threshold reached
       if (this.pendingAppends >= this.compactionThreshold) {
@@ -777,5 +837,33 @@ export class GraphStorage implements IGraphStorage {
    */
   getObservationIndexStats(): { wordCount: number; entityCount: number } {
     return this.observationIndex.getStats();
+  }
+
+  // ==================== Phase 10 Sprint 1: Transaction Factory ====================
+
+  /**
+   * Create a new batch transaction for atomic operations.
+   *
+   * Returns a BatchTransaction instance that can be used to queue multiple
+   * operations and execute them atomically with a single save operation.
+   *
+   * @returns A new BatchTransaction instance
+   *
+   * @example
+   * ```typescript
+   * const storage = new GraphStorage('/data/memory.jsonl');
+   *
+   * // Create and execute a batch transaction
+   * const result = await storage.transaction()
+   *   .createEntity({ name: 'Alice', entityType: 'person', observations: ['Developer'] })
+   *   .createEntity({ name: 'Bob', entityType: 'person', observations: ['Designer'] })
+   *   .createRelation({ from: 'Alice', to: 'Bob', relationType: 'knows' })
+   *   .execute();
+   *
+   * console.log(`Batch completed: ${result.operationsExecuted} operations`);
+   * ```
+   */
+  transaction(): BatchTransaction {
+    return new BatchTransaction(this);
   }
 }

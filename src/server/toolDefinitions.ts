@@ -304,6 +304,20 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  // Phase 10 Sprint 4: Automatic search method selection
+  {
+    name: 'search_auto',
+    description: 'Automatically select and execute the best search method based on query characteristics and graph size. Returns results along with the selected method and reasoning.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query' },
+        limit: { type: 'number', description: 'Maximum results to return (default: 10)' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
 
   // ==================== SAVED SEARCH TOOLS ====================
   {
@@ -910,7 +924,7 @@ export const toolCategories = {
   entity: ['create_entities', 'delete_entities', 'read_graph', 'open_nodes'],
   relation: ['create_relations', 'delete_relations'],
   observation: ['add_observations', 'delete_observations'],
-  search: ['search_nodes', 'search_by_date_range', 'search_nodes_ranked', 'boolean_search', 'fuzzy_search', 'get_search_suggestions'],
+  search: ['search_nodes', 'search_by_date_range', 'search_nodes_ranked', 'boolean_search', 'fuzzy_search', 'get_search_suggestions', 'search_auto'],
   savedSearch: ['save_search', 'execute_saved_search', 'list_saved_searches', 'delete_saved_search', 'update_saved_search'],
   tag: ['add_tags', 'remove_tags', 'set_importance', 'add_tags_to_multiple_entities', 'replace_tag', 'merge_tags'],
   tagAlias: ['add_tag_alias', 'list_tag_aliases', 'remove_tag_alias', 'get_aliases_for_tag', 'resolve_tag'],

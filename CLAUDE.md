@@ -22,7 +22,7 @@ npx vitest run -t "should create entities"
 
 ## Architecture Overview
 
-This is an enhanced MCP memory server with **54 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
+This is an enhanced MCP memory server with **55 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
 **npm:** @danielsimonjr/memory-mcp
 
@@ -32,7 +32,7 @@ This is an enhanced MCP memory server with **54 tools** (vs 11 in official versi
 ┌─────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer            │
 │  server/MCPServer.ts + toolDefinitions  │
-│  + toolHandlers (54 tools)              │
+│  + toolHandlers (55 tools)              │
 └──────────────────┬──────────────────────┘
                    │ (direct manager access)
 ┌──────────────────┴──────────────────────┐
@@ -130,14 +130,14 @@ Data files are stored in the **project root directory** (not in `dist/`):
 - `MEMORY_EMBEDDING_MODEL` - Embedding model (default: text-embedding-3-small for OpenAI, Xenova/all-MiniLM-L6-v2 for local)
 - `MEMORY_AUTO_INDEX_EMBEDDINGS` - Auto-index entities on creation: 'true' or 'false' (default: false)
 
-## Tool Categories (54 Total)
+## Tool Categories (55 Total)
 
 | Category | Count | Tools |
 |----------|-------|-------|
 | **Entity Operations** | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | **Relation Operations** | 2 | create_relations, delete_relations |
 | **Observation Management** | 2 | add_observations, delete_observations |
-| **Search** | 6 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions |
+| **Search** | 7 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions, search_auto |
 | **Semantic Search** | 3 | semantic_search, find_similar_entities, index_embeddings |
 | **Saved Searches** | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | **Tag Management** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
