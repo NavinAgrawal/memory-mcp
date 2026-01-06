@@ -1,6 +1,6 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "9.7.0",
+  "version": "9.7.1",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, graph algorithms, semantic search, and 54 advanced tools",
   "license": "MIT",
   "engines": {

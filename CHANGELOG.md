@@ -5,6 +5,27 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.7.1] - 2026-01-06
+
+### Validated
+
+- **Phase 9B: TaskScheduler Integration** - Systematic validation of all 11 tasks across 3 sprints
+  - Sprint 1 (4 tasks): Operation utilities, EntityManager, CompressionManager, IOManager - All COMPLETE
+  - Sprint 2 (3 tasks): ArchiveManager, SemanticSearch, TransactionManager - All COMPLETE
+  - Sprint 3 (4 tasks): GraphTraversal, StreamingExporter, Documentation, Tests - All COMPLETE
+
+### Changed
+
+- Updated `PHASE_9B_SPRINT_1_TODO.json` - All 4 tasks marked as completed
+- Updated `PHASE_9B_SPRINT_2_TODO.json` - All 3 tasks marked as completed
+- Updated `PHASE_9B_SPRINT_3_TODO.json` - All 4 tasks marked as completed
+
+### Tests
+
+- All 2308 tests passing (64 test files)
+- TypeScript type checking passes
+- Test coverage at 92.56%
+
 ## [9.7.0] - 2026-01-05
 
 ### Added
