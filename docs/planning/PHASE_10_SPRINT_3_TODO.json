@@ -1,0 +1,291 @@
+{
+  "phase": 10,
+  "sprint": 3,
+  "title": "Incremental TF-IDF Index",
+  "priority": "HIGH",
+  "effort": "5 hours",
+  "status": "pending",
+  "impact": "5-10x faster ranked search updates by avoiding full index rebuilds on entity changes",
+  "targetMetrics": {
+    "singleEntityUpdate": {
+      "current": "O(n) full index rebuild on any change",
+      "target": "O(log n) incremental update for single entity"
+    },
+    "indexUpdateLatency": {
+      "current": "~50ms for 1000 entity graph",
+      "target": "<5ms for single entity update"
+    },
+    "indexConsistency": {
+      "current": "Manual rebuild required",
+      "target": "Automatic via graph events subscription"
+    }
+  },
+  "tasks": [
+    {
+      "id": "10.3.1",
+      "category": "core",
+      "title": "Add Incremental Update Methods to TFIDFIndexManager",
+      "description": "Add methods for single-entity add/update/remove that update the TF-IDF index incrementally without full rebuild. Also add IDF recalculation optimization.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/search/TFIDFIndexManager.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Enable O(log n) incremental index updates instead of O(n) full rebuilds. When an entity is created, updated, or deleted, only that entity's document vector needs updating, and IDF values only need recalculation for affected terms.",
+        "keyDecisions": [
+          "addEntity() - add document vector for new entity",
+          "removeEntity() - remove document vector and update IDF",
+          "updateEntity() - combine remove + add",
+          "IDF recalculation is deferred (only recalc on next search if dirty flag set)",
+          "Maintain 'dirtyTerms' Set to track which terms need IDF recalc"
+        ],
+        "existingCodeContext": "TFIDFIndexManager.ts has buildIndex(), updateIndex(), loadIndex(), saveIndex(), getIndex(), clearIndex(), needsRebuild() methods. Add incremental methods after updateIndex()."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/search/TFIDFIndexManager.ts",
+          "details": "Open the TFIDFIndexManager file"
+        },
+        {
+          "step": 2,
+          "action": "Add dirty tracking property after the index property (around line 34)",
+          "code": "  /**\n   * Set of terms that need IDF recalculation.\n   * Deferred recalc avoids overhead on frequent updates.\n   */\n  private dirtyTerms: Set<string> = new Set();\n\n  /**\n   * Total document count for IDF calculation.\n   * Cached to avoid recounting on every update.\n   */\n  private documentCount: number = 0;"
+        },
+        {
+          "step": 3,
+          "action": "Add addEntity method after updateIndex() method (around line 163)",
+          "code": "  /**\n   * Add a single entity to the index incrementally.\n   *\n   * O(log n) operation - only updates the document vector for the new entity\n   * and marks affected terms as dirty for lazy IDF recalculation.\n   *\n   * @param entity - Entity to add to the index\n   * @returns True if added, false if entity already indexed\n   */\n  addEntity(entity: Entity): boolean {\n    if (!this.index) {\n      // No index exists - caller should build first\n      return false;\n    }\n\n    if (this.index.documents.has(entity.name)) {\n      // Already indexed\n      return false;\n    }\n\n    // Build document text and tokenize\n    const documentText = [\n      entity.name,\n      entity.entityType,\n      ...entity.observations,\n    ].join(' ');\n\n    const tokens = tokenize(documentText);\n    const tokenSet = new Set(tokens);\n\n    // Calculate term frequencies\n    const termFreq: Record<string, number> = {};\n    for (const term of tokens) {\n      termFreq[term] = (termFreq[term] || 0) + 1;\n      // Mark term as dirty for IDF recalc\n      this.dirtyTerms.add(term);\n    }\n\n    // Add document vector\n    this.index.documents.set(entity.name, {\n      entityName: entity.name,\n      terms: termFreq,\n      documentText,\n    });\n\n    this.documentCount++;\n    this.index.lastUpdated = new Date().toISOString();\n\n    return true;\n  }"
+        },
+        {
+          "step": 4,
+          "action": "Add removeEntity method after addEntity()",
+          "code": "  /**\n   * Remove a single entity from the index incrementally.\n   *\n   * O(log n) operation - removes the document vector and marks affected\n   * terms as dirty for lazy IDF recalculation.\n   *\n   * @param entityName - Name of entity to remove\n   * @returns True if removed, false if entity not in index\n   */\n  removeEntity(entityName: string): boolean {\n    if (!this.index) {\n      return false;\n    }\n\n    const doc = this.index.documents.get(entityName);\n    if (!doc) {\n      return false;\n    }\n\n    // Mark all terms from this document as dirty\n    for (const term of Object.keys(doc.terms)) {\n      this.dirtyTerms.add(term);\n    }\n\n    // Remove document vector\n    this.index.documents.delete(entityName);\n    this.documentCount--;\n    this.index.lastUpdated = new Date().toISOString();\n\n    return true;\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add updateEntityInIndex method after removeEntity()",
+          "code": "  /**\n   * Update a single entity in the index incrementally.\n   *\n   * Combines remove + add for atomic update. If entity doesn't exist,\n   * performs add only.\n   *\n   * @param entity - Entity with updated data\n   * @returns True if index was modified\n   */\n  updateEntityInIndex(entity: Entity): boolean {\n    if (!this.index) {\n      return false;\n    }\n\n    // Remove old version (if exists) then add new\n    this.removeEntity(entity.name);\n    return this.addEntity(entity);\n  }"
+        },
+        {
+          "step": 6,
+          "action": "Add recalculateDirtyIDF method after updateEntityInIndex()",
+          "code": "  /**\n   * Recalculate IDF values for dirty terms.\n   *\n   * Called lazily before search operations to ensure IDF values are accurate.\n   * Uses the existing document vectors to count term occurrences.\n   *\n   * @returns Number of terms recalculated\n   */\n  recalculateDirtyIDF(): number {\n    if (!this.index || this.dirtyTerms.size === 0) {\n      return 0;\n    }\n\n    const totalDocs = this.index.documents.size;\n    if (totalDocs === 0) {\n      // Clear IDF if no documents\n      this.index.idf.clear();\n      this.dirtyTerms.clear();\n      return 0;\n    }\n\n    let recalculated = 0;\n\n    for (const term of this.dirtyTerms) {\n      // Count documents containing this term\n      let docFreq = 0;\n      for (const doc of this.index.documents.values()) {\n        if (term in doc.terms) {\n          docFreq++;\n        }\n      }\n\n      if (docFreq === 0) {\n        // Term no longer in any document, remove from IDF\n        this.index.idf.delete(term);\n      } else {\n        // Recalculate IDF: log(totalDocs / docFreq)\n        const idfValue = Math.log(totalDocs / docFreq);\n        this.index.idf.set(term, idfValue);\n      }\n      recalculated++;\n    }\n\n    this.dirtyTerms.clear();\n    this.index.lastUpdated = new Date().toISOString();\n\n    return recalculated;\n  }"
+        },
+        {
+          "step": 7,
+          "action": "Add hasDirtyTerms method for checking if recalc needed",
+          "code": "  /**\n   * Check if there are terms pending IDF recalculation.\n   *\n   * @returns True if recalculateDirtyIDF() should be called before search\n   */\n  hasDirtyTerms(): boolean {\n    return this.dirtyTerms.size > 0;\n  }\n\n  /**\n   * Get count of dirty terms pending recalculation.\n   */\n  getDirtyTermCount(): number {\n    return this.dirtyTerms.size;\n  }"
+        },
+        {
+          "step": 8,
+          "action": "Add Entity import at the top of the file",
+          "details": "Find the import line (around line 12) and update to:\nimport type { TFIDFIndex, DocumentVector, KnowledgeGraph, ReadonlyKnowledgeGraph, Entity } from '../types/index.js';"
+        },
+        {
+          "step": 9,
+          "action": "Update buildIndex() to initialize documentCount (around line 91)",
+          "details": "After the existing buildIndex returns this.index, add before the return:\nthis.documentCount = this.index.documents.size;\nthis.dirtyTerms.clear();"
+        },
+        {
+          "step": 10,
+          "action": "Update loadIndex() to initialize documentCount (around line 186)",
+          "details": "After successfully loading the index, add:\nthis.documentCount = this.index.documents.size;\nthis.dirtyTerms.clear();"
+        },
+        {
+          "step": 11,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 12,
+          "action": "Run existing TFIDFIndexManager tests",
+          "details": "Run: npx vitest run tests/unit/search/TFIDFIndexManager.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "addEntity() method adds single entity to index in O(log n)",
+        "removeEntity() method removes entity from index in O(log n)",
+        "updateEntityInIndex() combines remove + add atomically",
+        "dirtyTerms Set tracks terms needing IDF recalc",
+        "recalculateDirtyIDF() updates only dirty terms' IDF values",
+        "hasDirtyTerms() returns true when recalc needed",
+        "getDirtyTermCount() returns count of dirty terms",
+        "buildIndex() and loadIndex() initialize documentCount and clear dirty set",
+        "Entity type imported from types",
+        "npm run typecheck passes",
+        "All existing TFIDFIndexManager tests pass"
+      ]
+    },
+    {
+      "id": "10.3.2",
+      "category": "integration",
+      "title": "Hook TFIDFIndexManager to Graph Events",
+      "description": "Subscribe TFIDFIndexManager to graph change events for automatic incremental index updates when entities are created, updated, or deleted.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/search/RankedSearch.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Connect the TFIDFIndexManager to the GraphEventEmitter so that the search index is automatically updated when entities change, without requiring manual rebuild.",
+        "keyDecisions": [
+          "Subscription happens when RankedSearch is constructed",
+          "Listen to entityCreated, entityUpdated, entityDeleted events",
+          "Lazy IDF recalc - set dirty flag, recalc before next search",
+          "Must handle case where events are not available (backward compat)"
+        ],
+        "existingCodeContext": "RankedSearch.ts uses TFIDFIndexManager internally. Modify constructor to subscribe to events."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/search/RankedSearch.ts",
+          "details": "Open the RankedSearch file"
+        },
+        {
+          "step": 2,
+          "action": "Add import for GraphEventEmitter types",
+          "details": "Find the imports at the top and add:\nimport type { GraphEventEmitter, EntityCreatedEvent, EntityUpdatedEvent, EntityDeletedEvent } from '../core/GraphEventEmitter.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add optional events parameter to constructor",
+          "details": "Find the constructor. Add optional events parameter:\nconstructor(\n  private storage: GraphStorage | IGraphStorage,\n  private events?: GraphEventEmitter\n) {\n\nNote: Keep existing constructor body"
+        },
+        {
+          "step": 4,
+          "action": "Add event subscription in constructor after existing initialization",
+          "code": "    // Subscribe to graph events for incremental index updates (Phase 10)\n    if (this.events) {\n      this.subscribeToEvents(this.events);\n    }"
+        },
+        {
+          "step": 5,
+          "action": "Add subscribeToEvents private method at the end of the class",
+          "code": "  /**\n   * Subscribe to graph events for incremental index updates.\n   * @private\n   */\n  private subscribeToEvents(events: GraphEventEmitter): void {\n    // Handle entity creation\n    events.on('entityCreated', (event: EntityCreatedEvent) => {\n      if (this.tfidfManager.getIndex()) {\n        this.tfidfManager.addEntity(event.entity);\n      }\n    });\n\n    // Handle entity update\n    events.on('entityUpdated', (event: EntityUpdatedEvent) => {\n      if (this.tfidfManager.getIndex()) {\n        this.tfidfManager.updateEntityInIndex(event.entity);\n      }\n    });\n\n    // Handle entity deletion\n    events.on('entityDeleted', (event: EntityDeletedEvent) => {\n      if (this.tfidfManager.getIndex()) {\n        this.tfidfManager.removeEntity(event.entityName);\n      }\n    });\n  }"
+        },
+        {
+          "step": 6,
+          "action": "Update the search method to recalculate dirty IDF before searching",
+          "details": "Find the search() method. At the start of the method, before any search logic, add:\n\n    // Recalculate dirty IDF values before search (Phase 10)\n    if (this.tfidfManager.hasDirtyTerms()) {\n      this.tfidfManager.recalculateDirtyIDF();\n    }"
+        },
+        {
+          "step": 7,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 8,
+          "action": "Run existing RankedSearch tests",
+          "details": "Run: npx vitest run tests/unit/search/RankedSearch.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "RankedSearch constructor accepts optional events parameter",
+        "Subscribes to entityCreated, entityUpdated, entityDeleted events",
+        "entityCreated triggers addEntity() on TFIDFIndexManager",
+        "entityUpdated triggers updateEntityInIndex() on TFIDFIndexManager",
+        "entityDeleted triggers removeEntity() on TFIDFIndexManager",
+        "search() recalculates dirty IDF before executing search",
+        "Works without events (backward compatible)",
+        "npm run typecheck passes",
+        "All existing RankedSearch tests pass"
+      ]
+    },
+    {
+      "id": "10.3.3",
+      "category": "tests",
+      "title": "Create Incremental TF-IDF Tests",
+      "description": "Create comprehensive unit tests for the incremental TF-IDF update methods and integration tests for automatic event-driven updates.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/unit/search/IncrementalTFIDF.test.ts"],
+      "testCategories": ["unit", "integration", "performance"],
+      "implementation": {
+        "purpose": "Verify incremental index updates work correctly, dirty term tracking is accurate, and event-driven updates maintain index consistency.",
+        "keyDecisions": [
+          "Test each incremental method in isolation",
+          "Test dirty term tracking and lazy recalc",
+          "Test event-driven updates with mock emitter",
+          "Performance comparison: incremental vs full rebuild"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file",
+          "details": "Create new file: tests/unit/search/IncrementalTFIDF.test.ts"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach } from 'vitest';\nimport { TFIDFIndexManager } from '../../../src/search/TFIDFIndexManager.js';\nimport type { Entity, ReadonlyKnowledgeGraph } from '../../../src/types/types.js';\nimport { join } from 'path';\nimport { tmpdir } from 'os';\n\nconst createTestGraph = (entities: Entity[]): ReadonlyKnowledgeGraph => ({\n  entities,\n  relations: [],\n});\n\nconst createEntity = (name: string, observations: string[]): Entity => ({\n  name,\n  entityType: 'test',\n  observations,\n  createdAt: new Date().toISOString(),\n  lastModified: new Date().toISOString(),\n});"
+        },
+        {
+          "step": 3,
+          "action": "Add TFIDFIndexManager incremental update tests",
+          "code": "describe('TFIDFIndexManager Incremental Updates', () => {\n  let manager: TFIDFIndexManager;\n  const testDir = join(tmpdir(), `tfidf-test-${Date.now()}`);\n\n  beforeEach(async () => {\n    manager = new TFIDFIndexManager(testDir);\n    // Build initial index with some entities\n    const graph = createTestGraph([\n      createEntity('Entity1', ['hello world']),\n      createEntity('Entity2', ['foo bar']),\n      createEntity('Entity3', ['hello foo']),\n    ]);\n    await manager.buildIndex(graph);\n  });\n\n  describe('addEntity', () => {\n    it('should add a new entity to the index', () => {\n      const newEntity = createEntity('Entity4', ['new content baz']);\n\n      const result = manager.addEntity(newEntity);\n\n      expect(result).toBe(true);\n      const index = manager.getIndex();\n      expect(index?.documents.has('Entity4')).toBe(true);\n      expect(index?.documents.get('Entity4')?.terms).toHaveProperty('new');\n    });\n\n    it('should mark new terms as dirty', () => {\n      const newEntity = createEntity('Entity4', ['unique term xyz']);\n\n      expect(manager.getDirtyTermCount()).toBe(0);\n      manager.addEntity(newEntity);\n\n      expect(manager.hasDirtyTerms()).toBe(true);\n      expect(manager.getDirtyTermCount()).toBeGreaterThan(0);\n    });\n\n    it('should not add duplicate entity', () => {\n      const result = manager.addEntity(createEntity('Entity1', ['different']));\n\n      expect(result).toBe(false);\n    });\n\n    it('should return false when no index exists', () => {\n      const freshManager = new TFIDFIndexManager(testDir);\n      const result = freshManager.addEntity(createEntity('Test', ['content']));\n\n      expect(result).toBe(false);\n    });\n  });\n\n  describe('removeEntity', () => {\n    it('should remove an entity from the index', () => {\n      const result = manager.removeEntity('Entity1');\n\n      expect(result).toBe(true);\n      const index = manager.getIndex();\n      expect(index?.documents.has('Entity1')).toBe(false);\n    });\n\n    it('should mark removed terms as dirty', () => {\n      manager.removeEntity('Entity1');\n\n      expect(manager.hasDirtyTerms()).toBe(true);\n    });\n\n    it('should return false for non-existent entity', () => {\n      const result = manager.removeEntity('NonExistent');\n\n      expect(result).toBe(false);\n    });\n  });\n\n  describe('updateEntityInIndex', () => {\n    it('should update an existing entity', () => {\n      const updatedEntity = createEntity('Entity1', ['updated observations']);\n\n      const result = manager.updateEntityInIndex(updatedEntity);\n\n      expect(result).toBe(true);\n      const doc = manager.getIndex()?.documents.get('Entity1');\n      expect(doc?.terms).toHaveProperty('updated');\n      expect(doc?.terms).not.toHaveProperty('hello');\n    });\n\n    it('should add entity if it does not exist', () => {\n      const newEntity = createEntity('Entity5', ['brand new']);\n\n      const result = manager.updateEntityInIndex(newEntity);\n\n      expect(result).toBe(true);\n      expect(manager.getIndex()?.documents.has('Entity5')).toBe(true);\n    });\n  });\n});"
+        },
+        {
+          "step": 4,
+          "action": "Add dirty IDF recalculation tests",
+          "code": "describe('Dirty IDF Recalculation', () => {\n  let manager: TFIDFIndexManager;\n  const testDir = join(tmpdir(), `tfidf-idf-test-${Date.now()}`);\n\n  beforeEach(async () => {\n    manager = new TFIDFIndexManager(testDir);\n    const graph = createTestGraph([\n      createEntity('Doc1', ['apple banana']),\n      createEntity('Doc2', ['banana cherry']),\n      createEntity('Doc3', ['cherry apple']),\n    ]);\n    await manager.buildIndex(graph);\n  });\n\n  it('should recalculate IDF for dirty terms only', () => {\n    // Add entity with new term\n    manager.addEntity(createEntity('Doc4', ['dragonfruit']));\n\n    expect(manager.hasDirtyTerms()).toBe(true);\n\n    const recalculated = manager.recalculateDirtyIDF();\n\n    expect(recalculated).toBeGreaterThan(0);\n    expect(manager.hasDirtyTerms()).toBe(false);\n    expect(manager.getIndex()?.idf.has('dragonfruit')).toBe(true);\n  });\n\n  it('should update IDF when document frequency changes', () => {\n    const idfBefore = manager.getIndex()?.idf.get('apple');\n\n    // Add another document with 'apple'\n    manager.addEntity(createEntity('Doc4', ['apple pie']));\n    manager.recalculateDirtyIDF();\n\n    const idfAfter = manager.getIndex()?.idf.get('apple');\n\n    // IDF should decrease as term appears in more documents\n    expect(idfAfter).toBeLessThan(idfBefore!);\n  });\n\n  it('should remove IDF entry when term no longer exists', () => {\n    // Remove all entities containing 'apple'\n    manager.removeEntity('Doc1');\n    manager.removeEntity('Doc3');\n    manager.recalculateDirtyIDF();\n\n    // 'apple' should no longer be in IDF (only Doc1 and Doc3 had it)\n    expect(manager.getIndex()?.idf.has('apple')).toBe(false);\n  });\n\n  it('should handle empty index gracefully', () => {\n    manager.removeEntity('Doc1');\n    manager.removeEntity('Doc2');\n    manager.removeEntity('Doc3');\n\n    const recalculated = manager.recalculateDirtyIDF();\n\n    expect(recalculated).toBeGreaterThan(0);\n    expect(manager.getIndex()?.idf.size).toBe(0);\n  });\n});"
+        },
+        {
+          "step": 5,
+          "action": "Add performance comparison test",
+          "code": "describe('Performance', () => {\n  const testDir = join(tmpdir(), `tfidf-perf-test-${Date.now()}`);\n\n  it('should be faster than full rebuild for single entity update', async () => {\n    const manager = new TFIDFIndexManager(testDir);\n\n    // Create graph with 500 entities\n    const entities = Array.from({ length: 500 }, (_, i) =>\n      createEntity(`Entity${i}`, [`observation ${i} with some content and words`])\n    );\n    const graph = createTestGraph(entities);\n\n    // Build initial index\n    await manager.buildIndex(graph);\n\n    // Time incremental update\n    const incrementalStart = Date.now();\n    manager.addEntity(createEntity('NewEntity', ['brand new content here']));\n    manager.recalculateDirtyIDF();\n    const incrementalTime = Date.now() - incrementalStart;\n\n    // Time full rebuild\n    const updatedGraph = createTestGraph([...entities, createEntity('NewEntity2', ['another new one'])]);\n    const rebuildStart = Date.now();\n    await manager.buildIndex(updatedGraph);\n    const rebuildTime = Date.now() - rebuildStart;\n\n    console.log(`Incremental update: ${incrementalTime}ms, Full rebuild: ${rebuildTime}ms`);\n\n    // Incremental should be significantly faster\n    expect(incrementalTime).toBeLessThan(rebuildTime);\n  });\n});"
+        },
+        {
+          "step": 6,
+          "action": "Close the test file",
+          "details": "Ensure all describe blocks are properly closed"
+        },
+        {
+          "step": 7,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/search/IncrementalTFIDF.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/search/IncrementalTFIDF.test.ts",
+        "Tests for addEntity - success, duplicate prevention, no index case",
+        "Tests for removeEntity - success, non-existent, dirty marking",
+        "Tests for updateEntityInIndex - update existing, add new",
+        "Tests for recalculateDirtyIDF - recalc only dirty, IDF changes, term removal",
+        "Tests for edge cases - empty index, all removed",
+        "Performance test comparing incremental vs full rebuild",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All three tasks completed with passing tests",
+    "addEntity(), removeEntity(), updateEntityInIndex() methods added to TFIDFIndexManager",
+    "Dirty term tracking with lazy IDF recalculation",
+    "RankedSearch subscribes to graph events for automatic updates",
+    "IDF recalculated before search when dirty terms exist",
+    "15+ unit tests pass",
+    "Incremental updates faster than full rebuild (performance test)",
+    "npm run typecheck passes",
+    "All existing tests pass (backward compatible)"
+  ],
+  "filesCreated": [
+    "tests/unit/search/IncrementalTFIDF.test.ts"
+  ],
+  "filesModified": [
+    "src/search/TFIDFIndexManager.ts",
+    "src/search/RankedSearch.ts"
+  ],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 5,
+  "dependencies": ["Sprint 10.2 (Graph Change Events - for event subscription)"],
+  "notes": [
+    "CRITICAL: Dirty IDF recalculation is LAZY - only happens before next search",
+    "This avoids overhead when multiple entities are updated in sequence (e.g., import)",
+    "RankedSearch must be constructed with events parameter to enable auto-updates",
+    "Backward compatible - works without events (manual rebuild still supported)",
+    "Performance gain is most significant for large graphs with frequent small updates"
+  ]
+}

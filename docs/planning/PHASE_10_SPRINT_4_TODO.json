@@ -1,0 +1,353 @@
+{
+  "phase": 10,
+  "sprint": 4,
+  "title": "Query Cost Estimation",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Enables intelligent query optimization, progress estimation for long queries, and automatic search algorithm selection",
+  "targetMetrics": {
+    "estimationAccuracy": {
+      "current": "N/A - no cost estimation",
+      "target": "+/- 20% accuracy for execution time prediction"
+    },
+    "algorithmSelection": {
+      "current": "Manual selection by user",
+      "target": "Automatic optimal algorithm selection based on query characteristics"
+    },
+    "progressPrediction": {
+      "current": "No progress indication for searches",
+      "target": "Accurate progress % based on estimated vs actual work done"
+    }
+  },
+  "tasks": [
+    {
+      "id": "10.4.1",
+      "category": "core",
+      "title": "Create QueryCostEstimator Class",
+      "description": "Create a QueryCostEstimator class that analyzes queries and graph state to estimate execution cost. Provides estimates in terms of entity iterations, index lookups, and expected latency.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/search/QueryCostEstimator.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Provide cost estimates for different search operations based on query complexity and graph size. Used for algorithm selection, progress tracking, and query optimization hints.",
+        "keyDecisions": [
+          "Cost expressed as CostEstimate object with multiple metrics",
+          "Supports all search types: basic, ranked, boolean, fuzzy, semantic",
+          "Uses graph statistics for accurate estimation",
+          "Provides algorithm recommendation based on query characteristics"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/search/QueryCostEstimator.ts",
+          "details": "Create the new file in the search directory"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Query Cost Estimator\n *\n * Analyzes queries and graph state to estimate execution cost.\n * Used for algorithm selection, progress tracking, and optimization hints.\n *\n * @module search/QueryCostEstimator\n */\n\nimport type { GraphStats, BooleanQueryNode } from '../types/types.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add SearchAlgorithm type",
+          "code": "/**\n * Available search algorithms.\n */\nexport type SearchAlgorithm = 'basic' | 'ranked' | 'boolean' | 'fuzzy' | 'semantic';"
+        },
+        {
+          "step": 4,
+          "action": "Add CostEstimate interface",
+          "code": "/**\n * Cost estimate for a search operation.\n */\nexport interface CostEstimate {\n  /** Estimated number of entity iterations required */\n  entityIterations: number;\n\n  /** Estimated number of index lookups */\n  indexLookups: number;\n\n  /** Estimated execution time in milliseconds */\n  estimatedMs: number;\n\n  /** Complexity class: 'low', 'medium', 'high', 'very_high' */\n  complexity: 'low' | 'medium' | 'high' | 'very_high';\n\n  /** Confidence level of the estimate (0.0 to 1.0) */\n  confidence: number;\n\n  /** Whether the query can use indexes effectively */\n  canUseIndex: boolean;\n\n  /** Recommended algorithm for this query */\n  recommendedAlgorithm: SearchAlgorithm;\n\n  /** Human-readable explanation of the estimate */\n  explanation: string;\n}"
+        },
+        {
+          "step": 5,
+          "action": "Add QueryAnalysis interface",
+          "code": "/**\n * Analysis of query characteristics.\n */\nexport interface QueryAnalysis {\n  /** Number of terms in the query */\n  termCount: number;\n\n  /** Whether query uses field specifiers (name:, type:, etc.) */\n  hasFieldSpecifiers: boolean;\n\n  /** Whether query uses boolean operators */\n  hasBooleanOperators: boolean;\n\n  /** Whether query requires fuzzy matching */\n  requiresFuzzy: boolean;\n\n  /** Whether query benefits from ranking */\n  benefitsFromRanking: boolean;\n\n  /** Fields targeted by the query */\n  targetFields: string[];\n}"
+        },
+        {
+          "step": 6,
+          "action": "Add cost constants",
+          "code": "/**\n * Cost constants for estimation (calibrated through benchmarks).\n * @internal\n */\nconst COST_CONSTANTS = {\n  /** Microseconds per entity for basic string matching */\n  BASIC_MATCH_US_PER_ENTITY: 5,\n\n  /** Microseconds per entity for TF-IDF scoring */\n  TFIDF_SCORE_US_PER_ENTITY: 15,\n\n  /** Microseconds per entity for fuzzy matching (Levenshtein) */\n  FUZZY_MATCH_US_PER_ENTITY: 50,\n\n  /** Microseconds per entity for semantic search (vector comparison) */\n  SEMANTIC_COMPARE_US_PER_ENTITY: 2,\n\n  /** Microseconds per index lookup (NameIndex, TypeIndex) */\n  INDEX_LOOKUP_US: 1,\n\n  /** Threshold for 'low' complexity (entities) */\n  LOW_COMPLEXITY_THRESHOLD: 100,\n\n  /** Threshold for 'medium' complexity (entities) */\n  MEDIUM_COMPLEXITY_THRESHOLD: 1000,\n\n  /** Threshold for 'high' complexity (entities) */\n  HIGH_COMPLEXITY_THRESHOLD: 10000,\n} as const;"
+        },
+        {
+          "step": 7,
+          "action": "Add QueryCostEstimator class",
+          "code": "/**\n * Estimates query execution cost based on query characteristics and graph state.\n *\n * @example\n * ```typescript\n * const estimator = new QueryCostEstimator();\n * const stats = await storage.getGraphStats();\n *\n * // Estimate cost for a search\n * const cost = estimator.estimateSearch('machine learning', 'ranked', stats);\n * console.log(`Estimated time: ${cost.estimatedMs}ms`);\n * console.log(`Complexity: ${cost.complexity}`);\n * console.log(`Recommended: ${cost.recommendedAlgorithm}`);\n *\n * // Analyze a query\n * const analysis = estimator.analyzeQuery('name:Alice AND type:person');\n * console.log(`Terms: ${analysis.termCount}`);\n * console.log(`Uses boolean: ${analysis.hasBooleanOperators}`);\n * ```\n */\nexport class QueryCostEstimator {\n  /**\n   * Estimate the cost of a search operation.\n   *\n   * @param query - The search query string\n   * @param algorithm - The search algorithm to use\n   * @param stats - Current graph statistics\n   * @returns Cost estimate with metrics and recommendations\n   */\n  estimateSearch(\n    query: string,\n    algorithm: SearchAlgorithm,\n    stats: GraphStats\n  ): CostEstimate {\n    const analysis = this.analyzeQuery(query);\n    const entityCount = stats.totalEntities;\n\n    let entityIterations = entityCount;\n    let indexLookups = 0;\n    let usPerEntity = COST_CONSTANTS.BASIC_MATCH_US_PER_ENTITY;\n    let canUseIndex = false;\n\n    // Adjust based on algorithm\n    switch (algorithm) {\n      case 'basic':\n        usPerEntity = COST_CONSTANTS.BASIC_MATCH_US_PER_ENTITY;\n        // Can use name/type index for field-specific queries\n        if (analysis.hasFieldSpecifiers && analysis.targetFields.length === 1) {\n          const field = analysis.targetFields[0];\n          if (field === 'name' || field === 'type') {\n            canUseIndex = true;\n            indexLookups = 1;\n            entityIterations = Math.ceil(entityCount * 0.1); // Estimate 10% match\n          }\n        }\n        break;\n\n      case 'ranked':\n        usPerEntity = COST_CONSTANTS.TFIDF_SCORE_US_PER_ENTITY;\n        // Always iterates all entities for scoring\n        break;\n\n      case 'boolean':\n        usPerEntity = COST_CONSTANTS.BASIC_MATCH_US_PER_ENTITY * 1.5;\n        // Uses observation index for term lookups\n        if (!analysis.hasBooleanOperators) {\n          canUseIndex = true;\n          indexLookups = analysis.termCount;\n          entityIterations = Math.ceil(entityCount * 0.2);\n        }\n        break;\n\n      case 'fuzzy':\n        usPerEntity = COST_CONSTANTS.FUZZY_MATCH_US_PER_ENTITY;\n        // Always iterates all entities (no index)\n        break;\n\n      case 'semantic':\n        usPerEntity = COST_CONSTANTS.SEMANTIC_COMPARE_US_PER_ENTITY;\n        // Vector comparison is fast but requires embedding lookup\n        indexLookups = 1; // Embedding generation\n        break;\n    }\n\n    // Calculate estimated time\n    const estimatedMs =\n      (entityIterations * usPerEntity) / 1000 +\n      (indexLookups * COST_CONSTANTS.INDEX_LOOKUP_US) / 1000;\n\n    // Determine complexity\n    let complexity: CostEstimate['complexity'];\n    if (entityIterations < COST_CONSTANTS.LOW_COMPLEXITY_THRESHOLD) {\n      complexity = 'low';\n    } else if (entityIterations < COST_CONSTANTS.MEDIUM_COMPLEXITY_THRESHOLD) {\n      complexity = 'medium';\n    } else if (entityIterations < COST_CONSTANTS.HIGH_COMPLEXITY_THRESHOLD) {\n      complexity = 'high';\n    } else {\n      complexity = 'very_high';\n    }\n\n    // Determine recommended algorithm\n    const recommendedAlgorithm = this.recommendAlgorithm(analysis, stats);\n\n    // Calculate confidence (lower for larger graphs, complex queries)\n    let confidence = 0.8;\n    if (entityCount > 10000) confidence -= 0.1;\n    if (analysis.hasBooleanOperators) confidence -= 0.1;\n    if (algorithm === 'fuzzy') confidence -= 0.1;\n    confidence = Math.max(0.5, confidence);\n\n    // Generate explanation\n    const explanation = this.generateExplanation(\n      algorithm,\n      entityIterations,\n      indexLookups,\n      canUseIndex,\n      estimatedMs\n    );\n\n    return {\n      entityIterations,\n      indexLookups,\n      estimatedMs: Math.round(estimatedMs * 100) / 100,\n      complexity,\n      confidence,\n      canUseIndex,\n      recommendedAlgorithm,\n      explanation,\n    };\n  }"
+        },
+        {
+          "step": 8,
+          "action": "Add analyzeQuery method",
+          "code": "  /**\n   * Analyze a query string to determine its characteristics.\n   *\n   * @param query - The search query string\n   * @returns Analysis of query characteristics\n   */\n  analyzeQuery(query: string): QueryAnalysis {\n    const normalized = query.toLowerCase().trim();\n\n    // Check for field specifiers (name:, type:, observation:)\n    const fieldPattern = /\\b(name|type|observation|entitytype|obs):/gi;\n    const fieldMatches = normalized.match(fieldPattern) || [];\n    const hasFieldSpecifiers = fieldMatches.length > 0;\n\n    // Extract target fields\n    const targetFields = [...new Set(\n      fieldMatches.map(m => m.replace(':', '').toLowerCase())\n    )];\n\n    // Check for boolean operators\n    const hasBooleanOperators =\n      /\\b(AND|OR|NOT)\\b/i.test(query) ||\n      /[()]/g.test(query);\n\n    // Count terms (excluding operators and field specifiers)\n    const cleanQuery = normalized\n      .replace(fieldPattern, '')\n      .replace(/\\b(and|or|not)\\b/gi, '')\n      .replace(/[()]/g, '')\n      .trim();\n    const terms = cleanQuery.split(/\\s+/).filter(t => t.length > 0);\n    const termCount = terms.length;\n\n    // Determine if fuzzy matching might be needed\n    const requiresFuzzy = /~\\d*$/.test(query) || /\\*|\\?/.test(query);\n\n    // Determine if ranking would benefit the query\n    const benefitsFromRanking = termCount > 1 && !hasFieldSpecifiers;\n\n    return {\n      termCount,\n      hasFieldSpecifiers,\n      hasBooleanOperators,\n      requiresFuzzy,\n      benefitsFromRanking,\n      targetFields,\n    };\n  }"
+        },
+        {
+          "step": 9,
+          "action": "Add recommendAlgorithm method",
+          "code": "  /**\n   * Recommend the optimal search algorithm based on query and graph.\n   *\n   * @param analysis - Query analysis\n   * @param stats - Graph statistics\n   * @returns Recommended search algorithm\n   */\n  recommendAlgorithm(analysis: QueryAnalysis, stats: GraphStats): SearchAlgorithm {\n    // Fuzzy required for wildcard/similarity queries\n    if (analysis.requiresFuzzy) {\n      return 'fuzzy';\n    }\n\n    // Boolean for complex queries with operators\n    if (analysis.hasBooleanOperators) {\n      return 'boolean';\n    }\n\n    // For very large graphs, prefer index-based search\n    if (stats.totalEntities > 10000) {\n      if (analysis.hasFieldSpecifiers) {\n        return 'boolean'; // Uses observation index\n      }\n      return 'basic'; // Simple but fast\n    }\n\n    // For multi-term queries, ranking is valuable\n    if (analysis.benefitsFromRanking && stats.totalEntities > 100) {\n      return 'ranked';\n    }\n\n    // Default to basic for simple queries\n    return 'basic';\n  }"
+        },
+        {
+          "step": 10,
+          "action": "Add generateExplanation method",
+          "code": "  /**\n   * Generate human-readable explanation of the cost estimate.\n   * @private\n   */\n  private generateExplanation(\n    algorithm: SearchAlgorithm,\n    entityIterations: number,\n    indexLookups: number,\n    canUseIndex: boolean,\n    estimatedMs: number\n  ): string {\n    const parts: string[] = [];\n\n    parts.push(`${algorithm} search`);\n\n    if (canUseIndex) {\n      parts.push(`uses index (${indexLookups} lookup${indexLookups > 1 ? 's' : ''})`);\n      parts.push(`~${entityIterations} entities to scan`);\n    } else {\n      parts.push(`full scan of ${entityIterations} entities`);\n    }\n\n    parts.push(`~${estimatedMs.toFixed(1)}ms estimated`);\n\n    return parts.join(', ');\n  }\n}"
+        },
+        {
+          "step": 11,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "QueryCostEstimator.ts file created in src/search/",
+        "CostEstimate interface with all fields defined",
+        "QueryAnalysis interface with all fields defined",
+        "estimateSearch() returns accurate cost estimates for all algorithms",
+        "analyzeQuery() correctly identifies query characteristics",
+        "recommendAlgorithm() suggests optimal algorithm",
+        "Cost constants are realistic (calibrated to benchmarks)",
+        "Human-readable explanation generated",
+        "Class has comprehensive JSDoc with examples",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "10.4.2",
+      "category": "integration",
+      "title": "Integrate QueryCostEstimator into SearchManager",
+      "description": "Add getCostEstimate() method to SearchManager that uses QueryCostEstimator to provide cost estimates for any search. Also add automatic algorithm selection option.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/search/SearchManager.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Expose cost estimation to users via SearchManager and enable automatic algorithm selection for optimal performance.",
+        "keyDecisions": [
+          "Add getCostEstimate() public method",
+          "Add searchAuto() method that uses recommendation",
+          "Cost estimator is lazily instantiated"
+        ],
+        "existingCodeContext": "SearchManager.ts orchestrates all search operations. Add cost estimator as private property and new public methods."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/search/SearchManager.ts",
+          "details": "Open the SearchManager file"
+        },
+        {
+          "step": 2,
+          "action": "Add import for QueryCostEstimator",
+          "details": "Find the imports at the top and add:\nimport { QueryCostEstimator, type CostEstimate, type SearchAlgorithm, type QueryAnalysis } from './QueryCostEstimator.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add private cost estimator property after existing properties",
+          "details": "Find the private properties section and add:\n  private costEstimator: QueryCostEstimator | null = null;\n\n  /**\n   * Get cost estimator instance (lazy init).\n   * @private\n   */\n  private getCostEstimator(): QueryCostEstimator {\n    if (!this.costEstimator) {\n      this.costEstimator = new QueryCostEstimator();\n    }\n    return this.costEstimator;\n  }"
+        },
+        {
+          "step": 4,
+          "action": "Add getCostEstimate public method",
+          "code": "  /**\n   * Get cost estimate for a search operation.\n   *\n   * Analyzes the query and current graph state to estimate execution cost,\n   * recommend optimal algorithm, and predict execution time.\n   *\n   * @param query - The search query string\n   * @param algorithm - Algorithm to estimate (default: 'basic')\n   * @returns Promise resolving to cost estimate\n   *\n   * @example\n   * ```typescript\n   * const cost = await searchManager.getCostEstimate('machine learning');\n   * console.log(`Estimated time: ${cost.estimatedMs}ms`);\n   * console.log(`Recommended: ${cost.recommendedAlgorithm}`);\n   *\n   * // Use recommendation\n   * if (cost.recommendedAlgorithm === 'ranked') {\n   *   const results = await searchManager.searchRanked('machine learning');\n   * }\n   * ```\n   */\n  async getCostEstimate(\n    query: string,\n    algorithm: SearchAlgorithm = 'basic'\n  ): Promise<CostEstimate> {\n    const stats = await this.getGraphStats();\n    return this.getCostEstimator().estimateSearch(query, algorithm, stats);\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add analyzeQuery public method",
+          "code": "  /**\n   * Analyze a query to understand its characteristics.\n   *\n   * Useful for understanding what search features a query would use.\n   *\n   * @param query - The search query string\n   * @returns Query analysis with term count, operators, etc.\n   */\n  analyzeQuery(query: string): QueryAnalysis {\n    return this.getCostEstimator().analyzeQuery(query);\n  }"
+        },
+        {
+          "step": 6,
+          "action": "Add searchAuto method for automatic algorithm selection",
+          "code": "  /**\n   * Search with automatic algorithm selection.\n   *\n   * Analyzes the query and graph state, then uses the optimal algorithm.\n   * Returns results with the same format as search_nodes tool.\n   *\n   * @param query - The search query string\n   * @param options - Optional search options (tags, importance, etc.)\n   * @returns Promise resolving to search results with algorithm used\n   *\n   * @example\n   * ```typescript\n   * const result = await searchManager.searchAuto('machine learning');\n   * console.log(`Used algorithm: ${result.algorithm}`);\n   * console.log(`Found: ${result.entities.length} entities`);\n   * ```\n   */\n  async searchAuto(\n    query: string,\n    options: {\n      tags?: string[];\n      minImportance?: number;\n      maxImportance?: number;\n      entityType?: string;\n      limit?: number;\n    } = {}\n  ): Promise<{\n    entities: Entity[];\n    algorithm: SearchAlgorithm;\n    costEstimate: CostEstimate;\n  }> {\n    const stats = await this.getGraphStats();\n    const analysis = this.getCostEstimator().analyzeQuery(query);\n    const recommended = this.getCostEstimator().recommendAlgorithm(analysis, stats);\n    const costEstimate = this.getCostEstimator().estimateSearch(query, recommended, stats);\n\n    let entities: Entity[];\n\n    switch (recommended) {\n      case 'ranked': {\n        const results = await this.searchRanked(\n          query,\n          options.tags,\n          options.minImportance,\n          options.maxImportance,\n          options.entityType,\n          options.limit\n        );\n        entities = results.map(r => r.entity);\n        break;\n      }\n\n      case 'boolean': {\n        entities = await this.booleanSearch(\n          query,\n          options.tags,\n          options.minImportance,\n          options.maxImportance,\n          options.limit\n        );\n        break;\n      }\n\n      case 'fuzzy': {\n        const results = await this.fuzzySearch(\n          query,\n          0.6, // Default threshold\n          options.tags,\n          options.minImportance,\n          options.maxImportance,\n          options.limit\n        );\n        entities = results.map(r => r.entity);\n        break;\n      }\n\n      case 'basic':\n      default: {\n        entities = await this.searchNodes(\n          query,\n          options.tags,\n          options.minImportance,\n          options.maxImportance,\n          options.entityType,\n          options.limit\n        );\n        break;\n      }\n    }\n\n    return {\n      entities,\n      algorithm: recommended,\n      costEstimate,\n    };\n  }"
+        },
+        {
+          "step": 7,
+          "action": "Add Entity import if missing",
+          "details": "Ensure Entity is imported from types"
+        },
+        {
+          "step": 8,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 9,
+          "action": "Run existing SearchManager tests",
+          "details": "Run: npx vitest run tests/unit/search/SearchManager.test.ts (if exists) or integration tests"
+        }
+      ],
+      "acceptanceCriteria": [
+        "getCostEstimate() method added to SearchManager",
+        "analyzeQuery() method added to SearchManager",
+        "searchAuto() method added with automatic algorithm selection",
+        "Cost estimator lazily initialized",
+        "searchAuto returns entities, algorithm used, and cost estimate",
+        "All search algorithms supported in searchAuto",
+        "JSDoc documentation with examples",
+        "npm run typecheck passes",
+        "Existing SearchManager tests pass"
+      ]
+    },
+    {
+      "id": "10.4.3",
+      "category": "tools",
+      "title": "Add search_auto MCP Tool",
+      "description": "Add a new search_auto MCP tool that exposes automatic algorithm selection to MCP clients. Returns results with algorithm used and cost metrics.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "testCategories": ["integration"],
+      "implementation": {
+        "purpose": "Expose automatic algorithm selection via MCP so clients can leverage intelligent query optimization without manual algorithm choice.",
+        "keyDecisions": [
+          "Tool name: search_auto",
+          "Returns: entities, algorithm used, cost estimate",
+          "Parameters similar to search_nodes but without algorithm choice"
+        ],
+        "existingCodeContext": "toolDefinitions.ts has all 54 tool schemas. toolHandlers.ts dispatches to managers. Add after search_nodes tool."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/server/toolDefinitions.ts",
+          "details": "Open the tool definitions file"
+        },
+        {
+          "step": 2,
+          "action": "Find the search_nodes tool definition (in SEARCH TOOLS section)",
+          "details": "Search for 'search_nodes' to find the search tools section"
+        },
+        {
+          "step": 3,
+          "action": "Add search_auto tool definition after search_nodes",
+          "code": "  {\n    name: 'search_auto',\n    description:\n      'Search the knowledge graph with automatic algorithm selection. Analyzes query and graph state to choose the optimal search algorithm (basic, ranked, boolean, or fuzzy). Returns results with algorithm used and cost metrics.',\n    inputSchema: {\n      type: 'object',\n      properties: {\n        query: {\n          type: 'string',\n          description: 'Search query string',\n        },\n        tags: {\n          type: 'array',\n          items: { type: 'string' },\n          description: 'Filter results to entities with these tags',\n        },\n        minImportance: {\n          type: 'number',\n          description: 'Minimum importance level (0-10)',\n        },\n        maxImportance: {\n          type: 'number',\n          description: 'Maximum importance level (0-10)',\n        },\n        entityType: {\n          type: 'string',\n          description: 'Filter results to this entity type',\n        },\n        limit: {\n          type: 'number',\n          description: 'Maximum number of results to return',\n        },\n      },\n      required: ['query'],\n      additionalProperties: false,\n    },\n  },"
+        },
+        {
+          "step": 4,
+          "action": "Open src/server/toolHandlers.ts",
+          "details": "Open the tool handlers file"
+        },
+        {
+          "step": 5,
+          "action": "Find where search_nodes is handled",
+          "details": "Search for 'case \"search_nodes\"' to find the search handlers section"
+        },
+        {
+          "step": 6,
+          "action": "Add search_auto handler after search_nodes",
+          "code": "      case 'search_auto': {\n        const { query, tags, minImportance, maxImportance, entityType, limit } = args as {\n          query: string;\n          tags?: string[];\n          minImportance?: number;\n          maxImportance?: number;\n          entityType?: string;\n          limit?: number;\n        };\n\n        const result = await ctx.searchManager.searchAuto(query, {\n          tags,\n          minImportance,\n          maxImportance,\n          entityType,\n          limit,\n        });\n\n        return {\n          content: [\n            {\n              type: 'text',\n              text: JSON.stringify(\n                {\n                  entities: result.entities,\n                  algorithm: result.algorithm,\n                  costEstimate: {\n                    estimatedMs: result.costEstimate.estimatedMs,\n                    complexity: result.costEstimate.complexity,\n                    explanation: result.costEstimate.explanation,\n                  },\n                  count: result.entities.length,\n                },\n                null,\n                2\n              ),\n            },\n          ],\n        };\n      }"
+        },
+        {
+          "step": 7,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 8,
+          "action": "Run integration tests if available",
+          "details": "Run: npm test"
+        }
+      ],
+      "acceptanceCriteria": [
+        "search_auto tool definition added to toolDefinitions.ts",
+        "search_auto handler added to toolHandlers.ts",
+        "Tool accepts query, tags, minImportance, maxImportance, entityType, limit",
+        "Response includes entities, algorithm, costEstimate, count",
+        "costEstimate includes estimatedMs, complexity, explanation",
+        "npm run typecheck passes",
+        "Integration tests pass"
+      ]
+    },
+    {
+      "id": "10.4.4",
+      "category": "tests",
+      "title": "Create Query Cost Estimator Tests",
+      "description": "Create comprehensive unit tests for QueryCostEstimator and integration tests for SearchManager.searchAuto().",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/unit/search/QueryCostEstimator.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Verify cost estimation accuracy, algorithm recommendations, and automatic search selection.",
+        "keyDecisions": [
+          "Test cost estimation for each algorithm",
+          "Test query analysis accuracy",
+          "Test algorithm recommendation logic",
+          "Integration test for searchAuto"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file",
+          "details": "Create new file: tests/unit/search/QueryCostEstimator.test.ts"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect } from 'vitest';\nimport {\n  QueryCostEstimator,\n  type CostEstimate,\n  type SearchAlgorithm,\n} from '../../../src/search/QueryCostEstimator.js';\nimport type { GraphStats } from '../../../src/types/types.js';\n\nconst createMockStats = (entityCount: number): GraphStats => ({\n  totalEntities: entityCount,\n  totalRelations: Math.floor(entityCount * 0.5),\n  entityTypesCounts: { test: entityCount },\n  relationTypesCounts: { related: Math.floor(entityCount * 0.5) },\n});"
+        },
+        {
+          "step": 3,
+          "action": "Add query analysis tests",
+          "code": "describe('QueryCostEstimator', () => {\n  const estimator = new QueryCostEstimator();\n\n  describe('analyzeQuery', () => {\n    it('should detect simple queries', () => {\n      const analysis = estimator.analyzeQuery('hello world');\n\n      expect(analysis.termCount).toBe(2);\n      expect(analysis.hasFieldSpecifiers).toBe(false);\n      expect(analysis.hasBooleanOperators).toBe(false);\n      expect(analysis.requiresFuzzy).toBe(false);\n    });\n\n    it('should detect field specifiers', () => {\n      const analysis = estimator.analyzeQuery('name:Alice type:person');\n\n      expect(analysis.hasFieldSpecifiers).toBe(true);\n      expect(analysis.targetFields).toContain('name');\n      expect(analysis.targetFields).toContain('type');\n    });\n\n    it('should detect boolean operators', () => {\n      const analysis = estimator.analyzeQuery('foo AND bar OR baz');\n\n      expect(analysis.hasBooleanOperators).toBe(true);\n    });\n\n    it('should detect parentheses as boolean', () => {\n      const analysis = estimator.analyzeQuery('(foo OR bar)');\n\n      expect(analysis.hasBooleanOperators).toBe(true);\n    });\n\n    it('should detect fuzzy queries', () => {\n      const analysis = estimator.analyzeQuery('hello~2');\n\n      expect(analysis.requiresFuzzy).toBe(true);\n    });\n\n    it('should identify ranking benefit for multi-term queries', () => {\n      const simple = estimator.analyzeQuery('hello');\n      const multi = estimator.analyzeQuery('machine learning models');\n\n      expect(simple.benefitsFromRanking).toBe(false);\n      expect(multi.benefitsFromRanking).toBe(true);\n    });\n  });"
+        },
+        {
+          "step": 4,
+          "action": "Add cost estimation tests",
+          "code": "  describe('estimateSearch', () => {\n    it('should estimate basic search cost', () => {\n      const stats = createMockStats(1000);\n      const cost = estimator.estimateSearch('hello', 'basic', stats);\n\n      expect(cost.entityIterations).toBe(1000);\n      expect(cost.estimatedMs).toBeGreaterThan(0);\n      expect(cost.complexity).toBe('medium');\n      expect(cost.confidence).toBeGreaterThan(0);\n      expect(cost.explanation).toContain('basic search');\n    });\n\n    it('should estimate higher cost for fuzzy search', () => {\n      const stats = createMockStats(1000);\n      const basic = estimator.estimateSearch('hello', 'basic', stats);\n      const fuzzy = estimator.estimateSearch('hello', 'fuzzy', stats);\n\n      expect(fuzzy.estimatedMs).toBeGreaterThan(basic.estimatedMs);\n    });\n\n    it('should use index for field-specific queries', () => {\n      const stats = createMockStats(1000);\n      const cost = estimator.estimateSearch('name:Alice', 'basic', stats);\n\n      expect(cost.canUseIndex).toBe(true);\n      expect(cost.indexLookups).toBeGreaterThan(0);\n      expect(cost.entityIterations).toBeLessThan(1000);\n    });\n\n    it('should categorize complexity correctly', () => {\n      const low = estimator.estimateSearch('x', 'basic', createMockStats(50));\n      const medium = estimator.estimateSearch('x', 'basic', createMockStats(500));\n      const high = estimator.estimateSearch('x', 'basic', createMockStats(5000));\n      const veryHigh = estimator.estimateSearch('x', 'basic', createMockStats(50000));\n\n      expect(low.complexity).toBe('low');\n      expect(medium.complexity).toBe('medium');\n      expect(high.complexity).toBe('high');\n      expect(veryHigh.complexity).toBe('very_high');\n    });\n  });"
+        },
+        {
+          "step": 5,
+          "action": "Add algorithm recommendation tests",
+          "code": "  describe('recommendAlgorithm', () => {\n    it('should recommend fuzzy for wildcard queries', () => {\n      const analysis = estimator.analyzeQuery('hello~2');\n      const stats = createMockStats(1000);\n      const recommended = estimator.recommendAlgorithm(analysis, stats);\n\n      expect(recommended).toBe('fuzzy');\n    });\n\n    it('should recommend boolean for complex queries', () => {\n      const analysis = estimator.analyzeQuery('foo AND bar');\n      const stats = createMockStats(1000);\n      const recommended = estimator.recommendAlgorithm(analysis, stats);\n\n      expect(recommended).toBe('boolean');\n    });\n\n    it('should recommend ranked for multi-term queries', () => {\n      const analysis = estimator.analyzeQuery('machine learning models');\n      const stats = createMockStats(500);\n      const recommended = estimator.recommendAlgorithm(analysis, stats);\n\n      expect(recommended).toBe('ranked');\n    });\n\n    it('should recommend basic for simple queries', () => {\n      const analysis = estimator.analyzeQuery('hello');\n      const stats = createMockStats(50);\n      const recommended = estimator.recommendAlgorithm(analysis, stats);\n\n      expect(recommended).toBe('basic');\n    });\n\n    it('should prefer index-based search for large graphs', () => {\n      const analysis = estimator.analyzeQuery('name:Alice');\n      const stats = createMockStats(50000);\n      const recommended = estimator.recommendAlgorithm(analysis, stats);\n\n      expect(recommended).toBe('boolean');\n    });\n  });\n});"
+        },
+        {
+          "step": 6,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/search/QueryCostEstimator.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/search/QueryCostEstimator.test.ts",
+        "Tests for analyzeQuery - simple, field specifiers, boolean, fuzzy, ranking",
+        "Tests for estimateSearch - basic, fuzzy comparison, index usage, complexity",
+        "Tests for recommendAlgorithm - each algorithm recommendation case",
+        "At least 15 test cases total",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "QueryCostEstimator class with estimateSearch, analyzeQuery, recommendAlgorithm",
+    "SearchManager.getCostEstimate() and searchAuto() methods added",
+    "search_auto MCP tool available",
+    "Cost estimates include entityIterations, estimatedMs, complexity, explanation",
+    "Algorithm recommendations accurate for query types",
+    "15+ unit tests pass",
+    "npm run typecheck passes",
+    "All existing tests pass (backward compatible)"
+  ],
+  "filesCreated": [
+    "src/search/QueryCostEstimator.ts",
+    "tests/unit/search/QueryCostEstimator.test.ts"
+  ],
+  "filesModified": [
+    "src/search/SearchManager.ts",
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts"
+  ],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 6,
+  "dependencies": [],
+  "notes": [
+    "Cost constants should be calibrated based on actual benchmark results",
+    "Confidence decreases for larger graphs and more complex queries",
+    "searchAuto provides easy API for clients that don't want to choose algorithms",
+    "Future enhancement: Add actual timing feedback to improve estimates over time",
+    "search_auto tool is especially useful for LLM clients like Claude"
+  ]
+}

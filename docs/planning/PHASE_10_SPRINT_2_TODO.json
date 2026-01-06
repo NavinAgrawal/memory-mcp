@@ -1,0 +1,354 @@
+{
+  "phase": 10,
+  "sprint": 2,
+  "title": "Graph Change Events",
+  "priority": "MEDIUM",
+  "effort": "5 hours",
+  "status": "pending",
+  "impact": "Enables real-time sync, audit logging, cache invalidation via EventEmitter-based reactive updates",
+  "targetMetrics": {
+    "eventLatency": {
+      "current": "N/A - no event system",
+      "target": "<1ms from mutation to event emission"
+    },
+    "externalSync": {
+      "current": "Polling required",
+      "target": "Real-time event subscription"
+    },
+    "memoryOverhead": {
+      "current": "N/A",
+      "target": "0 bytes when no listeners registered (lazy init)"
+    }
+  },
+  "tasks": [
+    {
+      "id": "10.2.1",
+      "category": "core",
+      "title": "Create GraphEventEmitter Class",
+      "description": "Create a type-safe EventEmitter wrapper for graph change events. Uses Node.js EventEmitter under the hood but provides type safety for event names and payloads.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/core/GraphEventEmitter.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Provide a type-safe event system for graph mutations. External systems can subscribe to entity/relation changes for real-time sync, audit logging, or cache invalidation.",
+        "keyDecisions": [
+          "Wrap Node.js EventEmitter for broad compatibility",
+          "Type-safe event names via GraphEventType union",
+          "Type-safe payloads via GraphEventMap",
+          "Automatic timestamp injection on emit",
+          "Support for multiple listeners per event"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/core/GraphEventEmitter.ts",
+          "details": "Create the new file in the core directory"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and event type definitions",
+          "code": "/**\n * Graph Event Emitter\n *\n * Type-safe EventEmitter for graph change notifications.\n * Enables real-time sync, audit logging, and cache invalidation.\n *\n * @module core/GraphEventEmitter\n */\n\nimport { EventEmitter } from 'events';\nimport type { Entity, Relation } from '../types/types.js';\n\n/**\n * Event types emitted by the graph.\n */\nexport type GraphEventType =\n  | 'entityCreated'\n  | 'entityUpdated'\n  | 'entityDeleted'\n  | 'relationCreated'\n  | 'relationDeleted'\n  | 'observationAdded'\n  | 'observationDeleted'\n  | 'graphLoaded'\n  | 'graphSaved';"
+        },
+        {
+          "step": 3,
+          "action": "Add base event interface",
+          "code": "/**\n * Base event payload with timestamp.\n */\nexport interface GraphEventBase {\n  /** ISO 8601 timestamp when event was emitted */\n  timestamp: string;\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add entity event interfaces",
+          "code": "/**\n * Entity created event payload.\n */\nexport interface EntityCreatedEvent extends GraphEventBase {\n  /** The newly created entity */\n  entity: Entity;\n}\n\n/**\n * Entity updated event payload.\n */\nexport interface EntityUpdatedEvent extends GraphEventBase {\n  /** The updated entity (with new values) */\n  entity: Entity;\n  /** Fields that were changed */\n  changes: Partial<Entity>;\n  /** Previous values of changed fields */\n  previousValues: Partial<Entity>;\n}\n\n/**\n * Entity deleted event payload.\n */\nexport interface EntityDeletedEvent extends GraphEventBase {\n  /** Name of the deleted entity */\n  entityName: string;\n  /** The entity that was deleted (snapshot before deletion) */\n  entity: Entity;\n}"
+        },
+        {
+          "step": 5,
+          "action": "Add relation event interfaces",
+          "code": "/**\n * Relation created event payload.\n */\nexport interface RelationCreatedEvent extends GraphEventBase {\n  /** The newly created relation */\n  relation: Relation;\n}\n\n/**\n * Relation deleted event payload.\n */\nexport interface RelationDeletedEvent extends GraphEventBase {\n  /** The deleted relation */\n  relation: Relation;\n}"
+        },
+        {
+          "step": 6,
+          "action": "Add observation event interfaces",
+          "code": "/**\n * Observation added event payload.\n */\nexport interface ObservationAddedEvent extends GraphEventBase {\n  /** Name of the entity observations were added to */\n  entityName: string;\n  /** The observations that were added */\n  observations: string[];\n}\n\n/**\n * Observation deleted event payload.\n */\nexport interface ObservationDeletedEvent extends GraphEventBase {\n  /** Name of the entity observations were removed from */\n  entityName: string;\n  /** The observations that were removed */\n  observations: string[];\n}"
+        },
+        {
+          "step": 7,
+          "action": "Add graph lifecycle event interfaces",
+          "code": "/**\n * Graph loaded event payload.\n */\nexport interface GraphLoadedEvent extends GraphEventBase {\n  /** Number of entities in the loaded graph */\n  entityCount: number;\n  /** Number of relations in the loaded graph */\n  relationCount: number;\n}\n\n/**\n * Graph saved event payload.\n */\nexport interface GraphSavedEvent extends GraphEventBase {\n  /** Number of entities saved */\n  entityCount: number;\n  /** Number of relations saved */\n  relationCount: number;\n  /** Bytes written to disk (if available) */\n  bytesWritten?: number;\n}"
+        },
+        {
+          "step": 8,
+          "action": "Add event map and listener types",
+          "code": "/**\n * Map of event types to their payload types.\n * Used for type-safe event handling.\n */\nexport interface GraphEventMap {\n  entityCreated: EntityCreatedEvent;\n  entityUpdated: EntityUpdatedEvent;\n  entityDeleted: EntityDeletedEvent;\n  relationCreated: RelationCreatedEvent;\n  relationDeleted: RelationDeletedEvent;\n  observationAdded: ObservationAddedEvent;\n  observationDeleted: ObservationDeletedEvent;\n  graphLoaded: GraphLoadedEvent;\n  graphSaved: GraphSavedEvent;\n}\n\n/**\n * Type-safe event listener function.\n */\nexport type GraphEventListener<T extends GraphEventType> = (\n  event: GraphEventMap[T]\n) => void;"
+        },
+        {
+          "step": 9,
+          "action": "Add GraphEventEmitter class",
+          "code": "/**\n * Type-safe EventEmitter for graph changes.\n *\n * Wraps Node.js EventEmitter to provide type safety for event names\n * and payloads. Automatically adds timestamps to all emitted events.\n *\n * @example\n * ```typescript\n * const emitter = new GraphEventEmitter();\n *\n * // Subscribe to entity creation\n * emitter.on('entityCreated', (event) => {\n *   console.log(`New entity: ${event.entity.name} at ${event.timestamp}`);\n * });\n *\n * // Subscribe to updates with change tracking\n * emitter.on('entityUpdated', (event) => {\n *   console.log(`Updated: ${event.entity.name}`);\n *   console.log('Changes:', event.changes);\n *   console.log('Previous:', event.previousValues);\n * });\n *\n * // One-time listener\n * emitter.once('graphLoaded', (event) => {\n *   console.log(`Loaded ${event.entityCount} entities`);\n * });\n * ```\n */\nexport class GraphEventEmitter {\n  private emitter = new EventEmitter();\n\n  /**\n   * Set maximum listeners per event type.\n   * @param n - Maximum number of listeners (default: 10)\n   */\n  setMaxListeners(n: number): this {\n    this.emitter.setMaxListeners(n);\n    return this;\n  }\n\n  /**\n   * Register a listener for a graph event.\n   * @param event - Event type to listen for\n   * @param listener - Callback function\n   */\n  on<T extends GraphEventType>(\n    event: T,\n    listener: GraphEventListener<T>\n  ): this {\n    this.emitter.on(event, listener);\n    return this;\n  }\n\n  /**\n   * Register a one-time listener for a graph event.\n   * The listener is automatically removed after first invocation.\n   * @param event - Event type to listen for\n   * @param listener - Callback function\n   */\n  once<T extends GraphEventType>(\n    event: T,\n    listener: GraphEventListener<T>\n  ): this {\n    this.emitter.once(event, listener);\n    return this;\n  }\n\n  /**\n   * Remove a listener for a graph event.\n   * @param event - Event type\n   * @param listener - Callback function to remove\n   */\n  off<T extends GraphEventType>(\n    event: T,\n    listener: GraphEventListener<T>\n  ): this {\n    this.emitter.off(event, listener);\n    return this;\n  }\n\n  /**\n   * Remove all listeners for a specific event or all events.\n   * @param event - Optional event type (removes all if not specified)\n   */\n  removeAllListeners(event?: GraphEventType): this {\n    this.emitter.removeAllListeners(event);\n    return this;\n  }\n\n  /**\n   * Emit a graph event.\n   * Automatically adds timestamp to the payload.\n   *\n   * @internal Used by GraphStorage to emit events on mutations.\n   * @param event - Event type\n   * @param payload - Event payload (without timestamp)\n   * @returns True if event had listeners\n   */\n  emit<T extends GraphEventType>(\n    event: T,\n    payload: Omit<GraphEventMap[T], 'timestamp'>\n  ): boolean {\n    const fullPayload = {\n      ...payload,\n      timestamp: new Date().toISOString(),\n    };\n    return this.emitter.emit(event, fullPayload);\n  }\n\n  /**\n   * Get the number of listeners for an event.\n   * @param event - Event type\n   */\n  listenerCount(event: GraphEventType): number {\n    return this.emitter.listenerCount(event);\n  }\n\n  /**\n   * Get all registered event names.\n   */\n  eventNames(): GraphEventType[] {\n    return this.emitter.eventNames() as GraphEventType[];\n  }\n}"
+        },
+        {
+          "step": 10,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "GraphEventEmitter.ts file created in src/core/",
+        "All 9 event types defined (entityCreated, entityUpdated, entityDeleted, relationCreated, relationDeleted, observationAdded, observationDeleted, graphLoaded, graphSaved)",
+        "Each event type has corresponding payload interface",
+        "GraphEventMap provides type-safe mapping",
+        "on(), once(), off(), emit() methods implemented with type safety",
+        "emit() automatically injects timestamp",
+        "Class has comprehensive JSDoc with examples",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "10.2.2",
+      "category": "core",
+      "title": "Integrate Events into GraphStorage",
+      "description": "Add lazy-initialized event emitter to GraphStorage and emit events on all mutation operations (create, update, delete for entities and relations).",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/core/GraphStorage.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Integrate the GraphEventEmitter into GraphStorage so that all mutations automatically emit events. Uses lazy initialization to avoid overhead when no listeners are registered.",
+        "keyDecisions": [
+          "Lazy initialization via getter (no overhead if events not used)",
+          "Events emitted after successful mutation (not before)",
+          "EntityUpdated event captures both changes and previous values",
+          "Events emitted inside mutex lock to ensure consistency"
+        ],
+        "existingCodeContext": "GraphStorage.ts is ~900 lines. Add events property after existing indexes (~line 90). Emit events in saveGraph, appendEntity, appendRelation, updateEntity methods."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/core/GraphStorage.ts",
+          "details": "Open the GraphStorage file"
+        },
+        {
+          "step": 2,
+          "action": "Add import for GraphEventEmitter at the top",
+          "details": "Find the imports (around line 10-15) and add:\nimport { GraphEventEmitter } from './GraphEventEmitter.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add lazy-initialized events property after observationIndex (~line 90)",
+          "code": "  /**\n   * Event emitter for graph change notifications.\n   * Lazily initialized on first access to avoid overhead when not used.\n   * @private\n   */\n  private _events: GraphEventEmitter | null = null;\n\n  /**\n   * Get the event emitter for subscribing to graph changes.\n   *\n   * Lazily initialized - no memory overhead if never accessed.\n   *\n   * @example\n   * ```typescript\n   * storage.events.on('entityCreated', (event) => {\n   *   console.log(`Created: ${event.entity.name}`);\n   * });\n   *\n   * storage.events.on('entityUpdated', (event) => {\n   *   console.log(`Updated: ${event.entity.name}`, event.changes);\n   * });\n   * ```\n   */\n  get events(): GraphEventEmitter {\n    if (!this._events) {\n      this._events = new GraphEventEmitter();\n    }\n    return this._events;\n  }"
+        },
+        {
+          "step": 4,
+          "action": "Find saveGraph method and add event emission at the end",
+          "details": "Search for 'async saveGraph'. After the durableWriteFile call (around the end of saveGraph), add:\n\n    // Emit graphSaved event if listeners exist\n    if (this._events) {\n      this._events.emit('graphSaved', {\n        entityCount: graph.entities.length,\n        relationCount: graph.relations.length,\n      });\n    }"
+        },
+        {
+          "step": 5,
+          "action": "Find loadFromDisk method and add event emission at the end",
+          "details": "Search for 'private async loadFromDisk'. At the end of the method, after setting this.cache, add:\n\n    // Emit graphLoaded event if listeners exist\n    if (this._events) {\n      this._events.emit('graphLoaded', {\n        entityCount: this.cache.entities.length,\n        relationCount: this.cache.relations.length,\n      });\n    }"
+        },
+        {
+          "step": 6,
+          "action": "Find appendEntity method and add event emission",
+          "details": "Search for 'async appendEntity'. After successfully appending and updating cache, add:\n\n    // Emit entityCreated event if listeners exist\n    if (this._events) {\n      this._events.emit('entityCreated', { entity });\n    }"
+        },
+        {
+          "step": 7,
+          "action": "Find appendRelation method and add event emission",
+          "details": "Search for 'async appendRelation'. After successfully appending and updating cache, add:\n\n    // Emit relationCreated event if listeners exist\n    if (this._events) {\n      this._events.emit('relationCreated', { relation });\n    }"
+        },
+        {
+          "step": 8,
+          "action": "Find updateEntity method and add event emission with change tracking",
+          "details": "Search for 'async updateEntity'. This method needs to capture previous values BEFORE applying updates. Modify to:\n\n1. Before applying updates, capture previous values:\n    const previousValues: Partial<Entity> = {};\n    for (const key of Object.keys(updates) as (keyof Entity)[]) {\n      if (key in entity) {\n        previousValues[key] = entity[key] as any;\n      }\n    }\n\n2. After successfully updating and saving, emit:\n    if (this._events) {\n      this._events.emit('entityUpdated', {\n        entity: { ...entity },\n        changes: updates,\n        previousValues,\n      });\n    }"
+        },
+        {
+          "step": 9,
+          "action": "Add helper method to emit entity deletion events (for use by transaction)",
+          "code": "  /**\n   * Emit entity deleted event if events are enabled.\n   * @internal Used by transaction() for batch deletions.\n   */\n  protected emitEntityDeleted(entity: Entity): void {\n    if (this._events) {\n      this._events.emit('entityDeleted', {\n        entityName: entity.name,\n        entity: { ...entity },\n      });\n    }\n  }\n\n  /**\n   * Emit relation deleted event if events are enabled.\n   * @internal Used by transaction() for batch deletions.\n   */\n  protected emitRelationDeleted(relation: Relation): void {\n    if (this._events) {\n      this._events.emit('relationDeleted', {\n        relation: { ...relation },\n      });\n    }\n  }"
+        },
+        {
+          "step": 10,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 11,
+          "action": "Run existing GraphStorage tests",
+          "details": "Run: npx vitest run tests/unit/core/GraphStorage.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "events getter property added (lazy-initialized)",
+        "graphLoaded event emitted after loadFromDisk",
+        "graphSaved event emitted after saveGraph",
+        "entityCreated event emitted after appendEntity",
+        "relationCreated event emitted after appendRelation",
+        "entityUpdated event emitted with changes and previousValues",
+        "Helper methods for deletion events available",
+        "No performance impact when no listeners (checks _events !== null)",
+        "npm run typecheck passes",
+        "All existing GraphStorage tests pass"
+      ]
+    },
+    {
+      "id": "10.2.3",
+      "category": "tests",
+      "title": "Create Graph Events Unit Tests",
+      "description": "Create comprehensive unit tests for the GraphEventEmitter class and its integration with GraphStorage.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/unit/core/GraphEvents.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Verify the event system works correctly for all event types, handles multiple listeners, and integrates properly with GraphStorage mutations.",
+        "keyDecisions": [
+          "Test GraphEventEmitter in isolation first",
+          "Test integration with GraphStorage mutations",
+          "Verify timestamp injection",
+          "Verify lazy initialization"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file",
+          "details": "Create new file: tests/unit/core/GraphEvents.test.ts"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';\nimport { GraphStorage } from '../../../src/core/GraphStorage.js';\nimport { GraphEventEmitter } from '../../../src/core/GraphEventEmitter.js';\nimport type {\n  EntityCreatedEvent,\n  EntityUpdatedEvent,\n  EntityDeletedEvent,\n  GraphLoadedEvent,\n} from '../../../src/core/GraphEventEmitter.js';\nimport { promises as fs } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';"
+        },
+        {
+          "step": 3,
+          "action": "Add GraphEventEmitter unit tests",
+          "code": "describe('GraphEventEmitter', () => {\n  let emitter: GraphEventEmitter;\n\n  beforeEach(() => {\n    emitter = new GraphEventEmitter();\n  });\n\n  describe('basic event handling', () => {\n    it('should emit and receive events', () => {\n      const listener = vi.fn();\n      emitter.on('entityCreated', listener);\n\n      emitter.emit('entityCreated', {\n        entity: { name: 'Test', entityType: 'test', observations: [] },\n      });\n\n      expect(listener).toHaveBeenCalledTimes(1);\n      expect(listener.mock.calls[0][0].entity.name).toBe('Test');\n    });\n\n    it('should add timestamp to events automatically', () => {\n      let receivedEvent: EntityCreatedEvent | null = null;\n      emitter.on('entityCreated', (event) => {\n        receivedEvent = event;\n      });\n\n      const beforeEmit = Date.now();\n      emitter.emit('entityCreated', {\n        entity: { name: 'Test', entityType: 'test', observations: [] },\n      });\n      const afterEmit = Date.now();\n\n      expect(receivedEvent?.timestamp).toBeDefined();\n      const eventTime = new Date(receivedEvent!.timestamp).getTime();\n      expect(eventTime).toBeGreaterThanOrEqual(beforeEmit);\n      expect(eventTime).toBeLessThanOrEqual(afterEmit);\n    });\n\n    it('should support multiple listeners for same event', () => {\n      const listener1 = vi.fn();\n      const listener2 = vi.fn();\n\n      emitter.on('entityCreated', listener1);\n      emitter.on('entityCreated', listener2);\n\n      emitter.emit('entityCreated', {\n        entity: { name: 'Test', entityType: 'test', observations: [] },\n      });\n\n      expect(listener1).toHaveBeenCalledTimes(1);\n      expect(listener2).toHaveBeenCalledTimes(1);\n    });\n\n    it('should remove listeners with off()', () => {\n      const listener = vi.fn();\n      emitter.on('entityCreated', listener);\n      emitter.off('entityCreated', listener);\n\n      emitter.emit('entityCreated', {\n        entity: { name: 'Test', entityType: 'test', observations: [] },\n      });\n\n      expect(listener).not.toHaveBeenCalled();\n    });\n\n    it('should support once() for single-use listeners', () => {\n      const listener = vi.fn();\n      emitter.once('entityCreated', listener);\n\n      emitter.emit('entityCreated', {\n        entity: { name: 'Test1', entityType: 'test', observations: [] },\n      });\n      emitter.emit('entityCreated', {\n        entity: { name: 'Test2', entityType: 'test', observations: [] },\n      });\n\n      expect(listener).toHaveBeenCalledTimes(1);\n      expect(listener.mock.calls[0][0].entity.name).toBe('Test1');\n    });\n\n    it('should return listener count', () => {\n      expect(emitter.listenerCount('entityCreated')).toBe(0);\n\n      emitter.on('entityCreated', () => {});\n      expect(emitter.listenerCount('entityCreated')).toBe(1);\n\n      emitter.on('entityCreated', () => {});\n      expect(emitter.listenerCount('entityCreated')).toBe(2);\n    });\n\n    it('should return event names', () => {\n      emitter.on('entityCreated', () => {});\n      emitter.on('entityDeleted', () => {});\n\n      const names = emitter.eventNames();\n      expect(names).toContain('entityCreated');\n      expect(names).toContain('entityDeleted');\n    });\n  });\n\n  describe('event types', () => {\n    it('should emit entityUpdated with changes and previousValues', () => {\n      let receivedEvent: EntityUpdatedEvent | null = null;\n      emitter.on('entityUpdated', (event) => {\n        receivedEvent = event;\n      });\n\n      emitter.emit('entityUpdated', {\n        entity: { name: 'Test', entityType: 'test', observations: [], importance: 5 },\n        changes: { importance: 5 },\n        previousValues: { importance: 3 },\n      });\n\n      expect(receivedEvent?.changes.importance).toBe(5);\n      expect(receivedEvent?.previousValues.importance).toBe(3);\n    });\n\n    it('should emit graphLoaded with counts', () => {\n      let receivedEvent: GraphLoadedEvent | null = null;\n      emitter.on('graphLoaded', (event) => {\n        receivedEvent = event;\n      });\n\n      emitter.emit('graphLoaded', {\n        entityCount: 100,\n        relationCount: 50,\n      });\n\n      expect(receivedEvent?.entityCount).toBe(100);\n      expect(receivedEvent?.relationCount).toBe(50);\n    });\n  });\n});"
+        },
+        {
+          "step": 4,
+          "action": "Add GraphStorage integration tests",
+          "code": "describe('GraphStorage Events Integration', () => {\n  let testDir: string;\n  let storage: GraphStorage;\n\n  beforeEach(async () => {\n    testDir = join(tmpdir(), `event-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);\n    await fs.mkdir(testDir, { recursive: true });\n    storage = new GraphStorage(join(testDir, 'test.jsonl'));\n  });\n\n  afterEach(async () => {\n    try {\n      await fs.rm(testDir, { recursive: true, force: true });\n    } catch {\n      // Ignore cleanup errors\n    }\n  });\n\n  describe('lazy initialization', () => {\n    it('should lazily initialize event emitter', () => {\n      // Access events property\n      const events = storage.events;\n      expect(events).toBeInstanceOf(GraphEventEmitter);\n\n      // Same instance on subsequent access\n      expect(storage.events).toBe(events);\n    });\n  });\n\n  describe('entity events', () => {\n    it('should emit entityCreated when appending entity', async () => {\n      const listener = vi.fn();\n      storage.events.on('entityCreated', listener);\n\n      await storage.appendEntity({\n        name: 'Test',\n        entityType: 'test',\n        observations: ['obs1'],\n        createdAt: new Date().toISOString(),\n        lastModified: new Date().toISOString(),\n      });\n\n      expect(listener).toHaveBeenCalledTimes(1);\n      expect(listener.mock.calls[0][0].entity.name).toBe('Test');\n    });\n  });\n\n  describe('graph lifecycle events', () => {\n    it('should emit graphSaved after saveGraph', async () => {\n      const listener = vi.fn();\n      storage.events.on('graphSaved', listener);\n\n      await storage.saveGraph({\n        entities: [\n          { name: 'E1', entityType: 'test', observations: [] },\n          { name: 'E2', entityType: 'test', observations: [] },\n        ],\n        relations: [\n          { from: 'E1', to: 'E2', relationType: 'related' },\n        ],\n      });\n\n      expect(listener).toHaveBeenCalledTimes(1);\n      expect(listener.mock.calls[0][0].entityCount).toBe(2);\n      expect(listener.mock.calls[0][0].relationCount).toBe(1);\n    });\n\n    it('should emit graphLoaded when loading from disk', async () => {\n      // First save some data\n      await storage.saveGraph({\n        entities: [{ name: 'Test', entityType: 'test', observations: [] }],\n        relations: [],\n      });\n\n      // Create new storage instance to force load from disk\n      const storage2 = new GraphStorage(join(testDir, 'test.jsonl'));\n      const listener = vi.fn();\n      storage2.events.on('graphLoaded', listener);\n\n      await storage2.loadGraph();\n\n      expect(listener).toHaveBeenCalledTimes(1);\n      expect(listener.mock.calls[0][0].entityCount).toBe(1);\n    });\n  });\n\n  describe('no overhead when unused', () => {\n    it('should not emit events when no listeners registered', async () => {\n      // Don't access storage.events - this should not cause any overhead\n      await storage.saveGraph({\n        entities: [{ name: 'Test', entityType: 'test', observations: [] }],\n        relations: [],\n      });\n\n      // If we get here without errors, the check for _events !== null works\n      expect(true).toBe(true);\n    });\n  });\n});"
+        },
+        {
+          "step": 5,
+          "action": "Close the file",
+          "details": "Ensure the file is complete and well-formed"
+        },
+        {
+          "step": 6,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/core/GraphEvents.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/core/GraphEvents.test.ts",
+        "Tests for basic event emission and reception",
+        "Tests for automatic timestamp injection",
+        "Tests for multiple listeners",
+        "Tests for listener removal (off)",
+        "Tests for once() single-use listeners",
+        "Tests for listenerCount and eventNames",
+        "Tests for event type payloads (entityUpdated, graphLoaded)",
+        "Integration tests with GraphStorage",
+        "Test for lazy initialization",
+        "Test for no overhead when events unused",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": "10.2.4",
+      "category": "exports",
+      "title": "Update Barrel Exports and Documentation",
+      "description": "Export the new GraphEventEmitter class and all event types from the core barrel, and update documentation.",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/core/index.ts", "CLAUDE.md"],
+      "testCategories": ["typecheck"],
+      "implementation": {
+        "purpose": "Make the event system accessible via the public API and document its usage.",
+        "keyDecisions": [
+          "Export class and all type definitions",
+          "Add brief documentation in CLAUDE.md"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/core/index.ts",
+          "details": "Open the core barrel export file"
+        },
+        {
+          "step": 2,
+          "action": "Add GraphEventEmitter exports at the end of the file",
+          "code": "// Phase 10 Sprint 2: Graph Change Events\nexport { GraphEventEmitter } from './GraphEventEmitter.js';\nexport type {\n  GraphEventType,\n  GraphEventMap,\n  GraphEventListener,\n  GraphEventBase,\n  EntityCreatedEvent,\n  EntityUpdatedEvent,\n  EntityDeletedEvent,\n  RelationCreatedEvent,\n  RelationDeletedEvent,\n  ObservationAddedEvent,\n  ObservationDeletedEvent,\n  GraphLoadedEvent,\n  GraphSavedEvent,\n} from './GraphEventEmitter.js';"
+        },
+        {
+          "step": 3,
+          "action": "Open CLAUDE.md",
+          "details": "Open the project documentation file"
+        },
+        {
+          "step": 4,
+          "action": "Add Graph Change Events documentation section",
+          "details": "Find the 'Performance & Optimizations' section and add after it:\n\n## Graph Change Events\n\nSubscribe to real-time graph changes via EventEmitter:\n\n```typescript\nstorage.events.on('entityCreated', (event) => {\n  console.log(`Created: ${event.entity.name} at ${event.timestamp}`);\n});\n\nstorage.events.on('entityUpdated', (event) => {\n  console.log(`Updated: ${event.entity.name}`, event.changes);\n});\n\nstorage.events.on('graphSaved', (event) => {\n  console.log(`Saved ${event.entityCount} entities`);\n});\n```\n\nAvailable events:\n- `entityCreated`, `entityUpdated`, `entityDeleted`\n- `relationCreated`, `relationDeleted`\n- `observationAdded`, `observationDeleted`\n- `graphLoaded`, `graphSaved`"
+        },
+        {
+          "step": 5,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 6,
+          "action": "Run all tests",
+          "details": "Run: npm test"
+        }
+      ],
+      "acceptanceCriteria": [
+        "GraphEventEmitter exported from src/core/index.ts",
+        "All event type interfaces exported",
+        "GraphEventListener type exported",
+        "CLAUDE.md updated with events documentation",
+        "Documentation includes code example",
+        "All event types listed in documentation",
+        "npm run typecheck passes",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "GraphEventEmitter class created with type-safe API",
+    "GraphStorage.events property available (lazy-initialized)",
+    "All mutation operations emit appropriate events",
+    "Events include automatic timestamps",
+    "No performance overhead when events unused",
+    "12+ unit tests pass",
+    "npm run typecheck passes",
+    "All existing tests pass (backward compatible)"
+  ],
+  "filesCreated": [
+    "src/core/GraphEventEmitter.ts",
+    "tests/unit/core/GraphEvents.test.ts"
+  ],
+  "filesModified": [
+    "src/core/GraphStorage.ts",
+    "src/core/index.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 5,
+  "dependencies": ["Sprint 10.1 (Transaction Batching - for testing combined event emission)"],
+  "notes": [
+    "CRITICAL: Events must be emitted AFTER successful mutation, not before",
+    "Lazy initialization ensures zero overhead when events not used",
+    "EntityUpdated event must capture both new values AND previous values for change tracking",
+    "This sprint enables Sprint 3 (Incremental TF-IDF) to hook into events for automatic index updates",
+    "Events are emitted inside mutex lock to ensure consistency with storage state"
+  ]
+}
