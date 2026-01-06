@@ -69,4 +69,29 @@ export type {
   SemanticIndexOptions,
   // Phase 9B: Long-running operation types
   LongRunningOperationOptions,
+  // Phase 10 Sprint 1: Transaction batching types
+  BatchOperationType,
+  BatchOperation,
+  BatchResult,
+  BatchOptions,
+  // Phase 10 Sprint 2: Graph change events types
+  GraphEventType,
+  GraphEventBase,
+  EntityCreatedEvent,
+  EntityUpdatedEvent,
+  EntityDeletedEvent,
+  RelationCreatedEvent,
+  RelationDeletedEvent,
+  ObservationAddedEvent,
+  ObservationDeletedEvent,
+  GraphSavedEvent,
+  GraphLoadedEvent,
+  GraphEvent,
+  GraphEventListener,
+  GraphEventMap,
+  // Phase 10 Sprint 4: Query cost estimation types
+  SearchMethod,
+  QueryCostEstimate,
+  AutoSearchResult,
+  QueryCostEstimatorOptions,
 } from './types.js';

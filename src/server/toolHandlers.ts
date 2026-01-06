@@ -194,6 +194,13 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatToolResponse(await ctx.searchManager.getSearchSuggestions(query, maxSuggestions));
   },
 
+  // Phase 10 Sprint 4: Automatic search method selection
+  search_auto: async (ctx, args) => {
+    const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
+    const limit = args.limit !== undefined ? validateWithSchema(args.limit, z.number().int().positive().max(200), 'Invalid limit') : undefined;
+    return formatToolResponse(await ctx.searchManager.autoSearch(query, limit));
+  },
+
   // ==================== SAVED SEARCH HANDLERS ====================
   save_search: async (ctx, args) => {
     const searchInput = validateWithSchema(args, SavedSearchInputSchema, 'Invalid saved search data');

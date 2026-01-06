@@ -5,6 +5,55 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.8.0] - 2026-01-06
+
+### Added
+
+- **Phase 10: Search & Storage Optimization** - New features for transaction batching, event-driven updates, and intelligent search
+
+  #### Sprint 1: Transaction Batching API
+  - `BatchTransaction` class - fluent builder pattern for batch operations
+  - `GraphStorage.transaction()` factory method - creates new batch transactions
+  - Supports entity CRUD, relation management, and observation operations
+  - Atomic execution with optional validation before execute
+  - Comprehensive error handling with stopOnError option
+
+  #### Sprint 2: Graph Change Events
+  - `GraphEventEmitter` class - event-driven architecture for graph changes
+  - Event types: `entity:created`, `entity:updated`, `entity:deleted`, `relation:created`, `relation:deleted`, `graph:saved`, `graph:loaded`
+  - Subscribe with `on()`, `onAny()`, `once()` methods
+  - `GraphStorage.events` getter for subscription access
+  - Automatic event emission on all graph operations
+
+  #### Sprint 3: Incremental TF-IDF Index
+  - `TFIDFIndexManager.addDocument()` - add entity to index without full rebuild
+  - `TFIDFIndexManager.removeDocument()` - remove entity from index
+  - `TFIDFIndexManager.updateDocument()` - update entity in index
+  - `TFIDFEventSync` class - automatic index sync via graph events
+  - Efficient IDF recalculation when document count changes
+
+  #### Sprint 4: Query Cost Estimation & Auto Search
+  - `QueryCostEstimator` class - estimates search costs based on query and graph size
+  - `SearchManager.autoSearch()` - automatically selects optimal search method
+  - `SearchManager.getSearchCostEstimates()` - returns cost estimates for all methods
+  - **New MCP Tool**: `search_auto` - intelligent search with automatic method selection
+  - Supports 5 search methods: basic, ranked, boolean, fuzzy, semantic
+
+### Changed
+
+- Updated tool count from 54 to 55 (added search_auto)
+- SearchManager now includes QueryCostEstimator integration
+- TFIDFIndexManager supports incremental updates without full rebuilds
+
+### Tests
+
+- Added `tests/unit/core/BatchTransaction.test.ts` - 29 tests for transaction batching
+- Added `tests/unit/core/GraphEventEmitter.test.ts` - 32 tests for event system
+- Added `tests/unit/search/IncrementalTFIDF.test.ts` - 22 tests for incremental index
+- Added `tests/unit/search/QueryCostEstimator.test.ts` - 29 tests for cost estimation
+- All 2437 tests passing (70 test files)
+- TypeScript type checking passes
+
 ## [9.7.1] - 2026-01-06
 
 ### Validated
