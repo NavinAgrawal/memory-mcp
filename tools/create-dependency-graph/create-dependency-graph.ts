@@ -106,15 +106,26 @@ interface PackageJson {
   version: string;
 }
 
+// CLI options interface
+interface CLIOptions {
+  root: string;
+  includeTests: boolean;
+}
+
 // Constants - support CLI argument or current working directory for portability
-function getProjectRoot(): string {
-  // Check for CLI argument: --root=/path/to/project or first positional arg
+function parseCliOptions(): CLIOptions {
   const args = process.argv.slice(2);
+  const options: CLIOptions = {
+    root: process.cwd(),
+    includeTests: false,
+  };
+
   for (const arg of args) {
     if (arg.startsWith('--root=')) {
-      return arg.slice(7);
-    }
-    if (arg === '--help' || arg === '-h') {
+      options.root = arg.slice(7);
+    } else if (arg === '--include-tests' || arg === '-t') {
+      options.includeTests = true;
+    } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Dependency Graph Generator
 
@@ -122,23 +133,29 @@ Usage:
   create-dependency-graph [options] [project-root]
 
 Options:
-  --root=<path>   Project root directory (default: current directory)
-  --help, -h      Show this help
+  --root=<path>      Project root directory (default: current directory)
+  --include-tests    Include test files in dependency analysis
+  -t                 Short form of --include-tests
+  --help, -h         Show this help
 
 Examples:
-  create-dependency-graph                     # Use current directory
-  create-dependency-graph ./my-project        # Specify project path
-  create-dependency-graph --root=C:/projects/my-app
+  create-dependency-graph                         # Use current directory
+  create-dependency-graph ./my-project            # Specify project path
+  create-dependency-graph --include-tests         # Include test file analysis
+  create-dependency-graph --root=C:/projects/my-app -t
 `);
       process.exit(0);
-    }
-    // First non-flag argument is the project root
-    if (!arg.startsWith('-') && existsSync(arg)) {
-      return arg;
+    } else if (!arg.startsWith('-') && existsSync(arg)) {
+      // First non-flag argument is the project root
+      options.root = arg;
     }
   }
-  // Fallback to current working directory
-  return process.cwd();
+
+  return options;
+}
+
+function getProjectRoot(): string {
+  return parseCliOptions().root;
 }
 
 const ROOT_DIR = getProjectRoot();
@@ -175,6 +192,111 @@ function getAllTsFiles(dir: string, files: string[] = []): string[] {
   }
 
   return files;
+}
+
+/**
+ * Recursively get all test files (.test.ts, .spec.ts) in a directory
+ */
+function getAllTestFiles(dir: string, files: string[] = []): string[] {
+  if (!existsSync(dir)) {
+    return files;
+  }
+
+  const entries = readdirSync(dir);
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      getAllTestFiles(fullPath, files);
+    } else if (entry.endsWith('.test.ts') || entry.endsWith('.spec.ts')) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+// Test coverage analysis interfaces
+interface TestCoverageAnalysis {
+  sourceFiles: string[];
+  testFiles: ParsedFile[];
+  coverageMap: Map<string, string[]>; // source file -> test files that import it
+  testedFiles: string[];
+  untestedFiles: string[];
+  testToSourceMap: Map<string, string[]>; // test file -> source files it imports
+}
+
+/**
+ * Analyze test coverage by mapping source files to test files
+ */
+function analyzeTestCoverage(sourceFiles: ParsedFile[], testFiles: ParsedFile[]): TestCoverageAnalysis {
+  const sourceFilePaths = new Set(sourceFiles.map(f => f.path));
+  const coverageMap = new Map<string, string[]>();
+  const testToSourceMap = new Map<string, string[]>();
+
+  // Initialize coverage map with empty arrays
+  for (const source of sourceFiles) {
+    coverageMap.set(source.path, []);
+  }
+
+  // Analyze each test file to see which source files it imports
+  for (const testFile of testFiles) {
+    const importedSources: string[] = [];
+
+    for (const dep of testFile.internalDependencies) {
+      // Resolve the import path relative to the test file
+      const resolvedPath = resolvePath(testFile.path, dep.file);
+
+      // Check if it's a source file (in src/)
+      if (sourceFilePaths.has(resolvedPath)) {
+        importedSources.push(resolvedPath);
+
+        // Add this test to the source file's coverage
+        const tests = coverageMap.get(resolvedPath) || [];
+        if (!tests.includes(testFile.path)) {
+          tests.push(testFile.path);
+          coverageMap.set(resolvedPath, tests);
+        }
+      }
+
+      // Also check without .ts extension variations
+      const withoutTs = resolvedPath.replace(/\.ts$/, '');
+      const withTs = withoutTs + '.ts';
+      if (sourceFilePaths.has(withTs) && !importedSources.includes(withTs)) {
+        importedSources.push(withTs);
+        const tests = coverageMap.get(withTs) || [];
+        if (!tests.includes(testFile.path)) {
+          tests.push(testFile.path);
+          coverageMap.set(withTs, tests);
+        }
+      }
+    }
+
+    testToSourceMap.set(testFile.path, importedSources);
+  }
+
+  // Determine tested and untested files
+  const testedFiles: string[] = [];
+  const untestedFiles: string[] = [];
+
+  for (const [sourcePath, tests] of coverageMap) {
+    if (tests.length > 0) {
+      testedFiles.push(sourcePath);
+    } else {
+      untestedFiles.push(sourcePath);
+    }
+  }
+
+  return {
+    sourceFiles: sourceFiles.map(f => f.path),
+    testFiles,
+    coverageMap,
+    testedFiles,
+    untestedFiles,
+    testToSourceMap,
+  };
 }
 
 /**
@@ -1160,10 +1282,141 @@ function generateCompactSummary(files: ParsedFile[], modules: ModuleMap, stats: 
 }
 
 /**
+ * Generate test coverage analysis markdown
+ */
+function generateTestCoverageMarkdown(coverage: TestCoverageAnalysis): string {
+  const lines: string[] = [];
+  const today = new Date().toISOString().split('T')[0];
+
+  lines.push('# Test Coverage Analysis');
+  lines.push('');
+  lines.push(`**Generated**: ${today}`);
+  lines.push('');
+
+  // Summary statistics
+  const totalSource = coverage.sourceFiles.length;
+  const totalTested = coverage.testedFiles.length;
+  const totalUntested = coverage.untestedFiles.length;
+  const coveragePercent = totalSource > 0 ? ((totalTested / totalSource) * 100).toFixed(1) : '0';
+
+  lines.push('## Summary');
+  lines.push('');
+  lines.push('| Metric | Count |');
+  lines.push('|--------|-------|');
+  lines.push(`| Total Source Files | ${totalSource} |`);
+  lines.push(`| Total Test Files | ${coverage.testFiles.length} |`);
+  lines.push(`| Source Files with Tests | ${totalTested} |`);
+  lines.push(`| Source Files without Tests | ${totalUntested} |`);
+  lines.push(`| Coverage | ${coveragePercent}% |`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+
+  // Untested files (the main deliverable)
+  lines.push('## Source Files Without Test Coverage');
+  lines.push('');
+  if (coverage.untestedFiles.length === 0) {
+    lines.push('**All source files have test coverage!** 🎉');
+  } else {
+    lines.push(`The following ${coverage.untestedFiles.length} source files are not directly imported by any test file:`);
+    lines.push('');
+
+    // Group by module
+    const byModule = new Map<string, string[]>();
+    for (const file of coverage.untestedFiles) {
+      const parts = file.split('/');
+      const module = parts.length >= 3 ? parts[1] : 'root';
+      if (!byModule.has(module)) byModule.set(module, []);
+      byModule.get(module)!.push(file);
+    }
+
+    for (const [module, files] of byModule) {
+      lines.push(`### ${module}/`);
+      lines.push('');
+      for (const file of files.sort()) {
+        const fileName = basename(file, '.ts');
+        lines.push(`- \`${file}\` → Expected test: \`tests/unit/${module}/${fileName}.test.ts\``);
+      }
+      lines.push('');
+    }
+  }
+  lines.push('---');
+  lines.push('');
+
+  // Files with tests
+  lines.push('## Source Files With Test Coverage');
+  lines.push('');
+  lines.push('| Source File | Test Files |');
+  lines.push('|-------------|------------|');
+
+  const sortedTested = [...coverage.testedFiles].sort();
+  for (const sourcePath of sortedTested) {
+    const tests = coverage.coverageMap.get(sourcePath) || [];
+    const shortSource = sourcePath.split('/').slice(-2).join('/');
+    const shortTests = tests.map(t => `\`${basename(t)}\``).join(', ');
+    lines.push(`| \`${shortSource}\` | ${shortTests} |`);
+  }
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+
+  // Test file details
+  lines.push('## Test File Details');
+  lines.push('');
+  lines.push('| Test File | Imports from Source |');
+  lines.push('|-----------|---------------------|');
+
+  for (const [testPath, sources] of coverage.testToSourceMap) {
+    const shortTest = testPath.split('/').slice(-2).join('/');
+    const sourceCount = sources.length;
+    lines.push(`| \`${shortTest}\` | ${sourceCount} files |`);
+  }
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate test coverage JSON
+ */
+function generateTestCoverageJson(coverage: TestCoverageAnalysis): object {
+  const coverageMapObj: Record<string, string[]> = {};
+  for (const [source, tests] of coverage.coverageMap) {
+    coverageMapObj[source] = tests;
+  }
+
+  const testToSourceObj: Record<string, string[]> = {};
+  for (const [test, sources] of coverage.testToSourceMap) {
+    testToSourceObj[test] = sources;
+  }
+
+  return {
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      totalSourceFiles: coverage.sourceFiles.length,
+      totalTestFiles: coverage.testFiles.length,
+      testedCount: coverage.testedFiles.length,
+      untestedCount: coverage.untestedFiles.length,
+      coveragePercent: coverage.sourceFiles.length > 0
+        ? ((coverage.testedFiles.length / coverage.sourceFiles.length) * 100).toFixed(1)
+        : '0',
+    },
+    untestedFiles: coverage.untestedFiles.sort(),
+    testedFiles: coverage.testedFiles.sort(),
+    coverageMap: coverageMapObj,
+    testToSourceMap: testToSourceObj,
+  };
+}
+
+/**
  * Main function
  */
 async function main(): Promise<void> {
+  const cliOptions = parseCliOptions();
   console.log('Scanning codebase for dependencies...');
+  if (cliOptions.includeTests) {
+    console.log('Test file analysis enabled');
+  }
 
   // Ensure output directory exists
   if (!existsSync(OUTPUT_DIR)) {
@@ -1231,6 +1484,38 @@ async function main(): Promise<void> {
   writeFileSync(join(OUTPUT_DIR, 'dependency-summary.compact.json'), compactSummary);
   const compactSize = Buffer.byteLength(compactSummary, 'utf8');
   console.log(`Written: docs/architecture/dependency-summary.compact.json (${(compactSize / 1024).toFixed(1)}KB)`);
+
+  // Test coverage analysis (when --include-tests is specified)
+  let testCoverage: TestCoverageAnalysis | null = null;
+  if (cliOptions.includeTests) {
+    console.log('\nAnalyzing test coverage...');
+
+    // Scan for test files in tests/ directory and src/ (for any .test.ts files)
+    const testDir = join(ROOT_DIR, 'tests');
+    const testFilePaths = [
+      ...getAllTestFiles(testDir),
+      ...getAllTestFiles(SRC_DIR),
+    ];
+    console.log(`Found ${testFilePaths.length} test files`);
+
+    // Parse test files
+    const parsedTestFiles = testFilePaths.map(parseFile);
+    console.log('Parsed all test files');
+
+    // Analyze test coverage
+    testCoverage = analyzeTestCoverage(parsedFiles, parsedTestFiles);
+
+    // Generate test coverage outputs
+    const testCoverageMarkdown = generateTestCoverageMarkdown(testCoverage);
+    const testCoverageJson = generateTestCoverageJson(testCoverage);
+
+    // Write test coverage outputs
+    writeFileSync(join(OUTPUT_DIR, 'TEST_COVERAGE.md'), testCoverageMarkdown);
+    console.log('Written: docs/architecture/TEST_COVERAGE.md');
+
+    writeFileSync(join(OUTPUT_DIR, 'test-coverage.json'), JSON.stringify(testCoverageJson, null, 2));
+    console.log('Written: docs/architecture/test-coverage.json');
+  }
 
   console.log('\nDependency graph generation complete!');
   console.log(`  - ${stats.totalTypeScriptFiles} files analyzed`);
@@ -1309,6 +1594,28 @@ async function main(): Promise<void> {
 
   writeFileSync(unusedReportPath, unusedReport);
   console.log(`\nWritten: ${unusedReportPath}`);
+
+  // Print test coverage summary if enabled
+  if (testCoverage) {
+    const coveragePercent = testCoverage.sourceFiles.length > 0
+      ? ((testCoverage.testedFiles.length / testCoverage.sourceFiles.length) * 100).toFixed(1)
+      : '0';
+
+    console.log('\n=== Test Coverage Analysis ===');
+    console.log(`  - ${testCoverage.testFiles.length} test files analyzed`);
+    console.log(`  - ${testCoverage.testedFiles.length}/${testCoverage.sourceFiles.length} source files have tests (${coveragePercent}%)`);
+    console.log(`  - ${testCoverage.untestedFiles.length} source files without tests`);
+
+    if (testCoverage.untestedFiles.length > 0) {
+      console.log('\nSource files without test coverage:');
+      for (const file of testCoverage.untestedFiles.slice(0, 15)) {
+        console.log(`  - ${file}`);
+      }
+      if (testCoverage.untestedFiles.length > 15) {
+        console.log(`  ... and ${testCoverage.untestedFiles.length - 15} more (see TEST_COVERAGE.md for full list)`);
+      }
+    }
+  }
 }
 
 main().catch(console.error);
