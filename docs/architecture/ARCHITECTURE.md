@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
-**Version**: 0.58.0
-**Last Updated**: 2025-12-30
+**Version**: 9.8.0
+**Last Updated**: 2026-01-06
 
 ---
 
@@ -32,14 +32,14 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 - **Timestamps**: Automatic tracking of creation and modification times
 - **Batch Operations**: Efficient bulk updates
 
-### Key Statistics (v0.58.0)
+### Key Statistics (v9.8.0)
 
-- **1484 Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
-- **Test Coverage**: 98%+ across core managers
+- **2493 Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
+- **Test Coverage**: 92% overall (58 source files, 72 test files)
 - **Performance**: Handles 2000+ entities, 5000+ total elements efficiently
-- **TypeScript**: Strict mode, full type safety (49 source files)
-- **Modular Server**: MCPServer split into 3 files (67 lines main, ~760 lines definitions, ~301 lines handlers)
-- **Lazy Initialization**: 5 managers instantiated on-demand (consolidated from 10)
+- **TypeScript**: Strict mode, full type safety (58 source files, ~22.5K lines)
+- **55 Tools**: Organized across 14 categories (entity, search, semantic, graph algorithms, etc.)
+- **Lazy Initialization**: 7 managers instantiated on-demand
 
 ---
 
@@ -86,7 +86,7 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 │  │  Layer 1: MCP Protocol Layer (server/)                 │ │
 │  │  ┌──────────────┬─────────────────┬─────────────────┐  │ │
 │  │  │ MCPServer.ts │ toolDefinitions │  toolHandlers   │  │ │
-│  │  │   (67 LOC)   │   (47 schemas)  │ (301 lines)     │  │ │
+│  │  │   (67 LOC)   │   (55 schemas)  │ (301 lines)     │  │ │
 │  │  └──────────────┴─────────────────┴─────────────────┘  │ │
 │  └────────────────────────────┬───────────────────────────┘ │
 │                               │ (direct manager access)     │

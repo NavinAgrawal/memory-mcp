@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 0.58.0
-**Last Updated**: 2025-12-30
+**Version**: 9.8.0
+**Last Updated**: 2026-01-06
 
 ## What Is This?
 
@@ -13,7 +13,7 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 |---------|-------------|
 | **Knowledge Graph** | Store entities and relations in a flexible graph structure |
 | **Persistent Memory** | Data persists across sessions in JSONL files |
-| **47 Tools** | Comprehensive API for graph operations |
+| **55 Tools** | Comprehensive API for graph operations |
 | **Hierarchical Nesting** | Parent-child relationships for tree organization |
 | **Advanced Search** | Basic, TF-IDF ranked, boolean, and fuzzy search |
 | **Duplicate Detection** | Intelligent compression with similarity scoring |
@@ -136,18 +136,20 @@ src/memory/ (49 TypeScript files)
     └── index.ts
 ```
 
-## Tool Categories (47 Total)
+## Tool Categories (55 Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
 | **Entity** | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | **Relation** | 2 | create_relations, delete_relations |
 | **Observation** | 2 | add_observations, delete_observations |
-| **Search** | 6 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions |
+| **Search** | 7 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions, search_auto |
+| **Semantic Search** | 3 | semantic_search, find_similar_entities, index_embeddings |
 | **Saved Search** | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | **Tag** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
 | **Tag Alias** | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
 | **Hierarchy** | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
+| **Graph Algorithms** | 4 | find_shortest_path, find_all_paths, get_connected_components, get_centrality |
 | **Analytics** | 2 | get_graph_stats, validate_graph |
 | **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | **Import/Export** | 2 | export_graph (7 formats), import_graph (3 formats) |
@@ -185,7 +187,7 @@ npm install
 # Build
 npm run build
 
-# Run tests (1484 tests)
+# Run tests (2493 tests)
 npm test
 
 # Run server

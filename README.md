@@ -92,7 +92,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Full-Text Search** | ❌ | ✅ FTS5 with BM25 ranking |
 | **Concurrency Control** | ❌ | ✅ Thread-safe with async-mutex |
 | **Total Tools** | 11 | **55** (+400%) |
-| **Code Structure** | Monolithic | **Modular** (50 files, ~10.7K lines) |
+| **Code Structure** | Monolithic | **Modular** (58 files, ~22.5K lines) |
 
 ## Key Features
 
@@ -112,10 +112,10 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - **Multi-Level Caching**: Bidirectional relation cache, fuzzy search cache, boolean AST cache
 
 **🏗️ Architecture**
-- **Modular Design**: Clean separation of concerns across 50 focused modules with 7 lazy-initialized managers
+- **Modular Design**: Clean separation of concerns across 58 focused modules with 7 lazy-initialized managers
 - **Type Safety**: Full TypeScript strict mode with comprehensive type definitions
 - **Lazy Initialization**: Context pattern with on-demand manager instantiation
-- **Developer Experience**: Barrel exports, 1803 tests, and comprehensive documentation
+- **Developer Experience**: Barrel exports, 2493 tests (92% coverage), and comprehensive documentation
 
 ## Quick Start
 
@@ -1920,7 +1920,7 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/                            # Main source (50 TypeScript files)
+├── src/                            # Main source (58 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── core/                       # Core managers (11 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
@@ -1976,7 +1976,7 @@ memory-mcp/
 │       ├── logger.ts                   # Logging utilities
 │       ├── searchCache.ts              # Search result caching
 │       └── index.ts
-├── tests/                          # Test suite (1803 tests, 52 files)
+├── tests/                          # Test suite (2493 tests, 72 files)
 │   ├── unit/                       # Unit tests
 │   ├── integration/                # Integration tests
 │   ├── e2e/                        # End-to-end tests
@@ -2002,7 +2002,7 @@ memory-mcp/
 ```bash
 npm run build      # Build TypeScript to JavaScript
 npm run watch      # Watch mode for development
-npm test           # Run 1803 tests with coverage
+npm test           # Run 2493 tests with coverage
 npm run typecheck  # TypeScript strict type checking
 npm run clean      # Clean dist/ directories
 npm run docs:deps  # Generate dependency graph

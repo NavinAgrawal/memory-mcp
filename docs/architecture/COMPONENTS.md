@@ -67,7 +67,7 @@ export class MCPServer {
 
 ### toolDefinitions (`server/toolDefinitions.ts`)
 
-**Purpose**: Schema definitions for all 47 MCP tools
+**Purpose**: Schema definitions for all 55 MCP tools
 
 **Lines**: ~400
 
@@ -92,11 +92,13 @@ export const toolDefinitions: ToolDefinition[]
 | Entity | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | Relation | 2 | create_relations, delete_relations |
 | Observation | 2 | add_observations, delete_observations |
-| Search | 6 | search_nodes, search_nodes_ranked, boolean_search, fuzzy_search, search_by_date_range, get_search_suggestions |
+| Search | 7 | search_nodes, search_nodes_ranked, boolean_search, fuzzy_search, search_by_date_range, get_search_suggestions, search_auto |
+| Semantic Search | 3 | semantic_search, find_similar_entities, index_embeddings |
 | Saved Searches | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | Tag Management | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
 | Tag Aliases | 5 | add_tag_alias, list_tag_aliases, remove_tag_alias, get_aliases_for_tag, resolve_tag |
 | Hierarchy | 9 | set_entity_parent, get_children, get_parent, get_ancestors, get_descendants, get_subtree, get_root_entities, get_entity_depth, move_entity |
+| Graph Algorithms | 4 | find_shortest_path, find_all_paths, get_connected_components, get_centrality |
 | Analytics | 2 | get_graph_stats, validate_graph |
 | Compression | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | Import/Export | 2 | export_graph, import_graph |
@@ -105,7 +107,7 @@ export const toolDefinitions: ToolDefinition[]
 
 ### toolHandlers (`server/toolHandlers.ts`)
 
-**Purpose**: Handler implementations for all 47 tools
+**Purpose**: Handler implementations for all 55 tools
 
 **Lines**: ~301
 
@@ -226,7 +228,7 @@ export class EntityManager {
 - Cycle detection for hierarchy operations
 - Cascading delete for children (optional)
 
-**Constants**:
+**Constants** (internal, use `IMPORTANCE_RANGE` from `utils/constants.ts` externally):
 - `MIN_IMPORTANCE = 0`
 - `MAX_IMPORTANCE = 10`
 
