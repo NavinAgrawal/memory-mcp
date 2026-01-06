@@ -1,11 +1,11 @@
 # Unused Files and Exports Analysis
 
-**Generated**: 2026-01-05
+**Generated**: 2026-01-06
 
 ## Summary
 
 - **Potentially unused files**: 0
-- **Potentially unused exports**: 127
+- **Potentially unused exports**: 142
 
 ## Potentially Unused Files
 
@@ -15,11 +15,6 @@ These files are not imported by any other file in the codebase:
 ## Potentially Unused Exports
 
 These exports are not imported by any other file in the codebase:
-
-### `src/core/EntityManager.ts`
-
-- `MIN_IMPORTANCE` (constant)
-- `MAX_IMPORTANCE` (constant)
 
 ### `src/core/TransactionManager.ts`
 
@@ -60,7 +55,6 @@ These exports are not imported by any other file in the codebase:
 ### `src/server/toolDefinitions.ts`
 
 - `ToolDefinition` (interface)
-- `toolCategories` (constant)
 
 ### `src/server/toolHandlers.ts`
 
@@ -112,7 +106,26 @@ These exports are not imported by any other file in the codebase:
 - `VectorSearchResult` (interface)
 - `EmbeddingConfig` (interface)
 - `SemanticIndexOptions` (interface)
+- `BatchResult` (interface)
+- `BatchOptions` (interface)
+- `GraphEventBase` (interface)
+- `RelationCreatedEvent` (interface)
+- `RelationDeletedEvent` (interface)
+- `ObservationAddedEvent` (interface)
+- `ObservationDeletedEvent` (interface)
+- `GraphSavedEvent` (interface)
+- `GraphLoadedEvent` (interface)
+- `GraphEventMap` (interface)
+- `QueryCostEstimate` (interface)
+- `AutoSearchResult` (interface)
+- `QueryCostEstimatorOptions` (interface)
 - `BooleanQueryNode` (type)
+- `BatchOperationType` (type)
+- `BatchOperation` (type)
+- `GraphEventType` (type)
+- `GraphEvent` (type)
+- `GraphEventListener` (type)
+- `SearchMethod` (type)
 
 ### `src/utils/compressedCache.ts`
 
@@ -148,6 +161,10 @@ These exports are not imported by any other file in the codebase:
 - `validatePagination` (function)
 - `ValidatedPagination` (interface)
 - `ToolResponse` (type)
+
+### `src/utils/operationUtils.ts`
+
+- `PhaseDefinition` (interface)
 
 ### `src/utils/schemas.ts`
 
@@ -192,8 +209,6 @@ These exports are not imported by any other file in the codebase:
 - `TaskResult` (interface)
 - `BatchOptions` (interface)
 - `QueueStats` (interface)
-- `ProgressCallback` (type)
-- `TaskPriority` (enum)
 
 ### `src/workers/levenshteinWorker.ts`
 
