@@ -17,6 +17,7 @@ import type {
   CentralityResult,
 } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
+import { checkCancellation } from '../utils/index.js';
 
 /**
  * Phase 4 Sprint 6: Default traversal options.
@@ -283,33 +284,53 @@ export class GraphTraversal {
   /**
    * Find all paths between two entities up to a maximum depth.
    *
+   * Phase 9B: Supports cancellation via AbortSignal in options.
+   *
    * @param source - Source entity name
    * @param target - Target entity name
    * @param maxDepth - Maximum path length (default: 5)
-   * @param options - Traversal options
+   * @param options - Traversal options (includes signal for cancellation)
    * @returns Array of PathResult objects for all found paths
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    */
   async findAllPaths(
     source: string,
     target: string,
     maxDepth: number = 5,
-    options: TraversalOptions = {}
+    options: TraversalOptions & { signal?: AbortSignal } = {}
   ): Promise<PathResult[]> {
+    // Check for early cancellation
+    const { signal, ...traversalOptions } = options;
+    checkCancellation(signal, 'findAllPaths');
+
     // Ensure graph is loaded to populate indexes
     await this.storage.loadGraph();
+
+    // Check for cancellation after load
+    checkCancellation(signal, 'findAllPaths');
 
     // Validate entities exist
     if (!this.storage.hasEntity(source) || !this.storage.hasEntity(target)) {
       return [];
     }
 
-    const opts = { ...DEFAULT_OPTIONS, ...options };
+    const opts = { ...DEFAULT_OPTIONS, ...traversalOptions };
     const allPaths: PathResult[] = [];
     const currentPath: string[] = [source];
     const currentRelations: Relation[] = [];
     const visited = new Set<string>([source]);
 
+    // Track iterations for periodic cancellation checks
+    let iterationCount = 0;
+    const CANCELLATION_CHECK_INTERVAL = 100;
+
     const dfsAllPaths = (current: string, depth: number) => {
+      // Periodic cancellation check
+      iterationCount++;
+      if (iterationCount % CANCELLATION_CHECK_INTERVAL === 0) {
+        checkCancellation(signal, 'findAllPaths');
+      }
+
       if (depth > maxDepth) return;
 
       if (current === target && depth > 0) {

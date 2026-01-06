@@ -9,7 +9,8 @@
  */
 
 import { createWriteStream } from 'fs';
-import type { Entity, ReadonlyKnowledgeGraph } from '../types/types.js';
+import type { Entity, ReadonlyKnowledgeGraph, LongRunningOperationOptions } from '../types/types.js';
+import { checkCancellation, createProgressReporter, createProgress } from '../utils/index.js';
 
 /**
  * Result summary from a streaming export operation.
@@ -68,17 +69,38 @@ export class StreamingExporter {
    * Each entity and relation is written as a separate JSON line.
    * Memory usage is constant regardless of graph size.
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
    * @param graph - The knowledge graph to export
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Promise resolving to export statistics
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    *
    * @example
    * ```typescript
    * const exporter = new StreamingExporter('export.jsonl');
    * const result = await exporter.streamJSONL(graph);
    * console.log(`Exported ${result.entitiesWritten} entities`);
+   *
+   * // With progress tracking (Phase 9B)
+   * const result = await exporter.streamJSONL(graph, {
+   *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+   * });
    * ```
    */
-  async streamJSONL(graph: ReadonlyKnowledgeGraph): Promise<StreamResult> {
+  async streamJSONL(
+    graph: ReadonlyKnowledgeGraph,
+    options?: LongRunningOperationOptions
+  ): Promise<StreamResult> {
+    // Check for early cancellation
+    checkCancellation(options?.signal, 'streamJSONL');
+
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(options?.onProgress);
+    const total = graph.entities.length + graph.relations.length;
+    let processed = 0;
+    reportProgress?.(createProgress(0, total, 'streamJSONL'));
+
     const start = Date.now();
     let bytesWritten = 0;
     let entitiesWritten = 0;
@@ -88,25 +110,41 @@ export class StreamingExporter {
 
     // Write entities
     for (const entity of graph.entities) {
+      // Check for cancellation periodically
+      checkCancellation(options?.signal, 'streamJSONL');
+
       const line = JSON.stringify(entity) + '\n';
       writeStream.write(line);
       bytesWritten += Buffer.byteLength(line, 'utf-8');
       entitiesWritten++;
+      processed++;
+      reportProgress?.(createProgress(processed, total, 'writing entities'));
     }
 
     // Write relations
     for (const relation of graph.relations) {
+      // Check for cancellation periodically
+      checkCancellation(options?.signal, 'streamJSONL');
+
       const line = JSON.stringify(relation) + '\n';
       writeStream.write(line);
       bytesWritten += Buffer.byteLength(line, 'utf-8');
       relationsWritten++;
+      processed++;
+      reportProgress?.(createProgress(processed, total, 'writing relations'));
     }
+
+    // Check for cancellation before finalizing
+    checkCancellation(options?.signal, 'streamJSONL');
 
     // Wait for stream to finish
     await new Promise<void>((resolve, reject) => {
       writeStream.end(() => resolve());
       writeStream.on('error', reject);
     });
+
+    // Report completion
+    reportProgress?.(createProgress(total, total, 'streamJSONL'));
 
     return {
       bytesWritten,
@@ -122,17 +160,38 @@ export class StreamingExporter {
    * Exports entities as CSV rows with proper escaping for special characters.
    * Header row includes: name, type, observations, tags, importance, createdAt, lastModified.
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
    * @param graph - The knowledge graph to export
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Promise resolving to export statistics
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    *
    * @example
    * ```typescript
    * const exporter = new StreamingExporter('export.csv');
    * const result = await exporter.streamCSV(graph);
    * console.log(`Exported ${result.entitiesWritten} entities as CSV`);
+   *
+   * // With progress tracking (Phase 9B)
+   * const result = await exporter.streamCSV(graph, {
+   *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+   * });
    * ```
    */
-  async streamCSV(graph: ReadonlyKnowledgeGraph): Promise<StreamResult> {
+  async streamCSV(
+    graph: ReadonlyKnowledgeGraph,
+    options?: LongRunningOperationOptions
+  ): Promise<StreamResult> {
+    // Check for early cancellation
+    checkCancellation(options?.signal, 'streamCSV');
+
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(options?.onProgress);
+    const total = graph.entities.length;
+    let processed = 0;
+    reportProgress?.(createProgress(0, total, 'streamCSV'));
+
     const start = Date.now();
     let bytesWritten = 0;
     let entitiesWritten = 0;
@@ -147,17 +206,28 @@ export class StreamingExporter {
 
     // Write entity rows
     for (const entity of graph.entities) {
+      // Check for cancellation periodically
+      checkCancellation(options?.signal, 'streamCSV');
+
       const row = this.entityToCSVRow(entity) + '\n';
       writeStream.write(row);
       bytesWritten += Buffer.byteLength(row, 'utf-8');
       entitiesWritten++;
+      processed++;
+      reportProgress?.(createProgress(processed, total, 'writing entities'));
     }
+
+    // Check for cancellation before finalizing
+    checkCancellation(options?.signal, 'streamCSV');
 
     // Wait for stream to finish
     await new Promise<void>((resolve, reject) => {
       writeStream.end(() => resolve());
       writeStream.on('error', reject);
     });
+
+    // Report completion
+    reportProgress?.(createProgress(total, total, 'streamCSV'));
 
     return {
       bytesWritten,

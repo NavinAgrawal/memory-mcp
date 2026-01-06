@@ -5,6 +5,49 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.7.0] - 2026-01-05
+
+### Added
+
+- **Phase 9B: TaskScheduler Integration** - Progress tracking and cancellation support for long-running operations
+
+  #### New Types and Utilities (Sprint 1)
+  - `LongRunningOperationOptions` interface - unified options for progress/cancellation
+  - `OperationCancelledError` - custom error for cancelled operations
+  - `operationUtils.ts` - utility functions for operation management:
+    - `checkCancellation()` - checks AbortSignal and throws if aborted
+    - `createProgressReporter()` - creates throttled progress callbacks
+    - `createProgress()` - creates standardized progress objects
+    - `executeWithPhases()` - executes multi-phase operations with progress
+    - `processBatchesWithProgress()` - batch processing with progress tracking
+
+  #### Enhanced Operations (Sprints 1-2)
+  - `EntityManager.createEntities()` - progress tracking and cancellation support
+  - `CompressionManager.findDuplicates()` - progress and cancellation for duplicate detection
+  - `CompressionManager.compressGraph()` - progress and cancellation for graph compression
+  - `IOManager.importGraph()` - progress and cancellation for graph imports
+  - `ArchiveManager.archiveEntities()` - progress and cancellation for archival
+  - `SemanticSearch.indexAll()` - AbortSignal support for embedding indexing
+  - `TransactionManager.commit()` - progress tracking with phase-based reporting
+  - `GraphTraversal.findAllPaths()` - cancellation support via AbortSignal
+  - `StreamingExporter.streamJSONL()` - progress tracking for JSONL exports
+  - `StreamingExporter.streamCSV()` - progress tracking for CSV exports
+
+  #### Documentation and Tests (Sprint 3)
+  - `docs/guides/TASKSCHEDULER_INTEGRATION.md` - comprehensive integration guide
+  - `tests/unit/utils/operationUtils.test.ts` - 28 unit tests for operation utilities
+  - `tests/integration/operation-progress.test.ts` - 13 integration tests for progress tracking
+
+### Fixed
+
+- **Workerpool Import Path** - Updated all imports from `@danielsimonjr/workerpool/modern` to `@danielsimonjr/workerpool` for compatibility with v10.0.1
+- **TransactionManager.commit()** - Moved early cancellation check inside try-catch block for proper error handling
+
+### Tests
+
+- All 2308 tests passing (64 test files)
+- Added 41 new tests for Phase 9B functionality
+
 ## [9.6.2] - 2026-01-05
 
 ### Fixed

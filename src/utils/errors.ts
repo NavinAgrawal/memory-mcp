@@ -145,3 +145,28 @@ export class InsufficientEntitiesError extends KnowledgeGraphError {
     this.name = 'InsufficientEntitiesError';
   }
 }
+
+/**
+ * Phase 9B: Error thrown when an operation is cancelled via AbortSignal.
+ *
+ * @example
+ * ```typescript
+ * const controller = new AbortController();
+ * try {
+ *   await manager.createEntities(entities, { signal: controller.signal });
+ * } catch (error) {
+ *   if (error instanceof OperationCancelledError) {
+ *     console.log('Operation was cancelled');
+ *   }
+ * }
+ * ```
+ */
+export class OperationCancelledError extends KnowledgeGraphError {
+  constructor(operation?: string) {
+    const message = operation
+      ? `Operation '${operation}' was cancelled`
+      : 'Operation was cancelled';
+    super(message, 'OPERATION_CANCELLED');
+    this.name = 'OperationCancelledError';
+  }
+}

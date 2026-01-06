@@ -8,10 +8,11 @@
  * @module core/TransactionManager
  */
 
-import type { Entity, Relation, KnowledgeGraph } from '../types/index.js';
+import type { Entity, Relation, KnowledgeGraph, LongRunningOperationOptions } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
 import { IOManager } from '../features/IOManager.js';
 import { KnowledgeGraphError } from '../utils/errors.js';
+import { checkCancellation, createProgressReporter, createProgress } from '../utils/index.js';
 
 /**
  * Types of operations that can be performed in a transaction.
@@ -241,7 +242,11 @@ export class TransactionManager {
    * Creates a backup before applying changes. If any operation fails,
    * automatically rolls back to the pre-transaction state.
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Promise resolving to transaction result
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    *
    * @example
    * ```typescript
@@ -255,31 +260,62 @@ export class TransactionManager {
    * } else {
    *   console.error(`Transaction failed: ${result.error}`);
    * }
+   *
+   * // With progress tracking (Phase 9B)
+   * const result = await txManager.commit({
+   *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+   * });
    * ```
    */
-  async commit(): Promise<TransactionResult> {
+  async commit(options?: LongRunningOperationOptions): Promise<TransactionResult> {
     this.ensureInTransaction();
 
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(options?.onProgress);
+    const totalOperations = this.operations.length;
+    reportProgress?.(createProgress(0, 100, 'commit'));
+
     try {
-      // Create backup for rollback
+      // Check for early cancellation (inside try block to handle gracefully)
+      checkCancellation(options?.signal, 'commit');
+      // Phase 1: Create backup for rollback (0-20% progress)
+      reportProgress?.(createProgress(5, 100, 'creating backup'));
       const backupResult = await this.ioManager.createBackup({
         description: 'Transaction backup (auto-created)',
       });
       this.transactionBackup = backupResult.path;
 
-      // Load mutable copy of graph for transaction
+      // Check for cancellation after backup
+      checkCancellation(options?.signal, 'commit');
+      reportProgress?.(createProgress(20, 100, 'backup created'));
+
+      // Phase 2: Load graph (20-30% progress)
+      reportProgress?.(createProgress(25, 100, 'loading graph'));
       const graph = await this.storage.getGraphForMutation();
       const timestamp = new Date().toISOString();
+      reportProgress?.(createProgress(30, 100, 'graph loaded'));
 
-      // Apply all operations
+      // Phase 3: Apply all operations (30-80% progress)
       let operationsExecuted = 0;
       for (const operation of this.operations) {
+        // Check for cancellation between operations
+        checkCancellation(options?.signal, 'commit');
+
         this.applyOperation(graph, operation, timestamp);
         operationsExecuted++;
+
+        // Map operation progress (0-100%) to overall progress (30-80%)
+        const opProgress = totalOperations > 0 ? Math.round(30 + (operationsExecuted / totalOperations) * 50) : 80;
+        reportProgress?.(createProgress(opProgress, 100, 'applying operations'));
       }
 
-      // Save the modified graph
+      // Check for cancellation before save
+      checkCancellation(options?.signal, 'commit');
+
+      // Phase 4: Save the modified graph (80-95% progress)
+      reportProgress?.(createProgress(85, 100, 'saving graph'));
       await this.storage.saveGraph(graph);
+      reportProgress?.(createProgress(95, 100, 'graph saved'));
 
       // Clean up transaction state
       this.inTransaction = false;
@@ -290,6 +326,9 @@ export class TransactionManager {
         await this.ioManager.deleteBackup(this.transactionBackup);
         this.transactionBackup = undefined;
       }
+
+      // Report completion
+      reportProgress?.(createProgress(100, 100, 'commit'));
 
       return {
         success: true,
