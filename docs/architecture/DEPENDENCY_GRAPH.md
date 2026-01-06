@@ -1,6 +1,6 @@
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 9.6.2 | **Last Updated**: 2026-01-05
+**Version**: 9.8.0 | **Last Updated**: 2026-01-06
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -28,13 +28,13 @@ This document provides a comprehensive dependency graph of all files, components
 
 The codebase is organized into the following modules:
 
-- **core**: 11 files
+- **core**: 12 files
 - **features**: 7 files
 - **entry**: 1 file
-- **search**: 13 files
+- **search**: 15 files
 - **server**: 4 files
 - **types**: 2 files
-- **utils**: 14 files
+- **utils**: 15 files
 - **workers**: 2 files
 
 ---
@@ -46,15 +46,26 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `Entity` | Import (type-only) |
+| `../types/index.js` | `Entity, LongRunningOperationOptions` | Import (type-only) |
 | `./GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `../utils/errors.js` | `EntityNotFoundError, InvalidImportanceError, ValidationError` | Import |
-| `../utils/index.js` | `BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema` | Import |
+| `../utils/index.js` | `BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema, checkCancellation, createProgressReporter, createProgress` | Import |
 | `../utils/constants.js` | `GRAPH_LIMITS` | Import |
 
 **Exports:**
 - Classes: `EntityManager`
-- Constants: `MIN_IMPORTANCE`, `MAX_IMPORTANCE`
+
+---
+
+### `src/core/GraphEventEmitter.ts` - Graph Event Emitter
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `GraphEventType, GraphEvent, GraphEventListener, GraphEventMap, Entity, Relation, EntityCreatedEvent, EntityUpdatedEvent, EntityDeletedEvent, RelationCreatedEvent, RelationDeletedEvent, ObservationAddedEvent, ObservationDeletedEvent, GraphSavedEvent, GraphLoadedEvent` | Import (type-only) |
+
+**Exports:**
+- Classes: `GraphEventEmitter`
 
 ---
 
@@ -76,6 +87,8 @@ The codebase is organized into the following modules:
 | `../types/index.js` | `KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData` | Import (type-only) |
 | `../utils/searchCache.js` | `clearAllSearchCaches` | Import |
 | `../utils/indexes.js` | `NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex` | Import |
+| `./TransactionManager.js` | `BatchTransaction` | Import |
+| `./GraphEventEmitter.js` | `GraphEventEmitter` | Import |
 
 **Exports:**
 - Classes: `GraphStorage`
@@ -89,6 +102,7 @@ The codebase is organized into the following modules:
 |------|---------|------|
 | `../types/index.js` | `Entity, Relation, TraversalOptions, TraversalResult, PathResult, ConnectedComponentsResult, CentralityResult` | Import (type-only) |
 | `./GraphStorage.js` | `GraphStorage` | Import (type-only) |
+| `../utils/index.js` | `checkCancellation` | Import |
 
 **Exports:**
 - Classes: `GraphTraversal`
@@ -106,28 +120,6 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `HierarchyManager`
-
----
-
-### `src/core/index.ts` - Core Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./GraphStorage.js` | `GraphStorage` | Re-export |
-| `./SQLiteStorage.js` | `SQLiteStorage` | Re-export |
-| `./EntityManager.js` | `EntityManager` | Re-export |
-| `./RelationManager.js` | `RelationManager` | Re-export |
-| `./ObservationManager.js` | `ObservationManager` | Re-export |
-| `./HierarchyManager.js` | `HierarchyManager` | Re-export |
-| `./ManagerContext.js` | `ManagerContext` | Re-export |
-| `./GraphTraversal.js` | `GraphTraversal` | Re-export |
-| `./ManagerContext.js` | `ManagerContext` | Re-export |
-| `./TransactionManager.js` | `TransactionManager, OperationType, type TransactionOperation, type TransactionResult` | Re-export |
-| `./StorageFactory.js` | `createStorage, createStorageFromPath` | Re-export |
-
-**Exports:**
-- Re-exports: `GraphStorage`, `SQLiteStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `HierarchyManager`, `ManagerContext`, `GraphTraversal`, `TransactionManager`, `OperationType`, `type TransactionOperation`, `type TransactionResult`, `createStorage`, `createStorageFromPath`
 
 ---
 
@@ -230,15 +222,39 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `Entity, Relation, KnowledgeGraph` | Import (type-only) |
+| `../types/index.js` | `Entity, Relation, KnowledgeGraph, LongRunningOperationOptions, BatchOperation, BatchResult, BatchOptions` | Import (type-only) |
 | `./GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `../features/IOManager.js` | `IOManager` | Import |
 | `../utils/errors.js` | `KnowledgeGraphError` | Import |
+| `../utils/index.js` | `checkCancellation, createProgressReporter, createProgress` | Import |
 
 **Exports:**
-- Classes: `TransactionManager`
+- Classes: `TransactionManager`, `BatchTransaction`
 - Interfaces: `TransactionResult`
 - Enums: `OperationType`
+
+---
+
+### `src/core/index.ts` - Core Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./GraphStorage.js` | `GraphStorage` | Re-export |
+| `./SQLiteStorage.js` | `SQLiteStorage` | Re-export |
+| `./EntityManager.js` | `EntityManager` | Re-export |
+| `./RelationManager.js` | `RelationManager` | Re-export |
+| `./ObservationManager.js` | `ObservationManager` | Re-export |
+| `./HierarchyManager.js` | `HierarchyManager` | Re-export |
+| `./ManagerContext.js` | `ManagerContext` | Re-export |
+| `./GraphTraversal.js` | `GraphTraversal` | Re-export |
+| `./ManagerContext.js` | `ManagerContext` | Re-export |
+| `./TransactionManager.js` | `TransactionManager, OperationType, BatchTransaction, type TransactionOperation, type TransactionResult` | Re-export |
+| `./StorageFactory.js` | `createStorage, createStorageFromPath` | Re-export |
+| `./GraphEventEmitter.js` | `GraphEventEmitter` | Re-export |
+
+**Exports:**
+- Re-exports: `GraphStorage`, `SQLiteStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `HierarchyManager`, `ManagerContext`, `GraphTraversal`, `TransactionManager`, `OperationType`, `BatchTransaction`, `type TransactionOperation`, `type TransactionResult`, `createStorage`, `createStorageFromPath`, `GraphEventEmitter`
 
 ---
 
@@ -268,9 +284,9 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `Entity` | Import (type-only) |
+| `../types/index.js` | `Entity, LongRunningOperationOptions` | Import (type-only) |
 | `../core/GraphStorage.js` | `GraphStorage` | Import (type-only) |
-| `../utils/index.js` | `compress, COMPRESSION_CONFIG` | Import |
+| `../utils/index.js` | `compress, COMPRESSION_CONFIG, checkCancellation, createProgressReporter, createProgress` | Import |
 
 **Exports:**
 - Classes: `ArchiveManager`
@@ -283,31 +299,14 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `Entity, Relation, CompressionResult, KnowledgeGraph` | Import (type-only) |
+| `../types/index.js` | `Entity, Relation, CompressionResult, KnowledgeGraph, LongRunningOperationOptions` | Import (type-only) |
 | `../core/GraphStorage.js` | `GraphStorage` | Import (type-only) |
-| `../utils/index.js` | `levenshteinDistance` | Import |
+| `../utils/index.js` | `levenshteinDistance, checkCancellation, createProgressReporter, createProgress` | Import |
 | `../utils/errors.js` | `EntityNotFoundError, InsufficientEntitiesError` | Import |
 | `../utils/constants.js` | `SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD` | Import |
 
 **Exports:**
 - Classes: `CompressionManager`
-
----
-
-### `src/features/index.ts` - Features Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./TagManager.js` | `TagManager` | Re-export |
-| `./IOManager.js` | `IOManager, type ExportFormat, type ImportFormat, type MergeStrategy, type BackupMetadata, type BackupInfo` | Re-export |
-| `./AnalyticsManager.js` | `AnalyticsManager` | Re-export |
-| `./CompressionManager.js` | `CompressionManager` | Re-export |
-| `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveOptions, type ArchiveResult` | Re-export |
-| `./StreamingExporter.js` | `StreamingExporter, type StreamResult` | Re-export |
-
-**Exports:**
-- Re-exports: `TagManager`, `IOManager`, `type ExportFormat`, `type ImportFormat`, `type MergeStrategy`, `type BackupMetadata`, `type BackupInfo`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveOptions`, `type ArchiveResult`, `StreamingExporter`, `type StreamResult`
 
 ---
 
@@ -322,10 +321,10 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `Entity, Relation, KnowledgeGraph, ReadonlyKnowledgeGraph, ImportResult, BackupOptions, BackupResult, RestoreResult, ExportOptions, ExportResult` | Import (type-only) |
+| `../types/index.js` | `Entity, Relation, KnowledgeGraph, ReadonlyKnowledgeGraph, ImportResult, BackupOptions, BackupResult, RestoreResult, ExportOptions, ExportResult, LongRunningOperationOptions` | Import (type-only) |
 | `../core/GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `../utils/errors.js` | `FileOperationError` | Import |
-| `../utils/index.js` | `compress, decompress, hasBrotliExtension, COMPRESSION_CONFIG, STREAMING_CONFIG` | Import |
+| `../utils/index.js` | `compress, decompress, hasBrotliExtension, COMPRESSION_CONFIG, STREAMING_CONFIG, checkCancellation, createProgressReporter, createProgress` | Import |
 | `./StreamingExporter.js` | `StreamingExporter, StreamResult` | Import |
 
 **Exports:**
@@ -344,7 +343,8 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/types.js` | `Entity, ReadonlyKnowledgeGraph` | Import (type-only) |
+| `../types/types.js` | `Entity, ReadonlyKnowledgeGraph, LongRunningOperationOptions` | Import (type-only) |
+| `../utils/index.js` | `checkCancellation, createProgressReporter, createProgress` | Import |
 
 **Exports:**
 - Classes: `StreamingExporter`
@@ -366,6 +366,23 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `TagManager`
+
+---
+
+### `src/features/index.ts` - Features Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./TagManager.js` | `TagManager` | Re-export |
+| `./IOManager.js` | `IOManager, type ExportFormat, type ImportFormat, type MergeStrategy, type BackupMetadata, type BackupInfo` | Re-export |
+| `./AnalyticsManager.js` | `AnalyticsManager` | Re-export |
+| `./CompressionManager.js` | `CompressionManager` | Re-export |
+| `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveOptions, type ArchiveResult` | Re-export |
+| `./StreamingExporter.js` | `StreamingExporter, type StreamResult` | Re-export |
+
+**Exports:**
+- Re-exports: `TagManager`, `IOManager`, `type ExportFormat`, `type ImportFormat`, `type MergeStrategy`, `type BackupMetadata`, `type BackupInfo`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveOptions`, `type ArchiveResult`, `StreamingExporter`, `type StreamResult`
 
 ---
 
@@ -437,7 +454,7 @@ The codebase is organized into the following modules:
 **External Dependencies:**
 | Package | Import |
 |---------|--------|
-| `@danielsimonjr/workerpool/modern` | `Pool, workerpool` |
+| `@danielsimonjr/workerpool` | `Pool, workerpool` |
 
 **Node.js Built-in Dependencies:**
 | Module | Import |
@@ -461,25 +478,15 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/search/index.ts` - Search Module Barrel Export
+### `src/search/QueryCostEstimator.ts` - Query Cost Estimator
 
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `./BasicSearch.js` | `BasicSearch` | Re-export |
-| `./RankedSearch.js` | `RankedSearch` | Re-export |
-| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
-| `./FuzzySearch.js` | `FuzzySearch, type FuzzySearchOptions` | Re-export |
-| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
-| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
-| `./SearchManager.js` | `SearchManager` | Re-export |
-| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
-| `./EmbeddingService.js` | `OpenAIEmbeddingService, LocalEmbeddingService, MockEmbeddingService, createEmbeddingService` | Re-export |
-| `./VectorStore.js` | `InMemoryVectorStore, SQLiteVectorStore, createVectorStore, cosineSimilarity, type SQLiteStorageWithEmbeddings` | Re-export |
-| `./SemanticSearch.js` | `SemanticSearch, entityToText` | Re-export |
+| `../types/index.js` | `SearchMethod, QueryCostEstimate, QueryCostEstimatorOptions` | Import (type-only) |
 
 **Exports:**
-- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `type FuzzySearchOptions`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`, `OpenAIEmbeddingService`, `LocalEmbeddingService`, `MockEmbeddingService`, `createEmbeddingService`, `InMemoryVectorStore`, `SQLiteVectorStore`, `createVectorStore`, `cosineSimilarity`, `type SQLiteStorageWithEmbeddings`, `SemanticSearch`, `entityToText`
+- Classes: `QueryCostEstimator`
 
 ---
 
@@ -537,7 +544,7 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../types/index.js` | `KnowledgeGraph, SearchResult, SavedSearch` | Import (type-only) |
+| `../types/index.js` | `KnowledgeGraph, SearchResult, SavedSearch, AutoSearchResult, Entity` | Import (type-only) |
 | `../core/GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `./BasicSearch.js` | `BasicSearch` | Import |
 | `./RankedSearch.js` | `RankedSearch` | Import |
@@ -545,6 +552,7 @@ The codebase is organized into the following modules:
 | `./FuzzySearch.js` | `FuzzySearch` | Import |
 | `./SearchSuggestions.js` | `SearchSuggestions` | Import |
 | `./SavedSearchManager.js` | `SavedSearchManager` | Import |
+| `./QueryCostEstimator.js` | `QueryCostEstimator` | Import |
 
 **Exports:**
 - Classes: `SearchManager`
@@ -572,10 +580,26 @@ The codebase is organized into the following modules:
 | `../types/index.js` | `Entity, EmbeddingService, IVectorStore, SemanticSearchResult, SemanticIndexOptions, ReadonlyKnowledgeGraph` | Import (type-only) |
 | `./VectorStore.js` | `InMemoryVectorStore` | Import |
 | `../utils/constants.js` | `EMBEDDING_DEFAULTS, SEMANTIC_SEARCH_LIMITS` | Import |
+| `../utils/index.js` | `checkCancellation` | Import |
 
 **Exports:**
 - Classes: `SemanticSearch`
 - Functions: `entityToText`
+
+---
+
+### `src/search/TFIDFEventSync.ts` - TF-IDF Event Sync
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../core/GraphEventEmitter.js` | `GraphEventEmitter` | Import (type-only) |
+| `./TFIDFIndexManager.js` | `TFIDFIndexManager` | Import (type-only) |
+| `../types/index.js` | `IGraphStorage` | Import (type-only) |
+| `../types/types.js` | `EntityCreatedEvent, EntityUpdatedEvent, EntityDeletedEvent` | Import (type-only) |
+
+**Exports:**
+- Classes: `TFIDFEventSync`
 
 ---
 
@@ -609,6 +633,31 @@ The codebase is organized into the following modules:
 - Classes: `InMemoryVectorStore`, `SQLiteVectorStore`
 - Interfaces: `SQLiteStorageWithEmbeddings`
 - Functions: `cosineSimilarity`, `createVectorStore`
+
+---
+
+### `src/search/index.ts` - Search Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./BasicSearch.js` | `BasicSearch` | Re-export |
+| `./RankedSearch.js` | `RankedSearch` | Re-export |
+| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
+| `./FuzzySearch.js` | `FuzzySearch, type FuzzySearchOptions` | Re-export |
+| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
+| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
+| `./SearchManager.js` | `SearchManager` | Re-export |
+| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
+| `./EmbeddingService.js` | `OpenAIEmbeddingService, LocalEmbeddingService, MockEmbeddingService, createEmbeddingService` | Re-export |
+| `./VectorStore.js` | `InMemoryVectorStore, SQLiteVectorStore, createVectorStore, cosineSimilarity, type SQLiteStorageWithEmbeddings` | Re-export |
+| `./SemanticSearch.js` | `SemanticSearch, entityToText` | Re-export |
+| `./TFIDFIndexManager.js` | `TFIDFIndexManager` | Re-export |
+| `./TFIDFEventSync.js` | `TFIDFEventSync` | Re-export |
+| `./QueryCostEstimator.js` | `QueryCostEstimator` | Re-export |
+
+**Exports:**
+- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `type FuzzySearchOptions`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`, `OpenAIEmbeddingService`, `LocalEmbeddingService`, `MockEmbeddingService`, `createEmbeddingService`, `InMemoryVectorStore`, `SQLiteVectorStore`, `createVectorStore`, `cosineSimilarity`, `type SQLiteStorageWithEmbeddings`, `SemanticSearch`, `entityToText`, `TFIDFIndexManager`, `TFIDFEventSync`, `QueryCostEstimator`
 
 ---
 
@@ -654,7 +703,7 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Interfaces: `ToolDefinition`
-- Constants: `toolDefinitions`, `toolCategories`
+- Constants: `toolDefinitions`
 
 ---
 
@@ -690,6 +739,11 @@ The codebase is organized into the following modules:
 ---
 
 ### `src/types/types.ts` - Type Definitions
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../utils/taskScheduler.js` | `ProgressCallback, TaskPriority` | Import (type-only) |
 
 ---
 
@@ -767,7 +821,7 @@ The codebase is organized into the following modules:
 ### `src/utils/errors.ts` - Custom Error Types
 
 **Exports:**
-- Classes: `KnowledgeGraphError`, `EntityNotFoundError`, `RelationNotFoundError`, `DuplicateEntityError`, `ValidationError`, `CycleDetectedError`, `InvalidImportanceError`, `FileOperationError`, `ImportError`, `ExportError`, `InsufficientEntitiesError`
+- Classes: `KnowledgeGraphError`, `EntityNotFoundError`, `RelationNotFoundError`, `DuplicateEntityError`, `ValidationError`, `CycleDetectedError`, `InvalidImportanceError`, `FileOperationError`, `ImportError`, `ExportError`, `InsufficientEntitiesError`, `OperationCancelledError`
 
 ---
 
@@ -789,7 +843,7 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `./errors.js` | `KnowledgeGraphError, EntityNotFoundError, RelationNotFoundError, DuplicateEntityError, ValidationError, CycleDetectedError, InvalidImportanceError, FileOperationError, ImportError, ExportError, InsufficientEntitiesError` | Re-export |
+| `./errors.js` | `KnowledgeGraphError, EntityNotFoundError, RelationNotFoundError, DuplicateEntityError, ValidationError, CycleDetectedError, InvalidImportanceError, FileOperationError, ImportError, ExportError, InsufficientEntitiesError, OperationCancelledError` | Re-export |
 | `./constants.js` | `FILE_EXTENSIONS, FILE_SUFFIXES, DEFAULT_FILE_NAMES, ENV_VARS, DEFAULT_BASE_DIR, LOG_PREFIXES, SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD, SEARCH_LIMITS, IMPORTANCE_RANGE, GRAPH_LIMITS, QUERY_LIMITS, COMPRESSION_CONFIG, STREAMING_CONFIG, type CompressionQuality` | Re-export |
 | `./compressionUtil.js` | `compress, decompress, compressFile, decompressFile, compressToBase64, decompressFromBase64, hasBrotliExtension, getCompressionRatio, createMetadata, createUncompressedMetadata, type CompressionOptions, type CompressionResult, type CompressionMetadata` | Re-export |
 | `./compressedCache.js` | `CompressedCache, type CompressedCacheOptions, type CompressedCacheStats` | Re-export |
@@ -823,9 +877,10 @@ The codebase is organized into the following modules:
   TaskQueue, // Batch Processing
   batchProcess, rateLimitedProcess, withRetry, // Rate Limiting
   debounce, throttle` | Re-export |
+| `./operationUtils.js` | `checkCancellation, createProgressReporter, createProgress, executeWithPhases, processBatchesWithProgress, type PhaseDefinition` | Re-export |
 
 **Exports:**
-- Re-exports: `KnowledgeGraphError`, `EntityNotFoundError`, `RelationNotFoundError`, `DuplicateEntityError`, `ValidationError`, `CycleDetectedError`, `InvalidImportanceError`, `FileOperationError`, `ImportError`, `ExportError`, `InsufficientEntitiesError`, `FILE_EXTENSIONS`, `FILE_SUFFIXES`, `DEFAULT_FILE_NAMES`, `ENV_VARS`, `DEFAULT_BASE_DIR`, `LOG_PREFIXES`, `SIMILARITY_WEIGHTS`, `DEFAULT_DUPLICATE_THRESHOLD`, `SEARCH_LIMITS`, `IMPORTANCE_RANGE`, `GRAPH_LIMITS`, `QUERY_LIMITS`, `COMPRESSION_CONFIG`, `STREAMING_CONFIG`, `type CompressionQuality`, `compress`, `decompress`, `compressFile`, `decompressFile`, `compressToBase64`, `decompressFromBase64`, `hasBrotliExtension`, `getCompressionRatio`, `createMetadata`, `createUncompressedMetadata`, `type CompressionOptions`, `type CompressionResult`, `type CompressionMetadata`, `CompressedCache`, `type CompressedCacheOptions`, `type CompressedCacheStats`, `logger`, `levenshteinDistance`, `calculateTF`, `calculateIDF`, `calculateIDFFromTokenSets`, `calculateTFIDF`, `tokenize`, `NameIndex`, `TypeIndex`, `LowercaseCache`, `RelationIndex`, `SearchCache`, `searchCaches`, `clearAllSearchCaches`, `getAllCacheStats`, `cleanupAllCaches`, `type CacheStats`, `// Zod schemas - Entity/Relation
+- Re-exports: `KnowledgeGraphError`, `EntityNotFoundError`, `RelationNotFoundError`, `DuplicateEntityError`, `ValidationError`, `CycleDetectedError`, `InvalidImportanceError`, `FileOperationError`, `ImportError`, `ExportError`, `InsufficientEntitiesError`, `OperationCancelledError`, `FILE_EXTENSIONS`, `FILE_SUFFIXES`, `DEFAULT_FILE_NAMES`, `ENV_VARS`, `DEFAULT_BASE_DIR`, `LOG_PREFIXES`, `SIMILARITY_WEIGHTS`, `DEFAULT_DUPLICATE_THRESHOLD`, `SEARCH_LIMITS`, `IMPORTANCE_RANGE`, `GRAPH_LIMITS`, `QUERY_LIMITS`, `COMPRESSION_CONFIG`, `STREAMING_CONFIG`, `type CompressionQuality`, `compress`, `decompress`, `compressFile`, `decompressFile`, `compressToBase64`, `decompressFromBase64`, `hasBrotliExtension`, `getCompressionRatio`, `createMetadata`, `createUncompressedMetadata`, `type CompressionOptions`, `type CompressionResult`, `type CompressionMetadata`, `CompressedCache`, `type CompressedCacheOptions`, `type CompressedCacheStats`, `logger`, `levenshteinDistance`, `calculateTF`, `calculateIDF`, `calculateIDFFromTokenSets`, `calculateTFIDF`, `tokenize`, `NameIndex`, `TypeIndex`, `LowercaseCache`, `RelationIndex`, `SearchCache`, `searchCaches`, `clearAllSearchCaches`, `getAllCacheStats`, `cleanupAllCaches`, `type CacheStats`, `// Zod schemas - Entity/Relation
   EntitySchema`, `CreateEntitySchema`, `UpdateEntitySchema`, `RelationSchema`, `CreateRelationSchema`, `SearchQuerySchema`, `DateRangeSchema`, `TagAliasSchema`, `ExportFormatSchema`, `BatchCreateEntitiesSchema`, `BatchCreateRelationsSchema`, `EntityNamesSchema`, `DeleteRelationsSchema`, `// Zod schemas - Observations
   AddObservationInputSchema`, `AddObservationsInputSchema`, `DeleteObservationInputSchema`, `DeleteObservationsInputSchema`, `// Zod schemas - Archive
   ArchiveCriteriaSchema`, `// Zod schemas - Saved Search
@@ -846,7 +901,7 @@ The codebase is organized into the following modules:
   TaskPriority`, `TaskStatus`, `type Task`, `type TaskResult`, `type ProgressCallback`, `type BatchOptions`, `type QueueStats`, `// Task Queue
   TaskQueue`, `// Batch Processing
   batchProcess`, `rateLimitedProcess`, `withRetry`, `// Rate Limiting
-  debounce`, `throttle`
+  debounce`, `throttle`, `checkCancellation`, `createProgressReporter`, `createProgress`, `executeWithPhases`, `processBatchesWithProgress`, `type PhaseDefinition`
 
 ---
 
@@ -869,12 +924,26 @@ The codebase is organized into the following modules:
 
 ---
 
+### `src/utils/operationUtils.ts` - Operation Utilities
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./errors.js` | `OperationCancelledError` | Import |
+| `./taskScheduler.js` | `ProgressCallback` | Import (type-only) |
+
+**Exports:**
+- Interfaces: `PhaseDefinition`
+- Functions: `checkCancellation`, `createProgressReporter`, `createProgress`, `executeWithPhases`, `processBatchesWithProgress`
+
+---
+
 ### `src/utils/parallelUtils.ts` - Parallel Utilities
 
 **External Dependencies:**
 | Package | Import |
 |---------|--------|
-| `@danielsimonjr/workerpool/modern` | `workerpool` |
+| `@danielsimonjr/workerpool` | `workerpool` |
 
 **Exports:**
 - Functions: `shutdownParallelUtils`, `parallelMap`, `parallelFilter`, `getPoolStats`
@@ -928,7 +997,7 @@ The codebase is organized into the following modules:
 **External Dependencies:**
 | Package | Import |
 |---------|--------|
-| `@danielsimonjr/workerpool/modern` | `workerpool` |
+| `@danielsimonjr/workerpool` | `workerpool` |
 
 **Exports:**
 - Classes: `TaskQueue`
@@ -957,7 +1026,7 @@ The codebase is organized into the following modules:
 **External Dependencies:**
 | Package | Import |
 |---------|--------|
-| `@danielsimonjr/workerpool/modern` | `workerpool` |
+| `@danielsimonjr/workerpool` | `workerpool` |
 
 **Exports:**
 - Interfaces: `WorkerInput`, `MatchResult`
@@ -972,41 +1041,52 @@ The codebase is organized into the following modules:
 | File | Imports From | Exports To |
 |------|--------------|------------|
 | `EntityManager` | 5 files | 2 files |
-| `GraphStorage` | 3 files | 19 files |
-| `GraphTraversal` | 2 files | 2 files |
+| `GraphEventEmitter` | 1 files | 3 files |
+| `GraphStorage` | 5 files | 19 files |
+| `GraphTraversal` | 3 files | 2 files |
 | `HierarchyManager` | 3 files | 2 files |
-| `index` | 10 files | 0 files |
 | `ManagerContext` | 14 files | 4 files |
 | `ObservationManager` | 2 files | 2 files |
 | `RelationManager` | 5 files | 2 files |
 | `SQLiteStorage` | 3 files | 2 files |
 | `StorageFactory` | 3 files | 1 files |
-| `TransactionManager` | 4 files | 1 files |
+| `TransactionManager` | 5 files | 2 files |
+| `index` | 11 files | 0 files |
 | `AnalyticsManager` | 2 files | 2 files |
 | `ArchiveManager` | 3 files | 2 files |
 | `CompressionManager` | 5 files | 2 files |
-| `index` | 6 files | 0 files |
 | `IOManager` | 5 files | 3 files |
-| `StreamingExporter` | 1 files | 2 files |
+| `StreamingExporter` | 2 files | 2 files |
 | `TagManager` | 1 files | 2 files |
+| `index` | 6 files | 0 files |
 | `index` | 4 files | 0 files |
 | `BasicSearch` | 4 files | 3 files |
 | `BooleanSearch` | 5 files | 2 files |
 | `EmbeddingService` | 2 files | 1 files |
 | `FuzzySearch` | 5 files | 2 files |
-| `index` | 11 files | 1 files |
+| `QueryCostEstimator` | 1 files | 2 files |
 | `RankedSearch` | 6 files | 2 files |
 | `SavedSearchManager` | 2 files | 2 files |
 | `SearchFilterChain` | 2 files | 5 files |
-| `SearchManager` | 8 files | 2 files |
+| `SearchManager` | 9 files | 2 files |
 | `SearchSuggestions` | 2 files | 2 files |
-| `SemanticSearch` | 3 files | 1 files |
 
 ---
 
 ## Circular Dependency Analysis
 
-**No circular dependencies detected.**
+**2 circular dependencies detected:**
+
+- **Runtime cycles**: 0 (require attention)
+- **Type-only cycles**: 2 (safe, no runtime impact)
+
+### Type-Only Circular Dependencies
+
+These cycles only involve type imports and are safe (erased at runtime):
+
+- src/core/GraphStorage.ts -> src/core/TransactionManager.ts -> src/core/GraphStorage.ts
+- src/core/GraphStorage.ts -> src/core/TransactionManager.ts -> src/features/IOManager.ts -> src/core/GraphStorage.ts
+
 ---
 
 ## Visual Dependency Graph
@@ -1015,19 +1095,19 @@ The codebase is organized into the following modules:
 graph TD
     subgraph Core
         N0[EntityManager]
-        N1[GraphStorage]
-        N2[GraphTraversal]
-        N3[HierarchyManager]
-        N4[index]
-        N5[...6 more]
+        N1[GraphEventEmitter]
+        N2[GraphStorage]
+        N3[GraphTraversal]
+        N4[HierarchyManager]
+        N5[...7 more]
     end
 
     subgraph Features
         N6[AnalyticsManager]
         N7[ArchiveManager]
         N8[CompressionManager]
-        N9[index]
-        N10[IOManager]
+        N9[IOManager]
+        N10[StreamingExporter]
         N11[...2 more]
     end
 
@@ -1040,8 +1120,8 @@ graph TD
         N14[BooleanSearch]
         N15[EmbeddingService]
         N16[FuzzySearch]
-        N17[index]
-        N18[...8 more]
+        N17[QueryCostEstimator]
+        N18[...10 more]
     end
 
     subgraph Server
@@ -1062,7 +1142,7 @@ graph TD
         N27[constants]
         N28[entityUtils]
         N29[errors]
-        N30[...9 more]
+        N30[...10 more]
     end
 
     subgraph Workers
@@ -1071,35 +1151,35 @@ graph TD
     end
 
     N0 --> N23
-    N0 --> N1
+    N0 --> N2
     N0 --> N29
     N0 --> N27
     N1 --> N23
     N2 --> N23
     N2 --> N1
     N3 --> N23
-    N3 --> N1
-    N3 --> N29
-    N4 --> N1
-    N4 --> N0
-    N4 --> N3
+    N3 --> N2
+    N4 --> N23
     N4 --> N2
-    N6 --> N1
+    N4 --> N29
+    N6 --> N2
     N6 --> N23
     N7 --> N23
-    N7 --> N1
+    N7 --> N2
     N8 --> N23
-    N8 --> N1
+    N8 --> N2
     N8 --> N29
     N8 --> N27
+    N9 --> N23
+    N9 --> N2
+    N9 --> N29
     N9 --> N10
-    N9 --> N6
-    N9 --> N8
-    N9 --> N7
-    N10 --> N23
-    N10 --> N1
-    N10 --> N29
+    N10 --> N24
     N12 --> N19
+    N12 --> N23
+    N13 --> N23
+    N13 --> N2
+    N14 --> N23
 ```
 
 ---
@@ -1108,21 +1188,21 @@ graph TD
 
 | Category | Count |
 |----------|-------|
-| Total TypeScript Files | 54 |
+| Total TypeScript Files | 58 |
 | Total Modules | 8 |
-| Total Lines of Code | 19452 |
-| Total Exports | 417 |
-| Total Re-exports | 222 |
-| Total Classes | 50 |
-| Total Interfaces | 71 |
-| Total Functions | 89 |
+| Total Lines of Code | 22608 |
+| Total Exports | 436 |
+| Total Re-exports | 234 |
+| Total Classes | 55 |
+| Total Interfaces | 89 |
+| Total Functions | 94 |
 | Total Type Guards | 4 |
 | Total Enums | 3 |
-| Type-only Imports | 49 |
+| Type-only Imports | 57 |
 | Runtime Circular Deps | 0 |
-| Type-only Circular Deps | 0 |
+| Type-only Circular Deps | 2 |
 
 ---
 
-*Last Updated*: 2026-01-05
-*Version*: 9.6.2
+*Last Updated*: 2026-01-06
+*Version*: 9.8.0

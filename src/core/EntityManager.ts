@@ -22,13 +22,15 @@ import { GRAPH_LIMITS } from '../utils/constants.js';
 
 /**
  * Minimum importance value (least important).
+ * Note: Use IMPORTANCE_RANGE from constants.ts for external access.
  */
-export const MIN_IMPORTANCE = 0;
+const MIN_IMPORTANCE = 0;
 
 /**
  * Maximum importance value (most important).
+ * Note: Use IMPORTANCE_RANGE from constants.ts for external access.
  */
-export const MAX_IMPORTANCE = 10;
+const MAX_IMPORTANCE = 10;
 
 /**
  * Manages entity operations with automatic timestamp handling.
