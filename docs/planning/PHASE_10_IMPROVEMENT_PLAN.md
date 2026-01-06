@@ -63,8 +63,9 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
    /**
     * Transaction context for batching multiple operations.
     * Operations within a transaction share a single lock/unlock cycle.
+    * Note: Named BatchTransactionContext to avoid collision with existing TransactionResult in TransactionManager.ts
     */
-   export interface TransactionContext {
+   export interface BatchTransactionContext {
      /** Create multiple entities within the transaction */
      createEntities(entities: EntityInput[]): void;
 
@@ -112,9 +113,10 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
    }
 
    /**
-    * Result of a committed transaction.
+    * Result of a committed batch transaction.
+    * Note: Named BatchTransactionResult to avoid collision with existing TransactionResult in TransactionManager.ts
     */
-   export interface TransactionResult {
+   export interface BatchTransactionResult {
      /** Whether the transaction was successful */
      success: boolean;
      /** Number of entities created */
@@ -140,9 +142,9 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
    ```
 
 **Acceptance Criteria**:
-- [ ] TransactionContext interface defined with all operation methods
+- [ ] BatchTransactionContext interface defined with all operation methods
 - [ ] EntityInput and RelationInput helper types defined
-- [ ] TransactionResult interface defined with statistics
+- [ ] BatchTransactionResult interface defined with statistics
 - [ ] TypeScript compilation passes
 - [ ] No breaking changes to existing types
 
@@ -163,8 +165,8 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
 2. **Add imports at the top** if not already present:
    ```typescript
    import type {
-     TransactionContext,
-     TransactionResult,
+     BatchTransactionContext,
+     BatchTransactionResult,
      EntityInput,
      RelationInput,
      Entity,
@@ -203,7 +205,7 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
     * }); // Single lock/unlock, single save
     * ```
     */
-   export class BatchTransaction implements TransactionContext {
+   export class BatchTransaction implements BatchTransactionContext {
      private pending: PendingOperations = {
        entitiesToCreate: [],
        entitiesToUpdate: [],
@@ -309,7 +311,7 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
    ```
 
 **Acceptance Criteria**:
-- [ ] BatchTransaction class implements TransactionContext interface
+- [ ] BatchTransaction class implements BatchTransactionContext interface
 - [ ] All operation methods collect pending operations
 - [ ] getPendingOperations() returns collected operations
 - [ ] hasPendingOperations() correctly detects pending work
@@ -333,7 +335,7 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
 2. **Add import for BatchTransaction** at the top:
    ```typescript
    import { BatchTransaction } from './TransactionManager.js';
-   import type { TransactionContext, TransactionResult } from '../types/types.js';
+   import type { BatchTransactionContext, BatchTransactionResult } from '../types/types.js';
    ```
 
 3. **Add the transaction method** to the GraphStorage class (find a good location, perhaps after saveGraph):
@@ -346,8 +348,8 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
     * - Before: 10 operations = 10 lock/unlock cycles, 10 file saves
     * - After: 10 operations = 1 lock/unlock cycle, 1 file save
     *
-    * @param callback - Function that receives a TransactionContext and queues operations
-    * @returns Transaction result with statistics
+    * @param callback - Function that receives a BatchTransactionContext and queues operations
+    * @returns BatchTransactionResult with statistics
     *
     * @example
     * ```typescript
@@ -364,8 +366,8 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
     * ```
     */
    async transaction(
-     callback: (tx: TransactionContext) => void | Promise<void>
-   ): Promise<TransactionResult> {
+     callback: (tx: BatchTransactionContext) => void | Promise<void>
+   ): Promise<BatchTransactionResult> {
      const startTime = Date.now();
      const tx = new BatchTransaction();
 
@@ -517,11 +519,11 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
 
 **Acceptance Criteria**:
 - [ ] transaction() method added to GraphStorage
-- [ ] Callback receives TransactionContext
+- [ ] Callback receives BatchTransactionContext
 - [ ] All operations applied in correct order
 - [ ] Single lock acquisition for all operations
 - [ ] Single save after all operations
-- [ ] TransactionResult contains accurate statistics
+- [ ] BatchTransactionResult contains accurate statistics
 - [ ] TypeScript compilation passes
 - [ ] Existing tests still pass
 
@@ -1580,20 +1582,29 @@ Phase 10 implements the remaining "New Feature Ideas" from the Future Features R
      const events = this.storage.events;
 
      events.on('entityCreated', (event) => {
-       this.tfidfIndex.addEntity(event.entity);
+       if (this.indexManager) {
+         this.indexManager.addEntity(event.entity);
+       }
      });
 
      events.on('entityUpdated', (event) => {
-       this.tfidfIndex.updateEntity(event.entity);
+       if (this.indexManager) {
+         this.indexManager.updateEntityInIndex(event.entity);
+       }
      });
 
      events.on('entityDeleted', (event) => {
-       this.tfidfIndex.removeEntity(event.entityName);
+       if (this.indexManager) {
+         this.indexManager.removeEntity(event.entityName);
+       }
      });
 
      // Rebuild index when graph is loaded from scratch
      events.on('graphLoaded', async () => {
-       await this.tfidfIndex.rebuild();
+       if (this.indexManager) {
+         const graph = await this.storage.loadGraph();
+         await this.indexManager.buildIndex(graph);
+       }
      });
    }
    ```
@@ -2441,7 +2452,7 @@ graph TD
 - [ ] transaction() method available on GraphStorage
 - [ ] Single lock/unlock cycle for multiple operations
 - [ ] Single save after all operations
-- [ ] TransactionResult contains accurate statistics
+- [ ] BatchTransactionResult contains accurate statistics
 - [ ] 2-3x speedup for bulk sequential operations
 
 ### Graph Change Events

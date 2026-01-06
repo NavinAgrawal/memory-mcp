@@ -196,7 +196,7 @@
         {
           "step": 3,
           "action": "Find the saveGraph method (search for 'async saveGraph')",
-          "details": "The saveGraph method is around line 250-280. Add the transaction method AFTER saveGraph."
+          "details": "The saveGraph method is around line 290. Add the transaction method AFTER saveGraph."
         },
         {
           "step": 4,

@@ -2,14 +2,14 @@
   "phase": 10,
   "sprint": 3,
   "title": "Incremental TF-IDF Index",
-  "priority": "HIGH",
+  "priority": "MEDIUM",
   "effort": "5 hours",
   "status": "pending",
   "impact": "5-10x faster ranked search updates by avoiding full index rebuilds on entity changes",
   "targetMetrics": {
     "singleEntityUpdate": {
       "current": "O(n) full index rebuild on any change",
-      "target": "O(log n) incremental update for single entity"
+      "target": "O(t) incremental update for single entity (t = token count)"
     },
     "indexUpdateLatency": {
       "current": "~50ms for 1000 entity graph",
@@ -32,7 +32,7 @@
       "files": ["src/search/TFIDFIndexManager.ts"],
       "testCategories": ["unit"],
       "implementation": {
-        "purpose": "Enable O(log n) incremental index updates instead of O(n) full rebuilds. When an entity is created, updated, or deleted, only that entity's document vector needs updating, and IDF values only need recalculation for affected terms.",
+        "purpose": "Enable O(t) incremental index updates instead of O(n) full rebuilds (t = token count in entity). When an entity is created, updated, or deleted, only that entity's document vector needs updating, and IDF values only need recalculation for affected terms.",
         "keyDecisions": [
           "addEntity() - add document vector for new entity",
           "removeEntity() - remove document vector and update IDF",
@@ -105,8 +105,8 @@
         }
       ],
       "acceptanceCriteria": [
-        "addEntity() method adds single entity to index in O(log n)",
-        "removeEntity() method removes entity from index in O(log n)",
+        "addEntity() method adds single entity to index in O(t) time (t = token count)",
+        "removeEntity() method removes entity from index in O(t) time (t = token count)",
         "updateEntityInIndex() combines remove + add atomically",
         "dirtyTerms Set tracks terms needing IDF recalc",
         "recalculateDirtyIDF() updates only dirty terms' IDF values",
@@ -162,12 +162,12 @@
         {
           "step": 5,
           "action": "Add subscribeToEvents private method at the end of the class",
-          "code": "  /**\n   * Subscribe to graph events for incremental index updates.\n   * @private\n   */\n  private subscribeToEvents(events: GraphEventEmitter): void {\n    // Handle entity creation\n    events.on('entityCreated', (event: EntityCreatedEvent) => {\n      if (this.tfidfManager.getIndex()) {\n        this.tfidfManager.addEntity(event.entity);\n      }\n    });\n\n    // Handle entity update\n    events.on('entityUpdated', (event: EntityUpdatedEvent) => {\n      if (this.tfidfManager.getIndex()) {\n        this.tfidfManager.updateEntityInIndex(event.entity);\n      }\n    });\n\n    // Handle entity deletion\n    events.on('entityDeleted', (event: EntityDeletedEvent) => {\n      if (this.tfidfManager.getIndex()) {\n        this.tfidfManager.removeEntity(event.entityName);\n      }\n    });\n  }"
+          "code": "  /**\n   * Subscribe to graph events for incremental index updates.\n   * @private\n   */\n  private subscribeToEvents(events: GraphEventEmitter): void {\n    // Handle entity creation\n    events.on('entityCreated', (event: EntityCreatedEvent) => {\n      if (this.indexManager?.getIndex()) {\n        this.indexManager.addEntity(event.entity);\n      }\n    });\n\n    // Handle entity update\n    events.on('entityUpdated', (event: EntityUpdatedEvent) => {\n      if (this.indexManager?.getIndex()) {\n        this.indexManager.updateEntityInIndex(event.entity);\n      }\n    });\n\n    // Handle entity deletion\n    events.on('entityDeleted', (event: EntityDeletedEvent) => {\n      if (this.indexManager?.getIndex()) {\n        this.indexManager.removeEntity(event.entityName);\n      }\n    });\n  }"
         },
         {
           "step": 6,
           "action": "Update the search method to recalculate dirty IDF before searching",
-          "details": "Find the search() method. At the start of the method, before any search logic, add:\n\n    // Recalculate dirty IDF values before search (Phase 10)\n    if (this.tfidfManager.hasDirtyTerms()) {\n      this.tfidfManager.recalculateDirtyIDF();\n    }"
+          "details": "Find the search() method (or searchNodesRanked method). At the start of the method, before any search logic, add:\n\n    // Recalculate dirty IDF values before search (Phase 10)\n    if (this.indexManager?.hasDirtyTerms()) {\n      this.indexManager.recalculateDirtyIDF();\n    }"
         },
         {
           "step": 7,
