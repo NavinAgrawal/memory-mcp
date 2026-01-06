@@ -119,7 +119,13 @@
       "Bash(./migrate-from-jsonl-to-sqlite.exe:*)",
       "mcp__memory-mcp__compress_graph",
       "mcp__memory-mcp__archive_entities",
-      "WebSearch"
+      "WebSearch",
+      "Bash(./tools/migrate-from-jsonl-to-sqlite/migrate-from-jsonl-to-sqlite.exe:*)",
+      "Bash(npm run build:ts:*)",
+      "Bash(npm config set:*)",
+      "Bash(set \"npm_config_msvs_version=2019\")",
+      "Bash(npx prebuild-install:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []
