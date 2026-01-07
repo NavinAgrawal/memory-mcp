@@ -125,7 +125,13 @@
       "Bash(npm config set:*)",
       "Bash(set \"npm_config_msvs_version=2019\")",
       "Bash(npx prebuild-install:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(npx pkg --help:*)",
+      "Bash(npx pkg:*)",
+      "Bash(npm info:*)",
+      "Bash(npx @yao-pkg/pkg:*)",
+      "Bash(npm run build:exe:*)",
+      "Bash(npm rebuild:*)"
     ],
     "deny": [],
     "ask": []
