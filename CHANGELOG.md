@@ -5,6 +5,52 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.8.1] - 2026-01-07
+
+### Changed
+
+- **Architecture Documentation Overhaul** - Complete update of all architecture docs with accurate codebase metrics
+
+  #### ARCHITECTURE.md (v3.1)
+  - Updated test coverage to 96.6% (56/58 source files tested by 74 test files)
+  - Rewrote Testing Strategy section with detailed tables:
+    - Test Coverage Summary table
+    - Test Categories by Directory breakdown
+    - Most-Tested Source Files table (GraphStorage: 45, EntityManager: 22, etc.)
+
+  #### COMPONENTS.md (v3.0)
+  - Added Codebase Statistics table (58 files, 22,608 LOC, 55 classes, 89 interfaces, 94 functions)
+  - Updated ManagerContext to list all 7 lazy-initialized managers
+  - Added Additional Core Classes section (GraphStorage, SQLiteStorage, GraphTraversal, etc.)
+  - Expanded Search Components to list all 17 classes with descriptions
+  - Completely rewrote Utility Components section with detailed function counts
+
+  #### OVERVIEW.md (v9.8.0)
+  - Complete directory structure rewrite with accurate file counts per module:
+    - core/ (12 files), server/ (4 files), search/ (15 files)
+    - features/ (7 files), types/ (2 files), utils/ (15 files), workers/ (2 files)
+  - Updated Key Design Principles (7 managers, dual storage backends, worker parallelism)
+
+  #### API.md (v3.0)
+  - Updated tool count from 47 to 55
+  - Added search_auto tool documentation
+  - Added Semantic Search section (semantic_search, find_similar_entities, index_embeddings)
+  - Added Graph Algorithms section (find_shortest_path, find_all_paths, get_connected_components, get_centrality)
+
+  #### DATAFLOW.md (v2.0)
+  - Updated version to 9.8.0
+
+- **Dependency Graph Tool Enhancements**
+  - Added `--include-tests` / `-t` CLI flag for test coverage analysis
+  - Generated TEST_COVERAGE.md with 96.6% coverage metrics
+  - Generated test-coverage.json for machine-readable coverage data
+  - Rebuilt create-dependency-graph.exe (58MB) and chunking-for-files.exe (57MB)
+
+### Tests
+
+- All tests passing
+- 96.6% source file coverage (56/58 files directly tested)
+
 ## [9.8.0] - 2026-01-06
 
 ### Added
