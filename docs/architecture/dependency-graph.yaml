@@ -1,7 +1,7 @@
 metadata:
   name: "@danielsimonjr/memory-mcp"
   version: 9.8.0
-  lastUpdated: "2026-01-06"
+  lastUpdated: "2026-01-07"
   totalFiles: 58
   totalModules: 8
   totalExports: 436
@@ -161,6 +161,98 @@ modules:
         - HierarchyManager
       classes:
         - HierarchyManager
+    src/core/index.ts:
+      description: Core Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./GraphStorage.js
+          imports:
+            - GraphStorage
+          reExport: true
+        - file: ./SQLiteStorage.js
+          imports:
+            - SQLiteStorage
+          reExport: true
+        - file: ./EntityManager.js
+          imports:
+            - EntityManager
+          reExport: true
+        - file: ./RelationManager.js
+          imports:
+            - RelationManager
+          reExport: true
+        - file: ./ObservationManager.js
+          imports:
+            - ObservationManager
+          reExport: true
+        - file: ./HierarchyManager.js
+          imports:
+            - HierarchyManager
+          reExport: true
+        - file: ./ManagerContext.js
+          imports:
+            - ManagerContext
+          reExport: true
+        - file: ./GraphTraversal.js
+          imports:
+            - GraphTraversal
+          reExport: true
+        - file: ./ManagerContext.js
+          imports:
+            - ManagerContext
+          reExport: true
+        - file: ./TransactionManager.js
+          imports:
+            - TransactionManager
+            - OperationType
+            - BatchTransaction
+            - type TransactionOperation
+            - type TransactionResult
+          reExport: true
+        - file: ./StorageFactory.js
+          imports:
+            - createStorage
+            - createStorageFromPath
+          reExport: true
+        - file: ./GraphEventEmitter.js
+          imports:
+            - GraphEventEmitter
+          reExport: true
+      exports:
+        - GraphStorage
+        - SQLiteStorage
+        - EntityManager
+        - RelationManager
+        - ObservationManager
+        - HierarchyManager
+        - ManagerContext
+        - GraphTraversal
+        - TransactionManager
+        - OperationType
+        - BatchTransaction
+        - type TransactionOperation
+        - type TransactionResult
+        - createStorage
+        - createStorageFromPath
+        - GraphEventEmitter
+      reExported:
+        - GraphStorage
+        - SQLiteStorage
+        - EntityManager
+        - RelationManager
+        - ObservationManager
+        - HierarchyManager
+        - ManagerContext
+        - GraphTraversal
+        - TransactionManager
+        - OperationType
+        - BatchTransaction
+        - type TransactionOperation
+        - type TransactionResult
+        - createStorage
+        - createStorageFromPath
+        - GraphEventEmitter
     src/core/ManagerContext.ts:
       description: Manager Context
       externalDependencies: []
@@ -357,98 +449,6 @@ modules:
         - TransactionResult
       enums:
         - OperationType
-    src/core/index.ts:
-      description: Core Module Barrel Export
-      externalDependencies: []
-      nodeDependencies: []
-      internalDependencies:
-        - file: ./GraphStorage.js
-          imports:
-            - GraphStorage
-          reExport: true
-        - file: ./SQLiteStorage.js
-          imports:
-            - SQLiteStorage
-          reExport: true
-        - file: ./EntityManager.js
-          imports:
-            - EntityManager
-          reExport: true
-        - file: ./RelationManager.js
-          imports:
-            - RelationManager
-          reExport: true
-        - file: ./ObservationManager.js
-          imports:
-            - ObservationManager
-          reExport: true
-        - file: ./HierarchyManager.js
-          imports:
-            - HierarchyManager
-          reExport: true
-        - file: ./ManagerContext.js
-          imports:
-            - ManagerContext
-          reExport: true
-        - file: ./GraphTraversal.js
-          imports:
-            - GraphTraversal
-          reExport: true
-        - file: ./ManagerContext.js
-          imports:
-            - ManagerContext
-          reExport: true
-        - file: ./TransactionManager.js
-          imports:
-            - TransactionManager
-            - OperationType
-            - BatchTransaction
-            - type TransactionOperation
-            - type TransactionResult
-          reExport: true
-        - file: ./StorageFactory.js
-          imports:
-            - createStorage
-            - createStorageFromPath
-          reExport: true
-        - file: ./GraphEventEmitter.js
-          imports:
-            - GraphEventEmitter
-          reExport: true
-      exports:
-        - GraphStorage
-        - SQLiteStorage
-        - EntityManager
-        - RelationManager
-        - ObservationManager
-        - HierarchyManager
-        - ManagerContext
-        - GraphTraversal
-        - TransactionManager
-        - OperationType
-        - BatchTransaction
-        - type TransactionOperation
-        - type TransactionResult
-        - createStorage
-        - createStorageFromPath
-        - GraphEventEmitter
-      reExported:
-        - GraphStorage
-        - SQLiteStorage
-        - EntityManager
-        - RelationManager
-        - ObservationManager
-        - HierarchyManager
-        - ManagerContext
-        - GraphTraversal
-        - TransactionManager
-        - OperationType
-        - BatchTransaction
-        - type TransactionOperation
-        - type TransactionResult
-        - createStorage
-        - createStorageFromPath
-        - GraphEventEmitter
   features:
     src/features/AnalyticsManager.ts:
       description: Analytics Manager
@@ -541,6 +541,76 @@ modules:
         - CompressionManager
       classes:
         - CompressionManager
+    src/features/index.ts:
+      description: Features Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./TagManager.js
+          imports:
+            - TagManager
+          reExport: true
+        - file: ./IOManager.js
+          imports:
+            - IOManager
+            - type ExportFormat
+            - type ImportFormat
+            - type MergeStrategy
+            - type BackupMetadata
+            - type BackupInfo
+          reExport: true
+        - file: ./AnalyticsManager.js
+          imports:
+            - AnalyticsManager
+          reExport: true
+        - file: ./CompressionManager.js
+          imports:
+            - CompressionManager
+          reExport: true
+        - file: ./ArchiveManager.js
+          imports:
+            - ArchiveManager
+            - type ArchiveCriteria
+            - type ArchiveOptions
+            - type ArchiveResult
+          reExport: true
+        - file: ./StreamingExporter.js
+          imports:
+            - StreamingExporter
+            - type StreamResult
+          reExport: true
+      exports:
+        - TagManager
+        - IOManager
+        - type ExportFormat
+        - type ImportFormat
+        - type MergeStrategy
+        - type BackupMetadata
+        - type BackupInfo
+        - AnalyticsManager
+        - CompressionManager
+        - ArchiveManager
+        - type ArchiveCriteria
+        - type ArchiveOptions
+        - type ArchiveResult
+        - StreamingExporter
+        - type StreamResult
+      reExported:
+        - TagManager
+        - IOManager
+        - type ExportFormat
+        - type ImportFormat
+        - type MergeStrategy
+        - type BackupMetadata
+        - type BackupInfo
+        - AnalyticsManager
+        - CompressionManager
+        - ArchiveManager
+        - type ArchiveCriteria
+        - type ArchiveOptions
+        - type ArchiveResult
+        - StreamingExporter
+        - type StreamResult
     src/features/IOManager.ts:
       description: IO Manager
       externalDependencies: []
@@ -636,76 +706,6 @@ modules:
         - TagManager
       classes:
         - TagManager
-    src/features/index.ts:
-      description: Features Module Barrel Export
-      externalDependencies: []
-      nodeDependencies: []
-      internalDependencies:
-        - file: ./TagManager.js
-          imports:
-            - TagManager
-          reExport: true
-        - file: ./IOManager.js
-          imports:
-            - IOManager
-            - type ExportFormat
-            - type ImportFormat
-            - type MergeStrategy
-            - type BackupMetadata
-            - type BackupInfo
-          reExport: true
-        - file: ./AnalyticsManager.js
-          imports:
-            - AnalyticsManager
-          reExport: true
-        - file: ./CompressionManager.js
-          imports:
-            - CompressionManager
-          reExport: true
-        - file: ./ArchiveManager.js
-          imports:
-            - ArchiveManager
-            - type ArchiveCriteria
-            - type ArchiveOptions
-            - type ArchiveResult
-          reExport: true
-        - file: ./StreamingExporter.js
-          imports:
-            - StreamingExporter
-            - type StreamResult
-          reExport: true
-      exports:
-        - TagManager
-        - IOManager
-        - type ExportFormat
-        - type ImportFormat
-        - type MergeStrategy
-        - type BackupMetadata
-        - type BackupInfo
-        - AnalyticsManager
-        - CompressionManager
-        - ArchiveManager
-        - type ArchiveCriteria
-        - type ArchiveOptions
-        - type ArchiveResult
-        - StreamingExporter
-        - type StreamResult
-      reExported:
-        - TagManager
-        - IOManager
-        - type ExportFormat
-        - type ImportFormat
-        - type MergeStrategy
-        - type BackupMetadata
-        - type BackupInfo
-        - AnalyticsManager
-        - CompressionManager
-        - ArchiveManager
-        - type ArchiveCriteria
-        - type ArchiveOptions
-        - type ArchiveResult
-        - StreamingExporter
-        - type StreamResult
   entry:
     src/index.ts:
       description: Re-export path utilities for backward compatibility
@@ -871,6 +871,130 @@ modules:
         - FuzzySearchOptions
       constants:
         - DEFAULT_FUZZY_THRESHOLD
+    src/search/index.ts:
+      description: Search Module Barrel Export
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./BasicSearch.js
+          imports:
+            - BasicSearch
+          reExport: true
+        - file: ./RankedSearch.js
+          imports:
+            - RankedSearch
+          reExport: true
+        - file: ./BooleanSearch.js
+          imports:
+            - BooleanSearch
+          reExport: true
+        - file: ./FuzzySearch.js
+          imports:
+            - FuzzySearch
+            - type FuzzySearchOptions
+          reExport: true
+        - file: ./SearchSuggestions.js
+          imports:
+            - SearchSuggestions
+          reExport: true
+        - file: ./SavedSearchManager.js
+          imports:
+            - SavedSearchManager
+          reExport: true
+        - file: ./SearchManager.js
+          imports:
+            - SearchManager
+          reExport: true
+        - file: ./SearchFilterChain.js
+          imports:
+            - SearchFilterChain
+            - type SearchFilters
+            - type ValidatedPagination
+          reExport: true
+        - file: ./EmbeddingService.js
+          imports:
+            - OpenAIEmbeddingService
+            - LocalEmbeddingService
+            - MockEmbeddingService
+            - createEmbeddingService
+          reExport: true
+        - file: ./VectorStore.js
+          imports:
+            - InMemoryVectorStore
+            - SQLiteVectorStore
+            - createVectorStore
+            - cosineSimilarity
+            - type SQLiteStorageWithEmbeddings
+          reExport: true
+        - file: ./SemanticSearch.js
+          imports:
+            - SemanticSearch
+            - entityToText
+          reExport: true
+        - file: ./TFIDFIndexManager.js
+          imports:
+            - TFIDFIndexManager
+          reExport: true
+        - file: ./TFIDFEventSync.js
+          imports:
+            - TFIDFEventSync
+          reExport: true
+        - file: ./QueryCostEstimator.js
+          imports:
+            - QueryCostEstimator
+          reExport: true
+      exports:
+        - BasicSearch
+        - RankedSearch
+        - BooleanSearch
+        - FuzzySearch
+        - type FuzzySearchOptions
+        - SearchSuggestions
+        - SavedSearchManager
+        - SearchManager
+        - SearchFilterChain
+        - type SearchFilters
+        - type ValidatedPagination
+        - OpenAIEmbeddingService
+        - LocalEmbeddingService
+        - MockEmbeddingService
+        - createEmbeddingService
+        - InMemoryVectorStore
+        - SQLiteVectorStore
+        - createVectorStore
+        - cosineSimilarity
+        - type SQLiteStorageWithEmbeddings
+        - SemanticSearch
+        - entityToText
+        - TFIDFIndexManager
+        - TFIDFEventSync
+        - QueryCostEstimator
+      reExported:
+        - BasicSearch
+        - RankedSearch
+        - BooleanSearch
+        - FuzzySearch
+        - type FuzzySearchOptions
+        - SearchSuggestions
+        - SavedSearchManager
+        - SearchManager
+        - SearchFilterChain
+        - type SearchFilters
+        - type ValidatedPagination
+        - OpenAIEmbeddingService
+        - LocalEmbeddingService
+        - MockEmbeddingService
+        - createEmbeddingService
+        - InMemoryVectorStore
+        - SQLiteVectorStore
+        - createVectorStore
+        - cosineSimilarity
+        - type SQLiteStorageWithEmbeddings
+        - SemanticSearch
+        - entityToText
+        - TFIDFIndexManager
+        - TFIDFEventSync
+        - QueryCostEstimator
     src/search/QueryCostEstimator.ts:
       description: Query Cost Estimator
       externalDependencies: []
@@ -1130,130 +1254,6 @@ modules:
       functions:
         - cosineSimilarity
         - createVectorStore
-    src/search/index.ts:
-      description: Search Module Barrel Export
-      externalDependencies: []
-      nodeDependencies: []
-      internalDependencies:
-        - file: ./BasicSearch.js
-          imports:
-            - BasicSearch
-          reExport: true
-        - file: ./RankedSearch.js
-          imports:
-            - RankedSearch
-          reExport: true
-        - file: ./BooleanSearch.js
-          imports:
-            - BooleanSearch
-          reExport: true
-        - file: ./FuzzySearch.js
-          imports:
-            - FuzzySearch
-            - type FuzzySearchOptions
-          reExport: true
-        - file: ./SearchSuggestions.js
-          imports:
-            - SearchSuggestions
-          reExport: true
-        - file: ./SavedSearchManager.js
-          imports:
-            - SavedSearchManager
-          reExport: true
-        - file: ./SearchManager.js
-          imports:
-            - SearchManager
-          reExport: true
-        - file: ./SearchFilterChain.js
-          imports:
-            - SearchFilterChain
-            - type SearchFilters
-            - type ValidatedPagination
-          reExport: true
-        - file: ./EmbeddingService.js
-          imports:
-            - OpenAIEmbeddingService
-            - LocalEmbeddingService
-            - MockEmbeddingService
-            - createEmbeddingService
-          reExport: true
-        - file: ./VectorStore.js
-          imports:
-            - InMemoryVectorStore
-            - SQLiteVectorStore
-            - createVectorStore
-            - cosineSimilarity
-            - type SQLiteStorageWithEmbeddings
-          reExport: true
-        - file: ./SemanticSearch.js
-          imports:
-            - SemanticSearch
-            - entityToText
-          reExport: true
-        - file: ./TFIDFIndexManager.js
-          imports:
-            - TFIDFIndexManager
-          reExport: true
-        - file: ./TFIDFEventSync.js
-          imports:
-            - TFIDFEventSync
-          reExport: true
-        - file: ./QueryCostEstimator.js
-          imports:
-            - QueryCostEstimator
-          reExport: true
-      exports:
-        - BasicSearch
-        - RankedSearch
-        - BooleanSearch
-        - FuzzySearch
-        - type FuzzySearchOptions
-        - SearchSuggestions
-        - SavedSearchManager
-        - SearchManager
-        - SearchFilterChain
-        - type SearchFilters
-        - type ValidatedPagination
-        - OpenAIEmbeddingService
-        - LocalEmbeddingService
-        - MockEmbeddingService
-        - createEmbeddingService
-        - InMemoryVectorStore
-        - SQLiteVectorStore
-        - createVectorStore
-        - cosineSimilarity
-        - type SQLiteStorageWithEmbeddings
-        - SemanticSearch
-        - entityToText
-        - TFIDFIndexManager
-        - TFIDFEventSync
-        - QueryCostEstimator
-      reExported:
-        - BasicSearch
-        - RankedSearch
-        - BooleanSearch
-        - FuzzySearch
-        - type FuzzySearchOptions
-        - SearchSuggestions
-        - SavedSearchManager
-        - SearchManager
-        - SearchFilterChain
-        - type SearchFilters
-        - type ValidatedPagination
-        - OpenAIEmbeddingService
-        - LocalEmbeddingService
-        - MockEmbeddingService
-        - createEmbeddingService
-        - InMemoryVectorStore
-        - SQLiteVectorStore
-        - createVectorStore
-        - cosineSimilarity
-        - type SQLiteStorageWithEmbeddings
-        - SemanticSearch
-        - entityToText
-        - TFIDFIndexManager
-        - TFIDFEventSync
-        - QueryCostEstimator
   server:
     src/server/MCPServer.ts:
       description: MCP Server
@@ -1803,9 +1803,7 @@ modules:
           reExport: true
         - file: ./schemas.js
           imports:
-            - |-
-              // Zod schemas - Entity/Relation
-                EntitySchema
+            - "// Zod schemas - Entity/Relation\r\n  EntitySchema"
             - CreateEntitySchema
             - UpdateEntitySchema
             - RelationSchema
@@ -1818,32 +1816,20 @@ modules:
             - BatchCreateRelationsSchema
             - EntityNamesSchema
             - DeleteRelationsSchema
-            - |-
-              // Zod schemas - Observations
-                AddObservationInputSchema
+            - "// Zod schemas - Observations\r\n  AddObservationInputSchema"
             - AddObservationsInputSchema
             - DeleteObservationInputSchema
             - DeleteObservationsInputSchema
-            - |-
-              // Zod schemas - Archive
-                ArchiveCriteriaSchema
-            - |-
-              // Zod schemas - Saved Search
-                SavedSearchInputSchema
+            - "// Zod schemas - Archive\r\n  ArchiveCriteriaSchema"
+            - "// Zod schemas - Saved Search\r\n  SavedSearchInputSchema"
             - SavedSearchUpdateSchema
-            - |-
-              // Zod schemas - Import/Export
-                ImportFormatSchema
+            - "// Zod schemas - Import/Export\r\n  ImportFormatSchema"
             - ExtendedExportFormatSchema
             - MergeStrategySchema
             - ExportFilterSchema
-            - |-
-              // Zod schemas - Search
-                OptionalTagsSchema
+            - "// Zod schemas - Search\r\n  OptionalTagsSchema"
             - OptionalEntityNamesSchema
-            - |-
-              // Schema types
-                type EntityInput
+            - "// Schema types\r\n  type EntityInput"
             - type CreateEntityInput
             - type UpdateEntityInput
             - type RelationInput
@@ -1861,34 +1847,24 @@ modules:
             - type ExtendedExportFormat
             - type MergeStrategy
             - type ExportFilterInput
-            - |-
-              // Validation result type
-                type ValidationResult
-            - |-
-              // Zod helpers
-                formatZodErrors
+            - "// Validation result type\r\n  type ValidationResult"
+            - "// Zod helpers\r\n  formatZodErrors"
             - validateWithSchema
             - validateSafe
             - validateArrayWithSchema
-            - |-
-              // Manual validation functions
-                validateEntity
+            - "// Manual validation functions\r\n  validateEntity"
             - validateRelation
             - validateImportance
             - validateTags
           reExport: true
         - file: ./formatters.js
           imports:
-            - |-
-              // Response formatting
-                formatToolResponse
+            - "// Response formatting\r\n  formatToolResponse"
             - formatTextResponse
             - formatRawResponse
             - formatErrorResponse
             - type ToolResponse
-            - |-
-              // Pagination utilities
-                validatePagination
+            - "// Pagination utilities\r\n  validatePagination"
             - applyPagination
             - paginateArray
             - getPaginationMeta
@@ -1896,9 +1872,7 @@ modules:
           reExport: true
         - file: ./entityUtils.js
           imports:
-            - |-
-              // Entity lookup
-                findEntityByName
+            - "// Entity lookup\r\n  findEntityByName"
             - findEntitiesByNames
             - entityExists
             - getEntityIndex
@@ -1906,33 +1880,25 @@ modules:
             - getEntityNameSet
             - groupEntitiesByType
             - touchEntity
-            - |-
-              // Tag utilities
-                normalizeTag
+            - "// Tag utilities\r\n  normalizeTag"
             - normalizeTags
             - hasMatchingTag
             - hasAllTags
             - filterByTags
             - addUniqueTags
             - removeTags
-            - |-
-              // Date utilities
-                isWithinDateRange
+            - "// Date utilities\r\n  isWithinDateRange"
             - parseDateRange
             - isValidISODate
             - getCurrentTimestamp
-            - |-
-              // Filter utilities
-                isWithinImportanceRange
+            - "// Filter utilities\r\n  isWithinImportanceRange"
             - filterByImportance
             - filterByCreatedDate
             - filterByModifiedDate
             - filterByEntityType
             - entityPassesFilters
             - type CommonSearchFilters
-            - |-
-              // Path utilities
-                validateFilePath
+            - "// Path utilities\r\n  validateFilePath"
             - defaultMemoryPath
             - ensureMemoryFilePath
           reExport: true
@@ -1945,26 +1911,18 @@ modules:
           reExport: true
         - file: ./taskScheduler.js
           imports:
-            - |-
-              // Types and Enums
-                TaskPriority
+            - "// Types and Enums\r\n  TaskPriority"
             - TaskStatus
             - type Task
             - type TaskResult
             - type ProgressCallback
             - type BatchOptions
             - type QueueStats
-            - |-
-              // Task Queue
-                TaskQueue
-            - |-
-              // Batch Processing
-                batchProcess
+            - "// Task Queue\r\n  TaskQueue"
+            - "// Batch Processing\r\n  batchProcess"
             - rateLimitedProcess
             - withRetry
-            - |-
-              // Rate Limiting
-                debounce
+            - "// Rate Limiting\r\n  debounce"
             - throttle
           reExport: true
         - file: ./operationUtils.js
@@ -2037,9 +1995,7 @@ modules:
         - getAllCacheStats
         - cleanupAllCaches
         - type CacheStats
-        - |-
-          // Zod schemas - Entity/Relation
-            EntitySchema
+        - "// Zod schemas - Entity/Relation\r\n  EntitySchema"
         - CreateEntitySchema
         - UpdateEntitySchema
         - RelationSchema
@@ -2052,32 +2008,20 @@ modules:
         - BatchCreateRelationsSchema
         - EntityNamesSchema
         - DeleteRelationsSchema
-        - |-
-          // Zod schemas - Observations
-            AddObservationInputSchema
+        - "// Zod schemas - Observations\r\n  AddObservationInputSchema"
         - AddObservationsInputSchema
         - DeleteObservationInputSchema
         - DeleteObservationsInputSchema
-        - |-
-          // Zod schemas - Archive
-            ArchiveCriteriaSchema
-        - |-
-          // Zod schemas - Saved Search
-            SavedSearchInputSchema
+        - "// Zod schemas - Archive\r\n  ArchiveCriteriaSchema"
+        - "// Zod schemas - Saved Search\r\n  SavedSearchInputSchema"
         - SavedSearchUpdateSchema
-        - |-
-          // Zod schemas - Import/Export
-            ImportFormatSchema
+        - "// Zod schemas - Import/Export\r\n  ImportFormatSchema"
         - ExtendedExportFormatSchema
         - MergeStrategySchema
         - ExportFilterSchema
-        - |-
-          // Zod schemas - Search
-            OptionalTagsSchema
+        - "// Zod schemas - Search\r\n  OptionalTagsSchema"
         - OptionalEntityNamesSchema
-        - |-
-          // Schema types
-            type EntityInput
+        - "// Schema types\r\n  type EntityInput"
         - type CreateEntityInput
         - type UpdateEntityInput
         - type RelationInput
@@ -2095,38 +2039,26 @@ modules:
         - type ExtendedExportFormat
         - type MergeStrategy
         - type ExportFilterInput
-        - |-
-          // Validation result type
-            type ValidationResult
-        - |-
-          // Zod helpers
-            formatZodErrors
+        - "// Validation result type\r\n  type ValidationResult"
+        - "// Zod helpers\r\n  formatZodErrors"
         - validateWithSchema
         - validateSafe
         - validateArrayWithSchema
-        - |-
-          // Manual validation functions
-            validateEntity
+        - "// Manual validation functions\r\n  validateEntity"
         - validateRelation
         - validateImportance
         - validateTags
-        - |-
-          // Response formatting
-            formatToolResponse
+        - "// Response formatting\r\n  formatToolResponse"
         - formatTextResponse
         - formatRawResponse
         - formatErrorResponse
         - type ToolResponse
-        - |-
-          // Pagination utilities
-            validatePagination
+        - "// Pagination utilities\r\n  validatePagination"
         - applyPagination
         - paginateArray
         - getPaginationMeta
         - type ValidatedPagination
-        - |-
-          // Entity lookup
-            findEntityByName
+        - "// Entity lookup\r\n  findEntityByName"
         - findEntitiesByNames
         - entityExists
         - getEntityIndex
@@ -2134,59 +2066,43 @@ modules:
         - getEntityNameSet
         - groupEntitiesByType
         - touchEntity
-        - |-
-          // Tag utilities
-            normalizeTag
+        - "// Tag utilities\r\n  normalizeTag"
         - normalizeTags
         - hasMatchingTag
         - hasAllTags
         - filterByTags
         - addUniqueTags
         - removeTags
-        - |-
-          // Date utilities
-            isWithinDateRange
+        - "// Date utilities\r\n  isWithinDateRange"
         - parseDateRange
         - isValidISODate
         - getCurrentTimestamp
-        - |-
-          // Filter utilities
-            isWithinImportanceRange
+        - "// Filter utilities\r\n  isWithinImportanceRange"
         - filterByImportance
         - filterByCreatedDate
         - filterByModifiedDate
         - filterByEntityType
         - entityPassesFilters
         - type CommonSearchFilters
-        - |-
-          // Path utilities
-            validateFilePath
+        - "// Path utilities\r\n  validateFilePath"
         - defaultMemoryPath
         - ensureMemoryFilePath
         - parallelMap
         - parallelFilter
         - getPoolStats
         - shutdownParallelUtils
-        - |-
-          // Types and Enums
-            TaskPriority
+        - "// Types and Enums\r\n  TaskPriority"
         - TaskStatus
         - type Task
         - type TaskResult
         - type ProgressCallback
         - type BatchOptions
         - type QueueStats
-        - |-
-          // Task Queue
-            TaskQueue
-        - |-
-          // Batch Processing
-            batchProcess
+        - "// Task Queue\r\n  TaskQueue"
+        - "// Batch Processing\r\n  batchProcess"
         - rateLimitedProcess
         - withRetry
-        - |-
-          // Rate Limiting
-            debounce
+        - "// Rate Limiting\r\n  debounce"
         - throttle
         - checkCancellation
         - createProgressReporter
@@ -2255,9 +2171,7 @@ modules:
         - getAllCacheStats
         - cleanupAllCaches
         - type CacheStats
-        - |-
-          // Zod schemas - Entity/Relation
-            EntitySchema
+        - "// Zod schemas - Entity/Relation\r\n  EntitySchema"
         - CreateEntitySchema
         - UpdateEntitySchema
         - RelationSchema
@@ -2270,32 +2184,20 @@ modules:
         - BatchCreateRelationsSchema
         - EntityNamesSchema
         - DeleteRelationsSchema
-        - |-
-          // Zod schemas - Observations
-            AddObservationInputSchema
+        - "// Zod schemas - Observations\r\n  AddObservationInputSchema"
         - AddObservationsInputSchema
         - DeleteObservationInputSchema
         - DeleteObservationsInputSchema
-        - |-
-          // Zod schemas - Archive
-            ArchiveCriteriaSchema
-        - |-
-          // Zod schemas - Saved Search
-            SavedSearchInputSchema
+        - "// Zod schemas - Archive\r\n  ArchiveCriteriaSchema"
+        - "// Zod schemas - Saved Search\r\n  SavedSearchInputSchema"
         - SavedSearchUpdateSchema
-        - |-
-          // Zod schemas - Import/Export
-            ImportFormatSchema
+        - "// Zod schemas - Import/Export\r\n  ImportFormatSchema"
         - ExtendedExportFormatSchema
         - MergeStrategySchema
         - ExportFilterSchema
-        - |-
-          // Zod schemas - Search
-            OptionalTagsSchema
+        - "// Zod schemas - Search\r\n  OptionalTagsSchema"
         - OptionalEntityNamesSchema
-        - |-
-          // Schema types
-            type EntityInput
+        - "// Schema types\r\n  type EntityInput"
         - type CreateEntityInput
         - type UpdateEntityInput
         - type RelationInput
@@ -2313,38 +2215,26 @@ modules:
         - type ExtendedExportFormat
         - type MergeStrategy
         - type ExportFilterInput
-        - |-
-          // Validation result type
-            type ValidationResult
-        - |-
-          // Zod helpers
-            formatZodErrors
+        - "// Validation result type\r\n  type ValidationResult"
+        - "// Zod helpers\r\n  formatZodErrors"
         - validateWithSchema
         - validateSafe
         - validateArrayWithSchema
-        - |-
-          // Manual validation functions
-            validateEntity
+        - "// Manual validation functions\r\n  validateEntity"
         - validateRelation
         - validateImportance
         - validateTags
-        - |-
-          // Response formatting
-            formatToolResponse
+        - "// Response formatting\r\n  formatToolResponse"
         - formatTextResponse
         - formatRawResponse
         - formatErrorResponse
         - type ToolResponse
-        - |-
-          // Pagination utilities
-            validatePagination
+        - "// Pagination utilities\r\n  validatePagination"
         - applyPagination
         - paginateArray
         - getPaginationMeta
         - type ValidatedPagination
-        - |-
-          // Entity lookup
-            findEntityByName
+        - "// Entity lookup\r\n  findEntityByName"
         - findEntitiesByNames
         - entityExists
         - getEntityIndex
@@ -2352,59 +2242,43 @@ modules:
         - getEntityNameSet
         - groupEntitiesByType
         - touchEntity
-        - |-
-          // Tag utilities
-            normalizeTag
+        - "// Tag utilities\r\n  normalizeTag"
         - normalizeTags
         - hasMatchingTag
         - hasAllTags
         - filterByTags
         - addUniqueTags
         - removeTags
-        - |-
-          // Date utilities
-            isWithinDateRange
+        - "// Date utilities\r\n  isWithinDateRange"
         - parseDateRange
         - isValidISODate
         - getCurrentTimestamp
-        - |-
-          // Filter utilities
-            isWithinImportanceRange
+        - "// Filter utilities\r\n  isWithinImportanceRange"
         - filterByImportance
         - filterByCreatedDate
         - filterByModifiedDate
         - filterByEntityType
         - entityPassesFilters
         - type CommonSearchFilters
-        - |-
-          // Path utilities
-            validateFilePath
+        - "// Path utilities\r\n  validateFilePath"
         - defaultMemoryPath
         - ensureMemoryFilePath
         - parallelMap
         - parallelFilter
         - getPoolStats
         - shutdownParallelUtils
-        - |-
-          // Types and Enums
-            TaskPriority
+        - "// Types and Enums\r\n  TaskPriority"
         - TaskStatus
         - type Task
         - type TaskResult
         - type ProgressCallback
         - type BatchOptions
         - type QueueStats
-        - |-
-          // Task Queue
-            TaskQueue
-        - |-
-          // Batch Processing
-            batchProcess
+        - "// Task Queue\r\n  TaskQueue"
+        - "// Batch Processing\r\n  batchProcess"
         - rateLimitedProcess
         - withRetry
-        - |-
-          // Rate Limiting
-            debounce
+        - "// Rate Limiting\r\n  debounce"
         - throttle
         - checkCancellation
         - createProgressReporter
@@ -2716,22 +2590,22 @@ dependencyGraph:
         - src/core/GraphStorage.ts
         - src/core/GraphTraversal.ts
         - src/core/HierarchyManager.ts
+        - src/core/index.ts
         - src/core/ManagerContext.ts
         - src/core/ObservationManager.ts
         - src/core/RelationManager.ts
         - src/core/SQLiteStorage.ts
         - src/core/StorageFactory.ts
         - src/core/TransactionManager.ts
-        - src/core/index.ts
     - name: Features
       files:
         - src/features/AnalyticsManager.ts
         - src/features/ArchiveManager.ts
         - src/features/CompressionManager.ts
+        - src/features/index.ts
         - src/features/IOManager.ts
         - src/features/StreamingExporter.ts
         - src/features/TagManager.ts
-        - src/features/index.ts
     - name: Entry
       files:
         - src/index.ts
@@ -2741,6 +2615,7 @@ dependencyGraph:
         - src/search/BooleanSearch.ts
         - src/search/EmbeddingService.ts
         - src/search/FuzzySearch.ts
+        - src/search/index.ts
         - src/search/QueryCostEstimator.ts
         - src/search/RankedSearch.ts
         - src/search/SavedSearchManager.ts
@@ -2751,7 +2626,6 @@ dependencyGraph:
         - src/search/TFIDFEventSync.ts
         - src/search/TFIDFIndexManager.ts
         - src/search/VectorStore.ts
-        - src/search/index.ts
     - name: Server
       files:
         - src/server/MCPServer.ts

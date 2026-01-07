@@ -181,6 +181,11 @@ function getAllTsFiles(dir: string, files: string[] = []): string[] {
   const entries = readdirSync(dir);
 
   for (const entry of entries) {
+    // Skip node_modules directories
+    if (entry === 'node_modules') {
+      continue;
+    }
+
     const fullPath = join(dir, entry);
     const stat = statSync(fullPath);
 
@@ -205,6 +210,11 @@ function getAllTestFiles(dir: string, files: string[] = []): string[] {
   const entries = readdirSync(dir);
 
   for (const entry of entries) {
+    // Skip node_modules directories
+    if (entry === 'node_modules') {
+      continue;
+    }
+
     const fullPath = join(dir, entry);
     const stat = statSync(fullPath);
 
@@ -228,18 +238,109 @@ interface TestCoverageAnalysis {
   testToSourceMap: Map<string, string[]>; // test file -> source files it imports
 }
 
+// Re-export map: barrel file -> source files it re-exports from
+type ReExportMap = Map<string, Set<string>>;
+
 /**
- * Analyze test coverage by mapping source files to test files
+ * Build a map of barrel files to the source files they re-export from.
+ * This allows tracing imports through barrel files (index.ts) to find
+ * the actual source files being tested.
+ */
+function buildReExportMap(sourceFiles: ParsedFile[]): ReExportMap {
+  const reExportMap: ReExportMap = new Map();
+  const sourceFilePaths = new Set(sourceFiles.map(f => f.path));
+
+  // Find all barrel files (files with re-exports)
+  for (const file of sourceFiles) {
+    const reExportedSources = new Set<string>();
+
+    for (const dep of file.internalDependencies) {
+      if (dep.reExport) {
+        // This file re-exports from another file
+        const resolved = resolvePath(file.path, dep.file);
+        if (sourceFilePaths.has(resolved)) {
+          reExportedSources.add(resolved);
+        }
+      }
+    }
+
+    if (reExportedSources.size > 0) {
+      reExportMap.set(file.path, reExportedSources);
+    }
+  }
+
+  // Recursively expand re-exports (handle chains like types/index.ts -> types/types.ts)
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [barrelPath, sources] of reExportMap) {
+      const expanded = new Set(sources);
+      for (const source of sources) {
+        // If a source is itself a barrel, add its sources too
+        const nestedSources = reExportMap.get(source);
+        if (nestedSources) {
+          for (const nested of nestedSources) {
+            if (!expanded.has(nested)) {
+              expanded.add(nested);
+              changed = true;
+            }
+          }
+        }
+      }
+      reExportMap.set(barrelPath, expanded);
+    }
+  }
+
+  return reExportMap;
+}
+
+/**
+ * Get all source files that are ultimately imported through a barrel file chain.
+ * Given an import to a barrel file, returns all source files it re-exports.
+ */
+function traceReExports(importedPath: string, reExportMap: ReExportMap): Set<string> {
+  const result = new Set<string>();
+  result.add(importedPath); // Always include the directly imported file
+
+  const sources = reExportMap.get(importedPath);
+  if (sources) {
+    for (const source of sources) {
+      result.add(source);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Analyze test coverage by mapping source files to test files.
+ * Traces imports through barrel files (index.ts) to find all source files
+ * that are indirectly tested through re-exports.
  */
 function analyzeTestCoverage(sourceFiles: ParsedFile[], testFiles: ParsedFile[]): TestCoverageAnalysis {
   const sourceFilePaths = new Set(sourceFiles.map(f => f.path));
   const coverageMap = new Map<string, string[]>();
   const testToSourceMap = new Map<string, string[]>();
 
+  // Build re-export map to trace imports through barrel files
+  const reExportMap = buildReExportMap(sourceFiles);
+
   // Initialize coverage map with empty arrays
   for (const source of sourceFiles) {
     coverageMap.set(source.path, []);
   }
+
+  // Helper to add test coverage for a source file
+  const addCoverage = (sourcePath: string, testPath: string, importedSources: string[]) => {
+    if (!importedSources.includes(sourcePath)) {
+      importedSources.push(sourcePath);
+    }
+    const tests = coverageMap.get(sourcePath) || [];
+    if (!tests.includes(testPath)) {
+      tests.push(testPath);
+      coverageMap.set(sourcePath, tests);
+    }
+  };
 
   // Analyze each test file to see which source files it imports
   for (const testFile of testFiles) {
@@ -251,25 +352,30 @@ function analyzeTestCoverage(sourceFiles: ParsedFile[], testFiles: ParsedFile[])
 
       // Check if it's a source file (in src/)
       if (sourceFilePaths.has(resolvedPath)) {
-        importedSources.push(resolvedPath);
+        // Add the directly imported file
+        addCoverage(resolvedPath, testFile.path, importedSources);
 
-        // Add this test to the source file's coverage
-        const tests = coverageMap.get(resolvedPath) || [];
-        if (!tests.includes(testFile.path)) {
-          tests.push(testFile.path);
-          coverageMap.set(resolvedPath, tests);
+        // Trace through barrel re-exports to find underlying source files
+        const reExportedSources = traceReExports(resolvedPath, reExportMap);
+        for (const reExportedPath of reExportedSources) {
+          if (sourceFilePaths.has(reExportedPath)) {
+            addCoverage(reExportedPath, testFile.path, importedSources);
+          }
         }
       }
 
       // Also check without .ts extension variations
       const withoutTs = resolvedPath.replace(/\.ts$/, '');
       const withTs = withoutTs + '.ts';
-      if (sourceFilePaths.has(withTs) && !importedSources.includes(withTs)) {
-        importedSources.push(withTs);
-        const tests = coverageMap.get(withTs) || [];
-        if (!tests.includes(testFile.path)) {
-          tests.push(testFile.path);
-          coverageMap.set(withTs, tests);
+      if (sourceFilePaths.has(withTs)) {
+        addCoverage(withTs, testFile.path, importedSources);
+
+        // Trace through barrel re-exports
+        const reExportedSources = traceReExports(withTs, reExportMap);
+        for (const reExportedPath of reExportedSources) {
+          if (sourceFilePaths.has(reExportedPath)) {
+            addCoverage(reExportedPath, testFile.path, importedSources);
+          }
         }
       }
     }

@@ -1,6 +1,6 @@
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 9.8.0 | **Last Updated**: 2026-01-06
+**Version**: 9.8.0 | **Last Updated**: 2026-01-07
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -123,6 +123,29 @@ The codebase is organized into the following modules:
 
 ---
 
+### `src/core/index.ts` - Core Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./GraphStorage.js` | `GraphStorage` | Re-export |
+| `./SQLiteStorage.js` | `SQLiteStorage` | Re-export |
+| `./EntityManager.js` | `EntityManager` | Re-export |
+| `./RelationManager.js` | `RelationManager` | Re-export |
+| `./ObservationManager.js` | `ObservationManager` | Re-export |
+| `./HierarchyManager.js` | `HierarchyManager` | Re-export |
+| `./ManagerContext.js` | `ManagerContext` | Re-export |
+| `./GraphTraversal.js` | `GraphTraversal` | Re-export |
+| `./ManagerContext.js` | `ManagerContext` | Re-export |
+| `./TransactionManager.js` | `TransactionManager, OperationType, BatchTransaction, type TransactionOperation, type TransactionResult` | Re-export |
+| `./StorageFactory.js` | `createStorage, createStorageFromPath` | Re-export |
+| `./GraphEventEmitter.js` | `GraphEventEmitter` | Re-export |
+
+**Exports:**
+- Re-exports: `GraphStorage`, `SQLiteStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `HierarchyManager`, `ManagerContext`, `GraphTraversal`, `TransactionManager`, `OperationType`, `BatchTransaction`, `type TransactionOperation`, `type TransactionResult`, `createStorage`, `createStorageFromPath`, `GraphEventEmitter`
+
+---
+
 ### `src/core/ManagerContext.ts` - Manager Context
 
 **Node.js Built-in Dependencies:**
@@ -235,29 +258,6 @@ The codebase is organized into the following modules:
 
 ---
 
-### `src/core/index.ts` - Core Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./GraphStorage.js` | `GraphStorage` | Re-export |
-| `./SQLiteStorage.js` | `SQLiteStorage` | Re-export |
-| `./EntityManager.js` | `EntityManager` | Re-export |
-| `./RelationManager.js` | `RelationManager` | Re-export |
-| `./ObservationManager.js` | `ObservationManager` | Re-export |
-| `./HierarchyManager.js` | `HierarchyManager` | Re-export |
-| `./ManagerContext.js` | `ManagerContext` | Re-export |
-| `./GraphTraversal.js` | `GraphTraversal` | Re-export |
-| `./ManagerContext.js` | `ManagerContext` | Re-export |
-| `./TransactionManager.js` | `TransactionManager, OperationType, BatchTransaction, type TransactionOperation, type TransactionResult` | Re-export |
-| `./StorageFactory.js` | `createStorage, createStorageFromPath` | Re-export |
-| `./GraphEventEmitter.js` | `GraphEventEmitter` | Re-export |
-
-**Exports:**
-- Re-exports: `GraphStorage`, `SQLiteStorage`, `EntityManager`, `RelationManager`, `ObservationManager`, `HierarchyManager`, `ManagerContext`, `GraphTraversal`, `TransactionManager`, `OperationType`, `BatchTransaction`, `type TransactionOperation`, `type TransactionResult`, `createStorage`, `createStorageFromPath`, `GraphEventEmitter`
-
----
-
 ## Features Dependencies
 
 ### `src/features/AnalyticsManager.ts` - Analytics Manager
@@ -307,6 +307,23 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `CompressionManager`
+
+---
+
+### `src/features/index.ts` - Features Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./TagManager.js` | `TagManager` | Re-export |
+| `./IOManager.js` | `IOManager, type ExportFormat, type ImportFormat, type MergeStrategy, type BackupMetadata, type BackupInfo` | Re-export |
+| `./AnalyticsManager.js` | `AnalyticsManager` | Re-export |
+| `./CompressionManager.js` | `CompressionManager` | Re-export |
+| `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveOptions, type ArchiveResult` | Re-export |
+| `./StreamingExporter.js` | `StreamingExporter, type StreamResult` | Re-export |
+
+**Exports:**
+- Re-exports: `TagManager`, `IOManager`, `type ExportFormat`, `type ImportFormat`, `type MergeStrategy`, `type BackupMetadata`, `type BackupInfo`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveOptions`, `type ArchiveResult`, `StreamingExporter`, `type StreamResult`
 
 ---
 
@@ -366,23 +383,6 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `TagManager`
-
----
-
-### `src/features/index.ts` - Features Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./TagManager.js` | `TagManager` | Re-export |
-| `./IOManager.js` | `IOManager, type ExportFormat, type ImportFormat, type MergeStrategy, type BackupMetadata, type BackupInfo` | Re-export |
-| `./AnalyticsManager.js` | `AnalyticsManager` | Re-export |
-| `./CompressionManager.js` | `CompressionManager` | Re-export |
-| `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveOptions, type ArchiveResult` | Re-export |
-| `./StreamingExporter.js` | `StreamingExporter, type StreamResult` | Re-export |
-
-**Exports:**
-- Re-exports: `TagManager`, `IOManager`, `type ExportFormat`, `type ImportFormat`, `type MergeStrategy`, `type BackupMetadata`, `type BackupInfo`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveOptions`, `type ArchiveResult`, `StreamingExporter`, `type StreamResult`
 
 ---
 
@@ -475,6 +475,31 @@ The codebase is organized into the following modules:
 - Classes: `FuzzySearch`
 - Interfaces: `FuzzySearchOptions`
 - Constants: `DEFAULT_FUZZY_THRESHOLD`
+
+---
+
+### `src/search/index.ts` - Search Module Barrel Export
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `./BasicSearch.js` | `BasicSearch` | Re-export |
+| `./RankedSearch.js` | `RankedSearch` | Re-export |
+| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
+| `./FuzzySearch.js` | `FuzzySearch, type FuzzySearchOptions` | Re-export |
+| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
+| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
+| `./SearchManager.js` | `SearchManager` | Re-export |
+| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
+| `./EmbeddingService.js` | `OpenAIEmbeddingService, LocalEmbeddingService, MockEmbeddingService, createEmbeddingService` | Re-export |
+| `./VectorStore.js` | `InMemoryVectorStore, SQLiteVectorStore, createVectorStore, cosineSimilarity, type SQLiteStorageWithEmbeddings` | Re-export |
+| `./SemanticSearch.js` | `SemanticSearch, entityToText` | Re-export |
+| `./TFIDFIndexManager.js` | `TFIDFIndexManager` | Re-export |
+| `./TFIDFEventSync.js` | `TFIDFEventSync` | Re-export |
+| `./QueryCostEstimator.js` | `QueryCostEstimator` | Re-export |
+
+**Exports:**
+- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `type FuzzySearchOptions`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`, `OpenAIEmbeddingService`, `LocalEmbeddingService`, `MockEmbeddingService`, `createEmbeddingService`, `InMemoryVectorStore`, `SQLiteVectorStore`, `createVectorStore`, `cosineSimilarity`, `type SQLiteStorageWithEmbeddings`, `SemanticSearch`, `entityToText`, `TFIDFIndexManager`, `TFIDFEventSync`, `QueryCostEstimator`
 
 ---
 
@@ -633,31 +658,6 @@ The codebase is organized into the following modules:
 - Classes: `InMemoryVectorStore`, `SQLiteVectorStore`
 - Interfaces: `SQLiteStorageWithEmbeddings`
 - Functions: `cosineSimilarity`, `createVectorStore`
-
----
-
-### `src/search/index.ts` - Search Module Barrel Export
-
-**Internal Dependencies:**
-| File | Imports | Type |
-|------|---------|------|
-| `./BasicSearch.js` | `BasicSearch` | Re-export |
-| `./RankedSearch.js` | `RankedSearch` | Re-export |
-| `./BooleanSearch.js` | `BooleanSearch` | Re-export |
-| `./FuzzySearch.js` | `FuzzySearch, type FuzzySearchOptions` | Re-export |
-| `./SearchSuggestions.js` | `SearchSuggestions` | Re-export |
-| `./SavedSearchManager.js` | `SavedSearchManager` | Re-export |
-| `./SearchManager.js` | `SearchManager` | Re-export |
-| `./SearchFilterChain.js` | `SearchFilterChain, type SearchFilters, type ValidatedPagination` | Re-export |
-| `./EmbeddingService.js` | `OpenAIEmbeddingService, LocalEmbeddingService, MockEmbeddingService, createEmbeddingService` | Re-export |
-| `./VectorStore.js` | `InMemoryVectorStore, SQLiteVectorStore, createVectorStore, cosineSimilarity, type SQLiteStorageWithEmbeddings` | Re-export |
-| `./SemanticSearch.js` | `SemanticSearch, entityToText` | Re-export |
-| `./TFIDFIndexManager.js` | `TFIDFIndexManager` | Re-export |
-| `./TFIDFEventSync.js` | `TFIDFEventSync` | Re-export |
-| `./QueryCostEstimator.js` | `QueryCostEstimator` | Re-export |
-
-**Exports:**
-- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `type FuzzySearchOptions`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`, `OpenAIEmbeddingService`, `LocalEmbeddingService`, `MockEmbeddingService`, `createEmbeddingService`, `InMemoryVectorStore`, `SQLiteVectorStore`, `createVectorStore`, `cosineSimilarity`, `type SQLiteStorageWithEmbeddings`, `SemanticSearch`, `entityToText`, `TFIDFIndexManager`, `TFIDFEventSync`, `QueryCostEstimator`
 
 ---
 
@@ -1045,31 +1045,31 @@ The codebase is organized into the following modules:
 | `GraphStorage` | 5 files | 19 files |
 | `GraphTraversal` | 3 files | 2 files |
 | `HierarchyManager` | 3 files | 2 files |
+| `index` | 11 files | 0 files |
 | `ManagerContext` | 14 files | 4 files |
 | `ObservationManager` | 2 files | 2 files |
 | `RelationManager` | 5 files | 2 files |
 | `SQLiteStorage` | 3 files | 2 files |
 | `StorageFactory` | 3 files | 1 files |
 | `TransactionManager` | 5 files | 2 files |
-| `index` | 11 files | 0 files |
 | `AnalyticsManager` | 2 files | 2 files |
 | `ArchiveManager` | 3 files | 2 files |
 | `CompressionManager` | 5 files | 2 files |
+| `index` | 6 files | 0 files |
 | `IOManager` | 5 files | 3 files |
 | `StreamingExporter` | 2 files | 2 files |
 | `TagManager` | 1 files | 2 files |
-| `index` | 6 files | 0 files |
 | `index` | 4 files | 0 files |
 | `BasicSearch` | 4 files | 3 files |
 | `BooleanSearch` | 5 files | 2 files |
 | `EmbeddingService` | 2 files | 1 files |
 | `FuzzySearch` | 5 files | 2 files |
+| `index` | 14 files | 1 files |
 | `QueryCostEstimator` | 1 files | 2 files |
 | `RankedSearch` | 6 files | 2 files |
 | `SavedSearchManager` | 2 files | 2 files |
 | `SearchFilterChain` | 2 files | 5 files |
 | `SearchManager` | 9 files | 2 files |
-| `SearchSuggestions` | 2 files | 2 files |
 
 ---
 
@@ -1106,8 +1106,8 @@ graph TD
         N6[AnalyticsManager]
         N7[ArchiveManager]
         N8[CompressionManager]
-        N9[IOManager]
-        N10[StreamingExporter]
+        N9[index]
+        N10[IOManager]
         N11[...2 more]
     end
 
@@ -1120,7 +1120,7 @@ graph TD
         N14[BooleanSearch]
         N15[EmbeddingService]
         N16[FuzzySearch]
-        N17[QueryCostEstimator]
+        N17[index]
         N18[...10 more]
     end
 
@@ -1170,16 +1170,16 @@ graph TD
     N8 --> N2
     N8 --> N29
     N8 --> N27
-    N9 --> N23
-    N9 --> N2
-    N9 --> N29
     N9 --> N10
-    N10 --> N24
+    N9 --> N6
+    N9 --> N8
+    N9 --> N7
+    N10 --> N23
+    N10 --> N2
+    N10 --> N29
     N12 --> N19
     N12 --> N23
     N13 --> N23
-    N13 --> N2
-    N14 --> N23
 ```
 
 ---
@@ -1204,5 +1204,5 @@ graph TD
 
 ---
 
-*Last Updated*: 2026-01-06
+*Last Updated*: 2026-01-07
 *Version*: 9.8.0

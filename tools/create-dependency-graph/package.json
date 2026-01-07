@@ -2,7 +2,6 @@
   "name": "create-dependency-graph",
   "version": "1.0.0",
   "description": "Generate dependency graph documentation for TypeScript projects",
-  "type": "module",
   "scripts": {
     "build": "npm run build:ts && npm run build:exe",
     "build:ts": "tsc",
