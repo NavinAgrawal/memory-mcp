@@ -2,7 +2,6 @@
   "name": "chunking-for-files",
   "version": "1.0.0",
   "description": "Split and merge large files for editing within context limits",
-  "type": "module",
   "main": "./dist/chunking-for-files.js",
   "bin": {
     "chunking-for-files": "./dist/chunking-for-files.js"
@@ -10,8 +9,12 @@
   "scripts": {
     "build": "npm run build:ts && npm run build:exe",
     "build:ts": "tsc",
-    "build:exe": "pkg dist/chunking-for-files.js --target node18-win-x64 --output chunking-for-files.exe",
+    "build:exe": "npx @yao-pkg/pkg . --target node22-win-x64 --output chunking-for-files.exe",
     "start": "node dist/chunking-for-files.js"
+  },
+  "pkg": {
+    "scripts": ["dist/**/*.js"],
+    "targets": ["node22-win-x64"]
   },
   "keywords": [
     "markdown",
@@ -26,7 +29,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22",
-    "pkg": "^5.8.1",
+    "@yao-pkg/pkg": "^6.11.0",
     "typescript": "^5.6.2"
   },
   "engines": {
