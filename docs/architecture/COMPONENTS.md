@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 0.58.0
-**Last Updated**: 2025-12-30
+**Version**: 9.8.0
+**Last Updated**: 2026-01-07
 
 ---
 
@@ -24,19 +24,35 @@ Memory MCP follows a layered architecture with specialized components:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  server/           │  MCP protocol handling                 │
+│  server/           │  MCP protocol handling (4 files)       │
 ├─────────────────────────────────────────────────────────────┤
-│  core/             │  Central managers and storage          │
+│  core/             │  Central managers and storage (12 files)│
 ├─────────────────────────────────────────────────────────────┤
-│  search/           │  Search implementations                │
+│  search/           │  Search implementations (15 files)     │
 ├─────────────────────────────────────────────────────────────┤
-│  features/         │  Advanced capabilities                 │
+│  features/         │  Advanced capabilities (7 files)       │
 ├─────────────────────────────────────────────────────────────┤
-│  utils/            │  Shared utilities                      │
+│  utils/            │  Shared utilities (15 files)           │
 ├─────────────────────────────────────────────────────────────┤
-│  types/            │  TypeScript definitions                │
+│  types/            │  TypeScript definitions (2 files)      │
+├─────────────────────────────────────────────────────────────┤
+│  workers/          │  Worker pool utilities (2 files)       │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Codebase Statistics
+
+| Metric | Count |
+|--------|-------|
+| Total TypeScript Files | 58 |
+| Total Lines of Code | 22,608 |
+| Total Exports | 436 |
+| Total Re-exports | 234 |
+| Total Classes | 55 |
+| Total Interfaces | 89 |
+| Total Functions | 94 |
+| Total Enums | 3 |
+| Type-only Imports | 57 |
 
 ---
 
@@ -170,12 +186,21 @@ get entityManager(): EntityManager {
 }
 ```
 
-**Managed Components** (5 total, consolidated from 10):
-- **EntityManager**: Entity CRUD + hierarchy + archive functionality
+**Managed Components** (7 lazy-initialized managers):
+- **EntityManager**: Entity CRUD operations with validation
 - **RelationManager**: Relation CRUD operations
-- **SearchManager**: Search + compression + analytics functionality
+- **ObservationManager**: Observation add/delete operations
+- **HierarchyManager**: Parent-child entity relationships
+- **SearchManager**: Search + compression + analytics
 - **IOManager**: Import + export + backup functionality
 - **TagManager**: Tag aliases and management
+
+**Additional Core Classes:**
+- **GraphStorage**: JSONL file I/O with caching
+- **SQLiteStorage**: SQLite backend (better-sqlite3)
+- **GraphTraversal**: Graph algorithms (BFS, DFS, shortest path, centrality)
+- **TransactionManager**: Batch operations and transactions
+- **GraphEventEmitter**: Event-driven updates for TF-IDF sync
 
 ---
 
@@ -324,10 +349,23 @@ export class SearchManager {
 }
 ```
 
-**Composed Components**:
-- BasicSearch, RankedSearch, BooleanSearch, FuzzySearch
-- SearchSuggestions, SavedSearchManager, TFIDFIndexManager
-- SearchFilterChain (unified filter logic)
+**Composed Components** (17 classes in search/):
+- **BasicSearch**: Simple text matching with filters
+- **RankedSearch**: TF-IDF relevance scoring
+- **BooleanSearch**: AND/OR/NOT query parsing
+- **FuzzySearch**: Levenshtein distance matching (uses workerpool)
+- **SearchSuggestions**: "Did you mean?" suggestions
+- **SavedSearchManager**: Saved search persistence
+- **SearchFilterChain**: Unified filter logic for all search types
+- **TFIDFIndexManager**: TF-IDF index persistence and updates
+- **TFIDFEventSync**: Event-driven TF-IDF updates
+- **QueryCostEstimator**: Query complexity estimation for search_auto
+- **SemanticSearch**: Vector similarity search (optional embeddings)
+- **OpenAIEmbeddingService**: OpenAI text-embedding-3-small provider
+- **LocalEmbeddingService**: Local Xenova/all-MiniLM-L6-v2 provider
+- **MockEmbeddingService**: Testing provider
+- **InMemoryVectorStore**: In-memory vector storage
+- **SQLiteVectorStore**: SQLite-backed vector storage
 
 ---
 
@@ -545,71 +583,136 @@ The following managers have been consolidated in Sprint 11:
 
 ## Utility Components
 
+The utils/ module contains 15 files with 20 classes and extensive utility functions.
+
+### Key Utility Classes
+
+| Class | File | Purpose |
+|-------|------|---------|
+| `CompressedCache` | compressedCache.ts | LRU cache with brotli compression |
+| `NameIndex` | indexes.ts | O(1) entity lookup by name |
+| `TypeIndex` | indexes.ts | O(1) entity grouping by type |
+| `LowercaseCache` | indexes.ts | Cached lowercase entity data |
+| `RelationIndex` | indexes.ts | Bidirectional relation lookup |
+| `ObservationIndex` | indexes.ts | Inverted index for observation search |
+| `SearchCache` | searchCache.ts | TTL-based search result caching |
+| `TaskQueue` | taskScheduler.ts | Priority task queue with workerpool |
+
+### Error Classes (12 total)
+
+All errors extend `KnowledgeGraphError`:
+- `EntityNotFoundError`, `RelationNotFoundError`
+- `DuplicateEntityError`, `ValidationError`
+- `CycleDetectedError`, `InvalidImportanceError`
+- `FileOperationError`, `ImportError`, `ExportError`
+- `InsufficientEntitiesError`, `OperationCancelledError`
+
 ### schemas (`utils/schemas.ts`)
 
-**Purpose**: Zod validation schemas
+**Purpose**: Zod validation schemas (26 schema constants)
 
 **Key Schemas**:
 - `EntitySchema`, `CreateEntitySchema`, `UpdateEntitySchema`
 - `RelationSchema`, `CreateRelationSchema`
-- `BatchCreateEntitiesSchema` (max 1000 items)
+- `BatchCreateEntitiesSchema`, `BatchCreateRelationsSchema`
 - `SearchQuerySchema`, `DateRangeSchema`
-- `ImportanceSchema` (0-10)
-
----
+- `AddObservationsInputSchema`, `DeleteObservationsInputSchema`
+- `ArchiveCriteriaSchema`, `SavedSearchInputSchema`
+- `ImportFormatSchema`, `ExtendedExportFormatSchema`, `MergeStrategySchema`
 
 ### constants (`utils/constants.ts`)
 
-**Purpose**: Centralized configuration values
+**Purpose**: Centralized configuration values (16 constants + 1 function)
 
 ```typescript
-export const SIMILARITY_WEIGHTS = {
-  NAME: 0.4,
-  TYPE: 0.3,
-  OBSERVATIONS: 0.2,
-  TAGS: 0.1,
-};
-
+export const SIMILARITY_WEIGHTS = { NAME: 0.4, TYPE: 0.3, OBSERVATIONS: 0.2, TAGS: 0.1 };
 export const DEFAULT_DUPLICATE_THRESHOLD = 0.8;
-
-export const SEARCH_LIMITS = {
-  DEFAULT: 50,
-  MAX: 1000,
-};
-
-export const GRAPH_LIMITS = {
-  MAX_ENTITIES: 10000,
-  MAX_RELATIONS: 50000,
-};
+export const SEARCH_LIMITS = { DEFAULT: 50, MAX: 1000 };
+export const GRAPH_LIMITS = { MAX_ENTITIES: 10000, MAX_RELATIONS: 50000 };
+export const COMPRESSION_CONFIG = { THRESHOLD: 262144, QUALITY: 6 };
+export const STREAMING_CONFIG = { ENTITY_THRESHOLD: 5000, CHUNK_SIZE: 1000 };
+export const EMBEDDING_DEFAULTS = { ... };
+export const SEMANTIC_SEARCH_LIMITS = { ... };
+export function getEmbeddingConfig(): EmbeddingConfig
 ```
 
----
+### formatters (`utils/formatters.ts`)
 
-### responseFormatter (`utils/responseFormatter.ts`)
-
-**Purpose**: Consistent MCP tool response formatting
+**Purpose**: Response and pagination formatting (8 functions)
 
 ```typescript
 export function formatToolResponse(data: unknown): ToolResponse
 export function formatTextResponse(text: string): ToolResponse
 export function formatRawResponse(content: unknown): ToolResponse
+export function formatErrorResponse(error: string): ToolResponse
+export function validatePagination(offset?, limit?): ValidatedPagination
+export function applyPagination(array, pagination): T[]
+export function paginateArray(array, offset?, limit?): T[]
+export function getPaginationMeta(total, offset, limit): { ... }
 ```
-
----
 
 ### searchAlgorithms (`utils/searchAlgorithms.ts`)
 
-**Purpose**: Search algorithms (consolidated from levenshtein.ts + tfidf.ts in Sprint 14)
+**Purpose**: Text search algorithms (6 functions)
 
 ```typescript
-// Levenshtein distance for fuzzy matching
 export function levenshteinDistance(s1: string, s2: string): number
-
-// TF-IDF scoring for ranked search
 export function calculateTF(term: string, document: string): number
 export function calculateIDF(term: string, documents: string[]): number
-export function calculateTFIDF(term: string, document: string, documents: string[]): number
+export function calculateIDFFromTokenSets(term: string, tokenSets: Set<string>[]): number
+export function calculateTFIDF(term: string, doc: string, docs: string[]): number
 export function tokenize(text: string): string[]
+```
+
+### entityUtils (`utils/entityUtils.ts`)
+
+**Purpose**: Entity manipulation utilities (28 functions)
+
+**Categories**:
+- Entity lookup: `findEntityByName`, `findEntitiesByNames`, `entityExists`, `getEntityIndex`
+- Tag utilities: `normalizeTag`, `normalizeTags`, `hasMatchingTag`, `filterByTags`
+- Date utilities: `isWithinDateRange`, `parseDateRange`, `isValidISODate`, `getCurrentTimestamp`
+- Filter utilities: `isWithinImportanceRange`, `filterByImportance`, `entityPassesFilters`
+- Path utilities: `validateFilePath`, `ensureMemoryFilePath`, `defaultMemoryPath`
+
+### compressionUtil (`utils/compressionUtil.ts`)
+
+**Purpose**: Brotli compression utilities (10 functions)
+
+```typescript
+export function compress(data: Buffer, options?): Promise<Buffer>
+export function decompress(data: Buffer): Promise<Buffer>
+export function compressFile(inputPath, outputPath?, options?): Promise<string>
+export function decompressFile(inputPath, outputPath?): Promise<string>
+export function compressToBase64(data: string): Promise<string>
+export function decompressFromBase64(data: string): Promise<string>
+export function hasBrotliExtension(filename: string): boolean
+export function getCompressionRatio(original: number, compressed: number): number
+```
+
+### taskScheduler (`utils/taskScheduler.ts`)
+
+**Purpose**: Task scheduling and batch processing (6 functions + 1 class)
+
+```typescript
+export class TaskQueue { ... }
+export function batchProcess(items, processor, options?): Promise<T[]>
+export function rateLimitedProcess(items, processor, rateLimit): Promise<T[]>
+export function withRetry(fn, maxRetries, delay?): Promise<T>
+export function debounce(fn, delay): (...args) => void
+export function throttle(fn, limit): (...args) => void
+```
+
+### operationUtils (`utils/operationUtils.ts`)
+
+**Purpose**: Long-running operation utilities (5 functions)
+
+```typescript
+export function checkCancellation(signal?: AbortSignal): void
+export function createProgressReporter(callback?, total?): (current, message?) => void
+export function createProgress(current, total, phase?, message?): ProgressInfo
+export function executeWithPhases(phases, options?): Promise<void>
+export function processBatchesWithProgress(items, batchSize, processor, options?): Promise<T[]>
 ```
 
 ---
@@ -715,6 +818,6 @@ interface ValidationReport {
 
 ---
 
-**Document Version**: 2.0
-**Last Updated**: 2025-12-30
+**Document Version**: 3.0
+**Last Updated**: 2026-01-07
 **Maintained By**: Daniel Simon Jr.

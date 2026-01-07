@@ -1,9 +1,9 @@
 # Memory MCP - API Reference
 
-**Version**: 0.58.0
-**Last Updated**: 2025-12-30
+**Version**: 9.8.0
+**Last Updated**: 2026-01-07
 
-Complete reference for all 47 MCP tools provided by the Memory MCP server.
+Complete reference for all 55 MCP tools provided by the Memory MCP server.
 
 ---
 
@@ -12,14 +12,16 @@ Complete reference for all 47 MCP tools provided by the Memory MCP server.
 1. [Entity Operations](#entity-operations) (4 tools)
 2. [Relation Operations](#relation-operations) (2 tools)
 3. [Observation Management](#observation-management) (2 tools)
-4. [Search Operations](#search-operations) (6 tools)
-5. [Saved Searches](#saved-searches) (5 tools)
-6. [Tag Management](#tag-management) (6 tools)
-7. [Tag Aliases](#tag-aliases) (5 tools)
-8. [Hierarchy Operations](#hierarchy-operations) (9 tools)
-9. [Analytics](#analytics) (2 tools)
-10. [Compression & Deduplication](#compression--deduplication) (4 tools)
-11. [Import/Export Operations](#importexport-operations) (2 tools)
+4. [Search Operations](#search-operations) (7 tools)
+5. [Semantic Search](#semantic-search) (3 tools)
+6. [Saved Searches](#saved-searches) (5 tools)
+7. [Tag Management](#tag-management) (6 tools)
+8. [Tag Aliases](#tag-aliases) (5 tools)
+9. [Hierarchy Operations](#hierarchy-operations) (9 tools)
+10. [Graph Algorithms](#graph-algorithms) (4 tools)
+11. [Analytics](#analytics) (2 tools)
+12. [Compression & Deduplication](#compression--deduplication) (4 tools)
+13. [Import/Export Operations](#importexport-operations) (2 tools)
 
 ---
 
@@ -556,6 +558,146 @@ Get search query suggestions based on existing content.
   "maxSuggestions": 5
 }
 ```
+
+---
+
+### search_auto
+
+Automatically select the best search strategy based on query analysis.
+
+**Parameters:**
+```typescript
+{
+  query: string;              // Search query
+  tags?: string[];            // Filter by tags
+  minImportance?: number;     // Minimum importance
+  maxImportance?: number;     // Maximum importance
+}
+```
+
+**Returns:**
+```typescript
+{
+  entities: Entity[];
+  relations: Relation[];
+  searchMethod: string;       // Method that was used (basic, ranked, boolean, fuzzy)
+  cost: number;               // Estimated query cost
+}
+```
+
+**Strategy Selection:**
+- Boolean operators detected → `boolean_search`
+- Short query with typos likely → `fuzzy_search`
+- Multi-word query → `search_nodes_ranked`
+- Simple query → `search_nodes`
+
+**Example:**
+```json
+{
+  "query": "engineer AND python",
+  "minImportance": 5
+}
+```
+
+---
+
+## Semantic Search
+
+### semantic_search
+
+Search using semantic similarity with embeddings.
+
+**Parameters:**
+```typescript
+{
+  query: string;              // Natural language query
+  limit?: number;             // Max results (default: 10, max: 100)
+  minSimilarity?: number;     // Min similarity threshold (0.0-1.0)
+}
+```
+
+**Returns:**
+```typescript
+{
+  results: Array<{
+    entity: Entity;
+    similarity: number;
+  }>
+}
+```
+
+**Notes:**
+- Requires embedding provider configuration via `MEMORY_EMBEDDING_PROVIDER`
+- Supported providers: `openai`, `local`, `none`
+- Call `index_embeddings` first to build the vector index
+
+**Example:**
+```json
+{
+  "query": "people who work on machine learning projects",
+  "limit": 10,
+  "minSimilarity": 0.7
+}
+```
+
+---
+
+### find_similar_entities
+
+Find entities similar to a given entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;         // Reference entity
+  limit?: number;             // Max results (default: 10, max: 100)
+  minSimilarity?: number;     // Min similarity threshold (0.0-1.0)
+}
+```
+
+**Returns:**
+```typescript
+{
+  results: Array<{
+    entity: Entity;
+    similarity: number;
+  }>
+}
+```
+
+**Example:**
+```json
+{
+  "entityName": "Alice",
+  "limit": 5
+}
+```
+
+---
+
+### index_embeddings
+
+Index all entities for semantic search.
+
+**Parameters:**
+```typescript
+{
+  forceReindex?: boolean;     // Re-index even if already indexed (default: false)
+}
+```
+
+**Returns:**
+```typescript
+{
+  indexed: number;            // Number of entities indexed
+  skipped: number;            // Number already indexed (if not forcing)
+}
+```
+
+**Notes:**
+- Call after adding entities to enable semantic search
+- Requires embedding provider configuration
+- Can be slow for large graphs (batches API calls)
 
 ---
 
@@ -1171,6 +1313,146 @@ Move an entity to a new parent.
 
 ---
 
+## Graph Algorithms
+
+### find_shortest_path
+
+Find the shortest path between two entities.
+
+**Parameters:**
+```typescript
+{
+  source: string;             // Starting entity name
+  target: string;             // Target entity name
+  relationTypes?: string[];   // Filter by relation types
+  direction?: 'outgoing' | 'incoming' | 'both';  // Traversal direction (default: both)
+}
+```
+
+**Returns:**
+```typescript
+{
+  path: string[];             // Entity names in order
+  relations: Relation[];      // Relations along the path
+  length: number;             // Number of hops
+}
+```
+
+**Example:**
+```json
+{
+  "source": "Alice",
+  "target": "Project_Z",
+  "direction": "outgoing"
+}
+```
+
+---
+
+### find_all_paths
+
+Find all paths between two entities up to a maximum depth.
+
+**Parameters:**
+```typescript
+{
+  source: string;
+  target: string;
+  maxDepth?: number;          // Max path length (default: 5)
+  relationTypes?: string[];
+  direction?: 'outgoing' | 'incoming' | 'both';
+}
+```
+
+**Returns:**
+```typescript
+{
+  paths: Array<{
+    path: string[];
+    relations: Relation[];
+    length: number;
+  }>
+}
+```
+
+**Example:**
+```json
+{
+  "source": "Alice",
+  "target": "Charlie",
+  "maxDepth": 3
+}
+```
+
+---
+
+### get_connected_components
+
+Find all connected components in the graph.
+
+**Parameters:** None
+
+**Returns:**
+```typescript
+{
+  components: Array<{
+    entities: string[];
+    size: number;
+  }>;
+  componentCount: number;
+  largestComponentSize: number;
+}
+```
+
+**Notes:**
+- Useful for identifying isolated subgraphs
+- Treats relations as undirected for connectivity
+
+---
+
+### get_centrality
+
+Calculate centrality metrics for entities.
+
+**Parameters:**
+```typescript
+{
+  algorithm?: 'degree' | 'betweenness' | 'pagerank';  // default: degree
+  topN?: number;              // Return top N entities (default: 10)
+  direction?: 'in' | 'out' | 'both';  // For degree centrality
+  dampingFactor?: number;     // For PageRank (default: 0.85)
+  approximate?: boolean;      // Use approximation for betweenness (default: false)
+  sampleRate?: number;        // Sample rate for approximation (0.0-1.0, default: 0.2)
+}
+```
+
+**Returns:**
+```typescript
+{
+  centrality: Array<{
+    entityName: string;
+    score: number;
+  }>;
+  algorithm: string;
+}
+```
+
+**Algorithm Notes:**
+- `degree`: Count of connections (fastest)
+- `betweenness`: How often entity appears on shortest paths (slow for large graphs)
+- `pagerank`: Importance based on incoming connections
+
+**Example:**
+```json
+{
+  "algorithm": "pagerank",
+  "topN": 5,
+  "dampingFactor": 0.85
+}
+```
+
+---
+
 ## Analytics
 
 ### get_graph_stats
@@ -1601,7 +1883,7 @@ All tools return errors in this format:
 
 ---
 
-**Document Version**: 2.1
-**Last Updated**: 2025-12-30
-**Total Tools**: 47
+**Document Version**: 3.0
+**Last Updated**: 2026-01-07
+**Total Tools**: 55
 **Maintained By**: Daniel Simon Jr.

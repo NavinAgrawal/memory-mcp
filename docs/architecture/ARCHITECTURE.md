@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
 **Version**: 9.8.0
-**Last Updated**: 2026-01-06
+**Last Updated**: 2026-01-07
 
 ---
 
@@ -35,7 +35,7 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 ### Key Statistics (v9.8.0)
 
 - **2493 Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
-- **Test Coverage**: 92% overall (58 source files, 72 test files)
+- **Test Coverage**: 96.6% source file coverage (56/58 source files tested by 74 test files)
 - **Performance**: Handles 2000+ entities, 5000+ total elements efficiently
 - **TypeScript**: Strict mode, full type safety (58 source files, ~22.5K lines)
 - **55 Tools**: Organized across 14 categories (entity, search, semantic, graph algorithms, etc.)
@@ -810,55 +810,68 @@ try {
 
 ## Testing Strategy
 
+### Test Coverage Summary
+
+| Metric | Count |
+|--------|-------|
+| Total Source Files | 58 |
+| Total Test Files | 74 |
+| Source Files with Tests | 56 |
+| Source Files without Tests | 2 |
+| Coverage | 96.6% |
+
+**Files Without Direct Test Coverage:**
+- `src/features/index.ts` (barrel export, tested indirectly)
+- `src/workers/index.ts` (barrel export, tested indirectly)
+
 ### Test Pyramid
 
 ```
             /\
            /  \
-          / E2E \ (Integration: 12 tests)
+          / E2E \ (E2E Tools: 3 test files)
          /______\
         /        \
-       / Edge     \ (Edge Cases: 35 tests)
-      /  Cases    \
-     /____________\
-    /              \
-   /   Unit Tests   \ (Unit: 325 tests)
-  /                  \
- /____________________\
-/                      \
-    Performance Tests    (Performance: 24 tests)
+       / Integr.  \ (Integration: 8 test files)
+      /____________\
+     /              \
+    /   Unit Tests   \ (Unit: 52 test files)
+   /                  \
+  /____________________\
+ /                      \
+/   Performance Tests    \ (Performance: 7 test files)
 ```
 
-### Test Categories
+### Test Categories by Directory
 
-1. **Unit Tests** (325 tests)
-   - EntityManager: 48 tests
-   - RelationManager: 26 tests
-   - BasicSearch: 37 tests
-   - RankedSearch: 35 tests
-   - BooleanSearch: 41 tests
-   - FuzzySearch: 39 tests
-   - CompressionManager: 29 tests
-   - Utils: Various
+| Category | Test Files | Key Coverage Areas |
+|----------|------------|-------------------|
+| **E2E** | 3 | entity-tools, observation-tools, relation-tools |
+| **Edge Cases** | 1 | Boundary conditions, edge-cases |
+| **Integration** | 8 | server, workflows, streaming, compression |
+| **Performance** | 7 | benchmarks, write-performance, task-scheduler |
+| **Unit/Core** | 14 | EntityManager, GraphStorage, SQLiteStorage, etc. |
+| **Unit/Features** | 7 | IOManager, TagManager, ArchiveManager, etc. |
+| **Unit/Search** | 17 | BasicSearch, FuzzySearch, SemanticSearch, etc. |
+| **Unit/Server** | 4 | MCPServer, toolHandlers, responseCompressor |
+| **Unit/Utils** | 15 | schemas, entityUtils, compressionUtil, etc. |
+| **Unit/Workers** | 2 | levenshteinWorker, WorkerPool |
 
-2. **Integration Tests** (12 tests)
-   - End-to-end workflows
-   - Multi-manager interactions
-   - Real-world scenarios
+### Most-Tested Source Files
 
-3. **Edge Case Tests** (35 tests)
-   - Unicode, special characters
-   - Extreme values
-   - Concurrent operations
-   - Large graphs
+The following source files are tested by the most test files:
 
-4. **Performance Tests** (24 tests)
-   - Performance budgets
-   - Scalability validation
-   - Memory efficiency
+| Source File | # of Test Files |
+|-------------|-----------------|
+| `core/GraphStorage.ts` | 45 |
+| `core/EntityManager.ts` | 22 |
+| `core/RelationManager.ts` | 14 |
+| `types/index.ts` | 14 |
+| `server/toolHandlers.ts` | 5 |
 
-### Test Coverage
+### Test Coverage Metrics
 
+- **Source File Coverage**: 96.6% (56/58 files directly tested)
 - **Statement Coverage**: 98%+
 - **Branch Coverage**: 95%+
 - **Function Coverage**: 100%
@@ -875,6 +888,9 @@ npm run typecheck
 
 # Coverage report
 npm test -- --coverage
+
+# Generate dependency + test coverage analysis
+npm run docs:deps -- --include-tests
 ```
 
 ---
@@ -928,6 +944,6 @@ This architecture serves the current use case well and provides a solid foundati
 
 ---
 
-**Document Version**: 3.0
-**Last Updated**: 2025-12-30
+**Document Version**: 3.1
+**Last Updated**: 2026-01-07
 **Maintained By**: Daniel Simon Jr.
