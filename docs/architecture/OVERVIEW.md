@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
 **Version**: 9.8.0
-**Last Updated**: 2026-01-06
+**Last Updated**: 2026-01-07
 
 ## What Is This?
 
@@ -78,61 +78,77 @@ interface Relation {
 ## Directory Structure
 
 ```
-src/memory/ (49 TypeScript files)
+src/ (58 TypeScript files, 22,608 lines of code)
 ├── index.ts              # Entry point, main() function
-├── vitest.config.ts      # Test configuration
-├── core/ (7 files)       # Core managers
-│   ├── ManagerContext.ts         # Context holder (lazy init)
-│   ├── EntityManager.ts          # Entity CRUD + hierarchy + archive
+│
+├── core/ (12 files)      # Core managers and storage
+│   ├── ManagerContext.ts         # Context holder (lazy init, 7 managers)
+│   ├── EntityManager.ts          # Entity CRUD operations
 │   ├── RelationManager.ts        # Relation CRUD
-│   ├── GraphStorage.ts           # File I/O, caching
-│   ├── TransactionManager.ts     # Batch operations
+│   ├── ObservationManager.ts     # Observation add/delete
+│   ├── HierarchyManager.ts       # Parent-child relationships
+│   ├── GraphStorage.ts           # JSONL file I/O, caching
+│   ├── SQLiteStorage.ts          # SQLite backend (better-sqlite3)
 │   ├── StorageFactory.ts         # Storage backend factory
+│   ├── TransactionManager.ts     # Batch operations
+│   ├── GraphTraversal.ts         # Graph algorithms (BFS, shortest path, centrality)
+│   ├── GraphEventEmitter.ts      # Event-driven TF-IDF sync
 │   └── index.ts                  # Barrel export (+ KnowledgeGraphManager alias)
-├── server/ (3 files)     # MCP protocol layer
-│   ├── MCPServer.ts              # Server initialization (67 lines)
-│   ├── toolDefinitions.ts        # 47 tool schemas
-│   └── toolHandlers.ts           # Tool implementation registry
-├── search/ (10 files)    # Search implementations
+│
+├── server/ (4 files)     # MCP protocol layer
+│   ├── MCPServer.ts              # Server initialization
+│   ├── toolDefinitions.ts        # 55 tool schemas
+│   ├── toolHandlers.ts           # Tool implementation registry
+│   └── responseCompressor.ts     # Brotli compression for large responses
+│
+├── search/ (15 files)    # Search implementations (17 classes)
 │   ├── SearchManager.ts          # Search orchestrator + compression + analytics
 │   ├── BasicSearch.ts            # Text matching
 │   ├── RankedSearch.ts           # TF-IDF scoring
 │   ├── BooleanSearch.ts          # AND/OR/NOT logic
-│   ├── FuzzySearch.ts            # Typo tolerance
+│   ├── FuzzySearch.ts            # Levenshtein matching (uses workerpool)
 │   ├── SearchFilterChain.ts      # Unified filter logic
 │   ├── SavedSearchManager.ts     # Saved search persistence
 │   ├── TFIDFIndexManager.ts      # TF-IDF index management
 │   ├── SearchSuggestions.ts      # "Did you mean?" suggestions
+│   ├── QueryCostEstimator.ts     # Query complexity for search_auto
+│   ├── SemanticSearch.ts         # Vector similarity search
+│   ├── EmbeddingService.ts       # OpenAI/Local/Mock embedding providers
+│   ├── VectorStore.ts            # In-memory/SQLite vector storage
+│   ├── TFIDFEventSync.ts         # Event-driven TF-IDF updates
 │   └── index.ts
-├── features/ (3 files)   # Advanced capabilities
+│
+├── features/ (7 files)   # Advanced capabilities
 │   ├── TagManager.ts             # Tag aliases
-│   ├── IOManager.ts              # Import + export + backup (consolidated)
+│   ├── IOManager.ts              # Import + export + backup
+│   ├── StreamingExporter.ts      # Memory-efficient large exports
+│   ├── AnalyticsManager.ts       # Graph stats and validation
+│   ├── ArchiveManager.ts         # Entity archival
+│   ├── CompressionManager.ts     # Duplicate detection and merging
 │   └── index.ts
-├── types/ (7 files)      # TypeScript definitions
-│   ├── entity.types.ts
-│   ├── search.types.ts
-│   ├── analytics.types.ts
-│   ├── import-export.types.ts
-│   ├── tag.types.ts
-│   ├── storage.types.ts          # IGraphStorage interface
+│
+├── types/ (2 files)      # TypeScript definitions (consolidated)
+│   ├── types.ts                  # All type definitions (89 interfaces)
+│   └── index.ts                  # Barrel export
+│
+├── utils/ (15 files)     # Shared utilities (20 classes, 50+ functions)
+│   ├── schemas.ts                # Zod validation schemas (26 validators)
+│   ├── constants.ts              # Shared constants (16+ exports)
+│   ├── formatters.ts             # Response + pagination formatting
+│   ├── entityUtils.ts            # Entity helper functions (28 functions)
+│   ├── searchAlgorithms.ts       # Levenshtein + TF-IDF algorithms
+│   ├── compressionUtil.ts        # Brotli compression utilities
+│   ├── compressedCache.ts        # LRU cache with compression
+│   ├── operationUtils.ts         # Long-running operation utilities
+│   ├── taskScheduler.ts          # Task queue with workerpool
+│   ├── searchCache.ts            # TTL-based search caching
+│   ├── indexes.ts                # O(1) lookup indexes (5 classes)
+│   ├── errors.ts                 # Custom error classes (12 errors)
+│   ├── logger.ts                 # Logging utility
 │   └── index.ts
-└── utils/ (17 files)     # Shared utilities
-    ├── schemas.ts                # Zod validation schemas (14 validators)
-    ├── constants.ts              # Shared constants (SIMILARITY_WEIGHTS)
-    ├── responseFormatter.ts      # Tool response helpers
-    ├── searchAlgorithms.ts       # Levenshtein + TF-IDF (consolidated)
-    ├── entityUtils.ts            # Entity helper functions
-    ├── tagUtils.ts               # Tag normalization/validation
-    ├── filterUtils.ts            # Date range filtering
-    ├── validationUtils.ts        # Validation helpers
-    ├── validationHelper.ts       # Zod validation wrappers
-    ├── paginationUtils.ts        # Pagination helpers
-    ├── searchCache.ts            # Search result caching
-    ├── indexes.ts                # Search index utilities
-    ├── dateUtils.ts              # Date manipulation
-    ├── pathUtils.ts              # Path handling
-    ├── errors.ts                 # Custom error classes
-    ├── logger.ts                 # Logging utility
+│
+└── workers/ (2 files)    # Worker pool utilities
+    ├── levenshteinWorker.ts      # Parallel fuzzy search worker
     └── index.ts
 ```
 
@@ -157,10 +173,12 @@ src/memory/ (49 TypeScript files)
 ## Key Design Principles
 
 1. **Context Pattern**: `ManagerContext` holds all managers with lazy-initialized getters
-2. **Lazy Initialization**: 5 managers instantiated on-demand using `??=` operator
-3. **Manager Consolidation**: Functionality merged (e.g., SearchManager includes compression + analytics)
+2. **Lazy Initialization**: 7 managers instantiated on-demand using `??=` operator
+3. **Dual Storage Backends**: JSONL (default) or SQLite (via `MEMORY_STORAGE_TYPE=sqlite`)
 4. **Dependency Injection**: `GraphStorage` injected into managers for testability
 5. **Barrel Exports**: Each module exports through `index.ts` (includes `KnowledgeGraphManager` alias)
+6. **Worker Parallelism**: Fuzzy search uses `@danielsimonjr/workerpool` for parallel processing
+7. **Event-Driven Updates**: `GraphEventEmitter` triggers TF-IDF index updates on entity changes
 
 ## Performance Characteristics
 
