@@ -5,6 +5,125 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.8.0] - 2026-01-06
+
+### Added
+
+- **Phase 10: Search & Storage Optimization** - New features for transaction batching, event-driven updates, and intelligent search
+
+  #### Sprint 1: Transaction Batching API
+  - `BatchTransaction` class - fluent builder pattern for batch operations
+  - `GraphStorage.transaction()` factory method - creates new batch transactions
+  - Supports entity CRUD, relation management, and observation operations
+  - Atomic execution with optional validation before execute
+  - Comprehensive error handling with stopOnError option
+
+  #### Sprint 2: Graph Change Events
+  - `GraphEventEmitter` class - event-driven architecture for graph changes
+  - Event types: `entity:created`, `entity:updated`, `entity:deleted`, `relation:created`, `relation:deleted`, `graph:saved`, `graph:loaded`
+  - Subscribe with `on()`, `onAny()`, `once()` methods
+  - `GraphStorage.events` getter for subscription access
+  - Automatic event emission on all graph operations
+
+  #### Sprint 3: Incremental TF-IDF Index
+  - `TFIDFIndexManager.addDocument()` - add entity to index without full rebuild
+  - `TFIDFIndexManager.removeDocument()` - remove entity from index
+  - `TFIDFIndexManager.updateDocument()` - update entity in index
+  - `TFIDFEventSync` class - automatic index sync via graph events
+  - Efficient IDF recalculation when document count changes
+
+  #### Sprint 4: Query Cost Estimation & Auto Search
+  - `QueryCostEstimator` class - estimates search costs based on query and graph size
+  - `SearchManager.autoSearch()` - automatically selects optimal search method
+  - `SearchManager.getSearchCostEstimates()` - returns cost estimates for all methods
+  - **New MCP Tool**: `search_auto` - intelligent search with automatic method selection
+  - Supports 5 search methods: basic, ranked, boolean, fuzzy, semantic
+
+### Changed
+
+- Updated tool count from 54 to 55 (added search_auto)
+- SearchManager now includes QueryCostEstimator integration
+- TFIDFIndexManager supports incremental updates without full rebuilds
+
+### Tests
+
+- Added `tests/unit/core/TransactionBatching.test.ts` - 25 tests for transaction batching
+- Added `tests/unit/core/GraphEvents.test.ts` - 30 tests for event system
+- Added `tests/unit/search/IncrementalTFIDF.test.ts` - 20 tests for incremental index
+- Added `tests/unit/search/QueryCostEstimator.test.ts` - 31 tests for cost estimation
+- All tests passing
+- TypeScript type checking passes
+
+### Validated
+
+- Phase 10 implementation validated against TODO JSON specifications (2026-01-06)
+- All sprint tasks marked as completed in PHASE_10_SPRINT_1_TODO.json through PHASE_10_SPRINT_4_TODO.json
+- PHASE_10_INDEX.json updated to completed status
+
+## [9.7.1] - 2026-01-06
+
+### Validated
+
+- **Phase 9B: TaskScheduler Integration** - Systematic validation of all 11 tasks across 3 sprints
+  - Sprint 1 (4 tasks): Operation utilities, EntityManager, CompressionManager, IOManager - All COMPLETE
+  - Sprint 2 (3 tasks): ArchiveManager, SemanticSearch, TransactionManager - All COMPLETE
+  - Sprint 3 (4 tasks): GraphTraversal, StreamingExporter, Documentation, Tests - All COMPLETE
+
+### Changed
+
+- Updated `PHASE_9B_SPRINT_1_TODO.json` - All 4 tasks marked as completed
+- Updated `PHASE_9B_SPRINT_2_TODO.json` - All 3 tasks marked as completed
+- Updated `PHASE_9B_SPRINT_3_TODO.json` - All 4 tasks marked as completed
+
+### Tests
+
+- All 2308 tests passing (64 test files)
+- TypeScript type checking passes
+- Test coverage at 92.56%
+
+## [9.7.0] - 2026-01-05
+
+### Added
+
+- **Phase 9B: TaskScheduler Integration** - Progress tracking and cancellation support for long-running operations
+
+  #### New Types and Utilities (Sprint 1)
+  - `LongRunningOperationOptions` interface - unified options for progress/cancellation
+  - `OperationCancelledError` - custom error for cancelled operations
+  - `operationUtils.ts` - utility functions for operation management:
+    - `checkCancellation()` - checks AbortSignal and throws if aborted
+    - `createProgressReporter()` - creates throttled progress callbacks
+    - `createProgress()` - creates standardized progress objects
+    - `executeWithPhases()` - executes multi-phase operations with progress
+    - `processBatchesWithProgress()` - batch processing with progress tracking
+
+  #### Enhanced Operations (Sprints 1-2)
+  - `EntityManager.createEntities()` - progress tracking and cancellation support
+  - `CompressionManager.findDuplicates()` - progress and cancellation for duplicate detection
+  - `CompressionManager.compressGraph()` - progress and cancellation for graph compression
+  - `IOManager.importGraph()` - progress and cancellation for graph imports
+  - `ArchiveManager.archiveEntities()` - progress and cancellation for archival
+  - `SemanticSearch.indexAll()` - AbortSignal support for embedding indexing
+  - `TransactionManager.commit()` - progress tracking with phase-based reporting
+  - `GraphTraversal.findAllPaths()` - cancellation support via AbortSignal
+  - `StreamingExporter.streamJSONL()` - progress tracking for JSONL exports
+  - `StreamingExporter.streamCSV()` - progress tracking for CSV exports
+
+  #### Documentation and Tests (Sprint 3)
+  - `docs/guides/TASKSCHEDULER_INTEGRATION.md` - comprehensive integration guide
+  - `tests/unit/utils/operationUtils.test.ts` - 28 unit tests for operation utilities
+  - `tests/integration/operation-progress.test.ts` - 13 integration tests for progress tracking
+
+### Fixed
+
+- **Workerpool Import Path** - Updated all imports from `@danielsimonjr/workerpool/modern` to `@danielsimonjr/workerpool` for compatibility with v10.0.1
+- **TransactionManager.commit()** - Moved early cancellation check inside try-catch block for proper error handling
+
+### Tests
+
+- All 2308 tests passing (64 test files)
+- Added 41 new tests for Phase 9B functionality
+
 ## [9.6.2] - 2026-01-05
 
 ### Fixed

@@ -1367,4 +1367,481 @@ export interface SemanticIndexOptions {
 
   /** Batch size for embedding API calls */
   batchSize?: number;
+
+  /** AbortSignal for cancellation support (Phase 9B) */
+  signal?: AbortSignal;
+}
+
+// ==================== Long-Running Operation Types (Phase 9B) ====================
+
+import type { ProgressCallback, TaskPriority } from '../utils/taskScheduler.js';
+
+/**
+ * Phase 9B: Options for long-running operations supporting progress and cancellation.
+ *
+ * Used by operations that may take significant time and benefit from
+ * user feedback and interruptibility.
+ *
+ * @example
+ * ```typescript
+ * // Basic usage with progress tracking
+ * const entities = await manager.createEntities(data, {
+ *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+ * });
+ *
+ * // With cancellation support
+ * const controller = new AbortController();
+ * const promise = manager.importGraph('json', data, 'merge', false, {
+ *   signal: controller.signal,
+ *   onProgress: (p) => updateProgressBar(p.percentage),
+ * });
+ * // Later: controller.abort();
+ * ```
+ */
+export interface LongRunningOperationOptions {
+  /**
+   * Progress callback for tracking operation progress.
+   * Called periodically with completion status.
+   */
+  onProgress?: ProgressCallback;
+
+  /**
+   * AbortSignal for cancellation support.
+   * When aborted, the operation will throw OperationCancelledError.
+   */
+  signal?: AbortSignal;
+
+  /**
+   * Priority for queued operations (optional).
+   * Higher priority operations are processed first.
+   */
+  priority?: TaskPriority;
+}
+
+// ==================== Transaction Batching Types (Phase 10 Sprint 1) ====================
+
+/**
+ * Phase 10 Sprint 1: Types of operations supported in a batch transaction.
+ *
+ * Used by BatchTransaction to categorize and execute operations atomically.
+ */
+export type BatchOperationType =
+  | 'createEntity'
+  | 'updateEntity'
+  | 'deleteEntity'
+  | 'createRelation'
+  | 'deleteRelation'
+  | 'addObservations'
+  | 'deleteObservations';
+
+/**
+ * Phase 10 Sprint 1: A single operation in a batch transaction.
+ *
+ * Discriminated union type for type-safe batch operations.
+ *
+ * @example
+ * ```typescript
+ * const createOp: BatchOperation = {
+ *   type: 'createEntity',
+ *   data: { name: 'Alice', entityType: 'person', observations: [] }
+ * };
+ *
+ * const updateOp: BatchOperation = {
+ *   type: 'updateEntity',
+ *   data: { name: 'Alice', updates: { importance: 8 } }
+ * };
+ * ```
+ */
+export type BatchOperation =
+  | { type: 'createEntity'; data: Omit<Entity, 'createdAt' | 'lastModified'> }
+  | { type: 'updateEntity'; data: { name: string; updates: Partial<Entity> } }
+  | { type: 'deleteEntity'; data: { name: string } }
+  | { type: 'createRelation'; data: Omit<Relation, 'createdAt' | 'lastModified'> }
+  | { type: 'deleteRelation'; data: { from: string; to: string; relationType: string } }
+  | { type: 'addObservations'; data: { name: string; observations: string[] } }
+  | { type: 'deleteObservations'; data: { name: string; observations: string[] } };
+
+/**
+ * Phase 10 Sprint 1: Result of executing a batch transaction.
+ *
+ * Provides detailed statistics about what was processed and any errors.
+ *
+ * @example
+ * ```typescript
+ * const result: BatchResult = {
+ *   success: true,
+ *   operationsExecuted: 5,
+ *   entitiesCreated: 2,
+ *   entitiesUpdated: 1,
+ *   entitiesDeleted: 0,
+ *   relationsCreated: 2,
+ *   relationsDeleted: 0,
+ *   executionTimeMs: 45
+ * };
+ * ```
+ */
+export interface BatchResult {
+  /** Whether the batch transaction was successful */
+  success: boolean;
+
+  /** Total number of operations executed */
+  operationsExecuted: number;
+
+  /** Number of entities created */
+  entitiesCreated: number;
+
+  /** Number of entities updated */
+  entitiesUpdated: number;
+
+  /** Number of entities deleted */
+  entitiesDeleted: number;
+
+  /** Number of relations created */
+  relationsCreated: number;
+
+  /** Number of relations deleted */
+  relationsDeleted: number;
+
+  /** Execution time in milliseconds */
+  executionTimeMs: number;
+
+  /** Error message if batch failed */
+  error?: string;
+
+  /** Index of the operation that failed (if applicable) */
+  failedOperationIndex?: number;
+}
+
+/**
+ * Phase 10 Sprint 1: Options for batch transaction execution.
+ *
+ * @example
+ * ```typescript
+ * const options: BatchOptions = {
+ *   stopOnError: true,
+ *   validateBeforeExecute: true
+ * };
+ * ```
+ */
+export interface BatchOptions {
+  /**
+   * Stop executing on first error (default: true).
+   * If false, continues processing and collects all errors.
+   */
+  stopOnError?: boolean;
+
+  /**
+   * Validate all operations before executing any (default: true).
+   * Helps catch errors early before making any changes.
+   */
+  validateBeforeExecute?: boolean;
+}
+
+// ==================== Graph Change Events Types (Phase 10 Sprint 2) ====================
+
+/**
+ * Phase 10 Sprint 2: Types of graph events that can be emitted.
+ *
+ * Used by GraphEventEmitter to categorize graph changes.
+ */
+export type GraphEventType =
+  | 'entity:created'
+  | 'entity:updated'
+  | 'entity:deleted'
+  | 'relation:created'
+  | 'relation:deleted'
+  | 'observation:added'
+  | 'observation:deleted'
+  | 'graph:saved'
+  | 'graph:loaded';
+
+/**
+ * Phase 10 Sprint 2: Base interface for all graph events.
+ *
+ * All graph events share a common structure with timestamp and type.
+ */
+export interface GraphEventBase {
+  /** Event type identifier */
+  type: GraphEventType;
+
+  /** ISO 8601 timestamp when the event occurred */
+  timestamp: string;
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when an entity is created.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('entity:created', (event) => {
+ *   console.log(`Entity ${event.entity.name} created`);
+ * });
+ * ```
+ */
+export interface EntityCreatedEvent extends GraphEventBase {
+  type: 'entity:created';
+  entity: Entity;
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when an entity is updated.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('entity:updated', (event) => {
+ *   console.log(`Entity ${event.entityName} updated`);
+ *   console.log(`Changed fields: ${Object.keys(event.changes).join(', ')}`);
+ * });
+ * ```
+ */
+export interface EntityUpdatedEvent extends GraphEventBase {
+  type: 'entity:updated';
+  entityName: string;
+  changes: Partial<Entity>;
+  previousValues?: Partial<Entity>;
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when an entity is deleted.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('entity:deleted', (event) => {
+ *   console.log(`Entity ${event.entityName} deleted`);
+ * });
+ * ```
+ */
+export interface EntityDeletedEvent extends GraphEventBase {
+  type: 'entity:deleted';
+  entityName: string;
+  entity?: Entity; // The entity before deletion (if available)
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when a relation is created.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('relation:created', (event) => {
+ *   console.log(`Relation ${event.relation.from} -> ${event.relation.to} created`);
+ * });
+ * ```
+ */
+export interface RelationCreatedEvent extends GraphEventBase {
+  type: 'relation:created';
+  relation: Relation;
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when a relation is deleted.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('relation:deleted', (event) => {
+ *   console.log(`Relation ${event.from} -> ${event.to} (${event.relationType}) deleted`);
+ * });
+ * ```
+ */
+export interface RelationDeletedEvent extends GraphEventBase {
+  type: 'relation:deleted';
+  from: string;
+  to: string;
+  relationType: string;
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when observations are added to an entity.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('observation:added', (event) => {
+ *   console.log(`Added ${event.observations.length} observations to ${event.entityName}`);
+ * });
+ * ```
+ */
+export interface ObservationAddedEvent extends GraphEventBase {
+  type: 'observation:added';
+  entityName: string;
+  observations: string[];
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when observations are deleted from an entity.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('observation:deleted', (event) => {
+ *   console.log(`Deleted ${event.observations.length} observations from ${event.entityName}`);
+ * });
+ * ```
+ */
+export interface ObservationDeletedEvent extends GraphEventBase {
+  type: 'observation:deleted';
+  entityName: string;
+  observations: string[];
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when the entire graph is saved.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('graph:saved', (event) => {
+ *   console.log(`Graph saved with ${event.entityCount} entities`);
+ * });
+ * ```
+ */
+export interface GraphSavedEvent extends GraphEventBase {
+  type: 'graph:saved';
+  entityCount: number;
+  relationCount: number;
+}
+
+/**
+ * Phase 10 Sprint 2: Event emitted when the graph is loaded from storage.
+ *
+ * @example
+ * ```typescript
+ * emitter.on('graph:loaded', (event) => {
+ *   console.log(`Graph loaded with ${event.entityCount} entities`);
+ * });
+ * ```
+ */
+export interface GraphLoadedEvent extends GraphEventBase {
+  type: 'graph:loaded';
+  entityCount: number;
+  relationCount: number;
+}
+
+/**
+ * Phase 10 Sprint 2: Union type of all possible graph events.
+ *
+ * Use this when handling any type of graph event.
+ */
+export type GraphEvent =
+  | EntityCreatedEvent
+  | EntityUpdatedEvent
+  | EntityDeletedEvent
+  | RelationCreatedEvent
+  | RelationDeletedEvent
+  | ObservationAddedEvent
+  | ObservationDeletedEvent
+  | GraphSavedEvent
+  | GraphLoadedEvent;
+
+/**
+ * Phase 10 Sprint 2: Listener function type for graph events.
+ *
+ * @template T - The specific event type to listen for
+ */
+export type GraphEventListener<T extends GraphEvent = GraphEvent> = (event: T) => void;
+
+/**
+ * Phase 10 Sprint 2: Map of event types to their corresponding event interfaces.
+ *
+ * Used for type-safe event listener registration.
+ */
+export interface GraphEventMap {
+  'entity:created': EntityCreatedEvent;
+  'entity:updated': EntityUpdatedEvent;
+  'entity:deleted': EntityDeletedEvent;
+  'relation:created': RelationCreatedEvent;
+  'relation:deleted': RelationDeletedEvent;
+  'observation:added': ObservationAddedEvent;
+  'observation:deleted': ObservationDeletedEvent;
+  'graph:saved': GraphSavedEvent;
+  'graph:loaded': GraphLoadedEvent;
+}
+
+// ==================== Query Cost Estimation Types (Phase 10 Sprint 4) ====================
+
+/**
+ * Phase 10 Sprint 4: Search method types for cost estimation.
+ */
+export type SearchMethod = 'basic' | 'ranked' | 'boolean' | 'fuzzy' | 'semantic';
+
+/**
+ * Phase 10 Sprint 4: Result of query cost estimation.
+ *
+ * Provides information about the estimated cost and complexity
+ * of a search query, helping clients choose optimal search methods.
+ *
+ * @example
+ * ```typescript
+ * const estimate: QueryCostEstimate = {
+ *   method: 'ranked',
+ *   estimatedTimeMs: 15,
+ *   complexity: 'medium',
+ *   entityCount: 1000,
+ *   recommendation: 'Use ranked search for best relevance'
+ * };
+ * ```
+ */
+export interface QueryCostEstimate {
+  /** The search method being estimated */
+  method: SearchMethod;
+
+  /** Estimated execution time in milliseconds */
+  estimatedTimeMs: number;
+
+  /** Query complexity level */
+  complexity: 'low' | 'medium' | 'high';
+
+  /** Number of entities in the graph */
+  entityCount: number;
+
+  /** Human-readable recommendation */
+  recommendation: string;
+
+  /** Whether this method is recommended for the query */
+  isRecommended: boolean;
+}
+
+/**
+ * Phase 10 Sprint 4: Result of automatic search method selection.
+ *
+ * Returned by the search_auto tool to show which method was chosen
+ * and why, along with the actual search results.
+ */
+export interface AutoSearchResult {
+  /** The search method that was selected */
+  selectedMethod: SearchMethod;
+
+  /** Why this method was selected */
+  selectionReason: string;
+
+  /** Cost estimates for all considered methods */
+  estimates: QueryCostEstimate[];
+
+  /** The actual search results */
+  results: SearchResult[];
+
+  /** Actual execution time in milliseconds */
+  executionTimeMs: number;
+}
+
+/**
+ * Phase 10 Sprint 4: Options for the QueryCostEstimator.
+ */
+export interface QueryCostEstimatorOptions {
+  /** Base time in ms for basic search per entity (default: 0.01) */
+  basicTimePerEntity?: number;
+
+  /** Base time in ms for ranked search per entity (default: 0.05) */
+  rankedTimePerEntity?: number;
+
+  /** Base time in ms for boolean search per entity (default: 0.02) */
+  booleanTimePerEntity?: number;
+
+  /** Base time in ms for fuzzy search per entity (default: 0.1) */
+  fuzzyTimePerEntity?: number;
+
+  /** Base time in ms for semantic search per entity (default: 0.5) */
+  semanticTimePerEntity?: number;
+
+  /** Threshold for "low" complexity (entity count, default: 100) */
+  lowComplexityThreshold?: number;
+
+  /** Threshold for "high" complexity (entity count, default: 1000) */
+  highComplexityThreshold?: number;
 }

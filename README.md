@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 54 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
+> **Enterprise-grade knowledge graph** with 55 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
 
 ## Table of Contents
 
@@ -91,8 +91,8 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **SQLite Backend** | ❌ | ✅ better-sqlite3 (3-10x faster) |
 | **Full-Text Search** | ❌ | ✅ FTS5 with BM25 ranking |
 | **Concurrency Control** | ❌ | ✅ Thread-safe with async-mutex |
-| **Total Tools** | 11 | **54** (+391%) |
-| **Code Structure** | Monolithic | **Modular** (50 files, ~10.7K lines) |
+| **Total Tools** | 11 | **55** (+400%) |
+| **Code Structure** | Monolithic | **Modular** (58 files, ~22.5K lines) |
 
 ## Key Features
 
@@ -112,10 +112,10 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - **Multi-Level Caching**: Bidirectional relation cache, fuzzy search cache, boolean AST cache
 
 **🏗️ Architecture**
-- **Modular Design**: Clean separation of concerns across 50 focused modules with 7 lazy-initialized managers
+- **Modular Design**: Clean separation of concerns across 58 focused modules with 7 lazy-initialized managers
 - **Type Safety**: Full TypeScript strict mode with comprehensive type definitions
 - **Lazy Initialization**: Context pattern with on-demand manager instantiation
-- **Developer Experience**: Barrel exports, 1803 tests, and comprehensive documentation
+- **Developer Experience**: Barrel exports, 2493 tests (92% coverage), and comprehensive documentation
 
 ## Quick Start
 
@@ -289,7 +289,7 @@ Add to `.vscode/mcp.json`:
 
 ## API Reference
 
-### Complete Tool List (54 Tools)
+### Complete Tool List (55 Tools)
 
 #### Entity Operations (4 tools)
 - `create_entities` - Create multiple new entities
@@ -305,13 +305,14 @@ Add to `.vscode/mcp.json`:
 - `add_observations` - Add observations to entities
 - `delete_observations` - Remove specific observations
 
-#### Search (6 tools)
+#### Search (7 tools)
 - `search_nodes` - Search for nodes by query with filters
 - `search_by_date_range` - Filter by date range
 - `search_nodes_ranked` - TF-IDF relevance ranking
 - `boolean_search` - Boolean queries (AND/OR/NOT)
 - `fuzzy_search` - Typo-tolerant search
 - `get_search_suggestions` - Get "Did you mean?" suggestions
+- `search_auto` - Automatically select best search method (Phase 10)
 
 #### Semantic Search (3 tools)
 - `semantic_search` - Search by semantic similarity using embeddings
@@ -1708,7 +1709,7 @@ All files use JSONL (JSON Lines) format where each line is a valid JSON object.
 Comprehensive documentation organized by category:
 
 **Core Documentation**
-- **[API Reference](docs/architecture/API.md)** - Complete API documentation for all 54 tools
+- **[API Reference](docs/architecture/API.md)** - Complete API documentation for all 55 tools
 - **[Architecture](docs/architecture/ARCHITECTURE.md)** - Technical architecture and system design
 - **[Dependency Graph](docs/architecture/DEPENDENCY_GRAPH.md)** - Module dependencies and structure
 - **[Workflow](docs/development/WORKFLOW.md)** - Development workflow and procedures
@@ -1892,7 +1893,7 @@ npm run typecheck # TypeScript type checking
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
 │  server/MCPServer.ts + toolDefinitions              │
-│  + toolHandlers (54 tools) + responseCompressor     │
+│  + toolHandlers (55 tools) + responseCompressor     │
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────┐
@@ -1919,7 +1920,7 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/                            # Main source (50 TypeScript files)
+├── src/                            # Main source (58 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── core/                       # Core managers (11 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
@@ -1935,7 +1936,7 @@ memory-mcp/
 │   │   └── index.ts                    # Barrel export (+ KnowledgeGraphManager alias)
 │   ├── server/                     # MCP protocol layer (4 files)
 │   │   ├── MCPServer.ts                # Server setup (67 lines)
-│   │   ├── toolDefinitions.ts          # 54 tool schemas
+│   │   ├── toolDefinitions.ts          # 55 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
 │   │   └── responseCompressor.ts       # Brotli response compression
 │   ├── search/                     # Search implementations (13 files)
@@ -1975,7 +1976,7 @@ memory-mcp/
 │       ├── logger.ts                   # Logging utilities
 │       ├── searchCache.ts              # Search result caching
 │       └── index.ts
-├── tests/                          # Test suite (1803 tests, 52 files)
+├── tests/                          # Test suite (2493 tests, 72 files)
 │   ├── unit/                       # Unit tests
 │   ├── integration/                # Integration tests
 │   ├── e2e/                        # End-to-end tests
@@ -2001,7 +2002,7 @@ memory-mcp/
 ```bash
 npm run build      # Build TypeScript to JavaScript
 npm run watch      # Watch mode for development
-npm test           # Run 1803 tests with coverage
+npm test           # Run 2493 tests with coverage
 npm run typecheck  # TypeScript strict type checking
 npm run clean      # Clean dist/ directories
 npm run docs:deps  # Generate dependency graph

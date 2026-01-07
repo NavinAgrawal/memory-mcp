@@ -1,0 +1,320 @@
+{
+  "phase": "9B",
+  "sprint": 1,
+  "title": "Foundation and Core Integrations",
+  "priority": "high",
+  "effort": "8 hours",
+  "status": "completed",
+  "impact": "High - Establishes common types and integrates TaskScheduler with core managers",
+  "targetMetrics": {
+    "progressCallback": {
+      "current": "Custom or none in most managers",
+      "target": "Unified ProgressCallback type (from taskScheduler.ts) used by all long-running operations"
+    },
+    "cancellation": {
+      "current": "No cancellation support",
+      "target": "AbortSignal support in EntityManager, CompressionManager, IOManager"
+    },
+    "backwardCompatibility": {
+      "current": "N/A",
+      "target": "All existing method signatures remain unchanged; options parameter is optional"
+    }
+  },
+  "tasks": [
+    {
+      "id": "9B.1.1",
+      "category": "type-consolidation",
+      "title": "Create Common Types and Operation Utilities",
+      "description": "Create shared types and utility functions for long-running operations with progress tracking and cancellation support. Uses the existing ProgressCallback from taskScheduler.ts.",
+      "status": "completed",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": [
+        "src/types/types.ts",
+        "src/utils/operationUtils.ts",
+        "src/utils/errors.ts",
+        "src/utils/index.ts"
+      ],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Provide consistent type definitions and utilities for async operations, enabling uniform progress reporting and cancellation patterns.",
+        "keyDecisions": [
+          "Use existing ProgressCallback from taskScheduler.ts (object-based: {completed, total, percentage, currentTaskId?})",
+          "Create LongRunningOperationOptions interface with onProgress, signal, and priority",
+          "Create OperationCancelledError class for cancellation errors",
+          "Create utility functions in operationUtils.ts (checkCancellation, createProgressReporter, createProgress, executeWithPhases)",
+          "All parameters are optional to maintain backward compatibility"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Add LongRunningOperationOptions interface to src/types/types.ts",
+          "details": "Import ProgressCallback and TaskPriority from taskScheduler. Create interface with onProgress?: ProgressCallback, signal?: AbortSignal, priority?: TaskPriority"
+        },
+        {
+          "step": 2,
+          "action": "Add OperationCancelledError class to src/utils/errors.ts",
+          "details": "Extend KnowledgeGraphError with 'OPERATION_CANCELLED' code. Include optional operation name in message."
+        },
+        {
+          "step": 3,
+          "action": "Create src/utils/operationUtils.ts with utility functions",
+          "details": "Implement checkCancellation(), createProgressReporter() with throttling, createProgress(), and executeWithPhases()"
+        },
+        {
+          "step": 4,
+          "action": "Export new utilities from src/utils/index.ts",
+          "details": "Add exports for all operationUtils functions and OperationCancelledError"
+        },
+        {
+          "step": 5,
+          "action": "Run TypeScript compilation",
+          "details": "npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "LongRunningOperationOptions interface added to types.ts",
+        "OperationCancelledError class added to errors.ts",
+        "operationUtils.ts created with all utility functions",
+        "Exports added to utils/index.ts",
+        "TypeScript compilation passes",
+        "No breaking changes to existing code"
+      ]
+    },
+    {
+      "id": "9B.1.2",
+      "category": "integration",
+      "title": "Enhance EntityManager.createEntities() with Progress and Cancellation",
+      "description": "Add optional progress tracking and cancellation support to the createEntities method while maintaining full backward compatibility. Method signature adds optional parameter only.",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/core/EntityManager.ts", "tests/unit/core/EntityManager.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Enable progress tracking and cancellation during bulk entity creation, improving UX for large imports.",
+        "keyDecisions": [
+          "Add optional LongRunningOperationOptions parameter to createEntities",
+          "Keep original return type Promise<Entity[]> (NOT CancellableResult wrapper)",
+          "Report progress after each batch of entities (using throttled reporter)",
+          "Support AbortSignal for cancellation mid-operation (throws OperationCancelledError)",
+          "Maintain backward compatibility - existing calls work unchanged"
+        ],
+        "currentCode": {
+          "file": "src/core/EntityManager.ts",
+          "signature": "async createEntities(entities: Entity[]): Promise<Entity[]>"
+        },
+        "newSignature": "async createEntities(entities: Entity[], options?: LongRunningOperationOptions): Promise<Entity[]>"
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Import new utilities in EntityManager.ts",
+          "details": "Import checkCancellation, createProgressReporter, createProgress from utils/index.js and LongRunningOperationOptions from types/index.js"
+        },
+        {
+          "step": 2,
+          "action": "Update createEntities method signature",
+          "details": "Add optional options parameter: async createEntities(entities: Entity[], options?: LongRunningOperationOptions): Promise<Entity[]>"
+        },
+        {
+          "step": 3,
+          "action": "Add progress and cancellation logic at method start",
+          "details": "Call checkCancellation, create throttled progress reporter, report initial progress (0%)"
+        },
+        {
+          "step": 4,
+          "action": "Add progress updates during entity processing",
+          "details": "Report progress every 100 entities, check cancellation periodically"
+        },
+        {
+          "step": 5,
+          "action": "Report completion at method end",
+          "details": "Call reportProgress with 100% before return"
+        },
+        {
+          "step": 6,
+          "action": "Run existing tests to verify backward compatibility",
+          "details": "npx vitest run tests/unit/core/EntityManager.test.ts"
+        },
+        {
+          "step": 7,
+          "action": "Add new tests for progress and cancellation",
+          "details": "Test progress callback receives updates, test cancellation throws OperationCancelledError"
+        }
+      ],
+      "acceptanceCriteria": [
+        "createEntities accepts optional LongRunningOperationOptions parameter",
+        "Progress callback receives updates during operation (using ProgressCallback type)",
+        "Cancellation via AbortSignal throws OperationCancelledError",
+        "All existing tests pass WITHOUT modification (backward compatible)",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "9B.1.3",
+      "category": "integration",
+      "title": "Enhance CompressionManager with Progress and Cancellation",
+      "description": "Add progress tracking and cancellation support to findDuplicates() and compressGraph() methods. These are O(n²) operations that benefit most from progress tracking.",
+      "status": "completed",
+      "estimatedHours": 2.5,
+      "agent": "haiku",
+      "files": ["src/features/CompressionManager.ts", "tests/unit/features/CompressionManager.test.ts"],
+      "testCategories": ["unit", "performance"],
+      "implementation": {
+        "purpose": "Enable progress tracking during duplicate detection and graph compression, which can be slow for large graphs.",
+        "keyDecisions": [
+          "Add optional LongRunningOperationOptions to both methods",
+          "Keep original return types (NOT CancellableResult wrappers)",
+          "findDuplicates reports progress per type bucket processed",
+          "compressGraph reports two-phase progress: detection (0-40%) + merging (40-100%)",
+          "Support cancellation between buckets/merges (not mid-operation)"
+        ],
+        "currentCode": {
+          "findDuplicates": "async findDuplicates(threshold: number = DEFAULT_DUPLICATE_THRESHOLD): Promise<string[][]>",
+          "compressGraph": "async compressGraph(threshold: number = DEFAULT_DUPLICATE_THRESHOLD, dryRun: boolean = false): Promise<CompressionResult>"
+        },
+        "newSignatures": {
+          "findDuplicates": "async findDuplicates(threshold?: number, options?: LongRunningOperationOptions): Promise<string[][]>",
+          "compressGraph": "async compressGraph(threshold?: number, dryRun?: boolean, options?: LongRunningOperationOptions): Promise<CompressionResult>"
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Import utilities in CompressionManager.ts",
+          "details": "Import checkCancellation, createProgressReporter, createProgress from utils/index.js"
+        },
+        {
+          "step": 2,
+          "action": "Update findDuplicates signature",
+          "details": "Add optional options parameter after threshold"
+        },
+        {
+          "step": 3,
+          "action": "Add progress tracking to findDuplicates",
+          "details": "Count type buckets, report progress per bucket, check cancellation between buckets"
+        },
+        {
+          "step": 4,
+          "action": "Update compressGraph signature",
+          "details": "Add optional options parameter after dryRun"
+        },
+        {
+          "step": 5,
+          "action": "Implement two-phase progress in compressGraph",
+          "details": "Phase 1 (findDuplicates): 0-40%. Phase 2 (merging): 40-100%. Pass scaled progress to findDuplicates."
+        },
+        {
+          "step": 6,
+          "action": "Run tests and add new test cases",
+          "details": "Verify backward compatibility, add progress/cancellation tests"
+        }
+      ],
+      "acceptanceCriteria": [
+        "findDuplicates accepts optional LongRunningOperationOptions",
+        "compressGraph accepts optional LongRunningOperationOptions",
+        "Progress callbacks report meaningful phase information",
+        "Cancellation works at safe checkpoints",
+        "All existing tests pass (backward compatible)",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "9B.1.4",
+      "category": "integration",
+      "title": "Enhance IOManager.importGraph() with Progress and Cancellation",
+      "description": "Add progress tracking and cancellation support to the importGraph method with phased progress reporting for parsing and merging phases.",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/features/IOManager.ts", "tests/unit/features/ImportManager.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Enable progress tracking during graph imports, which can be slow for large datasets.",
+        "keyDecisions": [
+          "Add optional LongRunningOperationOptions to importGraph",
+          "Keep original return type ImportResult (NOT CancellableResult)",
+          "Report three-phase progress: parsing (0-20%), entity processing (20-70%), relation processing (70-100%)",
+          "Support cancellation after parsing and between entity/relation batches"
+        ],
+        "currentCode": {
+          "signature": "async importGraph(format: ImportFormat, data: string, mergeStrategy: MergeStrategy = 'skip', dryRun: boolean = false): Promise<ImportResult>"
+        },
+        "newSignature": "async importGraph(format: ImportFormat, data: string, mergeStrategy?: MergeStrategy, dryRun?: boolean, options?: LongRunningOperationOptions): Promise<ImportResult>"
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Import utilities in IOManager.ts",
+          "details": "Import checkCancellation, createProgressReporter, createProgress from utils/index.js"
+        },
+        {
+          "step": 2,
+          "action": "Update importGraph signature",
+          "details": "Add optional options parameter at the end"
+        },
+        {
+          "step": 3,
+          "action": "Add Phase 1 progress for parsing (0-20%)",
+          "details": "Report progress after successful parsing, check cancellation"
+        },
+        {
+          "step": 4,
+          "action": "Add Phase 2 progress for entity processing (20-70%)",
+          "details": "Report progress every 100 entities during merge loop"
+        },
+        {
+          "step": 5,
+          "action": "Add Phase 3 progress for relation processing (70-100%)",
+          "details": "Report progress every 100 relations during merge loop"
+        },
+        {
+          "step": 6,
+          "action": "Run tests to verify backward compatibility",
+          "details": "npx vitest run tests/unit/features/ImportManager.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "importGraph accepts optional LongRunningOperationOptions",
+        "Progress reports parsing, entity, and relation processing phases",
+        "Cancellation works at safe checkpoints",
+        "All existing tests pass (backward compatible)",
+        "TypeScript compilation passes"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "Common operation types established in types.ts",
+    "operationUtils.ts created with utility functions",
+    "EntityManager, CompressionManager, and IOManager support progress callbacks",
+    "All three managers support AbortSignal cancellation",
+    "Backward compatibility maintained for all existing API calls",
+    "npm test passes with all new tests",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": ["src/utils/operationUtils.ts"],
+  "filesModified": [
+    "src/types/types.ts",
+    "src/utils/errors.ts",
+    "src/utils/index.ts",
+    "src/core/EntityManager.ts",
+    "src/features/CompressionManager.ts",
+    "src/features/IOManager.ts",
+    "tests/unit/core/EntityManager.test.ts",
+    "tests/unit/features/CompressionManager.test.ts",
+    "tests/unit/features/ImportManager.test.ts"
+  ],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 8,
+  "dependencies": [],
+  "notes": [
+    "CRITICAL: Use existing ProgressCallback from taskScheduler.ts - DO NOT create new type",
+    "Backward compatibility is essential - all existing tests must pass without modification",
+    "Methods keep original return types - NO CancellableResult<T> wrappers",
+    "Progress callbacks use object format: { completed, total, percentage, currentTaskId? }",
+    "Test with large datasets (1000+ entities) to verify progress/cancellation works"
+  ]
+}

@@ -7,7 +7,7 @@
  * @module search/SearchManager
  */
 
-import type { KnowledgeGraph, SearchResult, SavedSearch } from '../types/index.js';
+import type { KnowledgeGraph, SearchResult, SavedSearch, AutoSearchResult, Entity } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { BasicSearch } from './BasicSearch.js';
 import { RankedSearch } from './RankedSearch.js';
@@ -15,6 +15,7 @@ import { BooleanSearch } from './BooleanSearch.js';
 import { FuzzySearch } from './FuzzySearch.js';
 import { SearchSuggestions } from './SearchSuggestions.js';
 import { SavedSearchManager } from './SavedSearchManager.js';
+import { QueryCostEstimator } from './QueryCostEstimator.js';
 
 /**
  * Unified search manager providing access to all search types.
@@ -28,14 +29,18 @@ export class SearchManager {
   private fuzzySearcher: FuzzySearch;
   private searchSuggestions: SearchSuggestions;
   private savedSearchManager: SavedSearchManager;
+  private storage: GraphStorage;
+  private queryEstimator: QueryCostEstimator;
 
   constructor(storage: GraphStorage, savedSearchesFilePath: string) {
+    this.storage = storage;
     this.basicSearch = new BasicSearch(storage);
     this.rankedSearch = new RankedSearch(storage);
     this.booleanSearcher = new BooleanSearch(storage);
     this.fuzzySearcher = new FuzzySearch(storage);
     this.searchSuggestions = new SearchSuggestions(storage);
     this.savedSearchManager = new SavedSearchManager(savedSearchesFilePath, this.basicSearch);
+    this.queryEstimator = new QueryCostEstimator();
   }
 
   // ==================== Cache Management (Phase 4 Sprint 5) ====================
@@ -395,5 +400,131 @@ export class SearchManager {
     updates: Partial<Omit<SavedSearch, 'name' | 'createdAt' | 'useCount' | 'lastUsed'>>
   ): Promise<SavedSearch> {
     return this.savedSearchManager.updateSavedSearch(name, updates);
+  }
+
+  // ==================== Phase 10 Sprint 4: Automatic Search ====================
+
+  /**
+   * Phase 10 Sprint 4: Automatically select and execute the best search method.
+   *
+   * Analyzes the query and graph size to determine the optimal search method,
+   * then executes it and returns both the results and the selection reasoning.
+   *
+   * @param query - The search query
+   * @param limit - Maximum number of results (default: 10)
+   * @returns AutoSearchResult with selected method, results, and estimates
+   *
+   * @example
+   * ```typescript
+   * const manager = new SearchManager(storage, savedSearchesPath);
+   *
+   * // Let the system choose the best search method
+   * const result = await manager.autoSearch('software engineer skills');
+   *
+   * console.log(`Used ${result.selectedMethod} because: ${result.selectionReason}`);
+   * console.log(`Found ${result.results.length} results in ${result.executionTimeMs}ms`);
+   * ```
+   */
+  async autoSearch(query: string, limit: number = 10): Promise<AutoSearchResult> {
+    const startTime = Date.now();
+
+    // Get entity count from graph
+    const graph = await this.storage.loadGraph();
+    const entityCount = graph.entities.length;
+
+    // Get cost estimates for all methods
+    const estimates = this.queryEstimator.estimateAllMethods(query, entityCount);
+
+    // Get the recommended method
+    const recommendation = this.queryEstimator.recommendMethod(query, entityCount);
+    const selectedMethod = recommendation.method;
+    const selectionReason = recommendation.reason;
+
+    // Execute the selected search method
+    let results: SearchResult[];
+
+    switch (selectedMethod) {
+      case 'basic': {
+        const basicResult = await this.basicSearch.searchNodes(query);
+        results = basicResult.entities.map((e: Entity, idx: number) => ({
+          entity: e,
+          score: 1.0 - idx * 0.01, // Rank by position
+          matchedFields: { name: true, observations: e.observations },
+        }));
+        break;
+      }
+
+      case 'ranked': {
+        results = await this.rankedSearch.searchNodesRanked(query, undefined, undefined, undefined, limit);
+        break;
+      }
+
+      case 'boolean': {
+        const booleanResult = await this.booleanSearcher.booleanSearch(query);
+        results = booleanResult.entities.map((e: Entity, idx: number) => ({
+          entity: e,
+          score: 1.0 - idx * 0.01, // Rank by position
+          matchedFields: { name: true, observations: e.observations },
+        }));
+        break;
+      }
+
+      case 'fuzzy': {
+        const fuzzyResult = await this.fuzzySearcher.fuzzySearch(query);
+        results = fuzzyResult.entities.map((e: Entity, idx: number) => ({
+          entity: e,
+          score: 1.0 - idx * 0.01, // Rank by position
+          matchedFields: { name: true, observations: e.observations },
+        }));
+        break;
+      }
+
+      case 'semantic': {
+        // Semantic search not available through SearchManager
+        // Fall back to ranked search
+        results = await this.rankedSearch.searchNodesRanked(query, undefined, undefined, undefined, limit);
+        break;
+      }
+
+      default: {
+        const _exhaustiveCheck: never = selectedMethod;
+        throw new Error(`Unknown search method: ${_exhaustiveCheck}`);
+      }
+    }
+
+    // Limit results
+    const limitedResults = results.slice(0, limit);
+
+    return {
+      selectedMethod,
+      selectionReason,
+      estimates,
+      results: limitedResults,
+      executionTimeMs: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Phase 10 Sprint 4: Get cost estimates for all search methods.
+   *
+   * Useful for clients that want to display cost information or
+   * make their own method selection decisions.
+   *
+   * @param query - The search query
+   * @returns Array of cost estimates for all methods
+   */
+  async getSearchCostEstimates(query: string): Promise<import('../types/index.js').QueryCostEstimate[]> {
+    const graph = await this.storage.loadGraph();
+    const entityCount = graph.entities.length;
+    return this.queryEstimator.estimateAllMethods(query, entityCount);
+  }
+
+  /**
+   * Phase 10 Sprint 4: Get the query cost estimator instance.
+   *
+   * @returns The QueryCostEstimator instance
+   */
+  getQueryEstimator(): QueryCostEstimator {
+    return this.queryEstimator;
   }
 }

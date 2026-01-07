@@ -302,15 +302,17 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 # Claude Code local settings (not for version control)
-.claude/
 .mcp.json
 
 # Memory data files
 *.jsonl
 memory.db
-/.claude
-/.claude
+
+#Tools Executables
 tools/migrate-from-jsonl-to-sqlite/migrate-from-jsonl-to-sqlite.exe
+tools\chunking-for-files\chunking-for-files.exe
+tools\compress-for-context\compress-for-context.exe
+tools\chunking-for-files\chunking-for-files.exe
 
 # Windows null device artifact
 nul

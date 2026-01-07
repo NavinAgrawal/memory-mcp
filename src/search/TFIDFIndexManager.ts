@@ -258,4 +258,251 @@ export class TFIDFIndexManager {
 
     return false;
   }
+
+  // ==================== Phase 10 Sprint 3: Incremental Index Updates ====================
+
+  /**
+   * Phase 10 Sprint 3: Add a single document to the index incrementally.
+   *
+   * More efficient than rebuilding the entire index for single entity additions.
+   * Updates TF for the new document and recalculates IDF for affected terms.
+   *
+   * @param entity - The entity to add
+   *
+   * @example
+   * ```typescript
+   * const indexManager = new TFIDFIndexManager('/data');
+   * await indexManager.loadIndex();
+   *
+   * // Add new entity
+   * indexManager.addDocument({
+   *   name: 'NewEntity',
+   *   entityType: 'person',
+   *   observations: ['Software engineer']
+   * });
+   * ```
+   */
+  addDocument(entity: { name: string; entityType: string; observations: string[] }): void {
+    if (!this.index) {
+      // Can't add to non-existent index
+      return;
+    }
+
+    // Build document text and tokens
+    const documentText = [entity.name, entity.entityType, ...entity.observations].join(' ');
+    const tokens = tokenize(documentText);
+
+    // Calculate term frequencies
+    const termFreq: Record<string, number> = {};
+    for (const term of tokens) {
+      termFreq[term] = (termFreq[term] || 0) + 1;
+    }
+
+    // Add to documents map
+    this.index.documents.set(entity.name, {
+      entityName: entity.name,
+      terms: termFreq,
+      documentText,
+    });
+
+    // Update IDF for ALL terms because N changed (total document count)
+    // IDF = log(N/df), and N has increased
+    this.recalculateAllIDF();
+
+    // Update timestamp
+    this.index.lastUpdated = new Date().toISOString();
+  }
+
+  /**
+   * Phase 10 Sprint 3: Remove a single document from the index incrementally.
+   *
+   * More efficient than rebuilding the entire index for single entity deletions.
+   * Recalculates IDF for terms that were in the removed document.
+   *
+   * @param entityName - Name of the entity to remove
+   *
+   * @example
+   * ```typescript
+   * indexManager.removeDocument('DeletedEntity');
+   * ```
+   */
+  removeDocument(entityName: string): void {
+    if (!this.index) {
+      return;
+    }
+
+    const document = this.index.documents.get(entityName);
+    if (!document) {
+      return;
+    }
+
+    // Remove from documents map
+    this.index.documents.delete(entityName);
+
+    // Update IDF for ALL terms because N changed (total document count)
+    // IDF = log(N/df), and N has decreased
+    this.recalculateAllIDF();
+
+    // Update timestamp
+    this.index.lastUpdated = new Date().toISOString();
+  }
+
+  /**
+   * Phase 10 Sprint 3: Update a single document in the index incrementally.
+   *
+   * More efficient than rebuilding the entire index for single entity updates.
+   * Handles both term changes and observation updates.
+   *
+   * @param entity - The updated entity
+   *
+   * @example
+   * ```typescript
+   * indexManager.updateDocument({
+   *   name: 'ExistingEntity',
+   *   entityType: 'person',
+   *   observations: ['Updated observations']
+   * });
+   * ```
+   */
+  updateDocument(entity: { name: string; entityType: string; observations: string[] }): void {
+    if (!this.index) {
+      return;
+    }
+
+    const oldDocument = this.index.documents.get(entity.name);
+    const oldTerms = oldDocument ? new Set(Object.keys(oldDocument.terms)) : new Set<string>();
+
+    // Build new document
+    const documentText = [entity.name, entity.entityType, ...entity.observations].join(' ');
+    const tokens = tokenize(documentText);
+    const newTerms = new Set(tokens);
+
+    // Calculate term frequencies
+    const termFreq: Record<string, number> = {};
+    for (const term of tokens) {
+      termFreq[term] = (termFreq[term] || 0) + 1;
+    }
+
+    // Update documents map
+    this.index.documents.set(entity.name, {
+      entityName: entity.name,
+      terms: termFreq,
+      documentText,
+    });
+
+    // Find terms that changed (added or removed)
+    const changedTerms = new Set<string>();
+    for (const term of oldTerms) {
+      if (!newTerms.has(term)) {
+        changedTerms.add(term);
+      }
+    }
+    for (const term of newTerms) {
+      if (!oldTerms.has(term)) {
+        changedTerms.add(term);
+      }
+    }
+
+    // Recalculate IDF for changed terms
+    if (changedTerms.size > 0) {
+      this.recalculateIDFForTerms(changedTerms);
+    }
+
+    // Update timestamp
+    this.index.lastUpdated = new Date().toISOString();
+  }
+
+  /**
+   * Phase 10 Sprint 3: Recalculate IDF scores for a set of terms.
+   *
+   * @param terms - Set of terms to recalculate IDF for
+   * @private
+   */
+  private recalculateIDFForTerms(terms: Set<string>): void {
+    if (!this.index) {
+      return;
+    }
+
+    const totalDocs = this.index.documents.size;
+    if (totalDocs === 0) {
+      // No documents, clear all IDF for these terms
+      for (const term of terms) {
+        this.index.idf.delete(term);
+      }
+      return;
+    }
+
+    // Count documents containing each term
+    for (const term of terms) {
+      let docCount = 0;
+      for (const doc of this.index.documents.values()) {
+        if (term in doc.terms) {
+          docCount++;
+        }
+      }
+
+      if (docCount > 0) {
+        // IDF = log(N / df) where N = total docs, df = doc frequency
+        const idfScore = Math.log(totalDocs / docCount);
+        this.index.idf.set(term, idfScore);
+      } else {
+        // Term no longer exists in any document
+        this.index.idf.delete(term);
+      }
+    }
+  }
+
+  /**
+   * Phase 10 Sprint 3: Recalculate IDF scores for ALL terms in the index.
+   *
+   * Called when the total document count changes (add/remove document).
+   * @private
+   */
+  private recalculateAllIDF(): void {
+    if (!this.index) {
+      return;
+    }
+
+    const totalDocs = this.index.documents.size;
+
+    if (totalDocs === 0) {
+      // No documents, clear all IDF
+      this.index.idf.clear();
+      return;
+    }
+
+    // Build term -> document count map
+    const termDocCounts = new Map<string, number>();
+    for (const doc of this.index.documents.values()) {
+      for (const term of Object.keys(doc.terms)) {
+        termDocCounts.set(term, (termDocCounts.get(term) ?? 0) + 1);
+      }
+    }
+
+    // Clear old IDF and recalculate
+    this.index.idf.clear();
+    for (const [term, docCount] of termDocCounts) {
+      // IDF = log(N / df) where N = total docs, df = doc frequency
+      const idfScore = Math.log(totalDocs / docCount);
+      this.index.idf.set(term, idfScore);
+    }
+  }
+
+  /**
+   * Phase 10 Sprint 3: Check if the index is loaded/initialized.
+   *
+   * @returns True if index is available
+   */
+  isInitialized(): boolean {
+    return this.index !== null;
+  }
+
+  /**
+   * Phase 10 Sprint 3: Get the number of documents in the index.
+   *
+   * @returns Document count or 0 if not initialized
+   */
+  getDocumentCount(): number {
+    return this.index?.documents.size ?? 0;
+  }
 }

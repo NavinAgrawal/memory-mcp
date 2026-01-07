@@ -1,10 +1,10 @@
 metadata:
   name: "@danielsimonjr/memory-mcp"
-  version: 9.6.2
-  lastUpdated: "2026-01-05"
-  totalFiles: 54
+  version: 9.8.0
+  lastUpdated: "2026-01-07"
+  totalFiles: 58
   totalModules: 8
-  totalExports: 417
+  totalExports: 436
 entryPoints:
   - file: src/index.ts
     type: main
@@ -19,6 +19,7 @@ modules:
         - file: ../types/index.js
           imports:
             - Entity
+            - LongRunningOperationOptions
           typeOnly: true
         - file: ./GraphStorage.js
           imports:
@@ -34,18 +35,43 @@ modules:
             - BatchCreateEntitiesSchema
             - UpdateEntitySchema
             - EntityNamesSchema
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
         - file: ../utils/constants.js
           imports:
             - GRAPH_LIMITS
       exports:
-        - MIN_IMPORTANCE
-        - MAX_IMPORTANCE
         - EntityManager
       classes:
         - EntityManager
-      constants:
-        - MIN_IMPORTANCE
-        - MAX_IMPORTANCE
+    src/core/GraphEventEmitter.ts:
+      description: Graph Event Emitter
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - GraphEventType
+            - GraphEvent
+            - GraphEventListener
+            - GraphEventMap
+            - Entity
+            - Relation
+            - EntityCreatedEvent
+            - EntityUpdatedEvent
+            - EntityDeletedEvent
+            - RelationCreatedEvent
+            - RelationDeletedEvent
+            - ObservationAddedEvent
+            - ObservationDeletedEvent
+            - GraphSavedEvent
+            - GraphLoadedEvent
+          typeOnly: true
+      exports:
+        - GraphEventEmitter
+      classes:
+        - GraphEventEmitter
     src/core/GraphStorage.ts:
       description: Graph Storage
       externalDependencies:
@@ -76,6 +102,12 @@ modules:
             - LowercaseCache
             - RelationIndex
             - ObservationIndex
+        - file: ./TransactionManager.js
+          imports:
+            - BatchTransaction
+        - file: ./GraphEventEmitter.js
+          imports:
+            - GraphEventEmitter
       exports:
         - GraphStorage
       classes:
@@ -99,6 +131,9 @@ modules:
           imports:
             - GraphStorage
           typeOnly: true
+        - file: ../utils/index.js
+          imports:
+            - checkCancellation
       exports:
         - GraphTraversal
       classes:
@@ -171,6 +206,7 @@ modules:
           imports:
             - TransactionManager
             - OperationType
+            - BatchTransaction
             - type TransactionOperation
             - type TransactionResult
           reExport: true
@@ -178,6 +214,10 @@ modules:
           imports:
             - createStorage
             - createStorageFromPath
+          reExport: true
+        - file: ./GraphEventEmitter.js
+          imports:
+            - GraphEventEmitter
           reExport: true
       exports:
         - GraphStorage
@@ -190,10 +230,12 @@ modules:
         - GraphTraversal
         - TransactionManager
         - OperationType
+        - BatchTransaction
         - type TransactionOperation
         - type TransactionResult
         - createStorage
         - createStorageFromPath
+        - GraphEventEmitter
       reExported:
         - GraphStorage
         - SQLiteStorage
@@ -205,10 +247,12 @@ modules:
         - GraphTraversal
         - TransactionManager
         - OperationType
+        - BatchTransaction
         - type TransactionOperation
         - type TransactionResult
         - createStorage
         - createStorageFromPath
+        - GraphEventEmitter
     src/core/ManagerContext.ts:
       description: Manager Context
       externalDependencies: []
@@ -374,6 +418,10 @@ modules:
             - Entity
             - Relation
             - KnowledgeGraph
+            - LongRunningOperationOptions
+            - BatchOperation
+            - BatchResult
+            - BatchOptions
           typeOnly: true
         - file: ./GraphStorage.js
           imports:
@@ -385,11 +433,18 @@ modules:
         - file: ../utils/errors.js
           imports:
             - KnowledgeGraphError
+        - file: ../utils/index.js
+          imports:
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
       exports:
         - TransactionManager
+        - BatchTransaction
         - OperationType
       classes:
         - TransactionManager
+        - BatchTransaction
       interfaces:
         - TransactionResult
       enums:
@@ -430,6 +485,7 @@ modules:
         - file: ../types/index.js
           imports:
             - Entity
+            - LongRunningOperationOptions
           typeOnly: true
         - file: ../core/GraphStorage.js
           imports:
@@ -439,6 +495,9 @@ modules:
           imports:
             - compress
             - COMPRESSION_CONFIG
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
       exports:
         - ArchiveManager
       classes:
@@ -458,6 +517,7 @@ modules:
             - Relation
             - CompressionResult
             - KnowledgeGraph
+            - LongRunningOperationOptions
           typeOnly: true
         - file: ../core/GraphStorage.js
           imports:
@@ -466,6 +526,9 @@ modules:
         - file: ../utils/index.js
           imports:
             - levenshteinDistance
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
         - file: ../utils/errors.js
           imports:
             - EntityNotFoundError
@@ -572,6 +635,7 @@ modules:
             - RestoreResult
             - ExportOptions
             - ExportResult
+            - LongRunningOperationOptions
           typeOnly: true
         - file: ../core/GraphStorage.js
           imports:
@@ -587,6 +651,9 @@ modules:
             - hasBrotliExtension
             - COMPRESSION_CONFIG
             - STREAMING_CONFIG
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
         - file: ./StreamingExporter.js
           imports:
             - StreamingExporter
@@ -610,7 +677,13 @@ modules:
           imports:
             - Entity
             - ReadonlyKnowledgeGraph
+            - LongRunningOperationOptions
           typeOnly: true
+        - file: ../utils/index.js
+          imports:
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
       exports:
         - StreamingExporter
       classes:
@@ -756,7 +829,7 @@ modules:
     src/search/FuzzySearch.ts:
       description: Fuzzy Search
       externalDependencies:
-        - package: "@danielsimonjr/workerpool/modern"
+        - package: "@danielsimonjr/workerpool"
           imports:
             - Pool
             - workerpool
@@ -858,6 +931,18 @@ modules:
             - SemanticSearch
             - entityToText
           reExport: true
+        - file: ./TFIDFIndexManager.js
+          imports:
+            - TFIDFIndexManager
+          reExport: true
+        - file: ./TFIDFEventSync.js
+          imports:
+            - TFIDFEventSync
+          reExport: true
+        - file: ./QueryCostEstimator.js
+          imports:
+            - QueryCostEstimator
+          reExport: true
       exports:
         - BasicSearch
         - RankedSearch
@@ -881,6 +966,9 @@ modules:
         - type SQLiteStorageWithEmbeddings
         - SemanticSearch
         - entityToText
+        - TFIDFIndexManager
+        - TFIDFEventSync
+        - QueryCostEstimator
       reExported:
         - BasicSearch
         - RankedSearch
@@ -904,6 +992,24 @@ modules:
         - type SQLiteStorageWithEmbeddings
         - SemanticSearch
         - entityToText
+        - TFIDFIndexManager
+        - TFIDFEventSync
+        - QueryCostEstimator
+    src/search/QueryCostEstimator.ts:
+      description: Query Cost Estimator
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - SearchMethod
+            - QueryCostEstimate
+            - QueryCostEstimatorOptions
+          typeOnly: true
+      exports:
+        - QueryCostEstimator
+      classes:
+        - QueryCostEstimator
     src/search/RankedSearch.ts:
       description: Ranked Search
       externalDependencies: []
@@ -993,6 +1099,8 @@ modules:
             - KnowledgeGraph
             - SearchResult
             - SavedSearch
+            - AutoSearchResult
+            - Entity
           typeOnly: true
         - file: ../core/GraphStorage.js
           imports:
@@ -1016,6 +1124,9 @@ modules:
         - file: ./SavedSearchManager.js
           imports:
             - SavedSearchManager
+        - file: ./QueryCostEstimator.js
+          imports:
+            - QueryCostEstimator
       exports:
         - SearchManager
       classes:
@@ -1057,6 +1168,9 @@ modules:
           imports:
             - EMBEDDING_DEFAULTS
             - SEMANTIC_SEARCH_LIMITS
+        - file: ../utils/index.js
+          imports:
+            - checkCancellation
       exports:
         - entityToText
         - SemanticSearch
@@ -1064,6 +1178,33 @@ modules:
         - SemanticSearch
       functions:
         - entityToText
+    src/search/TFIDFEventSync.ts:
+      description: TF-IDF Event Sync
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../core/GraphEventEmitter.js
+          imports:
+            - GraphEventEmitter
+          typeOnly: true
+        - file: ./TFIDFIndexManager.js
+          imports:
+            - TFIDFIndexManager
+          typeOnly: true
+        - file: ../types/index.js
+          imports:
+            - IGraphStorage
+          typeOnly: true
+        - file: ../types/types.js
+          imports:
+            - EntityCreatedEvent
+            - EntityUpdatedEvent
+            - EntityDeletedEvent
+          typeOnly: true
+      exports:
+        - TFIDFEventSync
+      classes:
+        - TFIDFEventSync
     src/search/TFIDFIndexManager.ts:
       description: TF-IDF Index Manager
       externalDependencies: []
@@ -1178,12 +1319,10 @@ modules:
       internalDependencies: []
       exports:
         - toolDefinitions
-        - toolCategories
       interfaces:
         - ToolDefinition
       constants:
         - toolDefinitions
-        - toolCategories
     src/server/toolHandlers.ts:
       description: MCP Tool Handlers
       externalDependencies:
@@ -1243,7 +1382,12 @@ modules:
       description: Type Definitions
       externalDependencies: []
       nodeDependencies: []
-      internalDependencies: []
+      internalDependencies:
+        - file: ../utils/taskScheduler.js
+          imports:
+            - ProgressCallback
+            - TaskPriority
+          typeOnly: true
       exports: []
       interfaces:
         - Entity
@@ -1289,6 +1433,23 @@ modules:
         - VectorSearchResult
         - EmbeddingConfig
         - SemanticIndexOptions
+        - LongRunningOperationOptions
+        - BatchResult
+        - BatchOptions
+        - GraphEventBase
+        - EntityCreatedEvent
+        - EntityUpdatedEvent
+        - EntityDeletedEvent
+        - RelationCreatedEvent
+        - RelationDeletedEvent
+        - ObservationAddedEvent
+        - ObservationDeletedEvent
+        - GraphSavedEvent
+        - GraphLoadedEvent
+        - GraphEventMap
+        - QueryCostEstimate
+        - AutoSearchResult
+        - QueryCostEstimatorOptions
   utils:
     src/utils/compressedCache.ts:
       description: Compressed Cache Utility
@@ -1509,6 +1670,7 @@ modules:
         - ImportError
         - ExportError
         - InsufficientEntitiesError
+        - OperationCancelledError
       classes:
         - KnowledgeGraphError
         - EntityNotFoundError
@@ -1521,6 +1683,7 @@ modules:
         - ImportError
         - ExportError
         - InsufficientEntitiesError
+        - OperationCancelledError
     src/utils/formatters.ts:
       description: Response and Pagination Formatters
       externalDependencies: []
@@ -1567,6 +1730,7 @@ modules:
             - ImportError
             - ExportError
             - InsufficientEntitiesError
+            - OperationCancelledError
           reExport: true
         - file: ./constants.js
           imports:
@@ -1761,6 +1925,15 @@ modules:
             - "// Rate Limiting\r\n  debounce"
             - throttle
           reExport: true
+        - file: ./operationUtils.js
+          imports:
+            - checkCancellation
+            - createProgressReporter
+            - createProgress
+            - executeWithPhases
+            - processBatchesWithProgress
+            - type PhaseDefinition
+          reExport: true
       exports:
         - KnowledgeGraphError
         - EntityNotFoundError
@@ -1773,6 +1946,7 @@ modules:
         - ImportError
         - ExportError
         - InsufficientEntitiesError
+        - OperationCancelledError
         - FILE_EXTENSIONS
         - FILE_SUFFIXES
         - DEFAULT_FILE_NAMES
@@ -1930,6 +2104,12 @@ modules:
         - withRetry
         - "// Rate Limiting\r\n  debounce"
         - throttle
+        - checkCancellation
+        - createProgressReporter
+        - createProgress
+        - executeWithPhases
+        - processBatchesWithProgress
+        - type PhaseDefinition
       reExported:
         - KnowledgeGraphError
         - EntityNotFoundError
@@ -1942,6 +2122,7 @@ modules:
         - ImportError
         - ExportError
         - InsufficientEntitiesError
+        - OperationCancelledError
         - FILE_EXTENSIONS
         - FILE_SUFFIXES
         - DEFAULT_FILE_NAMES
@@ -2099,6 +2280,12 @@ modules:
         - withRetry
         - "// Rate Limiting\r\n  debounce"
         - throttle
+        - checkCancellation
+        - createProgressReporter
+        - createProgress
+        - executeWithPhases
+        - processBatchesWithProgress
+        - type PhaseDefinition
     src/utils/indexes.ts:
       description: Search Indexes
       externalDependencies: []
@@ -2131,10 +2318,36 @@ modules:
         - logger
       constants:
         - logger
+    src/utils/operationUtils.ts:
+      description: Operation Utilities
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ./errors.js
+          imports:
+            - OperationCancelledError
+        - file: ./taskScheduler.js
+          imports:
+            - ProgressCallback
+          typeOnly: true
+      exports:
+        - checkCancellation
+        - createProgressReporter
+        - createProgress
+        - executeWithPhases
+        - processBatchesWithProgress
+      interfaces:
+        - PhaseDefinition
+      functions:
+        - checkCancellation
+        - createProgressReporter
+        - createProgress
+        - executeWithPhases
+        - processBatchesWithProgress
     src/utils/parallelUtils.ts:
       description: Parallel Utilities
       externalDependencies:
-        - package: "@danielsimonjr/workerpool/modern"
+        - package: "@danielsimonjr/workerpool"
           imports:
             - workerpool
       nodeDependencies: []
@@ -2286,7 +2499,7 @@ modules:
     src/utils/taskScheduler.ts:
       description: Task Scheduler
       externalDependencies:
-        - package: "@danielsimonjr/workerpool/modern"
+        - package: "@danielsimonjr/workerpool"
           imports:
             - workerpool
       nodeDependencies: []
@@ -2339,7 +2552,7 @@ modules:
     src/workers/levenshteinWorker.ts:
       description: Levenshtein Worker
       externalDependencies:
-        - package: "@danielsimonjr/workerpool/modern"
+        - package: "@danielsimonjr/workerpool"
           imports:
             - workerpool
       nodeDependencies: []
@@ -2358,14 +2571,22 @@ modules:
 dependencyGraph:
   circularDependencies:
     runtime: []
-    typeOnly: []
-    total: 0
+    typeOnly:
+      - - src/core/GraphStorage.ts
+        - src/core/TransactionManager.ts
+        - src/core/GraphStorage.ts
+      - - src/core/GraphStorage.ts
+        - src/core/TransactionManager.ts
+        - src/features/IOManager.ts
+        - src/core/GraphStorage.ts
+    total: 2
     runtimeCount: 0
-    typeOnlyCount: 0
+    typeOnlyCount: 2
   layers:
     - name: Core
       files:
         - src/core/EntityManager.ts
+        - src/core/GraphEventEmitter.ts
         - src/core/GraphStorage.ts
         - src/core/GraphTraversal.ts
         - src/core/HierarchyManager.ts
@@ -2395,12 +2616,14 @@ dependencyGraph:
         - src/search/EmbeddingService.ts
         - src/search/FuzzySearch.ts
         - src/search/index.ts
+        - src/search/QueryCostEstimator.ts
         - src/search/RankedSearch.ts
         - src/search/SavedSearchManager.ts
         - src/search/SearchFilterChain.ts
         - src/search/SearchManager.ts
         - src/search/SearchSuggestions.ts
         - src/search/SemanticSearch.ts
+        - src/search/TFIDFEventSync.ts
         - src/search/TFIDFIndexManager.ts
         - src/search/VectorStore.ts
     - name: Server
@@ -2424,6 +2647,7 @@ dependencyGraph:
         - src/utils/index.ts
         - src/utils/indexes.ts
         - src/utils/logger.ts
+        - src/utils/operationUtils.ts
         - src/utils/parallelUtils.ts
         - src/utils/schemas.ts
         - src/utils/searchAlgorithms.ts
@@ -2434,19 +2658,19 @@ dependencyGraph:
         - src/workers/index.ts
         - src/workers/levenshteinWorker.ts
 statistics:
-  totalTypeScriptFiles: 54
+  totalTypeScriptFiles: 58
   totalModules: 8
-  totalLinesOfCode: 19452
-  totalExports: 417
-  totalClasses: 50
-  totalInterfaces: 71
-  totalFunctions: 89
+  totalLinesOfCode: 22608
+  totalExports: 436
+  totalClasses: 55
+  totalInterfaces: 89
+  totalFunctions: 94
   totalTypeGuards: 4
   totalEnums: 3
-  totalConstants: 53
-  totalReExports: 222
-  totalTypeOnlyImports: 49
+  totalConstants: 50
+  totalReExports: 234
+  totalTypeOnlyImports: 57
   runtimeCircularDeps: 0
-  typeOnlyCircularDeps: 0
+  typeOnlyCircularDeps: 2
   unusedFilesCount: 0
-  unusedExportsCount: 127
+  unusedExportsCount: 142

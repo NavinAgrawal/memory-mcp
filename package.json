@@ -1,7 +1,7 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "9.6.2",
-  "description": "Enhanced MCP memory server with hierarchies, compression, archiving, graph algorithms, semantic search, and 54 advanced tools",
+  "version": "9.8.0",
+  "description": "Enhanced MCP memory server with hierarchies, compression, archiving, graph algorithms, semantic search, and 55 advanced tools",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
@@ -76,7 +76,7 @@
     "docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts"
   },
   "dependencies": {
-    "@danielsimonjr/workerpool": "file:../../users/danie/dropbox/github/workerpool",
+    "@danielsimonjr/workerpool": "^10.0.1",
     "@modelcontextprotocol/sdk": "^1.21.1",
     "async-mutex": "^0.5.0",
     "better-sqlite3": "^11.7.0",

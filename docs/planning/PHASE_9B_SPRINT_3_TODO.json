@@ -1,0 +1,340 @@
+{
+  "phase": "9B",
+  "sprint": 3,
+  "title": "Polish, Documentation, and Testing",
+  "priority": "medium",
+  "effort": "9 hours",
+  "status": "completed",
+  "impact": "Medium - Completes TaskScheduler integration, adds documentation, and ensures comprehensive test coverage",
+  "targetMetrics": {
+    "graphTraversal": {
+      "current": "findAllPaths uses DFS without cancellation",
+      "target": "findAllPaths supports AbortSignal cancellation and maxPaths limit"
+    },
+    "streamingExporter": {
+      "current": "No progress reporting during streaming exports",
+      "target": "Progress callback for entity/relation streaming"
+    },
+    "documentation": {
+      "current": "TaskScheduler documented in CLAUDE.md only",
+      "target": "Comprehensive guide in docs/guides/TASK_SCHEDULER.md"
+    },
+    "testCoverage": {
+      "current": "Basic TaskScheduler tests exist",
+      "target": "Unit tests for operationUtils + integration tests for all managers"
+    }
+  },
+  "tasks": [
+    {
+      "id": "9B.3.1",
+      "category": "integration",
+      "title": "Add Cancellation Support to GraphTraversal.findAllPaths()",
+      "description": "Add AbortSignal cancellation support and optional maxPaths limit to GraphTraversal.findAllPaths() method for early termination of path-finding in dense graphs.",
+      "status": "completed",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/core/GraphTraversal.ts", "src/types/types.ts", "tests/unit/core/GraphTraversal.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Enable cancellation of path-finding operations that may take a long time in densely connected graphs.",
+        "keyDecisions": [
+          "Add signal and maxPaths to TraversalOptions interface",
+          "Check cancellation at each DFS recursion level",
+          "Support early termination when maxPaths reached",
+          "Keep original return type PathResult[] (NOT CancellableResult wrapper)"
+        ],
+        "currentCode": {
+          "signature": "async findAllPaths(source: string, target: string, maxDepth: number = 5, options: TraversalOptions = {}): Promise<PathResult[]>"
+        },
+        "existingTraversalOptions": {
+          "fields": ["direction?: 'incoming' | 'outgoing' | 'both'", "maxDepth?: number", "relationTypes?: string[]", "entityTypes?: string[]"]
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Update TraversalOptions in src/types/types.ts",
+          "details": "Add signal?: AbortSignal and maxPaths?: number fields"
+        },
+        {
+          "step": 2,
+          "action": "Import checkCancellation in GraphTraversal.ts",
+          "details": "Import from utils/index.js"
+        },
+        {
+          "step": 3,
+          "action": "Add cancellation check in dfsAllPaths helper function",
+          "details": "At start of recursion: checkCancellation(opts.signal, 'findAllPaths')"
+        },
+        {
+          "step": 4,
+          "action": "Add maxPaths early termination",
+          "details": "If paths.length >= maxPaths, return early from DFS"
+        },
+        {
+          "step": 5,
+          "action": "Update findShortestPath for consistency",
+          "details": "Add cancellation check in BFS loop every 100 iterations"
+        },
+        {
+          "step": 6,
+          "action": "Add tests for cancellation and maxPaths",
+          "details": "Test cancellation throws OperationCancelledError, test maxPaths limits results"
+        }
+      ],
+      "acceptanceCriteria": [
+        "TraversalOptions includes signal and maxPaths fields",
+        "findAllPaths checks cancellation at each recursion",
+        "maxPaths enables early termination",
+        "findShortestPath also checks cancellation",
+        "All existing traversal tests pass (backward compatible)",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "9B.3.2",
+      "category": "integration",
+      "title": "Add Progress Callback to StreamingExporter",
+      "description": "Add progress callback support to StreamingExporter.streamJSONL() and streamCSV() methods for tracking progress during large streaming exports.",
+      "status": "completed",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/features/StreamingExporter.ts", "tests/unit/features/StreamingExporter.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Enable progress tracking during streaming exports, showing entity/relation export progress.",
+        "keyDecisions": [
+          "Create StreamingExportOptions interface with onProgress?: ProgressCallback",
+          "Report progress every 100 entities/relations",
+          "Keep original return type StreamResult",
+          "Optionally add cancellation support (signal field)"
+        ],
+        "currentCode": {
+          "streamJSONL": "async streamJSONL(graph: ReadonlyKnowledgeGraph): Promise<StreamResult>",
+          "streamCSV": "async streamCSV(graph: ReadonlyKnowledgeGraph): Promise<StreamResult>"
+        }
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create StreamingExportOptions interface",
+          "details": "interface StreamingExportOptions { onProgress?: ProgressCallback; signal?: AbortSignal; }"
+        },
+        {
+          "step": 2,
+          "action": "Update streamJSONL signature",
+          "details": "async streamJSONL(graph, options?: StreamingExportOptions): Promise<StreamResult>"
+        },
+        {
+          "step": 3,
+          "action": "Add progress reporting in entity loop",
+          "details": "Every 100 entities, report progress with percentage and bytes written"
+        },
+        {
+          "step": 4,
+          "action": "Add progress reporting in relation loop",
+          "details": "Every 100 relations, report progress"
+        },
+        {
+          "step": 5,
+          "action": "Update streamCSV similarly",
+          "details": "Same progress pattern for CSV export"
+        },
+        {
+          "step": 6,
+          "action": "Add tests for streaming progress",
+          "details": "Test progress callback receives expected updates"
+        }
+      ],
+      "acceptanceCriteria": [
+        "StreamingExportOptions interface created",
+        "streamJSONL accepts optional StreamingExportOptions",
+        "streamCSV accepts optional StreamingExportOptions",
+        "Progress callback receives updates every 100 items",
+        "All existing streaming tests pass (backward compatible)",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "9B.3.3",
+      "category": "documentation",
+      "title": "Create TaskScheduler Integration Guide",
+      "description": "Create comprehensive documentation for the TaskScheduler utilities and the new progress/cancellation patterns used across all managers.",
+      "status": "completed",
+      "estimatedHours": 3,
+      "agent": "haiku",
+      "files": ["docs/guides/TASK_SCHEDULER.md", "CLAUDE.md"],
+      "testCategories": [],
+      "implementation": {
+        "purpose": "Provide comprehensive documentation for TaskScheduler utilities and async operation patterns.",
+        "keyDecisions": [
+          "Include overview of all TaskScheduler utilities",
+          "Document the existing ProgressCallback type (object-based format)",
+          "Document LongRunningOperationOptions interface",
+          "Provide examples for each manager's progress/cancellation features",
+          "Include performance considerations and best practices"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create docs/guides/TASK_SCHEDULER.md",
+          "details": "Create file with comprehensive structure"
+        },
+        {
+          "step": 2,
+          "action": "Write Overview section",
+          "details": "Explain TaskScheduler purpose, available utilities (batchProcess, withRetry, debounce, throttle, TaskQueue)"
+        },
+        {
+          "step": 3,
+          "action": "Document the ProgressCallback type",
+          "details": "Document object-based format: { completed, total, percentage, currentTaskId? }"
+        },
+        {
+          "step": 4,
+          "action": "Document LongRunningOperationOptions",
+          "details": "Explain onProgress, signal, and priority fields"
+        },
+        {
+          "step": 5,
+          "action": "Write Manager Integration section",
+          "details": "Document each manager's progress/cancellation capabilities with examples"
+        },
+        {
+          "step": 6,
+          "action": "Write Best Practices section",
+          "details": "Guidelines for when to use, progress patterns, cancellation handling, error handling"
+        },
+        {
+          "step": 7,
+          "action": "Write Performance Considerations section",
+          "details": "Document overhead, batch sizes, throttling"
+        },
+        {
+          "step": 8,
+          "action": "Update CLAUDE.md",
+          "details": "Add reference to new guide in Documentation section"
+        }
+      ],
+      "acceptanceCriteria": [
+        "docs/guides/TASK_SCHEDULER.md exists with comprehensive content",
+        "All core utilities documented with examples",
+        "LongRunningOperationOptions documented",
+        "All manager integrations documented with code examples",
+        "Best practices section provides actionable guidance",
+        "Performance considerations section covers overhead",
+        "CLAUDE.md updated to reference the new guide"
+      ]
+    },
+    {
+      "id": "9B.3.4",
+      "category": "testing",
+      "title": "Add Unit and Integration Tests for Operation Utilities",
+      "description": "Create comprehensive unit tests for the operationUtils module and integration tests that verify progress/cancellation across multiple managers in realistic scenarios.",
+      "status": "completed",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["tests/unit/utils/operationUtils.test.ts", "tests/integration/task-scheduler.test.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Ensure operationUtils functions work correctly and TaskScheduler integration works across all managers.",
+        "keyDecisions": [
+          "Create unit tests for checkCancellation, createProgressReporter, createProgress, executeWithPhases",
+          "Create integration tests for EntityManager, CompressionManager progress/cancellation",
+          "Test combined workflows with progress tracking",
+          "Test performance overhead of progress callbacks < 20%"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create tests/unit/utils/operationUtils.test.ts",
+          "details": "Unit tests for all operationUtils functions"
+        },
+        {
+          "step": 2,
+          "action": "Test checkCancellation",
+          "details": "Test with undefined signal, non-aborted signal, aborted signal, operation name in error"
+        },
+        {
+          "step": 3,
+          "action": "Test createProgressReporter",
+          "details": "Test returns undefined for no callback, throttling behavior, always reports 0% and 100%"
+        },
+        {
+          "step": 4,
+          "action": "Test createProgress",
+          "details": "Test correct values, zero total handling, currentTaskId inclusion"
+        },
+        {
+          "step": 5,
+          "action": "Test executeWithPhases",
+          "details": "Test phase ordering, progress reporting, cancellation"
+        },
+        {
+          "step": 6,
+          "action": "Create tests/integration/task-scheduler.test.ts",
+          "details": "Integration tests for multi-manager scenarios"
+        },
+        {
+          "step": 7,
+          "action": "Test EntityManager progress and cancellation",
+          "details": "Create 500 entities with progress tracking, abort mid-operation"
+        },
+        {
+          "step": 8,
+          "action": "Test combined workflow",
+          "details": "Import -> compress -> export pipeline with progress"
+        },
+        {
+          "step": 9,
+          "action": "Test performance overhead",
+          "details": "Verify progress callback overhead < 20% compared to no callback"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Unit tests exist for all operationUtils functions",
+        "Integration tests for EntityManager progress/cancellation",
+        "Integration tests for CompressionManager progress",
+        "Combined workflow test verifies end-to-end progress",
+        "Performance test verifies overhead < 20%",
+        "All tests pass with npm test",
+        "Test coverage maintained or improved"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "GraphTraversal.findAllPaths supports cancellation and maxPaths",
+    "StreamingExporter supports progress callback",
+    "Comprehensive documentation in docs/guides/TASK_SCHEDULER.md",
+    "Unit tests for operationUtils complete",
+    "Integration tests cover all major managers",
+    "npm test passes with all new tests",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": [
+    "docs/guides/TASK_SCHEDULER.md",
+    "tests/unit/utils/operationUtils.test.ts",
+    "tests/integration/task-scheduler.test.ts"
+  ],
+  "filesModified": [
+    "src/core/GraphTraversal.ts",
+    "src/features/StreamingExporter.ts",
+    "src/types/types.ts",
+    "tests/unit/core/GraphTraversal.test.ts",
+    "tests/unit/features/StreamingExporter.test.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 30,
+  "totalEstimatedHours": 9,
+  "dependencies": ["Sprint 9B.1 (operationUtils)", "Sprint 9B.2 (manager integrations)"],
+  "notes": [
+    "Sprint 3 depends on both Sprint 1 and Sprint 2 being complete",
+    "Documentation should be comprehensive enough for new developers",
+    "Integration tests should use realistic data sizes (100-1000 items)",
+    "Performance tests should account for CI environment variability (use 20% overhead threshold)",
+    "Use the existing ProgressCallback type from taskScheduler.ts in all examples"
+  ]
+}

@@ -20,6 +20,7 @@ import type {
   RestoreResult,
   ExportOptions,
   ExportResult,
+  LongRunningOperationOptions,
 } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import { FileOperationError } from '../utils/errors.js';
@@ -29,6 +30,9 @@ import {
   hasBrotliExtension,
   COMPRESSION_CONFIG,
   STREAMING_CONFIG,
+  checkCancellation,
+  createProgressReporter,
+  createProgress,
 } from '../utils/index.js';
 import { StreamingExporter, type StreamResult } from './StreamingExporter.js';
 
@@ -569,21 +573,37 @@ export class IOManager {
   /**
    * Import graph from formatted data.
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
    * @param format - Import format
    * @param data - Import data string
    * @param mergeStrategy - How to handle conflicts
    * @param dryRun - If true, preview changes without applying
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Import result with statistics
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    */
   async importGraph(
     format: ImportFormat,
     data: string,
     mergeStrategy: MergeStrategy = 'skip',
-    dryRun: boolean = false
+    dryRun: boolean = false,
+    options?: LongRunningOperationOptions
   ): Promise<ImportResult> {
+    // Check for early cancellation
+    checkCancellation(options?.signal, 'importGraph');
+
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(options?.onProgress);
+    reportProgress?.(createProgress(0, 100, 'importGraph'));
+
     let importedGraph: KnowledgeGraph;
 
     try {
+      // Parsing phase (0-20% progress)
+      reportProgress?.(createProgress(5, 100, 'parsing data'));
+      checkCancellation(options?.signal, 'importGraph');
+
       switch (format) {
         case 'json':
           importedGraph = this.parseJsonImport(data);
@@ -597,6 +617,8 @@ export class IOManager {
         default:
           throw new Error(`Unsupported import format: ${format}`);
       }
+
+      reportProgress?.(createProgress(20, 100, 'parsing complete'));
     } catch (error) {
       return {
         entitiesAdded: 0,
@@ -608,7 +630,8 @@ export class IOManager {
       };
     }
 
-    return await this.mergeImportedGraph(importedGraph, mergeStrategy, dryRun);
+    // Merging phase (20-100% progress)
+    return await this.mergeImportedGraph(importedGraph, mergeStrategy, dryRun, options);
   }
 
   private parseJsonImport(data: string): KnowledgeGraph {
@@ -797,8 +820,15 @@ export class IOManager {
   private async mergeImportedGraph(
     importedGraph: KnowledgeGraph,
     mergeStrategy: MergeStrategy,
-    dryRun: boolean
+    dryRun: boolean,
+    options?: LongRunningOperationOptions
   ): Promise<ImportResult> {
+    // Check for cancellation
+    checkCancellation(options?.signal, 'importGraph');
+
+    // Setup progress reporter (we're at 20% from parsing, need to go to 100%)
+    const reportProgress = createProgressReporter(options?.onProgress);
+
     const existingGraph = await this.storage.getGraphForMutation();
     const result: ImportResult = {
       entitiesAdded: 0,
@@ -819,7 +849,15 @@ export class IOManager {
       existingRelationsSet.add(`${relation.from}|${relation.to}|${relation.relationType}`);
     }
 
+    // Process entities (20-60% progress)
+    const totalEntities = importedGraph.entities.length;
+    const totalRelations = importedGraph.relations.length;
+    let processedEntities = 0;
+
     for (const importedEntity of importedGraph.entities) {
+      // Check for cancellation periodically
+      checkCancellation(options?.signal, 'importGraph');
+
       const existing = existingEntitiesMap.get(importedEntity.name);
 
       if (!existing) {
@@ -863,17 +901,32 @@ export class IOManager {
             break;
         }
       }
+
+      processedEntities++;
+      // Map entity progress (0-100%) to overall progress (20-60%)
+      const entityProgress = totalEntities > 0 ? Math.round(20 + (processedEntities / totalEntities) * 40) : 60;
+      reportProgress?.(createProgress(entityProgress, 100, 'importing entities'));
     }
 
+    reportProgress?.(createProgress(60, 100, 'importing relations'));
+
+    // Process relations (60-95% progress)
+    let processedRelations = 0;
+
     for (const importedRelation of importedGraph.relations) {
+      // Check for cancellation periodically
+      checkCancellation(options?.signal, 'importGraph');
+
       const relationKey = `${importedRelation.from}|${importedRelation.to}|${importedRelation.relationType}`;
 
       if (!existingEntitiesMap.has(importedRelation.from)) {
         result.errors.push(`Relation source entity "${importedRelation.from}" does not exist`);
+        processedRelations++;
         continue;
       }
       if (!existingEntitiesMap.has(importedRelation.to)) {
         result.errors.push(`Relation target entity "${importedRelation.to}" does not exist`);
+        processedRelations++;
         continue;
       }
 
@@ -890,11 +943,23 @@ export class IOManager {
           result.relationsSkipped++;
         }
       }
+
+      processedRelations++;
+      // Map relation progress (0-100%) to overall progress (60-95%)
+      const relationProgress = totalRelations > 0 ? Math.round(60 + (processedRelations / totalRelations) * 35) : 95;
+      reportProgress?.(createProgress(relationProgress, 100, 'importing relations'));
     }
+
+    // Check for cancellation before final save
+    checkCancellation(options?.signal, 'importGraph');
+    reportProgress?.(createProgress(95, 100, 'saving graph'));
 
     if (!dryRun && (mergeStrategy !== 'fail' || result.errors.length === 0)) {
       await this.storage.saveGraph(existingGraph);
     }
+
+    // Report completion
+    reportProgress?.(createProgress(100, 100, 'importGraph'));
 
     return result;
   }

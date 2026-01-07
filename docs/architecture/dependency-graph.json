@@ -1,11 +1,11 @@
 {
   "metadata": {
     "name": "@danielsimonjr/memory-mcp",
-    "version": "9.6.2",
-    "lastUpdated": "2026-01-05",
-    "totalFiles": 54,
+    "version": "9.8.0",
+    "lastUpdated": "2026-01-07",
+    "totalFiles": 58,
     "totalModules": 8,
-    "totalExports": 417
+    "totalExports": 436
   },
   "entryPoints": [
     {
@@ -24,7 +24,8 @@
           {
             "file": "../types/index.js",
             "imports": [
-              "Entity"
+              "Entity",
+              "LongRunningOperationOptions"
             ],
             "typeOnly": true
           },
@@ -48,7 +49,10 @@
             "imports": [
               "BatchCreateEntitiesSchema",
               "UpdateEntitySchema",
-              "EntityNamesSchema"
+              "EntityNamesSchema",
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress"
             ]
           },
           {
@@ -59,16 +63,44 @@
           }
         ],
         "exports": [
-          "MIN_IMPORTANCE",
-          "MAX_IMPORTANCE",
           "EntityManager"
         ],
         "classes": [
           "EntityManager"
+        ]
+      },
+      "src/core/GraphEventEmitter.ts": {
+        "description": "Graph Event Emitter",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "GraphEventType",
+              "GraphEvent",
+              "GraphEventListener",
+              "GraphEventMap",
+              "Entity",
+              "Relation",
+              "EntityCreatedEvent",
+              "EntityUpdatedEvent",
+              "EntityDeletedEvent",
+              "RelationCreatedEvent",
+              "RelationDeletedEvent",
+              "ObservationAddedEvent",
+              "ObservationDeletedEvent",
+              "GraphSavedEvent",
+              "GraphLoadedEvent"
+            ],
+            "typeOnly": true
+          }
         ],
-        "constants": [
-          "MIN_IMPORTANCE",
-          "MAX_IMPORTANCE"
+        "exports": [
+          "GraphEventEmitter"
+        ],
+        "classes": [
+          "GraphEventEmitter"
         ]
       },
       "src/core/GraphStorage.ts": {
@@ -117,6 +149,18 @@
               "RelationIndex",
               "ObservationIndex"
             ]
+          },
+          {
+            "file": "./TransactionManager.js",
+            "imports": [
+              "BatchTransaction"
+            ]
+          },
+          {
+            "file": "./GraphEventEmitter.js",
+            "imports": [
+              "GraphEventEmitter"
+            ]
           }
         ],
         "exports": [
@@ -150,6 +194,12 @@
               "GraphStorage"
             ],
             "typeOnly": true
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "checkCancellation"
+            ]
           }
         ],
         "exports": [
@@ -268,6 +318,7 @@
             "imports": [
               "TransactionManager",
               "OperationType",
+              "BatchTransaction",
               "type TransactionOperation",
               "type TransactionResult"
             ],
@@ -278,6 +329,13 @@
             "imports": [
               "createStorage",
               "createStorageFromPath"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./GraphEventEmitter.js",
+            "imports": [
+              "GraphEventEmitter"
             ],
             "reExport": true
           }
@@ -293,10 +351,12 @@
           "GraphTraversal",
           "TransactionManager",
           "OperationType",
+          "BatchTransaction",
           "type TransactionOperation",
           "type TransactionResult",
           "createStorage",
-          "createStorageFromPath"
+          "createStorageFromPath",
+          "GraphEventEmitter"
         ],
         "reExported": [
           "GraphStorage",
@@ -309,10 +369,12 @@
           "GraphTraversal",
           "TransactionManager",
           "OperationType",
+          "BatchTransaction",
           "type TransactionOperation",
           "type TransactionResult",
           "createStorage",
-          "createStorageFromPath"
+          "createStorageFromPath",
+          "GraphEventEmitter"
         ]
       },
       "src/core/ManagerContext.ts": {
@@ -595,7 +657,11 @@
             "imports": [
               "Entity",
               "Relation",
-              "KnowledgeGraph"
+              "KnowledgeGraph",
+              "LongRunningOperationOptions",
+              "BatchOperation",
+              "BatchResult",
+              "BatchOptions"
             ],
             "typeOnly": true
           },
@@ -617,14 +683,24 @@
             "imports": [
               "KnowledgeGraphError"
             ]
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress"
+            ]
           }
         ],
         "exports": [
           "TransactionManager",
+          "BatchTransaction",
           "OperationType"
         ],
         "classes": [
-          "TransactionManager"
+          "TransactionManager",
+          "BatchTransaction"
         ],
         "interfaces": [
           "TransactionResult"
@@ -687,7 +763,8 @@
           {
             "file": "../types/index.js",
             "imports": [
-              "Entity"
+              "Entity",
+              "LongRunningOperationOptions"
             ],
             "typeOnly": true
           },
@@ -702,7 +779,10 @@
             "file": "../utils/index.js",
             "imports": [
               "compress",
-              "COMPRESSION_CONFIG"
+              "COMPRESSION_CONFIG",
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress"
             ]
           }
         ],
@@ -729,7 +809,8 @@
               "Entity",
               "Relation",
               "CompressionResult",
-              "KnowledgeGraph"
+              "KnowledgeGraph",
+              "LongRunningOperationOptions"
             ],
             "typeOnly": true
           },
@@ -743,7 +824,10 @@
           {
             "file": "../utils/index.js",
             "imports": [
-              "levenshteinDistance"
+              "levenshteinDistance",
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress"
             ]
           },
           {
@@ -891,7 +975,8 @@
               "BackupResult",
               "RestoreResult",
               "ExportOptions",
-              "ExportResult"
+              "ExportResult",
+              "LongRunningOperationOptions"
             ],
             "typeOnly": true
           },
@@ -915,7 +1000,10 @@
               "decompress",
               "hasBrotliExtension",
               "COMPRESSION_CONFIG",
-              "STREAMING_CONFIG"
+              "STREAMING_CONFIG",
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress"
             ]
           },
           {
@@ -953,9 +1041,18 @@
             "file": "../types/types.js",
             "imports": [
               "Entity",
-              "ReadonlyKnowledgeGraph"
+              "ReadonlyKnowledgeGraph",
+              "LongRunningOperationOptions"
             ],
             "typeOnly": true
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress"
+            ]
           }
         ],
         "exports": [
@@ -1182,7 +1279,7 @@
         "description": "Fuzzy Search",
         "externalDependencies": [
           {
-            "package": "@danielsimonjr/workerpool/modern",
+            "package": "@danielsimonjr/workerpool",
             "imports": [
               "Pool",
               "workerpool"
@@ -1347,6 +1444,27 @@
               "entityToText"
             ],
             "reExport": true
+          },
+          {
+            "file": "./TFIDFIndexManager.js",
+            "imports": [
+              "TFIDFIndexManager"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./TFIDFEventSync.js",
+            "imports": [
+              "TFIDFEventSync"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./QueryCostEstimator.js",
+            "imports": [
+              "QueryCostEstimator"
+            ],
+            "reExport": true
           }
         ],
         "exports": [
@@ -1371,7 +1489,10 @@
           "cosineSimilarity",
           "type SQLiteStorageWithEmbeddings",
           "SemanticSearch",
-          "entityToText"
+          "entityToText",
+          "TFIDFIndexManager",
+          "TFIDFEventSync",
+          "QueryCostEstimator"
         ],
         "reExported": [
           "BasicSearch",
@@ -1395,7 +1516,32 @@
           "cosineSimilarity",
           "type SQLiteStorageWithEmbeddings",
           "SemanticSearch",
-          "entityToText"
+          "entityToText",
+          "TFIDFIndexManager",
+          "TFIDFEventSync",
+          "QueryCostEstimator"
+        ]
+      },
+      "src/search/QueryCostEstimator.ts": {
+        "description": "Query Cost Estimator",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "SearchMethod",
+              "QueryCostEstimate",
+              "QueryCostEstimatorOptions"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "QueryCostEstimator"
+        ],
+        "classes": [
+          "QueryCostEstimator"
         ]
       },
       "src/search/RankedSearch.ts": {
@@ -1534,7 +1680,9 @@
             "imports": [
               "KnowledgeGraph",
               "SearchResult",
-              "SavedSearch"
+              "SavedSearch",
+              "AutoSearchResult",
+              "Entity"
             ],
             "typeOnly": true
           },
@@ -1579,6 +1727,12 @@
             "file": "./SavedSearchManager.js",
             "imports": [
               "SavedSearchManager"
+            ]
+          },
+          {
+            "file": "./QueryCostEstimator.js",
+            "imports": [
+              "QueryCostEstimator"
             ]
           }
         ],
@@ -1644,6 +1798,12 @@
               "EMBEDDING_DEFAULTS",
               "SEMANTIC_SEARCH_LIMITS"
             ]
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "checkCancellation"
+            ]
           }
         ],
         "exports": [
@@ -1655,6 +1815,49 @@
         ],
         "functions": [
           "entityToText"
+        ]
+      },
+      "src/search/TFIDFEventSync.ts": {
+        "description": "TF-IDF Event Sync",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../core/GraphEventEmitter.js",
+            "imports": [
+              "GraphEventEmitter"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./TFIDFIndexManager.js",
+            "imports": [
+              "TFIDFIndexManager"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "IGraphStorage"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "../types/types.js",
+            "imports": [
+              "EntityCreatedEvent",
+              "EntityUpdatedEvent",
+              "EntityDeletedEvent"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "TFIDFEventSync"
+        ],
+        "classes": [
+          "TFIDFEventSync"
         ]
       },
       "src/search/TFIDFIndexManager.ts": {
@@ -1834,15 +2037,13 @@
         "nodeDependencies": [],
         "internalDependencies": [],
         "exports": [
-          "toolDefinitions",
-          "toolCategories"
+          "toolDefinitions"
         ],
         "interfaces": [
           "ToolDefinition"
         ],
         "constants": [
-          "toolDefinitions",
-          "toolCategories"
+          "toolDefinitions"
         ]
       },
       "src/server/toolHandlers.ts": {
@@ -1928,7 +2129,16 @@
         "description": "Type Definitions",
         "externalDependencies": [],
         "nodeDependencies": [],
-        "internalDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../utils/taskScheduler.js",
+            "imports": [
+              "ProgressCallback",
+              "TaskPriority"
+            ],
+            "typeOnly": true
+          }
+        ],
         "exports": [],
         "interfaces": [
           "Entity",
@@ -1973,7 +2183,24 @@
           "IVectorStore",
           "VectorSearchResult",
           "EmbeddingConfig",
-          "SemanticIndexOptions"
+          "SemanticIndexOptions",
+          "LongRunningOperationOptions",
+          "BatchResult",
+          "BatchOptions",
+          "GraphEventBase",
+          "EntityCreatedEvent",
+          "EntityUpdatedEvent",
+          "EntityDeletedEvent",
+          "RelationCreatedEvent",
+          "RelationDeletedEvent",
+          "ObservationAddedEvent",
+          "ObservationDeletedEvent",
+          "GraphSavedEvent",
+          "GraphLoadedEvent",
+          "GraphEventMap",
+          "QueryCostEstimate",
+          "AutoSearchResult",
+          "QueryCostEstimatorOptions"
         ]
       }
     },
@@ -2255,7 +2482,8 @@
           "FileOperationError",
           "ImportError",
           "ExportError",
-          "InsufficientEntitiesError"
+          "InsufficientEntitiesError",
+          "OperationCancelledError"
         ],
         "classes": [
           "KnowledgeGraphError",
@@ -2268,7 +2496,8 @@
           "FileOperationError",
           "ImportError",
           "ExportError",
-          "InsufficientEntitiesError"
+          "InsufficientEntitiesError",
+          "OperationCancelledError"
         ]
       },
       "src/utils/formatters.ts": {
@@ -2325,7 +2554,8 @@
               "FileOperationError",
               "ImportError",
               "ExportError",
-              "InsufficientEntitiesError"
+              "InsufficientEntitiesError",
+              "OperationCancelledError"
             ],
             "reExport": true
           },
@@ -2557,6 +2787,18 @@
               "throttle"
             ],
             "reExport": true
+          },
+          {
+            "file": "./operationUtils.js",
+            "imports": [
+              "checkCancellation",
+              "createProgressReporter",
+              "createProgress",
+              "executeWithPhases",
+              "processBatchesWithProgress",
+              "type PhaseDefinition"
+            ],
+            "reExport": true
           }
         ],
         "exports": [
@@ -2571,6 +2813,7 @@
           "ImportError",
           "ExportError",
           "InsufficientEntitiesError",
+          "OperationCancelledError",
           "FILE_EXTENSIONS",
           "FILE_SUFFIXES",
           "DEFAULT_FILE_NAMES",
@@ -2727,7 +2970,13 @@
           "rateLimitedProcess",
           "withRetry",
           "// Rate Limiting\r\n  debounce",
-          "throttle"
+          "throttle",
+          "checkCancellation",
+          "createProgressReporter",
+          "createProgress",
+          "executeWithPhases",
+          "processBatchesWithProgress",
+          "type PhaseDefinition"
         ],
         "reExported": [
           "KnowledgeGraphError",
@@ -2741,6 +2990,7 @@
           "ImportError",
           "ExportError",
           "InsufficientEntitiesError",
+          "OperationCancelledError",
           "FILE_EXTENSIONS",
           "FILE_SUFFIXES",
           "DEFAULT_FILE_NAMES",
@@ -2897,7 +3147,13 @@
           "rateLimitedProcess",
           "withRetry",
           "// Rate Limiting\r\n  debounce",
-          "throttle"
+          "throttle",
+          "checkCancellation",
+          "createProgressReporter",
+          "createProgress",
+          "executeWithPhases",
+          "processBatchesWithProgress",
+          "type PhaseDefinition"
         ]
       },
       "src/utils/indexes.ts": {
@@ -2942,11 +3198,48 @@
           "logger"
         ]
       },
+      "src/utils/operationUtils.ts": {
+        "description": "Operation Utilities",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "./errors.js",
+            "imports": [
+              "OperationCancelledError"
+            ]
+          },
+          {
+            "file": "./taskScheduler.js",
+            "imports": [
+              "ProgressCallback"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "checkCancellation",
+          "createProgressReporter",
+          "createProgress",
+          "executeWithPhases",
+          "processBatchesWithProgress"
+        ],
+        "interfaces": [
+          "PhaseDefinition"
+        ],
+        "functions": [
+          "checkCancellation",
+          "createProgressReporter",
+          "createProgress",
+          "executeWithPhases",
+          "processBatchesWithProgress"
+        ]
+      },
       "src/utils/parallelUtils.ts": {
         "description": "Parallel Utilities",
         "externalDependencies": [
           {
-            "package": "@danielsimonjr/workerpool/modern",
+            "package": "@danielsimonjr/workerpool",
             "imports": [
               "workerpool"
             ]
@@ -3134,7 +3427,7 @@
         "description": "Task Scheduler",
         "externalDependencies": [
           {
-            "package": "@danielsimonjr/workerpool/modern",
+            "package": "@danielsimonjr/workerpool",
             "imports": [
               "workerpool"
             ]
@@ -3205,7 +3498,7 @@
         "description": "Levenshtein Worker",
         "externalDependencies": [
           {
-            "package": "@danielsimonjr/workerpool/modern",
+            "package": "@danielsimonjr/workerpool",
             "imports": [
               "workerpool"
             ]
@@ -3233,16 +3526,29 @@
   "dependencyGraph": {
     "circularDependencies": {
       "runtime": [],
-      "typeOnly": [],
-      "total": 0,
+      "typeOnly": [
+        [
+          "src/core/GraphStorage.ts",
+          "src/core/TransactionManager.ts",
+          "src/core/GraphStorage.ts"
+        ],
+        [
+          "src/core/GraphStorage.ts",
+          "src/core/TransactionManager.ts",
+          "src/features/IOManager.ts",
+          "src/core/GraphStorage.ts"
+        ]
+      ],
+      "total": 2,
       "runtimeCount": 0,
-      "typeOnlyCount": 0
+      "typeOnlyCount": 2
     },
     "layers": [
       {
         "name": "Core",
         "files": [
           "src/core/EntityManager.ts",
+          "src/core/GraphEventEmitter.ts",
           "src/core/GraphStorage.ts",
           "src/core/GraphTraversal.ts",
           "src/core/HierarchyManager.ts",
@@ -3281,12 +3587,14 @@
           "src/search/EmbeddingService.ts",
           "src/search/FuzzySearch.ts",
           "src/search/index.ts",
+          "src/search/QueryCostEstimator.ts",
           "src/search/RankedSearch.ts",
           "src/search/SavedSearchManager.ts",
           "src/search/SearchFilterChain.ts",
           "src/search/SearchManager.ts",
           "src/search/SearchSuggestions.ts",
           "src/search/SemanticSearch.ts",
+          "src/search/TFIDFEventSync.ts",
           "src/search/TFIDFIndexManager.ts",
           "src/search/VectorStore.ts"
         ]
@@ -3319,6 +3627,7 @@
           "src/utils/index.ts",
           "src/utils/indexes.ts",
           "src/utils/logger.ts",
+          "src/utils/operationUtils.ts",
           "src/utils/parallelUtils.ts",
           "src/utils/schemas.ts",
           "src/utils/searchAlgorithms.ts",
@@ -3336,21 +3645,21 @@
     ]
   },
   "statistics": {
-    "totalTypeScriptFiles": 54,
+    "totalTypeScriptFiles": 58,
     "totalModules": 8,
-    "totalLinesOfCode": 19452,
-    "totalExports": 417,
-    "totalClasses": 50,
-    "totalInterfaces": 71,
-    "totalFunctions": 89,
+    "totalLinesOfCode": 22608,
+    "totalExports": 436,
+    "totalClasses": 55,
+    "totalInterfaces": 89,
+    "totalFunctions": 94,
     "totalTypeGuards": 4,
     "totalEnums": 3,
-    "totalConstants": 53,
-    "totalReExports": 222,
-    "totalTypeOnlyImports": 49,
+    "totalConstants": 50,
+    "totalReExports": 234,
+    "totalTypeOnlyImports": 57,
     "runtimeCircularDeps": 0,
-    "typeOnlyCircularDeps": 0,
+    "typeOnlyCircularDeps": 2,
     "unusedFilesCount": 0,
-    "unusedExportsCount": 127
+    "unusedExportsCount": 142
   }
 }

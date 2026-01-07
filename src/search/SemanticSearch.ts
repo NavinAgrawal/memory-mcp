@@ -17,6 +17,7 @@ import type {
 } from '../types/index.js';
 import { InMemoryVectorStore } from './VectorStore.js';
 import { EMBEDDING_DEFAULTS, SEMANTIC_SEARCH_LIMITS } from '../utils/constants.js';
+import { checkCancellation } from '../utils/index.js';
 
 /**
  * Convert an entity to a text representation for embedding.
@@ -91,9 +92,12 @@ export class SemanticSearch {
    * Generates embeddings for all entities and stores them in the vector store.
    * Can be called incrementally - only indexes entities that aren't already indexed.
    *
+   * Phase 9B: Supports cancellation via AbortSignal in options.
+   *
    * @param graph - Knowledge graph to index
-   * @param options - Indexing options
+   * @param options - Indexing options (includes signal for cancellation)
    * @returns Index statistics
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    */
   async indexAll(
     graph: ReadonlyKnowledgeGraph,
@@ -103,7 +107,11 @@ export class SemanticSearch {
       forceReindex = false,
       onProgress,
       batchSize = EMBEDDING_DEFAULTS.DEFAULT_BATCH_SIZE,
+      signal,
     } = options;
+
+    // Check for early cancellation
+    checkCancellation(signal, 'indexAll');
 
     let indexed = 0;
     let skipped = 0;
@@ -124,6 +132,9 @@ export class SemanticSearch {
 
     // Process in batches
     for (let i = 0; i < toIndex.length; i += batchSize) {
+      // Check for cancellation between batches
+      checkCancellation(signal, 'indexAll');
+
       const batch = toIndex.slice(i, i + batchSize);
       const texts = batch.map(entityToText);
 
@@ -137,6 +148,9 @@ export class SemanticSearch {
       } catch (error) {
         // Try individual embeddings on batch failure
         for (const entity of batch) {
+          // Check for cancellation during fallback
+          checkCancellation(signal, 'indexAll');
+
           try {
             const text = entityToText(entity);
             const embedding = await this.embeddingService.embed(text);

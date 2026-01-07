@@ -1,11 +1,12 @@
 # Phase 9B: TaskScheduler Integration
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Created**: 2026-01-05
+**Updated**: 2026-01-05
 **Status**: PLANNED
 **Total Sprints**: 3
-**Total Tasks**: 10 tasks organized into sprints of 3-4 items
-**Prerequisites**: Phase 9 (Advanced Optimizations) complete, All 2267+ tests passing
+**Total Tasks**: 11 tasks organized into sprints of 3-4 items
+**Prerequisites**: Phase 9 (Advanced Optimizations) complete, all tests passing
 
 ---
 
@@ -1098,11 +1099,11 @@ The `src/utils/taskScheduler.ts` module provides:
 
 ---
 
-## Sprint 3: Polish and Documentation
+## Sprint 3: Polish, Documentation, and Testing
 
-**Priority**: LOW (P3)
-**Estimated Duration**: 4 hours
-**Impact**: Completes integration and ensures comprehensive coverage
+**Priority**: MEDIUM (P3)
+**Estimated Duration**: 9 hours
+**Impact**: Completes integration, adds documentation, and ensures comprehensive coverage
 
 ### Task 3.1: Enhance GraphTraversal.findAllPaths() with Cancellation
 
@@ -1263,173 +1264,103 @@ The `src/utils/taskScheduler.ts` module provides:
 
 ---
 
-### Task 3.3: Update Index Exports and Write Tests
+### Task 3.3: Create TaskScheduler Integration Guide
 
 **Files**:
-- `src/utils/index.ts`
-- `src/types/index.ts`
-- `tests/unit/utils/operationUtils.test.ts` (new)
+- `docs/guides/TASK_SCHEDULER.md` (new)
+- `CLAUDE.md` (update)
 
-**Estimated Time**: 1.5 hours
+**Estimated Time**: 3 hours
 **Agent**: Haiku
 
-**Description**: Ensure all new utilities are properly exported and create comprehensive tests.
+**Description**: Create comprehensive documentation for TaskScheduler utilities and the new progress/cancellation patterns used across all managers.
 
 **Step-by-Step Instructions**:
 
-1. **Verify exports in `src/utils/index.ts`**:
-   ```typescript
-   // Ensure these are exported:
-   export {
-     checkCancellation,
-     createProgressReporter,
-     createProgress,
-     executeWithPhases,
-   } from './operationUtils.js';
+1. **Create the documentation file** `docs/guides/TASK_SCHEDULER.md` with the following structure:
+   - Overview of TaskScheduler module
+   - Core utilities (batchProcess, withRetry, debounce, throttle, TaskQueue)
+   - LongRunningOperationOptions interface documentation
+   - Manager integration examples for each supported method
+   - Best practices for progress reporting
+   - Performance considerations
 
-   export { OperationCancelledError } from './errors.js';
+2. **Document the existing ProgressCallback type**:
+   ```typescript
+   // From src/utils/taskScheduler.ts - uses object-based progress
+   type ProgressCallback = (progress: {
+     completed: number;
+     total: number;
+     percentage: number;
+     currentTaskId?: string;
+   }) => void;
    ```
 
-2. **Verify exports in `src/types/index.ts`**:
-   ```typescript
-   export type { LongRunningOperationOptions } from './types.js';
-   ```
+3. **Document each manager integration** with examples:
+   - EntityManager.createEntities()
+   - CompressionManager.findDuplicates(), compressGraph()
+   - IOManager.importGraph()
+   - ArchiveManager.archiveEntities()
+   - SemanticSearch.indexAll()
+   - TransactionManager.commit()
+   - GraphTraversal.findAllPaths()
+   - StreamingExporter.streamJSONL()
 
-3. **Create test file**: `tests/unit/utils/operationUtils.test.ts`
-   ```typescript
-   import { describe, it, expect, vi } from 'vitest';
-   import {
-     checkCancellation,
-     createProgressReporter,
-     createProgress,
-     executeWithPhases,
-     OperationCancelledError,
-   } from '../../../src/utils/index.js';
+4. **Update CLAUDE.md** to reference the new guide in the Documentation section
 
-   describe('operationUtils', () => {
-     describe('checkCancellation', () => {
-       it('should not throw when signal is undefined', () => {
-         expect(() => checkCancellation(undefined)).not.toThrow();
-       });
+5. **Add best practices section** covering:
+   - When to use progress callbacks
+   - Proper AbortController lifecycle management
+   - Throttling considerations
+   - Error handling with cancellation
 
-       it('should not throw when signal is not aborted', () => {
-         const controller = new AbortController();
-         expect(() => checkCancellation(controller.signal)).not.toThrow();
-       });
+**Acceptance Criteria**:
+- [ ] `docs/guides/TASK_SCHEDULER.md` exists with comprehensive content
+- [ ] All core utilities documented with examples
+- [ ] All manager integrations documented
+- [ ] Best practices section provides actionable guidance
+- [ ] CLAUDE.md updated to reference the new guide
 
-       it('should throw OperationCancelledError when signal is aborted', () => {
-         const controller = new AbortController();
-         controller.abort();
-         expect(() => checkCancellation(controller.signal)).toThrow(OperationCancelledError);
-       });
+---
 
-       it('should include operation name in error message', () => {
-         const controller = new AbortController();
-         controller.abort();
-         expect(() => checkCancellation(controller.signal, 'testOp'))
-           .toThrow("Operation 'testOp' was cancelled");
-       });
-     });
+### Task 3.4: Add Integration Tests and Unit Tests for Operation Utilities
 
-     describe('createProgressReporter', () => {
-       it('should return undefined when callback is undefined', () => {
-         expect(createProgressReporter(undefined)).toBeUndefined();
-       });
+**Files**:
+- `tests/unit/utils/operationUtils.test.ts` (new)
+- `tests/integration/task-scheduler.test.ts` (new)
 
-       it('should throttle progress callbacks', async () => {
-         const callback = vi.fn();
-         const reporter = createProgressReporter(callback, 50);
+**Estimated Time**: 2 hours
+**Agent**: Haiku
 
-         reporter!({ completed: 1, total: 100, percentage: 1 });
-         reporter!({ completed: 2, total: 100, percentage: 2 });
-         reporter!({ completed: 3, total: 100, percentage: 3 });
+**Description**: Create comprehensive unit tests for the new operationUtils module and integration tests that verify progress/cancellation across multiple managers.
 
-         // Only first call should go through (within throttle window)
-         expect(callback).toHaveBeenCalledTimes(1);
-       });
+**Step-by-Step Instructions**:
 
-       it('should always report 0% and 100%', () => {
-         const callback = vi.fn();
-         const reporter = createProgressReporter(callback, 1000);
+1. **Create unit test file** `tests/unit/utils/operationUtils.test.ts`:
+   - Test `checkCancellation()` with various signal states
+   - Test `createProgressReporter()` throttling behavior
+   - Test `createProgress()` object creation
+   - Test `executeWithPhases()` ordering and progress reporting
 
-         reporter!({ completed: 0, total: 100, percentage: 0 });
-         reporter!({ completed: 100, total: 100, percentage: 100 });
+2. **Create integration test file** `tests/integration/task-scheduler.test.ts`:
+   - Test EntityManager.createEntities() with progress tracking
+   - Test cancellation returns partial results
+   - Test CompressionManager progress during duplicate detection
+   - Test combined workflow (import → compress → export) with progress
+   - Test performance overhead of progress callbacks < 20%
 
-         expect(callback).toHaveBeenCalledTimes(2);
-       });
-     });
-
-     describe('createProgress', () => {
-       it('should create progress object with correct values', () => {
-         const progress = createProgress(50, 100);
-         expect(progress).toEqual({
-           completed: 50,
-           total: 100,
-           percentage: 50,
-         });
-       });
-
-       it('should handle zero total', () => {
-         const progress = createProgress(0, 0);
-         expect(progress.percentage).toBe(0);
-       });
-
-       it('should include currentTaskId when provided', () => {
-         const progress = createProgress(25, 100, 'task1');
-         expect(progress.currentTaskId).toBe('task1');
-       });
-     });
-
-     describe('executeWithPhases', () => {
-       it('should execute phases in order', async () => {
-         const order: string[] = [];
-
-         await executeWithPhases([
-           { name: 'phase1', weight: 50, execute: async () => { order.push('1'); return 1; } },
-           { name: 'phase2', weight: 50, execute: async () => { order.push('2'); return 2; } },
-         ]);
-
-         expect(order).toEqual(['1', '2']);
-       });
-
-       it('should report progress correctly', async () => {
-         const progressUpdates: number[] = [];
-
-         await executeWithPhases(
-           [
-             { name: 'phase1', weight: 25, execute: async (p) => { p(100); return 1; } },
-             { name: 'phase2', weight: 75, execute: async (p) => { p(100); return 2; } },
-           ],
-           (p) => progressUpdates.push(p.percentage)
-         );
-
-         expect(progressUpdates).toContain(100); // Final completion
-       });
-
-       it('should throw on cancellation', async () => {
-         const controller = new AbortController();
-         controller.abort();
-
-         await expect(executeWithPhases(
-           [{ name: 'phase1', weight: 100, execute: async () => 1 }],
-           undefined,
-           controller.signal
-         )).rejects.toThrow(OperationCancelledError);
-       });
-     });
-   });
-   ```
-
-4. **Run all tests**:
+3. **Run all tests**:
    ```bash
    npm test
    ```
 
 **Acceptance Criteria**:
-- [ ] All new utilities properly exported
-- [ ] Comprehensive tests for operationUtils
-- [ ] All tests pass (including new and existing)
-- [ ] Test coverage maintained or improved
+- [ ] Unit tests for all operationUtils functions
+- [ ] Integration tests for EntityManager progress/cancellation
+- [ ] Integration tests for CompressionManager progress
+- [ ] Combined workflow test verifies end-to-end progress
+- [ ] Performance test verifies overhead < 20%
+- [ ] All tests pass with npm test
 
 ---
 
@@ -1483,17 +1414,17 @@ Supported operations:
 
 ## Summary
 
-| Sprint | Tasks | Focus |
-|--------|-------|-------|
-| Sprint 1 | 4 | Foundation types, EntityManager, CompressionManager, IOManager |
-| Sprint 2 | 3 | ArchiveManager, SemanticSearch, TransactionManager |
-| Sprint 3 | 3 | GraphTraversal, StreamingExporter, Tests & Documentation |
+| Sprint | Tasks | Hours | Focus |
+|--------|-------|-------|-------|
+| Sprint 1 | 4 | 8 | Foundation types, EntityManager, CompressionManager, IOManager |
+| Sprint 2 | 3 | 6 | ArchiveManager, SemanticSearch, TransactionManager |
+| Sprint 3 | 4 | 9 | GraphTraversal, StreamingExporter, Documentation, Tests |
 
-**Total**: 10 tasks across 3 sprints
+**Total**: 11 tasks across 3 sprints (~23 hours)
 
 **Key deliverables**:
 1. New `operationUtils.ts` with shared utilities
 2. `LongRunningOperationOptions` interface for consistent API
 3. Progress and cancellation in 8+ methods
-4. Comprehensive test coverage
-5. Updated documentation
+4. Comprehensive test coverage (unit + integration)
+5. TaskScheduler integration guide documentation

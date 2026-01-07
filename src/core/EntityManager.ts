@@ -7,21 +7,30 @@
  * @module core/EntityManager
  */
 
-import type { Entity } from '../types/index.js';
+import type { Entity, LongRunningOperationOptions } from '../types/index.js';
 import type { GraphStorage } from './GraphStorage.js';
 import { EntityNotFoundError, InvalidImportanceError, ValidationError } from '../utils/errors.js';
-import { BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema } from '../utils/index.js';
+import {
+  BatchCreateEntitiesSchema,
+  UpdateEntitySchema,
+  EntityNamesSchema,
+  checkCancellation,
+  createProgressReporter,
+  createProgress,
+} from '../utils/index.js';
 import { GRAPH_LIMITS } from '../utils/constants.js';
 
 /**
  * Minimum importance value (least important).
+ * Note: Use IMPORTANCE_RANGE from constants.ts for external access.
  */
-export const MIN_IMPORTANCE = 0;
+const MIN_IMPORTANCE = 0;
 
 /**
  * Maximum importance value (most important).
+ * Note: Use IMPORTANCE_RANGE from constants.ts for external access.
  */
-export const MAX_IMPORTANCE = 10;
+const MAX_IMPORTANCE = 10;
 
 /**
  * Manages entity operations with automatic timestamp handling.
@@ -38,9 +47,13 @@ export class EntityManager {
    * - Normalizes all tags to lowercase for consistent searching
    * - Validates importance values (must be between 0-10)
    *
+   * Phase 9B: Supports progress tracking and cancellation via LongRunningOperationOptions.
+   *
    * @param entities - Array of entities to create. Each entity must have a unique name.
+   * @param options - Optional progress/cancellation options (Phase 9B)
    * @returns Promise resolving to array of newly created entities (excludes duplicates)
    * @throws {InvalidImportanceError} If any entity has importance outside the valid range [0-10]
+   * @throws {OperationCancelledError} If operation is cancelled via signal (Phase 9B)
    *
    * @example
    * ```typescript
@@ -60,15 +73,33 @@ export class EntityManager {
    *   { name: 'Bob', entityType: 'person', observations: [] },
    *   { name: 'Charlie', entityType: 'person', observations: [] }
    * ]);
+   *
+   * // With progress tracking and cancellation (Phase 9B)
+   * const controller = new AbortController();
+   * const results = await manager.createEntities(largeEntityArray, {
+   *   signal: controller.signal,
+   *   onProgress: (p) => console.log(`${p.percentage}% complete`),
+   * });
    * ```
    */
-  async createEntities(entities: Entity[]): Promise<Entity[]> {
+  async createEntities(
+    entities: Entity[],
+    options?: LongRunningOperationOptions
+  ): Promise<Entity[]> {
+    // Check for early cancellation
+    checkCancellation(options?.signal, 'createEntities');
+
     // Validate input
     const validation = BatchCreateEntitiesSchema.safeParse(entities);
     if (!validation.success) {
       const errors = validation.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
       throw new ValidationError('Invalid entity data', errors);
     }
+
+    // Setup progress reporter
+    const reportProgress = createProgressReporter(options?.onProgress);
+    const total = entities.length;
+    reportProgress?.(createProgress(0, total, 'createEntities'));
 
     // Use read-only graph for checking existing entities
     const readGraph = await this.storage.loadGraph();
@@ -83,29 +114,39 @@ export class EntityManager {
       );
     }
 
-    const newEntities = entitiesToAdd
-      .map(e => {
-        const entity: Entity = {
-          ...e,
-          createdAt: e.createdAt || timestamp,
-          lastModified: e.lastModified || timestamp,
-        };
+    // Check for cancellation before processing
+    checkCancellation(options?.signal, 'createEntities');
 
-        // Normalize tags to lowercase
-        if (e.tags) {
-          entity.tags = e.tags.map(tag => tag.toLowerCase());
+    const newEntities: Entity[] = [];
+    let processed = 0;
+
+    for (const e of entitiesToAdd) {
+      // Check for cancellation periodically
+      checkCancellation(options?.signal, 'createEntities');
+
+      const entity: Entity = {
+        ...e,
+        createdAt: e.createdAt || timestamp,
+        lastModified: e.lastModified || timestamp,
+      };
+
+      // Normalize tags to lowercase
+      if (e.tags) {
+        entity.tags = e.tags.map(tag => tag.toLowerCase());
+      }
+
+      // Validate importance
+      if (e.importance !== undefined) {
+        if (e.importance < MIN_IMPORTANCE || e.importance > MAX_IMPORTANCE) {
+          throw new InvalidImportanceError(e.importance, MIN_IMPORTANCE, MAX_IMPORTANCE);
         }
+        entity.importance = e.importance;
+      }
 
-        // Validate importance
-        if (e.importance !== undefined) {
-          if (e.importance < MIN_IMPORTANCE || e.importance > MAX_IMPORTANCE) {
-            throw new InvalidImportanceError(e.importance, MIN_IMPORTANCE, MAX_IMPORTANCE);
-          }
-          entity.importance = e.importance;
-        }
-
-        return entity;
-      });
+      newEntities.push(entity);
+      processed++;
+      reportProgress?.(createProgress(processed, entitiesToAdd.length, 'createEntities'));
+    }
 
     // OPTIMIZED: Use append for single entity, bulk save for multiple
     // (N individual appends is slower than one bulk write)
@@ -116,6 +157,9 @@ export class EntityManager {
       graph.entities.push(...newEntities);
       await this.storage.saveGraph(graph);
     }
+
+    // Report completion
+    reportProgress?.(createProgress(entitiesToAdd.length, entitiesToAdd.length, 'createEntities'));
 
     return newEntities;
   }

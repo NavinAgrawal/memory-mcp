@@ -20,6 +20,7 @@ export {
   ImportError,
   ExportError,
   InsufficientEntitiesError,
+  OperationCancelledError,
 } from './errors.js';
 
 // ==================== Constants ====================
@@ -248,3 +249,13 @@ export {
   debounce,
   throttle,
 } from './taskScheduler.js';
+
+// ==================== Operation Utilities (Phase 9B) ====================
+export {
+  checkCancellation,
+  createProgressReporter,
+  createProgress,
+  executeWithPhases,
+  processBatchesWithProgress,
+  type PhaseDefinition,
+} from './operationUtils.js';

@@ -38,3 +38,10 @@ export {
   SemanticSearch,
   entityToText,
 } from './SemanticSearch.js';
+
+// Phase 10 Sprint 3: TF-IDF Index Manager and Event Sync
+export { TFIDFIndexManager } from './TFIDFIndexManager.js';
+export { TFIDFEventSync } from './TFIDFEventSync.js';
+
+// Phase 10 Sprint 4: Query Cost Estimation
+export { QueryCostEstimator } from './QueryCostEstimator.js';

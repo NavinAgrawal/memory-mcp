@@ -12,7 +12,7 @@ import type { GraphStorage } from '../core/GraphStorage.js';
 import { levenshteinDistance } from '../utils/index.js';
 import { SEARCH_LIMITS } from '../utils/constants.js';
 import { SearchFilterChain, type SearchFilters } from './SearchFilterChain.js';
-import workerpool, { type Pool } from '@danielsimonjr/workerpool/modern';
+import workerpool, { type Pool } from '@danielsimonjr/workerpool';
 import { fileURLToPath } from 'url';
 import { dirname, join, sep } from 'path';
 

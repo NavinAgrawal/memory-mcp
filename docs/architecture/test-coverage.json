@@ -1,0 +1,1041 @@
+{
+  "metadata": {
+    "generatedAt": "2026-01-07T00:58:28.709Z",
+    "totalSourceFiles": 58,
+    "totalTestFiles": 74,
+    "testedCount": 56,
+    "untestedCount": 2,
+    "coveragePercent": "96.6"
+  },
+  "untestedFiles": [
+    "src/features/index.ts",
+    "src/workers/index.ts"
+  ],
+  "testedFiles": [
+    "src/core/EntityManager.ts",
+    "src/core/GraphEventEmitter.ts",
+    "src/core/GraphStorage.ts",
+    "src/core/GraphTraversal.ts",
+    "src/core/HierarchyManager.ts",
+    "src/core/ManagerContext.ts",
+    "src/core/ObservationManager.ts",
+    "src/core/RelationManager.ts",
+    "src/core/SQLiteStorage.ts",
+    "src/core/StorageFactory.ts",
+    "src/core/TransactionManager.ts",
+    "src/core/index.ts",
+    "src/features/AnalyticsManager.ts",
+    "src/features/ArchiveManager.ts",
+    "src/features/CompressionManager.ts",
+    "src/features/IOManager.ts",
+    "src/features/StreamingExporter.ts",
+    "src/features/TagManager.ts",
+    "src/index.ts",
+    "src/search/BasicSearch.ts",
+    "src/search/BooleanSearch.ts",
+    "src/search/EmbeddingService.ts",
+    "src/search/FuzzySearch.ts",
+    "src/search/QueryCostEstimator.ts",
+    "src/search/RankedSearch.ts",
+    "src/search/SavedSearchManager.ts",
+    "src/search/SearchFilterChain.ts",
+    "src/search/SearchManager.ts",
+    "src/search/SearchSuggestions.ts",
+    "src/search/SemanticSearch.ts",
+    "src/search/TFIDFEventSync.ts",
+    "src/search/TFIDFIndexManager.ts",
+    "src/search/VectorStore.ts",
+    "src/search/index.ts",
+    "src/server/MCPServer.ts",
+    "src/server/responseCompressor.ts",
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts",
+    "src/types/index.ts",
+    "src/types/types.ts",
+    "src/utils/compressedCache.ts",
+    "src/utils/compressionUtil.ts",
+    "src/utils/constants.ts",
+    "src/utils/entityUtils.ts",
+    "src/utils/errors.ts",
+    "src/utils/formatters.ts",
+    "src/utils/index.ts",
+    "src/utils/indexes.ts",
+    "src/utils/logger.ts",
+    "src/utils/operationUtils.ts",
+    "src/utils/parallelUtils.ts",
+    "src/utils/schemas.ts",
+    "src/utils/searchAlgorithms.ts",
+    "src/utils/searchCache.ts",
+    "src/utils/taskScheduler.ts",
+    "src/workers/levenshteinWorker.ts"
+  ],
+  "coverageMap": {
+    "src/core/EntityManager.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/operation-progress.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/performance/optimization-benchmarks.test.ts",
+      "tests/performance/task-scheduler-benchmarks.test.ts",
+      "tests/performance/task-scheduler-config-benchmarks.test.ts",
+      "tests/performance/write-performance.test.ts",
+      "tests/unit/core/ConcurrencyControl.test.ts",
+      "tests/unit/core/EntityManager.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/RelationManager.test.ts",
+      "tests/unit/features/CompressionManager.test.ts",
+      "tests/unit/search/BasicSearch.test.ts",
+      "tests/unit/search/BooleanSearch.test.ts",
+      "tests/unit/search/FuzzySearch.test.ts",
+      "tests/unit/search/RankedSearch.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/GraphEventEmitter.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/GraphEventEmitter.test.ts",
+      "tests/unit/core/GraphEvents.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/search/TFIDFEventSync.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/GraphStorage.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/backup-compression.test.ts",
+      "tests/integration/compression-optimization.test.ts",
+      "tests/integration/operation-progress.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/integration/streaming-export.test.ts",
+      "tests/integration/worker-pool-integration.test.ts",
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/performance/compression-benchmarks.test.ts",
+      "tests/performance/optimization-benchmarks.test.ts",
+      "tests/performance/task-scheduler-benchmarks.test.ts",
+      "tests/performance/task-scheduler-config-benchmarks.test.ts",
+      "tests/performance/write-performance.test.ts",
+      "tests/unit/core/BatchTransaction.test.ts",
+      "tests/unit/core/ConcurrencyControl.test.ts",
+      "tests/unit/core/EntityManager.test.ts",
+      "tests/unit/core/GraphEventEmitter.test.ts",
+      "tests/unit/core/GraphEvents.test.ts",
+      "tests/unit/core/GraphStorage.test.ts",
+      "tests/unit/core/GraphTraversal.test.ts",
+      "tests/unit/core/HierarchyManager.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/ObservationManager.test.ts",
+      "tests/unit/core/RelationManager.test.ts",
+      "tests/unit/core/StorageFactory.test.ts",
+      "tests/unit/core/TransactionBatching.test.ts",
+      "tests/unit/core/TransactionManager.test.ts",
+      "tests/unit/features/AnalyticsManager.test.ts",
+      "tests/unit/features/ArchiveManager.test.ts",
+      "tests/unit/features/CompressionManager.test.ts",
+      "tests/unit/features/IOManager.test.ts",
+      "tests/unit/search/BasicSearch.test.ts",
+      "tests/unit/search/BooleanSearch.test.ts",
+      "tests/unit/search/FuzzySearch.test.ts",
+      "tests/unit/search/IncrementalTFIDF.test.ts",
+      "tests/unit/search/RankedSearch.test.ts",
+      "tests/unit/search/SavedSearchManager.test.ts",
+      "tests/unit/search/SearchManager.test.ts",
+      "tests/unit/search/SearchSuggestions.test.ts",
+      "tests/unit/search/TFIDFEventSync.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/GraphTraversal.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/GraphTraversal.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/HierarchyManager.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/EntityManager.test.ts",
+      "tests/unit/core/HierarchyManager.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/index.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/ManagerContext.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/edge-cases/edge-cases.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/ObservationManager.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/performance/write-performance.test.ts",
+      "tests/unit/core/ConcurrencyControl.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/ObservationManager.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/RelationManager.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/RelationManager.test.ts",
+      "tests/unit/features/CompressionManager.test.ts",
+      "tests/unit/search/BasicSearch.test.ts",
+      "tests/unit/search/BooleanSearch.test.ts",
+      "tests/unit/search/FuzzySearch.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/SQLiteStorage.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/ConcurrencyControl.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/SQLiteStorage.test.ts",
+      "tests/unit/core/StorageFactory.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/StorageFactory.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/StorageFactory.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/core/TransactionManager.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/operation-progress.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/core/BatchTransaction.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/core/TransactionBatching.test.ts",
+      "tests/unit/core/TransactionManager.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/features/AnalyticsManager.ts": [
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/features/AnalyticsManager.test.ts"
+    ],
+    "src/features/ArchiveManager.ts": [
+      "tests/integration/operation-progress.test.ts",
+      "tests/performance/compression-benchmarks.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/features/ArchiveManager.test.ts"
+    ],
+    "src/features/CompressionManager.ts": [
+      "tests/integration/compression-optimization.test.ts",
+      "tests/integration/operation-progress.test.ts",
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/performance/optimization-benchmarks.test.ts",
+      "tests/performance/task-scheduler-benchmarks.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/features/CompressionManager.test.ts"
+    ],
+    "src/features/index.ts": [],
+    "src/features/IOManager.ts": [
+      "tests/integration/backup-compression.test.ts",
+      "tests/integration/operation-progress.test.ts",
+      "tests/integration/streaming-export.test.ts",
+      "tests/performance/task-scheduler-benchmarks.test.ts",
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/features/IOManager.test.ts"
+    ],
+    "src/features/StreamingExporter.ts": [
+      "tests/integration/operation-progress.test.ts",
+      "tests/performance/task-scheduler-benchmarks.test.ts",
+      "tests/unit/features/StreamingExporter.test.ts"
+    ],
+    "src/features/TagManager.ts": [
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/features/TagManager.test.ts"
+    ],
+    "src/index.ts": [
+      "tests/file-path.test.ts",
+      "tests/knowledge-graph.test.ts"
+    ],
+    "src/search/BasicSearch.ts": [
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/unit/search/BasicSearch.test.ts",
+      "tests/unit/search/SavedSearchManager.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/BooleanSearch.ts": [
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/unit/search/BooleanSearch.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/EmbeddingService.ts": [
+      "tests/unit/search/EmbeddingService.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/FuzzySearch.ts": [
+      "tests/integration/worker-pool-integration.test.ts",
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/unit/search/FuzzySearch.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/index.ts": [
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/QueryCostEstimator.ts": [
+      "tests/unit/search/QueryCostEstimator.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/RankedSearch.ts": [
+      "tests/integration/workflows.test.ts",
+      "tests/performance/benchmarks.test.ts",
+      "tests/unit/search/RankedSearch.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/SavedSearchManager.ts": [
+      "tests/unit/search/SavedSearchManager.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/SearchFilterChain.ts": [
+      "tests/unit/search/SearchFilterChain.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/SearchManager.ts": [
+      "tests/unit/core/ManagerContext.test.ts",
+      "tests/unit/search/SearchManager.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/SearchSuggestions.ts": [
+      "tests/unit/search/SearchSuggestions.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/SemanticSearch.ts": [
+      "tests/unit/search/SemanticSearch.test.ts"
+    ],
+    "src/search/TFIDFEventSync.ts": [
+      "tests/unit/search/IncrementalTFIDF.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts",
+      "tests/unit/search/TFIDFEventSync.test.ts"
+    ],
+    "src/search/TFIDFIndexManager.ts": [
+      "tests/unit/search/IncrementalTFIDF.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts",
+      "tests/unit/search/TFIDFEventSync.test.ts",
+      "tests/unit/search/TFIDFIndexManager.test.ts"
+    ],
+    "src/search/VectorStore.ts": [
+      "tests/unit/search/SemanticSearch.test.ts",
+      "tests/unit/search/VectorStore.test.ts"
+    ],
+    "src/server/MCPServer.ts": [
+      "tests/integration/server.test.ts",
+      "tests/unit/server/MCPServer.test.ts"
+    ],
+    "src/server/responseCompressor.ts": [
+      "tests/unit/server/responseCompressor.test.ts"
+    ],
+    "src/server/toolDefinitions.ts": [
+      "tests/integration/server.test.ts",
+      "tests/unit/server/MCPServer.test.ts",
+      "tests/unit/server/toolDefinitions.test.ts"
+    ],
+    "src/server/toolHandlers.ts": [
+      "tests/e2e/tools/entity-tools.test.ts",
+      "tests/e2e/tools/observation-tools.test.ts",
+      "tests/e2e/tools/relation-tools.test.ts",
+      "tests/integration/server.test.ts",
+      "tests/unit/server/toolHandlers.test.ts"
+    ],
+    "src/types/index.ts": [
+      "tests/integration/backup-compression.test.ts",
+      "tests/integration/worker-pool-integration.test.ts",
+      "tests/performance/compression-benchmarks.test.ts",
+      "tests/performance/write-performance.test.ts",
+      "tests/unit/core/GraphEvents.test.ts",
+      "tests/unit/features/IOManager.test.ts",
+      "tests/unit/search/QueryCostEstimator.test.ts",
+      "tests/unit/search/SearchFilterChain.test.ts",
+      "tests/unit/search/SemanticSearch.test.ts",
+      "tests/unit/search/TFIDFEventSync.test.ts",
+      "tests/unit/search/TFIDFIndexManager.test.ts",
+      "tests/unit/utils/compressedCache.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/indexes.test.ts"
+    ],
+    "src/types/types.ts": [
+      "tests/integration/operation-progress.test.ts",
+      "tests/integration/streaming-export.test.ts",
+      "tests/performance/task-scheduler-benchmarks.test.ts",
+      "tests/performance/task-scheduler-config-benchmarks.test.ts",
+      "tests/unit/core/BatchTransaction.test.ts",
+      "tests/unit/core/GraphEventEmitter.test.ts",
+      "tests/unit/features/StreamingExporter.test.ts",
+      "tests/unit/search/IncrementalTFIDF.test.ts"
+    ],
+    "src/utils/compressedCache.ts": [
+      "tests/performance/compression-benchmarks.test.ts",
+      "tests/unit/utils/compressedCache.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/compressionUtil.ts": [
+      "tests/performance/compression-benchmarks.test.ts",
+      "tests/unit/features/IOManager.test.ts",
+      "tests/unit/utils/compressionUtil.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/constants.ts": [
+      "tests/performance/compression-benchmarks.test.ts",
+      "tests/unit/features/IOManager.test.ts",
+      "tests/unit/search/EmbeddingService.test.ts",
+      "tests/unit/server/responseCompressor.test.ts",
+      "tests/unit/utils/compressionUtil.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/entityUtils.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/errors.ts": [
+      "tests/integration/operation-progress.test.ts",
+      "tests/unit/core/EntityManager.test.ts",
+      "tests/unit/core/HierarchyManager.test.ts",
+      "tests/unit/core/ObservationManager.test.ts",
+      "tests/unit/core/RelationManager.test.ts",
+      "tests/unit/core/TransactionManager.test.ts",
+      "tests/unit/features/CompressionManager.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/errors.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/operationUtils.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/formatters.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/index.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/indexes.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/indexes.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/logger.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/logger.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/operationUtils.ts": [
+      "tests/performance/task-scheduler-config-benchmarks.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/operationUtils.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/parallelUtils.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/parallelUtils.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/schemas.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/searchAlgorithms.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts"
+    ],
+    "src/utils/searchCache.ts": [
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts",
+      "tests/unit/utils/searchCache.test.ts"
+    ],
+    "src/utils/taskScheduler.ts": [
+      "tests/performance/task-scheduler-config-benchmarks.test.ts",
+      "tests/unit/utils/entityUtils.test.ts",
+      "tests/unit/utils/formatters.test.ts",
+      "tests/unit/utils/schemas.test.ts",
+      "tests/unit/utils/searchAlgorithms.test.ts",
+      "tests/unit/utils/taskScheduler.test.ts"
+    ],
+    "src/workers/index.ts": [],
+    "src/workers/levenshteinWorker.ts": [
+      "tests/unit/workers/levenshteinWorker.test.ts"
+    ]
+  },
+  "testToSourceMap": {
+    "tests/e2e/tools/entity-tools.test.ts": [
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/server/toolHandlers.ts"
+    ],
+    "tests/e2e/tools/observation-tools.test.ts": [
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/server/toolHandlers.ts"
+    ],
+    "tests/e2e/tools/relation-tools.test.ts": [
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/server/toolHandlers.ts"
+    ],
+    "tests/edge-cases/edge-cases.test.ts": [
+      "src/core/ManagerContext.ts"
+    ],
+    "tests/file-path.test.ts": [
+      "src/index.ts"
+    ],
+    "tests/integration/backup-compression.test.ts": [
+      "src/features/IOManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/types/index.ts"
+    ],
+    "tests/integration/compression-optimization.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/features/CompressionManager.ts"
+    ],
+    "tests/integration/operation-progress.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/features/CompressionManager.ts",
+      "src/features/IOManager.ts",
+      "src/features/ArchiveManager.ts",
+      "src/core/TransactionManager.ts",
+      "src/features/StreamingExporter.ts",
+      "src/utils/errors.ts",
+      "src/types/types.ts"
+    ],
+    "tests/integration/server.test.ts": [
+      "src/server/MCPServer.ts",
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/server/toolDefinitions.ts",
+      "src/server/toolHandlers.ts"
+    ],
+    "tests/integration/streaming-export.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/features/IOManager.ts",
+      "src/types/types.ts"
+    ],
+    "tests/integration/worker-pool-integration.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/search/FuzzySearch.ts",
+      "src/types/index.ts"
+    ],
+    "tests/integration/workflows.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/features/CompressionManager.ts",
+      "src/search/BasicSearch.ts",
+      "src/search/RankedSearch.ts",
+      "src/search/BooleanSearch.ts",
+      "src/search/FuzzySearch.ts"
+    ],
+    "tests/knowledge-graph.test.ts": [
+      "src/index.ts"
+    ],
+    "tests/performance/benchmarks.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/features/CompressionManager.ts",
+      "src/search/BasicSearch.ts",
+      "src/search/RankedSearch.ts",
+      "src/search/BooleanSearch.ts",
+      "src/search/FuzzySearch.ts"
+    ],
+    "tests/performance/compression-benchmarks.test.ts": [
+      "src/utils/compressionUtil.ts",
+      "src/utils/compressedCache.ts",
+      "src/features/ArchiveManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/constants.ts",
+      "src/types/index.ts"
+    ],
+    "tests/performance/optimization-benchmarks.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/features/CompressionManager.ts"
+    ],
+    "tests/performance/task-scheduler-benchmarks.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/features/CompressionManager.ts",
+      "src/features/IOManager.ts",
+      "src/features/StreamingExporter.ts",
+      "src/types/types.ts"
+    ],
+    "tests/performance/task-scheduler-config-benchmarks.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/utils/taskScheduler.ts",
+      "src/utils/operationUtils.ts",
+      "src/types/types.ts"
+    ],
+    "tests/performance/write-performance.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/core/BatchTransaction.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/TransactionManager.ts",
+      "src/types/types.ts"
+    ],
+    "tests/unit/core/ConcurrencyControl.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/ObservationManager.ts"
+    ],
+    "tests/unit/core/EntityManager.test.ts": [
+      "src/core/EntityManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/core/GraphEventEmitter.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/types/types.ts"
+    ],
+    "tests/unit/core/GraphEvents.test.ts": [
+      "src/core/GraphEventEmitter.ts",
+      "src/core/GraphStorage.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/core/GraphStorage.test.ts": [
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/core/GraphTraversal.test.ts": [
+      "src/core/GraphStorage.ts",
+      "src/core/GraphTraversal.ts"
+    ],
+    "tests/unit/core/HierarchyManager.test.ts": [
+      "src/core/HierarchyManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/core/ManagerContext.test.ts": [
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/search/SearchManager.ts",
+      "src/features/IOManager.ts",
+      "src/features/TagManager.ts",
+      "src/features/AnalyticsManager.ts",
+      "src/features/CompressionManager.ts",
+      "src/features/ArchiveManager.ts"
+    ],
+    "tests/unit/core/ObservationManager.test.ts": [
+      "src/core/ObservationManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/core/RelationManager.test.ts": [
+      "src/core/RelationManager.ts",
+      "src/core/EntityManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/core/SQLiteStorage.test.ts": [
+      "src/core/SQLiteStorage.ts"
+    ],
+    "tests/unit/core/StorageFactory.test.ts": [
+      "src/core/StorageFactory.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts"
+    ],
+    "tests/unit/core/TransactionBatching.test.ts": [
+      "src/core/TransactionManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/core/TransactionManager.test.ts": [
+      "src/core/TransactionManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/features/AnalyticsManager.test.ts": [
+      "src/features/AnalyticsManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/features/ArchiveManager.test.ts": [
+      "src/features/ArchiveManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/features/CompressionManager.test.ts": [
+      "src/features/CompressionManager.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/features/IOManager.test.ts": [
+      "src/features/IOManager.ts",
+      "src/core/GraphStorage.ts",
+      "src/types/index.ts",
+      "src/utils/compressionUtil.ts",
+      "src/utils/constants.ts"
+    ],
+    "tests/unit/features/StreamingExporter.test.ts": [
+      "src/features/StreamingExporter.ts",
+      "src/types/types.ts"
+    ],
+    "tests/unit/features/TagManager.test.ts": [
+      "src/features/TagManager.ts"
+    ],
+    "tests/unit/search/BasicSearch.test.ts": [
+      "src/search/BasicSearch.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/BooleanSearch.test.ts": [
+      "src/search/BooleanSearch.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/EmbeddingService.test.ts": [
+      "src/search/EmbeddingService.ts",
+      "src/utils/constants.ts"
+    ],
+    "tests/unit/search/FuzzySearch.test.ts": [
+      "src/search/FuzzySearch.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/IncrementalTFIDF.test.ts": [
+      "src/search/TFIDFIndexManager.ts",
+      "src/search/TFIDFEventSync.ts",
+      "src/core/GraphStorage.ts",
+      "src/types/types.ts"
+    ],
+    "tests/unit/search/QueryCostEstimator.test.ts": [
+      "src/search/QueryCostEstimator.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/search/RankedSearch.test.ts": [
+      "src/search/RankedSearch.ts",
+      "src/core/EntityManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/SavedSearchManager.test.ts": [
+      "src/search/SavedSearchManager.ts",
+      "src/search/BasicSearch.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/SearchFilterChain.test.ts": [
+      "src/search/SearchFilterChain.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/search/SearchManager.test.ts": [
+      "src/search/SearchManager.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/SearchSuggestions.test.ts": [
+      "src/search/SearchSuggestions.ts",
+      "src/core/GraphStorage.ts"
+    ],
+    "tests/unit/search/SemanticSearch.test.ts": [
+      "src/search/index.ts",
+      "src/search/BasicSearch.ts",
+      "src/search/RankedSearch.ts",
+      "src/search/BooleanSearch.ts",
+      "src/search/FuzzySearch.ts",
+      "src/search/SearchSuggestions.ts",
+      "src/search/SavedSearchManager.ts",
+      "src/search/SearchManager.ts",
+      "src/search/SearchFilterChain.ts",
+      "src/search/EmbeddingService.ts",
+      "src/search/VectorStore.ts",
+      "src/search/SemanticSearch.ts",
+      "src/search/TFIDFIndexManager.ts",
+      "src/search/TFIDFEventSync.ts",
+      "src/search/QueryCostEstimator.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/search/TFIDFEventSync.test.ts": [
+      "src/search/TFIDFEventSync.ts",
+      "src/search/TFIDFIndexManager.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/core/GraphStorage.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/search/TFIDFIndexManager.test.ts": [
+      "src/search/TFIDFIndexManager.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/search/VectorStore.test.ts": [
+      "src/search/VectorStore.ts"
+    ],
+    "tests/unit/server/MCPServer.test.ts": [
+      "src/server/MCPServer.ts",
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts",
+      "src/server/toolDefinitions.ts"
+    ],
+    "tests/unit/server/responseCompressor.test.ts": [
+      "src/server/responseCompressor.ts",
+      "src/utils/constants.ts"
+    ],
+    "tests/unit/server/toolDefinitions.test.ts": [
+      "src/server/toolDefinitions.ts"
+    ],
+    "tests/unit/server/toolHandlers.test.ts": [
+      "src/server/toolHandlers.ts",
+      "src/core/index.ts",
+      "src/core/GraphStorage.ts",
+      "src/core/SQLiteStorage.ts",
+      "src/core/EntityManager.ts",
+      "src/core/RelationManager.ts",
+      "src/core/ObservationManager.ts",
+      "src/core/HierarchyManager.ts",
+      "src/core/ManagerContext.ts",
+      "src/core/GraphTraversal.ts",
+      "src/core/TransactionManager.ts",
+      "src/core/StorageFactory.ts",
+      "src/core/GraphEventEmitter.ts"
+    ],
+    "tests/unit/utils/compressedCache.test.ts": [
+      "src/utils/compressedCache.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/utils/compressionUtil.test.ts": [
+      "src/utils/compressionUtil.ts",
+      "src/utils/constants.ts"
+    ],
+    "tests/unit/utils/entityUtils.test.ts": [
+      "src/utils/index.ts",
+      "src/utils/errors.ts",
+      "src/utils/constants.ts",
+      "src/utils/compressionUtil.ts",
+      "src/utils/compressedCache.ts",
+      "src/utils/logger.ts",
+      "src/utils/searchAlgorithms.ts",
+      "src/utils/indexes.ts",
+      "src/utils/searchCache.ts",
+      "src/utils/schemas.ts",
+      "src/utils/formatters.ts",
+      "src/utils/entityUtils.ts",
+      "src/utils/parallelUtils.ts",
+      "src/utils/taskScheduler.ts",
+      "src/utils/operationUtils.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/utils/errors.test.ts": [
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/utils/formatters.test.ts": [
+      "src/utils/index.ts",
+      "src/utils/errors.ts",
+      "src/utils/constants.ts",
+      "src/utils/compressionUtil.ts",
+      "src/utils/compressedCache.ts",
+      "src/utils/logger.ts",
+      "src/utils/searchAlgorithms.ts",
+      "src/utils/indexes.ts",
+      "src/utils/searchCache.ts",
+      "src/utils/schemas.ts",
+      "src/utils/formatters.ts",
+      "src/utils/entityUtils.ts",
+      "src/utils/parallelUtils.ts",
+      "src/utils/taskScheduler.ts",
+      "src/utils/operationUtils.ts"
+    ],
+    "tests/unit/utils/indexes.test.ts": [
+      "src/utils/indexes.ts",
+      "src/types/index.ts"
+    ],
+    "tests/unit/utils/logger.test.ts": [
+      "src/utils/logger.ts"
+    ],
+    "tests/unit/utils/operationUtils.test.ts": [
+      "src/utils/operationUtils.ts",
+      "src/utils/errors.ts"
+    ],
+    "tests/unit/utils/parallelUtils.test.ts": [
+      "src/utils/parallelUtils.ts"
+    ],
+    "tests/unit/utils/schemas.test.ts": [
+      "src/utils/index.ts",
+      "src/utils/errors.ts",
+      "src/utils/constants.ts",
+      "src/utils/compressionUtil.ts",
+      "src/utils/compressedCache.ts",
+      "src/utils/logger.ts",
+      "src/utils/searchAlgorithms.ts",
+      "src/utils/indexes.ts",
+      "src/utils/searchCache.ts",
+      "src/utils/schemas.ts",
+      "src/utils/formatters.ts",
+      "src/utils/entityUtils.ts",
+      "src/utils/parallelUtils.ts",
+      "src/utils/taskScheduler.ts",
+      "src/utils/operationUtils.ts"
+    ],
+    "tests/unit/utils/searchAlgorithms.test.ts": [
+      "src/utils/index.ts",
+      "src/utils/errors.ts",
+      "src/utils/constants.ts",
+      "src/utils/compressionUtil.ts",
+      "src/utils/compressedCache.ts",
+      "src/utils/logger.ts",
+      "src/utils/searchAlgorithms.ts",
+      "src/utils/indexes.ts",
+      "src/utils/searchCache.ts",
+      "src/utils/schemas.ts",
+      "src/utils/formatters.ts",
+      "src/utils/entityUtils.ts",
+      "src/utils/parallelUtils.ts",
+      "src/utils/taskScheduler.ts",
+      "src/utils/operationUtils.ts"
+    ],
+    "tests/unit/utils/searchCache.test.ts": [
+      "src/utils/searchCache.ts"
+    ],
+    "tests/unit/utils/taskScheduler.test.ts": [
+      "src/utils/taskScheduler.ts"
+    ],
+    "tests/unit/workers/levenshteinWorker.test.ts": [
+      "src/workers/levenshteinWorker.ts"
+    ],
+    "tests/unit/workers/WorkerPool.test.ts": []
+  }
+}

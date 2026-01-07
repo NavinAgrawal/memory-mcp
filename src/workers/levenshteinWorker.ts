@@ -7,7 +7,7 @@
  * @module workers/levenshteinWorker
  */
 
-import workerpool from '@danielsimonjr/workerpool/modern';
+import workerpool from '@danielsimonjr/workerpool';
 
 /**
  * Input data structure for the worker.

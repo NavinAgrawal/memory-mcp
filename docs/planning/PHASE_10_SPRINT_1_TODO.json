@@ -1,0 +1,360 @@
+{
+  "phase": 10,
+  "sprint": 1,
+  "title": "Transaction Batching API",
+  "priority": "HIGH",
+  "effort": "6 hours",
+  "status": "completed",
+  "completedAt": "2026-01-06",
+  "implementationNotes": "Implemented using BatchTransaction class with fluent API and execute() method. Different from spec design (no GraphStorage.transaction() callback) but achieves same goals with cleaner API.",
+  "impact": "2-3x speedup for bulk sequential operations by reducing mutex lock/unlock cycles from N to 1",
+  "targetMetrics": {
+    "sequentialOperations": {
+      "current": "10 operations = 10 lock/unlock cycles, 10 file saves",
+      "target": "10 operations = 1 lock/unlock cycle, 1 file save"
+    },
+    "bulkImportSpeedup": {
+      "current": "~500ms for 100 entities (individual creates)",
+      "target": "~50ms for 100 entities (batched transaction)"
+    }
+  },
+  "tasks": [
+    {
+      "id": "10.1.1",
+      "category": "types",
+      "title": "Create Transaction Batching Interfaces",
+      "description": "Define TypeScript interfaces for the fluent transaction batching API in src/types/types.ts. These interfaces enable collecting multiple operations and executing them atomically in a single lock/save cycle.",
+      "status": "completed",
+      "implementationNotes": "Implemented as BatchOperation, BatchResult, BatchOptions types instead of spec's BatchTransactionContext, EntityInput, RelationInput. Same functionality with different type names.",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/types/types.ts"],
+      "testCategories": ["unit", "typecheck"],
+      "implementation": {
+        "purpose": "Create type definitions that enable a fluent API for batching operations. The BatchTransactionContext collects operations, then GraphStorage.transaction() executes them atomically.",
+        "keyDecisions": [
+          "BatchTransactionContext is the interface users interact with",
+          "All methods return void (operations are collected, not executed immediately)",
+          "BatchTransactionResult provides statistics about what was executed",
+          "EntityInput and RelationInput are simplified creation types without timestamps"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/types/types.ts",
+          "details": "Navigate to the types file which contains all type definitions for the project"
+        },
+        {
+          "step": 2,
+          "action": "Find the end of the file (before any closing exports)",
+          "details": "Scroll to the bottom of the file. Add new interfaces after the LongRunningOperationOptions section (around line 1420)"
+        },
+        {
+          "step": 3,
+          "action": "Add section comment for Transaction Batching Types",
+          "details": "Add: // ==================== Transaction Batching Types (Phase 10) ===================="
+        },
+        {
+          "step": 4,
+          "action": "Add EntityInput interface",
+          "code": "/**\n * Input for creating a new entity in a batch transaction.\n * Timestamps are added automatically when the transaction commits.\n */\nexport interface EntityInput {\n  /** Unique name identifying the entity */\n  name: string;\n  /** Type/category of the entity */\n  entityType: string;\n  /** Array of observation strings */\n  observations: string[];\n  /** Optional tags for categorization */\n  tags?: string[];\n  /** Optional importance level (0-10) */\n  importance?: number;\n  /** Optional parent entity name for hierarchy */\n  parentId?: string;\n}"
+        },
+        {
+          "step": 5,
+          "action": "Add RelationInput interface",
+          "code": "/**\n * Input for creating a new relation in a batch transaction.\n * Timestamps are added automatically when the transaction commits.\n */\nexport interface RelationInput {\n  /** Source entity name */\n  from: string;\n  /** Target entity name */\n  to: string;\n  /** Type of relationship (active voice, e.g., 'works_at') */\n  relationType: string;\n}"
+        },
+        {
+          "step": 6,
+          "action": "Add ObservationInput interface",
+          "code": "/**\n * Input for adding observations to an entity in a batch transaction.\n */\nexport interface ObservationInput {\n  /** Name of the entity to add observations to */\n  entityName: string;\n  /** Array of observation strings to add */\n  contents: string[];\n}"
+        },
+        {
+          "step": 7,
+          "action": "Add BatchTransactionContext interface",
+          "code": "/**\n * Context for batching multiple graph operations.\n * Operations are collected and executed atomically when the transaction commits.\n *\n * @example\n * ```typescript\n * await storage.transaction((tx) => {\n *   tx.createEntities([{ name: 'Alice', entityType: 'person', observations: [] }]);\n *   tx.createRelations([{ from: 'Alice', to: 'Bob', relationType: 'knows' }]);\n *   tx.addObservations([{ entityName: 'Alice', contents: ['Engineer'] }]);\n * }); // All operations execute in single lock/save\n * ```\n */\nexport interface BatchTransactionContext {\n  /** Create multiple entities within the transaction */\n  createEntities(entities: EntityInput[]): void;\n\n  /** Create multiple relations within the transaction */\n  createRelations(relations: RelationInput[]): void;\n\n  /** Add observations to entities within the transaction */\n  addObservations(observations: ObservationInput[]): void;\n\n  /** Delete entities by name within the transaction */\n  deleteEntities(entityNames: string[]): void;\n\n  /** Delete specific relations within the transaction */\n  deleteRelations(relations: { from: string; to: string; relationType: string }[]): void;\n\n  /** Update entities within the transaction */\n  updateEntities(updates: { name: string; updates: Partial<Entity> }[]): void;\n\n  /** Add tags to a single entity within the transaction */\n  addTags(entityName: string, tags: string[]): void;\n\n  /** Set importance for a single entity within the transaction */\n  setImportance(entityName: string, importance: number): void;\n}"
+        },
+        {
+          "step": 8,
+          "action": "Add BatchTransactionResult interface",
+          "code": "/**\n * Result of a committed batch transaction.\n * Provides statistics about what operations were executed.\n */\nexport interface BatchTransactionResult {\n  /** Whether the transaction completed successfully */\n  success: boolean;\n  /** Number of entities created */\n  entitiesCreated: number;\n  /** Number of entities updated (including tag/importance changes) */\n  entitiesUpdated: number;\n  /** Number of entities deleted */\n  entitiesDeleted: number;\n  /** Number of relations created */\n  relationsCreated: number;\n  /** Number of relations deleted */\n  relationsDeleted: number;\n  /** Number of observations added */\n  observationsAdded: number;\n  /** Duration of the transaction in milliseconds */\n  durationMs: number;\n}"
+        },
+        {
+          "step": 9,
+          "action": "Run TypeScript compilation to verify",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "EntityInput interface defined with name, entityType, observations, and optional fields",
+        "RelationInput interface defined with from, to, relationType",
+        "ObservationInput interface defined with entityName and contents",
+        "BatchTransactionContext interface defined with all 8 methods",
+        "BatchTransactionResult interface defined with all statistics fields",
+        "All interfaces have JSDoc documentation",
+        "npm run typecheck passes with no errors"
+      ]
+    },
+    {
+      "id": "10.1.2",
+      "category": "core",
+      "title": "Implement BatchTransaction Class",
+      "description": "Create the BatchTransaction class that implements BatchTransactionContext. This class collects pending operations during a transaction callback and provides them for execution.",
+      "status": "completed",
+      "implementationNotes": "BatchTransaction class implemented in TransactionManager.ts with fluent builder API. Uses execute() method directly instead of being consumed by GraphStorage.transaction().",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/core/TransactionManager.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "The BatchTransaction class is the concrete implementation that collects operations. It does NOT execute them - GraphStorage.transaction() reads the pending operations and executes them atomically.",
+        "keyDecisions": [
+          "Separate class from existing TransactionManager to avoid complexity",
+          "Uses Set for deleteEntities to prevent duplicates",
+          "Provides hasPendingOperations() for early return on empty transactions",
+          "Provides getStats() for debugging/logging"
+        ],
+        "existingCodeContext": "TransactionManager.ts already exists at ~512 lines with begin/commit/rollback pattern. Add BatchTransaction class AFTER the existing TransactionManager class."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/core/TransactionManager.ts",
+          "details": "Open the existing TransactionManager file"
+        },
+        {
+          "step": 2,
+          "action": "Add imports at the top of the file",
+          "details": "Find the existing imports (around line 11) and add the new types. Update the import line to include:\nimport type { Entity, Relation, KnowledgeGraph, LongRunningOperationOptions, BatchTransactionContext, EntityInput, RelationInput, ObservationInput, BatchTransactionResult } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add PendingOperations interface after imports (around line 16)",
+          "code": "/**\n * Internal structure for tracking pending operations in a batch transaction.\n * @internal\n */\ninterface PendingOperations {\n  entitiesToCreate: EntityInput[];\n  entitiesToUpdate: { name: string; updates: Partial<Entity> }[];\n  entitiesToDelete: Set<string>;\n  relationsToCreate: RelationInput[];\n  relationsToDelete: { from: string; to: string; relationType: string }[];\n  observationsToAdd: ObservationInput[];\n  tagsToAdd: { entityName: string; tags: string[] }[];\n  importanceToSet: { entityName: string; importance: number }[];\n}"
+        },
+        {
+          "step": 4,
+          "action": "Find the end of the TransactionManager class (around line 512)",
+          "details": "Scroll to the very end of the file, after the closing brace of TransactionManager class"
+        },
+        {
+          "step": 5,
+          "action": "Add the BatchTransaction class",
+          "code": "/**\n * Collects multiple operations for atomic batch execution.\n *\n * This class implements BatchTransactionContext and is used internally\n * by GraphStorage.transaction() to collect operations before executing\n * them in a single lock/save cycle.\n *\n * @example\n * ```typescript\n * // Used internally by GraphStorage.transaction():\n * const tx = new BatchTransaction();\n * tx.createEntities([...]);\n * tx.createRelations([...]);\n * const pending = tx.getPendingOperations();\n * // Execute all pending operations atomically\n * ```\n */\nexport class BatchTransaction implements BatchTransactionContext {\n  private pending: PendingOperations = {\n    entitiesToCreate: [],\n    entitiesToUpdate: [],\n    entitiesToDelete: new Set(),\n    relationsToCreate: [],\n    relationsToDelete: [],\n    observationsToAdd: [],\n    tagsToAdd: [],\n    importanceToSet: [],\n  };\n\n  createEntities(entities: EntityInput[]): void {\n    this.pending.entitiesToCreate.push(...entities);\n  }\n\n  createRelations(relations: RelationInput[]): void {\n    this.pending.relationsToCreate.push(...relations);\n  }\n\n  addObservations(observations: ObservationInput[]): void {\n    this.pending.observationsToAdd.push(...observations);\n  }\n\n  deleteEntities(entityNames: string[]): void {\n    for (const name of entityNames) {\n      this.pending.entitiesToDelete.add(name);\n    }\n  }\n\n  deleteRelations(relations: { from: string; to: string; relationType: string }[]): void {\n    this.pending.relationsToDelete.push(...relations);\n  }\n\n  updateEntities(updates: { name: string; updates: Partial<Entity> }[]): void {\n    this.pending.entitiesToUpdate.push(...updates);\n  }\n\n  addTags(entityName: string, tags: string[]): void {\n    this.pending.tagsToAdd.push({ entityName, tags });\n  }\n\n  setImportance(entityName: string, importance: number): void {\n    this.pending.importanceToSet.push({ entityName, importance });\n  }\n\n  /**\n   * Get the pending operations for execution.\n   * @internal Used by GraphStorage.transaction() to apply operations.\n   */\n  getPendingOperations(): PendingOperations {\n    return this.pending;\n  }\n\n  /**\n   * Check if any operations are pending.\n   */\n  hasPendingOperations(): boolean {\n    return (\n      this.pending.entitiesToCreate.length > 0 ||\n      this.pending.entitiesToUpdate.length > 0 ||\n      this.pending.entitiesToDelete.size > 0 ||\n      this.pending.relationsToCreate.length > 0 ||\n      this.pending.relationsToDelete.length > 0 ||\n      this.pending.observationsToAdd.length > 0 ||\n      this.pending.tagsToAdd.length > 0 ||\n      this.pending.importanceToSet.length > 0\n    );\n  }\n\n  /**\n   * Get statistics about pending operations.\n   */\n  getStats(): {\n    entities: { create: number; update: number; delete: number };\n    relations: { create: number; delete: number };\n    observations: number;\n    tags: number;\n    importance: number;\n  } {\n    return {\n      entities: {\n        create: this.pending.entitiesToCreate.length,\n        update: this.pending.entitiesToUpdate.length,\n        delete: this.pending.entitiesToDelete.size,\n      },\n      relations: {\n        create: this.pending.relationsToCreate.length,\n        delete: this.pending.relationsToDelete.length,\n      },\n      observations: this.pending.observationsToAdd.length,\n      tags: this.pending.tagsToAdd.length,\n      importance: this.pending.importanceToSet.length,\n    };\n  }\n}"
+        },
+        {
+          "step": 6,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 7,
+          "action": "Run existing TransactionManager tests to verify no regressions",
+          "details": "Run: npx vitest run tests/unit/core/TransactionManager.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "BatchTransaction class implements BatchTransactionContext interface",
+        "All 8 operation methods collect operations without executing",
+        "getPendingOperations() returns PendingOperations structure",
+        "hasPendingOperations() correctly detects if any operations are pending",
+        "getStats() returns accurate operation counts",
+        "Uses Set for deleteEntities to prevent duplicate deletions",
+        "Class has JSDoc documentation with example",
+        "npm run typecheck passes",
+        "Existing TransactionManager tests pass"
+      ]
+    },
+    {
+      "id": "10.1.3",
+      "category": "core",
+      "title": "Add transaction() Method to GraphStorage",
+      "description": "Add a fluent transaction() method to GraphStorage that accepts a callback, collects operations using BatchTransaction, and executes them atomically in a single lock/save cycle.",
+      "status": "completed",
+      "implementationNotes": "Alternative design: BatchTransaction used directly with execute() method instead of GraphStorage.transaction() callback. Same atomic behavior achieved.",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/core/GraphStorage.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "The transaction() method is the main API that users call. It creates a BatchTransaction, calls the user's callback to collect operations, then executes all operations atomically using a single mutex lock and single saveGraph call.",
+        "keyDecisions": [
+          "Callback can be sync or async (returns void | Promise<void>)",
+          "Early return if no operations queued (no lock acquired)",
+          "Operations applied in specific order: create entities, create relations, add observations, add tags, set importance, update entities, delete entities, delete relations",
+          "Single saveGraph() call after all operations"
+        ],
+        "existingCodeContext": "GraphStorage.ts is ~900 lines. Add the transaction method after saveGraph() method (search for 'async saveGraph'). Need to import BatchTransaction from TransactionManager."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/core/GraphStorage.ts",
+          "details": "Open the GraphStorage file"
+        },
+        {
+          "step": 2,
+          "action": "Add import for BatchTransaction",
+          "details": "Find the imports at the top (around line 10-15). Add this import:\nimport { BatchTransaction } from './TransactionManager.js';\n\nAlso add the types import if not present:\nimport type { BatchTransactionContext, BatchTransactionResult } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Find the saveGraph method (search for 'async saveGraph')",
+          "details": "The saveGraph method is around line 290. Add the transaction method AFTER saveGraph."
+        },
+        {
+          "step": 4,
+          "action": "Add the transaction method",
+          "code": "/**\n * Execute multiple operations in a single atomic transaction.\n *\n * All operations share a single lock/unlock cycle and single save operation,\n * making batch operations 2-10x faster than individual calls.\n *\n * Operations are applied in this order:\n * 1. Create entities\n * 2. Create relations\n * 3. Add observations\n * 4. Add tags\n * 5. Set importance\n * 6. Update entities\n * 7. Delete entities (and their relations)\n * 8. Delete specific relations\n *\n * @param callback - Function that receives BatchTransactionContext and queues operations\n * @returns Transaction result with statistics\n *\n * @example\n * ```typescript\n * const result = await storage.transaction((tx) => {\n *   tx.createEntities([\n *     { name: 'Alice', entityType: 'person', observations: ['Engineer'] },\n *     { name: 'Bob', entityType: 'person', observations: ['Designer'] },\n *   ]);\n *   tx.createRelations([\n *     { from: 'Alice', to: 'Bob', relationType: 'knows' },\n *   ]);\n *   tx.addTags('Alice', ['tech', 'senior']);\n *   tx.setImportance('Bob', 8);\n * });\n * console.log(`Created ${result.entitiesCreated} entities in ${result.durationMs}ms`);\n * ```\n */\nasync transaction(\n  callback: (tx: BatchTransactionContext) => void | Promise<void>\n): Promise<BatchTransactionResult> {\n  const startTime = Date.now();\n  const tx = new BatchTransaction();\n\n  // Execute callback to collect operations\n  await callback(tx);\n\n  // Early return if no operations queued\n  if (!tx.hasPendingOperations()) {\n    return {\n      success: true,\n      entitiesCreated: 0,\n      entitiesUpdated: 0,\n      entitiesDeleted: 0,\n      relationsCreated: 0,\n      relationsDeleted: 0,\n      observationsAdded: 0,\n      durationMs: Date.now() - startTime,\n    };\n  }\n\n  // Acquire lock once for all operations\n  const release = await this.mutex.acquire();\n  try {\n    await this.ensureLoaded();\n    const graph = await this.getGraphForMutation();\n    const pending = tx.getPendingOperations();\n    const timestamp = new Date().toISOString();\n\n    let entitiesCreated = 0;\n    let entitiesUpdated = 0;\n    let entitiesDeleted = 0;\n    let relationsCreated = 0;\n    let relationsDeleted = 0;\n    let observationsAdded = 0;\n\n    // Build entity lookup map\n    const entityMap = new Map(graph.entities.map(e => [e.name, e]));\n\n    // 1. Create entities\n    for (const input of pending.entitiesToCreate) {\n      if (!entityMap.has(input.name)) {\n        const entity: Entity = {\n          name: input.name,\n          entityType: input.entityType,\n          observations: [...input.observations],\n          tags: input.tags?.map(t => t.toLowerCase()),\n          importance: input.importance,\n          parentId: input.parentId,\n          createdAt: timestamp,\n          lastModified: timestamp,\n        };\n        graph.entities.push(entity);\n        entityMap.set(entity.name, entity);\n        entitiesCreated++;\n      }\n    }\n\n    // 2. Create relations\n    for (const input of pending.relationsToCreate) {\n      const exists = graph.relations.some(\n        r => r.from === input.from && r.to === input.to && r.relationType === input.relationType\n      );\n      if (!exists) {\n        graph.relations.push({\n          from: input.from,\n          to: input.to,\n          relationType: input.relationType,\n          createdAt: timestamp,\n          lastModified: timestamp,\n        });\n        relationsCreated++;\n      }\n    }\n\n    // 3. Add observations\n    for (const { entityName, contents } of pending.observationsToAdd) {\n      const entity = entityMap.get(entityName);\n      if (entity) {\n        entity.observations.push(...contents);\n        entity.lastModified = timestamp;\n        observationsAdded += contents.length;\n      }\n    }\n\n    // 4. Add tags\n    for (const { entityName, tags } of pending.tagsToAdd) {\n      const entity = entityMap.get(entityName);\n      if (entity) {\n        const normalizedTags = tags.map(t => t.toLowerCase());\n        entity.tags = [...new Set([...(entity.tags ?? []), ...normalizedTags])];\n        entity.lastModified = timestamp;\n        entitiesUpdated++;\n      }\n    }\n\n    // 5. Set importance\n    for (const { entityName, importance } of pending.importanceToSet) {\n      const entity = entityMap.get(entityName);\n      if (entity) {\n        entity.importance = importance;\n        entity.lastModified = timestamp;\n        entitiesUpdated++;\n      }\n    }\n\n    // 6. Update entities\n    for (const { name, updates } of pending.entitiesToUpdate) {\n      const entity = entityMap.get(name);\n      if (entity) {\n        Object.assign(entity, updates);\n        entity.lastModified = timestamp;\n        entitiesUpdated++;\n      }\n    }\n\n    // 7. Delete entities (and cascade delete their relations)\n    if (pending.entitiesToDelete.size > 0) {\n      const originalCount = graph.entities.length;\n      graph.entities = graph.entities.filter(e => !pending.entitiesToDelete.has(e.name));\n      entitiesDeleted = originalCount - graph.entities.length;\n\n      // Cascade delete relations involving deleted entities\n      graph.relations = graph.relations.filter(\n        r => !pending.entitiesToDelete.has(r.from) && !pending.entitiesToDelete.has(r.to)\n      );\n    }\n\n    // 8. Delete specific relations\n    if (pending.relationsToDelete.length > 0) {\n      const toDelete = new Set(\n        pending.relationsToDelete.map(r => `${r.from}|${r.to}|${r.relationType}`)\n      );\n      const originalCount = graph.relations.length;\n      graph.relations = graph.relations.filter(\n        r => !toDelete.has(`${r.from}|${r.to}|${r.relationType}`)\n      );\n      relationsDeleted = originalCount - graph.relations.length;\n    }\n\n    // Single save for all operations\n    await this.saveGraph(graph);\n\n    return {\n      success: true,\n      entitiesCreated,\n      entitiesUpdated,\n      entitiesDeleted,\n      relationsCreated,\n      relationsDeleted,\n      observationsAdded,\n      durationMs: Date.now() - startTime,\n    };\n  } finally {\n    release();\n  }\n}"
+        },
+        {
+          "step": 5,
+          "action": "Add Entity import if missing",
+          "details": "Ensure Entity is imported in the types import. The import line should include:\nimport type { KnowledgeGraph, Entity, Relation, ... } from '../types/index.js';"
+        },
+        {
+          "step": 6,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 7,
+          "action": "Run existing GraphStorage tests",
+          "details": "Run: npx vitest run tests/unit/core/GraphStorage.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "transaction() method added to GraphStorage class",
+        "Callback receives BatchTransactionContext",
+        "Supports both sync and async callbacks",
+        "Returns early with zero-counts if no operations queued",
+        "Acquires mutex once for all operations",
+        "Operations applied in documented order (creates before deletes)",
+        "Single saveGraph() call after all operations",
+        "Returns BatchTransactionResult with accurate statistics",
+        "Entity deletions cascade to remove related relations",
+        "JSDoc documentation with example",
+        "npm run typecheck passes",
+        "Existing GraphStorage tests pass"
+      ]
+    },
+    {
+      "id": "10.1.4",
+      "category": "tests",
+      "title": "Create Transaction Batching Unit Tests",
+      "description": "Create comprehensive unit tests for the transaction batching API covering all operation types, combined operations, edge cases, and performance verification.",
+      "status": "completed",
+      "implementationNotes": "Tests created in tests/unit/core/TransactionBatching.test.ts testing BatchTransaction class with all operation types, validation, and performance.",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["tests/unit/core/TransactionBatching.test.ts"],
+      "testCategories": ["unit", "integration", "performance"],
+      "implementation": {
+        "purpose": "Verify the transaction batching API works correctly for all operations, handles edge cases gracefully, and provides performance benefits over individual operations.",
+        "keyDecisions": [
+          "Test each operation type in isolation",
+          "Test combined operations in single transaction",
+          "Test edge cases (empty transaction, duplicate detection, async callbacks)",
+          "Include performance comparison test"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file",
+          "details": "Create new file: tests/unit/core/TransactionBatching.test.ts"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach, afterEach } from 'vitest';\nimport { GraphStorage } from '../../../src/core/GraphStorage.js';\nimport { promises as fs } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';\n\ndescribe('Transaction Batching API', () => {\n  let testDir: string;\n  let storage: GraphStorage;\n\n  beforeEach(async () => {\n    testDir = join(tmpdir(), `tx-batch-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);\n    await fs.mkdir(testDir, { recursive: true });\n    storage = new GraphStorage(join(testDir, 'test.jsonl'));\n  });\n\n  afterEach(async () => {\n    try {\n      await fs.rm(testDir, { recursive: true, force: true });\n    } catch {\n      // Ignore cleanup errors\n    }\n  });"
+        },
+        {
+          "step": 3,
+          "action": "Add tests for createEntities",
+          "code": "  describe('createEntities', () => {\n    it('should create entities in a transaction', async () => {\n      const result = await storage.transaction((tx) => {\n        tx.createEntities([\n          { name: 'Alice', entityType: 'person', observations: ['Engineer'] },\n          { name: 'Bob', entityType: 'person', observations: ['Designer'] },\n        ]);\n      });\n\n      expect(result.success).toBe(true);\n      expect(result.entitiesCreated).toBe(2);\n\n      const graph = await storage.loadGraph();\n      expect(graph.entities.length).toBe(2);\n      expect(graph.entities.find(e => e.name === 'Alice')).toBeDefined();\n      expect(graph.entities.find(e => e.name === 'Bob')).toBeDefined();\n    });\n\n    it('should set timestamps on created entities', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([{ name: 'Test', entityType: 'test', observations: [] }]);\n      });\n\n      const graph = await storage.loadGraph();\n      const entity = graph.entities[0];\n      expect(entity.createdAt).toBeDefined();\n      expect(entity.lastModified).toBeDefined();\n    });\n\n    it('should skip duplicate entity names', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([{ name: 'Alice', entityType: 'person', observations: [] }]);\n      });\n\n      const result = await storage.transaction((tx) => {\n        tx.createEntities([{ name: 'Alice', entityType: 'person', observations: ['New'] }]);\n      });\n\n      expect(result.entitiesCreated).toBe(0);\n      const graph = await storage.loadGraph();\n      expect(graph.entities.length).toBe(1);\n    });\n  });"
+        },
+        {
+          "step": 4,
+          "action": "Add tests for createRelations",
+          "code": "  describe('createRelations', () => {\n    it('should create relations in a transaction', async () => {\n      // First create entities\n      await storage.transaction((tx) => {\n        tx.createEntities([\n          { name: 'Alice', entityType: 'person', observations: [] },\n          { name: 'Bob', entityType: 'person', observations: [] },\n        ]);\n      });\n\n      // Then create relations\n      const result = await storage.transaction((tx) => {\n        tx.createRelations([{ from: 'Alice', to: 'Bob', relationType: 'knows' }]);\n      });\n\n      expect(result.relationsCreated).toBe(1);\n      const graph = await storage.loadGraph();\n      expect(graph.relations.length).toBe(1);\n      expect(graph.relations[0].from).toBe('Alice');\n      expect(graph.relations[0].to).toBe('Bob');\n    });\n  });"
+        },
+        {
+          "step": 5,
+          "action": "Add tests for addObservations",
+          "code": "  describe('addObservations', () => {\n    it('should add observations in a transaction', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([{ name: 'Alice', entityType: 'person', observations: ['Initial'] }]);\n      });\n\n      const result = await storage.transaction((tx) => {\n        tx.addObservations([{ entityName: 'Alice', contents: ['Added 1', 'Added 2'] }]);\n      });\n\n      expect(result.observationsAdded).toBe(2);\n      const graph = await storage.loadGraph();\n      const alice = graph.entities.find(e => e.name === 'Alice');\n      expect(alice?.observations).toContain('Initial');\n      expect(alice?.observations).toContain('Added 1');\n      expect(alice?.observations).toContain('Added 2');\n    });\n\n    it('should ignore observations for non-existent entities', async () => {\n      const result = await storage.transaction((tx) => {\n        tx.addObservations([{ entityName: 'NonExistent', contents: ['Test'] }]);\n      });\n\n      expect(result.observationsAdded).toBe(0);\n    });\n  });"
+        },
+        {
+          "step": 6,
+          "action": "Add tests for deleteEntities",
+          "code": "  describe('deleteEntities', () => {\n    it('should delete entities in a transaction', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([\n          { name: 'Alice', entityType: 'person', observations: [] },\n          { name: 'Bob', entityType: 'person', observations: [] },\n          { name: 'Charlie', entityType: 'person', observations: [] },\n        ]);\n      });\n\n      const result = await storage.transaction((tx) => {\n        tx.deleteEntities(['Bob']);\n      });\n\n      expect(result.entitiesDeleted).toBe(1);\n      const graph = await storage.loadGraph();\n      expect(graph.entities.length).toBe(2);\n      expect(graph.entities.find(e => e.name === 'Bob')).toBeUndefined();\n    });\n\n    it('should cascade delete relations when entity is deleted', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([\n          { name: 'Alice', entityType: 'person', observations: [] },\n          { name: 'Bob', entityType: 'person', observations: [] },\n        ]);\n        tx.createRelations([{ from: 'Alice', to: 'Bob', relationType: 'knows' }]);\n      });\n\n      await storage.transaction((tx) => {\n        tx.deleteEntities(['Bob']);\n      });\n\n      const graph = await storage.loadGraph();\n      expect(graph.relations.length).toBe(0);\n    });\n  });"
+        },
+        {
+          "step": 7,
+          "action": "Add tests for combined operations",
+          "code": "  describe('combined operations', () => {\n    it('should handle multiple operation types in one transaction', async () => {\n      const result = await storage.transaction((tx) => {\n        tx.createEntities([\n          { name: 'Alice', entityType: 'person', observations: ['Engineer'] },\n          { name: 'Bob', entityType: 'person', observations: ['Designer'] },\n        ]);\n        tx.createRelations([{ from: 'Alice', to: 'Bob', relationType: 'knows' }]);\n        tx.addTags('Alice', ['tech', 'senior']);\n        tx.setImportance('Bob', 8);\n      });\n\n      expect(result.entitiesCreated).toBe(2);\n      expect(result.relationsCreated).toBe(1);\n\n      const graph = await storage.loadGraph();\n      const alice = graph.entities.find(e => e.name === 'Alice');\n      const bob = graph.entities.find(e => e.name === 'Bob');\n\n      expect(alice?.tags).toContain('tech');\n      expect(alice?.tags).toContain('senior');\n      expect(bob?.importance).toBe(8);\n    });\n\n    it('should return early for empty transactions', async () => {\n      const result = await storage.transaction((_tx) => {\n        // No operations\n      });\n\n      expect(result.success).toBe(true);\n      expect(result.entitiesCreated).toBe(0);\n      expect(result.durationMs).toBeLessThan(50);\n    });\n  });"
+        },
+        {
+          "step": 8,
+          "action": "Add tests for edge cases",
+          "code": "  describe('edge cases', () => {\n    it('should handle async callback', async () => {\n      const result = await storage.transaction(async (tx) => {\n        // Simulate async work\n        await new Promise(resolve => setTimeout(resolve, 10));\n        tx.createEntities([{ name: 'AsyncEntity', entityType: 'test', observations: [] }]);\n      });\n\n      expect(result.entitiesCreated).toBe(1);\n    });\n\n    it('should update lastModified timestamp for modifications', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([{ name: 'Entity1', entityType: 'test', observations: [] }]);\n      });\n\n      const graph1 = await storage.loadGraph();\n      const before = graph1.entities[0].lastModified;\n\n      // Wait a bit\n      await new Promise(resolve => setTimeout(resolve, 50));\n\n      await storage.transaction((tx) => {\n        tx.addTags('Entity1', ['updated']);\n      });\n\n      const graph2 = await storage.loadGraph();\n      const after = graph2.entities[0].lastModified;\n\n      expect(after).not.toBe(before);\n    });\n\n    it('should normalize tags to lowercase', async () => {\n      await storage.transaction((tx) => {\n        tx.createEntities([{ name: 'Test', entityType: 'test', observations: [], tags: ['UPPER', 'Mixed'] }]);\n      });\n\n      const graph = await storage.loadGraph();\n      expect(graph.entities[0].tags).toContain('upper');\n      expect(graph.entities[0].tags).toContain('mixed');\n    });\n  });"
+        },
+        {
+          "step": 9,
+          "action": "Add performance test",
+          "code": "  describe('performance', () => {\n    it('should be faster than individual operations for bulk work', async () => {\n      const entityCount = 100;\n      const entities = Array.from({ length: entityCount }, (_, i) => ({\n        name: `Entity${i}`,\n        entityType: 'test',\n        observations: [`Observation ${i}`],\n      }));\n\n      // Time the transaction approach\n      const txStart = Date.now();\n      await storage.transaction((tx) => {\n        tx.createEntities(entities);\n      });\n      const txDuration = Date.now() - txStart;\n\n      console.log(`Transaction (${entityCount} entities): ${txDuration}ms`);\n\n      // Should complete in reasonable time (much less than individual creates)\n      expect(txDuration).toBeLessThan(500);\n\n      // Verify all entities created\n      const graph = await storage.loadGraph();\n      expect(graph.entities.length).toBe(entityCount);\n    });\n  });"
+        },
+        {
+          "step": 10,
+          "action": "Close the describe block",
+          "code": "});"
+        },
+        {
+          "step": 11,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/core/TransactionBatching.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/core/TransactionBatching.test.ts",
+        "15+ unit tests covering all operation types",
+        "Tests for createEntities, createRelations, addObservations, deleteEntities",
+        "Tests for combined operations in single transaction",
+        "Tests for edge cases: empty transaction, async callback, timestamps",
+        "Tests for cascade delete of relations",
+        "Performance test verifying bulk operations complete quickly",
+        "All tests pass with npx vitest run"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "BatchTransactionContext interface available in types",
+    "BatchTransaction class implements all operation methods",
+    "GraphStorage.transaction() method executes operations atomically",
+    "Single lock/save cycle for all operations in a transaction",
+    "15+ unit tests pass",
+    "npm run typecheck passes",
+    "All existing tests pass (backward compatible)"
+  ],
+  "filesCreated": [
+    "tests/unit/core/TransactionBatching.test.ts"
+  ],
+  "filesModified": [
+    "src/types/types.ts",
+    "src/core/TransactionManager.ts",
+    "src/core/GraphStorage.ts"
+  ],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 6,
+  "dependencies": [],
+  "notes": [
+    "CRITICAL: The BatchTransaction class collects operations - GraphStorage.transaction() executes them",
+    "Order of operations matters: creates before updates, updates before deletes",
+    "Entity deletions must cascade to remove related relations",
+    "Tags must be normalized to lowercase",
+    "Empty transactions should return early without acquiring locks",
+    "This sprint provides foundation for Sprint 2 (Graph Events) to emit events during transactions"
+  ]
+}

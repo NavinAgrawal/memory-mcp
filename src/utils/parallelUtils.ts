@@ -7,7 +7,7 @@
  * @module utils/parallelUtils
  */
 
-import workerpool from '@danielsimonjr/workerpool/modern';
+import workerpool from '@danielsimonjr/workerpool';
 
 /**
  * Default chunk size for parallel operations.

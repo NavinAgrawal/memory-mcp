@@ -1,0 +1,154 @@
+{
+  "phase": 10,
+  "title": "Developer Experience & Advanced APIs",
+  "version": "1.0.0",
+  "status": "completed",
+  "completedAt": "2026-01-06",
+  "totalSprints": 4,
+  "totalTasks": 15,
+  "totalEstimatedHours": 22,
+  "totalNewTests": 57,
+  "priority": "HIGH",
+  "description": "Phase 10 focuses on developer experience improvements and advanced APIs. It introduces transaction batching for bulk operations, graph change events for real-time sync, incremental TF-IDF indexing, and intelligent query cost estimation.",
+  "goals": [
+    "2-3x speedup for bulk operations via transaction batching",
+    "Real-time change notifications via EventEmitter-based events",
+    "5-10x faster ranked search updates via incremental TF-IDF",
+    "Intelligent automatic algorithm selection for optimal search performance"
+  ],
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Transaction Batching API",
+      "file": "PHASE_10_SPRINT_1_TODO.json",
+      "priority": "HIGH",
+      "effort": "6 hours",
+      "tasks": 4,
+      "newTests": 15,
+      "status": "completed",
+      "summary": "Create fluent transaction API for batching multiple graph operations in a single lock/save cycle. Provides 2-3x speedup for bulk operations.",
+      "keyDeliverables": [
+        "BatchTransactionContext interface for collecting operations",
+        "BatchTransaction class implementation",
+        "GraphStorage.transaction() method for atomic execution",
+        "Comprehensive unit tests"
+      ],
+      "filesCreated": ["tests/unit/core/TransactionBatching.test.ts"],
+      "filesModified": ["src/types/types.ts", "src/core/TransactionManager.ts", "src/core/GraphStorage.ts"],
+      "dependencies": []
+    },
+    {
+      "sprint": 2,
+      "title": "Graph Change Events",
+      "file": "PHASE_10_SPRINT_2_TODO.json",
+      "priority": "MEDIUM",
+      "effort": "5 hours",
+      "tasks": 4,
+      "newTests": 12,
+      "status": "completed",
+      "summary": "Create type-safe EventEmitter wrapper for graph change notifications. Enables real-time sync, audit logging, and cache invalidation.",
+      "keyDeliverables": [
+        "GraphEventEmitter class with type-safe events",
+        "Event types for entity/relation CRUD operations",
+        "Integration with GraphStorage mutations",
+        "Lazy initialization for zero overhead when unused"
+      ],
+      "filesCreated": ["src/core/GraphEventEmitter.ts", "tests/unit/core/GraphEvents.test.ts"],
+      "filesModified": ["src/core/GraphStorage.ts", "src/core/index.ts", "CLAUDE.md"],
+      "dependencies": ["Sprint 10.1"]
+    },
+    {
+      "sprint": 3,
+      "title": "Incremental TF-IDF Index",
+      "file": "PHASE_10_SPRINT_3_TODO.json",
+      "priority": "HIGH",
+      "effort": "5 hours",
+      "tasks": 3,
+      "newTests": 15,
+      "status": "completed",
+      "summary": "Add incremental update methods to TFIDFIndexManager for O(log n) single-entity updates instead of O(n) full rebuilds. Hooks into graph events for automatic updates.",
+      "keyDeliverables": [
+        "addEntity(), removeEntity(), updateEntityInIndex() methods",
+        "Dirty term tracking with lazy IDF recalculation",
+        "RankedSearch subscription to graph events",
+        "Performance benchmarks showing improvement"
+      ],
+      "filesCreated": ["tests/unit/search/IncrementalTFIDF.test.ts"],
+      "filesModified": ["src/search/TFIDFIndexManager.ts", "src/search/RankedSearch.ts"],
+      "dependencies": ["Sprint 10.2"]
+    },
+    {
+      "sprint": 4,
+      "title": "Query Cost Estimation",
+      "file": "PHASE_10_SPRINT_4_TODO.json",
+      "priority": "MEDIUM",
+      "effort": "6 hours",
+      "tasks": 4,
+      "newTests": 15,
+      "status": "completed",
+      "summary": "Create QueryCostEstimator for analyzing queries and recommending optimal search algorithms. Enables intelligent automatic algorithm selection.",
+      "keyDeliverables": [
+        "QueryCostEstimator class with cost estimation",
+        "Query analysis for detecting characteristics",
+        "Algorithm recommendation based on query and graph",
+        "search_auto MCP tool for automatic selection"
+      ],
+      "filesCreated": ["src/search/QueryCostEstimator.ts", "tests/unit/search/QueryCostEstimator.test.ts"],
+      "filesModified": ["src/search/SearchManager.ts", "src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "dependencies": []
+    }
+  ],
+  "executionOrder": [
+    {
+      "order": 1,
+      "sprint": 1,
+      "reason": "Transaction batching is foundational - provides the atomic operation pattern used by event emission"
+    },
+    {
+      "order": 2,
+      "sprint": 2,
+      "reason": "Graph events depend on transaction batching for testing combined event emission"
+    },
+    {
+      "order": 3,
+      "sprint": 3,
+      "reason": "Incremental TF-IDF depends on graph events for automatic index updates"
+    },
+    {
+      "order": 4,
+      "sprint": 4,
+      "reason": "Query cost estimation is independent but best done last to incorporate learnings"
+    }
+  ],
+  "risksMitigations": [
+    {
+      "risk": "Transaction batching adds complexity to GraphStorage",
+      "mitigation": "BatchTransaction class is separate from existing TransactionManager, minimizing coupling"
+    },
+    {
+      "risk": "Event emission could impact performance",
+      "mitigation": "Lazy initialization ensures zero overhead when no listeners registered"
+    },
+    {
+      "risk": "Incremental IDF recalc may have edge cases",
+      "mitigation": "Fallback to full rebuild if dirty term count exceeds threshold"
+    },
+    {
+      "risk": "Cost estimation accuracy may vary",
+      "mitigation": "Include confidence score and explanation in estimates"
+    }
+  ],
+  "successMetrics": [
+    "2-3x speedup for bulk operations (100+ entities)",
+    "<1ms event emission latency",
+    "5-10x faster ranked search updates for single entity changes",
+    "+/- 20% accuracy for execution time prediction"
+  ],
+  "postPhaseActions": [
+    "Benchmark all new features against Phase 9 baselines",
+    "Update CLAUDE.md with new features documentation",
+    "Consider Phase 11: Query optimization based on cost estimates"
+  ],
+  "createdAt": "2026-01-06",
+  "lastUpdated": "2026-01-06"
+}
