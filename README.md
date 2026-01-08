@@ -1,11 +1,11 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-9.0.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-9.8.3-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![Changelog](https://img.shields.io/badge/changelog-latest-orange.svg)](CHANGELOG.md)
+[![Coverage](https://img.shields.io/badge/coverage-96.6%25-brightgreen.svg)](docs/architecture/TEST_COVERAGE.md)
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
@@ -18,108 +18,62 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - [Installation](#installation)
 - [Core Concepts](#core-concepts)
 - [API Reference](#api-reference)
-- [Data Model](#data-model)
-- [Usage Examples](#usage-examples)
-- [Documentation](#documentation)
 - [Configuration](#configuration)
 - [Development](#development)
+- [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 - [License](#license)
-- [Acknowledgments](#acknowledgments)
 
 ## Features
 
 ### Core Memory Capabilities
+
 - **Knowledge Graph Storage**: Entity-Relation-Observation model for structured memory
 - **Persistent Memory**: Information persists across chat sessions with JSONL or SQLite storage
 - **Dual Storage Backends**: JSONL (human-readable) or SQLite with better-sqlite3 (3-10x faster, FTS5 search)
 - **Full CRUD Operations**: Create, read, update, delete entities and relations
-- **Flexible Search**: Text-based, fuzzy, boolean, and TF-IDF ranked search
+- **Flexible Search**: Text-based, fuzzy, boolean, semantic, and TF-IDF ranked search
 
 ### Advanced Features
-- **Hierarchical Nesting**: Parent-child relationships for organizing tree structures (9 tools)
-- **Graph Algorithms**: Path finding, connected components, centrality metrics (4 tools)
-- **Semantic Search**: Embedding-based similarity search with OpenAI or local models (3 tools)
-- **Memory Compression**: Intelligent duplicate detection and merging with similarity scoring (4 tools)
-- **Advanced Search**: TF-IDF ranking, boolean queries, fuzzy matching, date range search (6 tools)
-- **Import/Export**: 7 export formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with brotli compression, 3 import formats
-- **Tag Management**: Tags, aliases, bulk operations, importance scores (11 tools)
-- **Saved Searches**: Store and execute frequent queries (5 tools)
-- **Graph Analytics**: Statistics, validation, integrity checks (2 tools)
-- **Brotli Compression**: Compressed backups, exports, and MCP responses (50-70% size reduction)
 
-### Data Management
-- **Automatic Timestamps**: `createdAt` and `lastModified` fields with smart updates
-- **Date Range Search**: Filter entities/relations by creation or modification date
-- **Graph Statistics**: Comprehensive analytics with counts, types, and temporal data
-- **Tags System**: Categorize entities with case-insensitive tags and aliases
-- **Importance Levels**: 0-10 scale for entity prioritization
-- **Advanced Filtering**: Combine text, tags, importance, and date ranges
-- **Compressed Archives**: Archived entities stored with brotli compression
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **Hierarchical Nesting** | 9 | Parent-child relationships for organizing tree structures |
+| **Graph Algorithms** | 4 | Path finding, connected components, centrality metrics |
+| **Semantic Search** | 3 | Embedding-based similarity search with OpenAI or local models |
+| **Memory Compression** | 4 | Intelligent duplicate detection and merging with similarity scoring |
+| **Advanced Search** | 7 | TF-IDF ranking, boolean queries, fuzzy matching, auto-select |
+| **Tag Management** | 11 | Tags, aliases, bulk operations, importance scores |
+| **Saved Searches** | 5 | Store and execute frequent queries |
+| **Import/Export** | 2 | 7 export formats with brotli compression, 3 import formats |
+| **Graph Analytics** | 2 | Statistics, validation, integrity checks |
 
 ### Comparison with Official Memory Server
 
 | Feature | Official | Enhanced (This Fork) |
 |---------|----------|----------------------|
-| Entity Management | ✅ | ✅ |
-| Relation Management | ✅ | ✅ |
-| Observation Tracking | ✅ | ✅ |
+| Entity/Relation/Observation Management | ✅ | ✅ |
 | Basic Search | ✅ | ✅ |
 | **Hierarchical Nesting** | ❌ | ✅ Parent-child trees |
 | **Graph Algorithms** | ❌ | ✅ Path finding, centrality |
 | **Semantic Search** | ❌ | ✅ Embedding-based similarity |
-| **Memory Compression** | ❌ | ✅ Duplicate detection (50x faster) |
+| **Memory Compression** | ❌ | ✅ Duplicate detection |
 | **Brotli Compression** | ❌ | ✅ Backups, exports, responses |
 | **Smart Archiving** | ❌ | ✅ Criteria-based |
-| **Advanced Search** | ❌ | ✅ TF-IDF + Boolean |
-| **Fuzzy Search** | ❌ | ✅ Typo-tolerant |
-| **Saved Searches** | ❌ | ✅ Store queries |
-| **Tag Aliases** | ❌ | ✅ Synonyms |
-| **Graph Validation** | ❌ | ✅ Integrity checks |
-| **Timestamps** | ❌ | ✅ createdAt + lastModified |
-| **Importance Levels** | ❌ | ✅ 0-10 scale |
-| **Export Formats** | ❌ | ✅ 7 formats + compression |
-| **Import** | ❌ | ✅ 3 formats + merge |
-| **Input Validation** | ❌ | ✅ Zod schemas (14 validators) |
-| **Caching Layer** | ❌ | ✅ In-memory (instant reads) |
-| **Backup & Restore** | ❌ | ✅ Point-in-time recovery |
-| **Transactions** | ❌ | ✅ ACID guarantees |
-| **Security** | Basic | ✅ Input validation |
-| **Reliability** | Basic | ✅ Backups & Transactions |
-| **Performance** | Basic | ✅ Caching & Optimizations |
+| **Advanced Search** | ❌ | ✅ TF-IDF + Boolean + Fuzzy |
 | **SQLite Backend** | ❌ | ✅ better-sqlite3 (3-10x faster) |
 | **Full-Text Search** | ❌ | ✅ FTS5 with BM25 ranking |
-| **Concurrency Control** | ❌ | ✅ Thread-safe with async-mutex |
-| **Total Tools** | 11 | **55** (+400%) |
-| **Code Structure** | Monolithic | **Modular** (58 files, ~22.5K lines) |
-
-## Key Features
-
-### Production-Ready Enterprise Capabilities
-
-**🔐 Security & Data Integrity**
-- **Input Validation**: Zod-based schemas validate all inputs, preventing malformed data and injection attacks
-- **Transaction Support**: ACID-compliant transactions with automatic rollback on failures
-- **Backup & Restore**: Point-in-time recovery with timestamped, compressed backups and metadata
-- **Data Protection**: Comprehensive validation with size limits, range checks, and format enforcement
-
-**⚡ Performance Optimizations**
-- **Smart Caching**: In-memory cache with write-through invalidation for instant reads
-- **Optimized Algorithms**: 50x faster duplicate detection using two-level bucketing (O(n²) → O(n·k))
-- **Efficient Storage**: JSONL format with modular architecture for better tree-shaking
-- **Brotli Compression**: 50-70% size reduction for backups, exports, and large responses
-- **Multi-Level Caching**: Bidirectional relation cache, fuzzy search cache, boolean AST cache
-
-**🏗️ Architecture**
-- **Modular Design**: Clean separation of concerns across 58 focused modules with 7 lazy-initialized managers
-- **Type Safety**: Full TypeScript strict mode with comprehensive type definitions
-- **Lazy Initialization**: Context pattern with on-demand manager instantiation
-- **Developer Experience**: Barrel exports, 2493 tests (92% coverage), and comprehensive documentation
+| **Timestamps** | ❌ | ✅ createdAt + lastModified |
+| **Import/Export Formats** | ❌ | ✅ 7 export / 3 import |
+| **Input Validation** | ❌ | ✅ Zod schemas |
+| **Backup & Restore** | ❌ | ✅ Compressed snapshots |
+| **Total Tools** | 11 | **55** |
+| **Code Structure** | Monolithic | **Modular** (58 files) |
 
 ## Quick Start
 
-### 1. Install from NPM (Recommended)
+### 1. Install from NPM
 
 ```bash
 npm install -g @danielsimonjr/memory-mcp
@@ -171,11 +125,9 @@ Tag this as "preferences" with importance 8.
 Create a parent entity called "Development Preferences" and nest this under it.
 ```
 
-Claude will automatically use the enhanced tools!
-
 ## Installation
 
-### Local Build (Recommended)
+### Local Build
 
 ```bash
 # Clone repository
@@ -186,7 +138,7 @@ cd memory-mcp
 npm install
 npm run build
 
-# Run tests
+# Run tests (2535 tests, 96.6% coverage)
 npm test
 
 # Type check
@@ -211,8 +163,6 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) o
 }
 ```
 
-Replace `<PATH_TO>` with your actual paths.
-
 ### VS Code
 
 Add to `.vscode/mcp.json`:
@@ -232,1532 +182,162 @@ Add to `.vscode/mcp.json`:
 
 ### Entities
 
-**Primary nodes** in the knowledge graph.
+Primary nodes in the knowledge graph.
 
-**Fields:**
-- `name` (string): Unique identifier
-- `entityType` (string): Classification
-- `observations` (string[]): Facts about the entity
-- `parentId` (string, optional): Parent entity name for hierarchical nesting
-- `createdAt` (string, optional): ISO 8601 timestamp
-- `lastModified` (string, optional): ISO 8601 timestamp
-- `tags` (string[], optional): Lowercase tags for categorization
-- `importance` (number, optional): 0-10 scale for prioritization
-
-**Example:**
-```json
-{
-  "name": "John_Smith",
-  "entityType": "person",
-  "observations": ["Speaks fluent Spanish", "Senior developer"],
-  "parentId": "Engineering_Team",
-  "createdAt": "2025-01-15T10:30:00.000Z",
-  "tags": ["colleague", "engineering"],
-  "importance": 7
+```typescript
+interface Entity {
+  name: string;           // Unique identifier
+  entityType: string;     // Classification
+  observations: string[]; // Facts about the entity
+  parentId?: string;      // Parent entity name for hierarchical nesting
+  tags?: string[];        // Lowercase tags for categorization
+  importance?: number;    // 0-10 scale for prioritization
+  createdAt?: string;     // ISO 8601 timestamp
+  lastModified?: string;  // ISO 8601 timestamp
 }
 ```
 
 ### Relations
 
-**Directed connections** between entities.
+Directed connections between entities.
 
-**Fields:**
-- `from` (string): Source entity name
-- `to` (string): Target entity name
-- `relationType` (string): Relationship type
-- `createdAt` (string, optional): ISO 8601 timestamp
-- `lastModified` (string, optional): ISO 8601 timestamp
-
-**Example:**
-```json
-{
-  "from": "John_Smith",
-  "to": "Anthropic",
-  "relationType": "works_at",
-  "createdAt": "2025-01-15T10:30:00.000Z"
+```typescript
+interface Relation {
+  from: string;           // Source entity name
+  to: string;             // Target entity name
+  relationType: string;   // Relationship type (active voice)
+  createdAt?: string;     // ISO 8601 timestamp
+  lastModified?: string;  // ISO 8601 timestamp
 }
 ```
 
 ### Observations
 
-**Discrete facts** about entities.
-
-**Principles:**
-- One fact per observation
-- Atomic information
-- Independently manageable
+Discrete facts about entities. Each observation should be atomic and independently manageable.
 
 ## API Reference
 
 ### Complete Tool List (55 Tools)
 
 #### Entity Operations (4 tools)
-- `create_entities` - Create multiple new entities
-- `delete_entities` - Remove entities and their relations
-- `read_graph` - Read entire knowledge graph
-- `open_nodes` - Retrieve specific nodes by name
+| Tool | Description |
+|------|-------------|
+| `create_entities` | Create multiple new entities |
+| `delete_entities` | Remove entities and their relations |
+| `read_graph` | Read entire knowledge graph |
+| `open_nodes` | Retrieve specific nodes by name |
 
 #### Relation Operations (2 tools)
-- `create_relations` - Create multiple new relations
-- `delete_relations` - Remove specific relations
+| Tool | Description |
+|------|-------------|
+| `create_relations` | Create relations between entities |
+| `delete_relations` | Remove specific relations |
 
 #### Observation Management (2 tools)
-- `add_observations` - Add observations to entities
-- `delete_observations` - Remove specific observations
+| Tool | Description |
+|------|-------------|
+| `add_observations` | Add observations to entities |
+| `delete_observations` | Remove specific observations |
 
 #### Search (7 tools)
-- `search_nodes` - Search for nodes by query with filters
-- `search_by_date_range` - Filter by date range
-- `search_nodes_ranked` - TF-IDF relevance ranking
-- `boolean_search` - Boolean queries (AND/OR/NOT)
-- `fuzzy_search` - Typo-tolerant search
-- `get_search_suggestions` - Get "Did you mean?" suggestions
-- `search_auto` - Automatically select best search method (Phase 10)
+| Tool | Description |
+|------|-------------|
+| `search_nodes` | Search with filters (tags, importance) |
+| `search_by_date_range` | Filter by date range |
+| `search_nodes_ranked` | TF-IDF relevance ranking |
+| `boolean_search` | Boolean queries (AND/OR/NOT) |
+| `fuzzy_search` | Typo-tolerant search |
+| `get_search_suggestions` | "Did you mean?" suggestions |
+| `search_auto` | Auto-select best search method |
 
 #### Semantic Search (3 tools)
-- `semantic_search` - Search by semantic similarity using embeddings
-- `find_similar_entities` - Find entities similar to a reference entity
-- `index_embeddings` - Build or rebuild the semantic search index
+| Tool | Description |
+|------|-------------|
+| `semantic_search` | Search by semantic similarity using embeddings |
+| `find_similar_entities` | Find entities similar to a reference entity |
+| `index_embeddings` | Build or rebuild the semantic search index |
 
 #### Saved Searches (5 tools)
-- `save_search` - Save search query
-- `list_saved_searches` - List all saved searches
-- `execute_saved_search` - Execute saved search
-- `delete_saved_search` - Delete saved search
-- `update_saved_search` - Update saved search
+| Tool | Description |
+|------|-------------|
+| `save_search` | Save search query for reuse |
+| `execute_saved_search` | Execute a saved search |
+| `list_saved_searches` | List all saved searches |
+| `delete_saved_search` | Delete a saved search |
+| `update_saved_search` | Update saved search parameters |
 
 #### Tag Management (6 tools)
-- `add_tags` - Add tags to entity
-- `remove_tags` - Remove tags from entity
-- `set_importance` - Set entity importance (0-10)
-- `add_tags_to_multiple_entities` - Add tags to multiple entities
-- `replace_tag` - Replace tag globally
-- `merge_tags` - Merge two tags into one
+| Tool | Description |
+|------|-------------|
+| `add_tags` | Add tags to an entity |
+| `remove_tags` | Remove tags from an entity |
+| `set_importance` | Set entity importance (0-10) |
+| `add_tags_to_multiple_entities` | Bulk tag operation |
+| `replace_tag` | Replace tag globally |
+| `merge_tags` | Merge two tags into one |
 
 #### Tag Aliases (5 tools)
-- `add_tag_alias` - Create tag synonym
-- `list_tag_aliases` - List all tag aliases
-- `remove_tag_alias` - Remove tag alias
-- `get_aliases_for_tag` - Get aliases for tag
-- `resolve_tag` - Resolve alias to canonical form
+| Tool | Description |
+|------|-------------|
+| `add_tag_alias` | Create tag synonym |
+| `list_tag_aliases` | List all aliases |
+| `remove_tag_alias` | Remove an alias |
+| `get_aliases_for_tag` | Get aliases for canonical tag |
+| `resolve_tag` | Resolve alias to canonical form |
 
 #### Hierarchical Nesting (9 tools)
-- `set_entity_parent` - Set or remove parent relationship
-- `get_children` - Get immediate children
-- `get_parent` - Get parent entity
-- `get_ancestors` - Get all ancestors (parent chain)
-- `get_descendants` - Get all descendants (recursive)
-- `get_subtree` - Get entity + descendants with relations
-- `get_root_entities` - Get all entities with no parent
-- `get_entity_depth` - Get depth in hierarchy (0 = root)
-- `move_entity` - Move entity to new parent
+| Tool | Description |
+|------|-------------|
+| `set_entity_parent` | Set/remove parent relationship |
+| `get_children` | Get immediate children |
+| `get_parent` | Get parent entity |
+| `get_ancestors` | Get all ancestors (parent chain) |
+| `get_descendants` | Get all descendants (recursive) |
+| `get_subtree` | Get entity + descendants with relations |
+| `get_root_entities` | Get entities with no parent |
+| `get_entity_depth` | Get depth in hierarchy |
+| `move_entity` | Move entity to new parent |
 
 #### Graph Algorithms (4 tools)
-- `find_shortest_path` - Find shortest path between two entities
-- `find_all_paths` - Find all paths between entities with max depth
-- `get_connected_components` - Analyze graph connectivity and detect isolated subgraphs
-- `get_centrality` - Calculate centrality metrics (degree, betweenness, PageRank)
+| Tool | Description |
+|------|-------------|
+| `find_shortest_path` | Shortest path between entities (BFS) |
+| `find_all_paths` | All paths with max depth limit |
+| `get_connected_components` | Detect isolated subgraphs |
+| `get_centrality` | Calculate centrality metrics (degree, betweenness, PageRank) |
 
 #### Graph Analytics (2 tools)
-- `get_graph_stats` - Get comprehensive graph statistics
-- `validate_graph` - Validate graph integrity
+| Tool | Description |
+|------|-------------|
+| `get_graph_stats` | Comprehensive graph statistics |
+| `validate_graph` | Validate graph integrity |
 
 #### Compression & Archiving (4 tools)
-- `find_duplicates` - Find similar entities by threshold
-- `merge_entities` - Merge multiple entities into one
-- `compress_graph` - Automated compression with dry-run
-- `archive_entities` - Archive by age, importance, or tags
+| Tool | Description |
+|------|-------------|
+| `find_duplicates` | Find similar entities by threshold |
+| `merge_entities` | Merge multiple entities into one |
+| `compress_graph` | Auto compression with dry-run |
+| `archive_entities` | Archive by age, importance, or tags |
 
 #### Import & Export (2 tools)
-- `export_graph` - Export in 7 formats (with optional brotli compression)
-- `import_graph` - Import from JSON/CSV/GraphML
-
----
-
-### Detailed API Documentation
-
-<details>
-<summary><b>Core: create_entities</b></summary>
-
-Create multiple new entities in the knowledge graph.
-
-**Input:**
-```typescript
-{
-  entities: Array<{
-    name: string;
-    entityType: string;
-    observations: string[];
-    parentId?: string;      // NEW in v0.8.0
-    tags?: string[];
-    importance?: number;    // 0-10
-  }>
-}
-```
-
-**Returns:** Array of created entities with timestamps
-
-**Example:**
-```json
-{
-  "entities": [{
-    "name": "Project_Alpha",
-    "entityType": "project",
-    "observations": ["Web application rewrite"],
-    "tags": ["high-priority"],
-    "importance": 8
-  }]
-}
-```
-</details>
-
-<details>
-<summary><b>Core: create_relations</b></summary>
-
-Create multiple new relations between entities.
-
-**Input:**
-```typescript
-{
-  relations: Array<{
-    from: string;
-    to: string;
-    relationType: string;
-  }>
-}
-```
-
-**Returns:** Array of created relations with timestamps
-
-**Example:**
-```json
-{
-  "relations": [{
-    "from": "John_Smith",
-    "to": "Project_Alpha",
-    "relationType": "works_on"
-  }]
-}
-```
-</details>
-
-<details>
-<summary><b>Core: add_observations</b></summary>
-
-Add new observations to existing entities.
-
-**Input:**
-```typescript
-{
-  observations: Array<{
-    entityName: string;
-    contents: string[];
-  }>
-}
-```
-
-**Returns:** Array with added observations per entity
-
-**Example:**
-```json
-{
-  "observations": [{
-    "entityName": "John_Smith",
-    "contents": ["Certified AWS architect", "Speaks German"]
-  }]
-}
-```
-</details>
-
-<details>
-<summary><b>Core: delete_entities</b></summary>
-
-Remove entities and all their relations from the graph.
-
-**Input:**
-```typescript
-{
-  entityNames: string[]
-}
-```
-
-**Returns:** Confirmation
-
-**Note:** Cascade deletes all relations to/from these entities.
-</details>
-
-<details>
-<summary><b>Core: delete_observations</b></summary>
-
-Remove specific observations from entities.
-
-**Input:**
-```typescript
-{
-  deletions: Array<{
-    entityName: string;
-    observations: string[];
-  }>
-}
-```
-
-**Returns:** Confirmation
-</details>
-
-<details>
-<summary><b>Core: delete_relations</b></summary>
-
-Remove specific relations from the graph.
-
-**Input:**
-```typescript
-{
-  relations: Array<{
-    from: string;
-    to: string;
-    relationType: string;
-  }>
-}
-```
-
-**Returns:** Confirmation
-</details>
-
-<details>
-<summary><b>Core: read_graph</b></summary>
-
-Read the entire knowledge graph (all entities and relations).
-
-**Input:** None
-
-**Returns:** Complete knowledge graph
-```typescript
-{
-  entities: Entity[];
-  relations: Relation[];
-}
-```
-</details>
-
-<details>
-<summary><b>Core: search_nodes</b></summary>
-
-Search for nodes by query string with optional filters.
-
-**Input:**
-```typescript
-{
-  query: string;
-  tags?: string[];
-  minImportance?: number;
-  maxImportance?: number;
-}
-```
-
-**Returns:** Matching entities and their relations
-
-**Example:**
-```json
-{
-  "query": "typescript",
-  "tags": ["programming"],
-  "minImportance": 5
-}
-```
-</details>
-
-<details>
-<summary><b>Core: open_nodes</b></summary>
-
-Retrieve specific nodes by exact name match.
-
-**Input:**
-```typescript
-{
-  names: string[]
-}
-```
-
-**Returns:** Requested entities and relations between them
-
-**Example:**
-```json
-{
-  "names": ["John_Smith", "Project_Alpha"]
-}
-```
-</details>
-
----
-
-<details>
-<summary><b>Hierarchy: set_entity_parent</b></summary>
-
-Set or remove parent-child relationship for hierarchical nesting.
-
-**Input:**
-```typescript
-{
-  entityName: string;
-  parentName: string | null;  // null removes parent
-}
-```
-
-**Returns:** Updated entity
-
-**Features:**
-- Automatic cycle detection
-- Updates lastModified timestamp
-
-**Example:**
-```json
-{
-  "entityName": "Feature_Auth",
-  "parentName": "Project_Alpha"
-}
-```
-</details>
-
-<details>
-<summary><b>Hierarchy: get_children</b></summary>
-
-Get immediate children of an entity.
-
-**Input:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:** Array of child entities
-
-**Example:**
-```json
-{
-  "entityName": "Project_Alpha"
-}
-```
-</details>
-
-<details>
-<summary><b>Hierarchy: get_parent</b></summary>
-
-Get parent entity (or null if root).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:** Parent entity or null
-</details>
-
-<details>
-<summary><b>Hierarchy: get_ancestors</b></summary>
-
-Get all ancestors (parent chain to root).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:** Array of ancestors (closest to furthest)
-
-**Example:** Task → Feature → Project → Root
-</details>
-
-<details>
-<summary><b>Hierarchy: get_descendants</b></summary>
-
-Get all descendants recursively (BFS traversal).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:** Array of all descendant entities
-</details>
-
-<details>
-<summary><b>Hierarchy: get_subtree</b></summary>
-
-Get entity + all descendants with their relations.
-
-**Input:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:** Subtree (entities + relations)
-```typescript
-{
-  entities: Entity[];
-  relations: Relation[];
-}
-```
-
-**Use cases:** Export branches, analyze sections, filter by scope
-</details>
-
-<details>
-<summary><b>Hierarchy: get_root_entities</b></summary>
-
-Get all entities with no parent (top-level entities).
-
-**Input:** None
-
-**Returns:** Array of root entities
-</details>
-
-<details>
-<summary><b>Hierarchy: get_entity_depth</b></summary>
-
-Get depth in hierarchy (0 = root, 1 = child of root, etc.).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-}
-```
-
-**Returns:**
-```typescript
-{
-  entityName: string;
-  depth: number;
-}
-```
-</details>
-
-<details>
-<summary><b>Hierarchy: move_entity</b></summary>
-
-Move an entity to a new parent (shorthand for set_entity_parent).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-  newParentName: string | null;  // null makes it a root entity
-}
-```
-
-**Returns:** Updated entity
-
-**Features:**
-- Automatic cycle detection
-- Updates lastModified timestamp
-</details>
-
----
-
-<details>
-<summary><b>Compression: find_duplicates</b></summary>
-
-Find similar entities using multi-factor similarity scoring.
-
-**Input:**
-```typescript
-{
-  threshold?: number;  // Default 0.8 (80% similar)
-}
-```
-
-**Returns:** Array of duplicate entity name groups
-
-**Algorithm:**
-- Name similarity: 40% (Levenshtein distance)
-- Type match: 30% (exact match)
-- Observation overlap: 20% (Jaccard similarity)
-- Tag overlap: 10% (Jaccard similarity)
-
-**Example:**
-```json
-{
-  "threshold": 0.85
-}
-```
-</details>
-
-<details>
-<summary><b>Compression: merge_entities</b></summary>
-
-Merge multiple entities into one target entity.
-
-**Input:**
-```typescript
-{
-  entityNames: string[];
-  targetName?: string;  // Auto-selects if not provided
-}
-```
-
-**Returns:** Merged entity
-
-**Merge behavior:**
-- Combines unique observations and tags
-- Keeps highest importance
-- Redirects all relations to target
-- Preserves earliest createdAt
-
-**Example:**
-```json
-{
-  "entityNames": ["Project Alpha", "project-alpha", "Project-Alpha"],
-  "targetName": "Project Alpha"
-}
-```
-</details>
-
-<details>
-<summary><b>Compression: compress_graph</b></summary>
-
-Automated duplicate detection and merging.
-
-**Input:**
-```typescript
-{
-  threshold?: number;   // Default 0.8
-  dryRun?: boolean;     // Default false (preview only)
-}
-```
-
-**Returns:** Compression statistics
-```typescript
-{
-  duplicatesFound: number;
-  entitiesMerged: number;
-  observationsCompressed: number;
-  relationsConsolidated: number;
-  spaceFreed: number;
-  mergedEntities: Array<{ kept: string; merged: string[] }>;
-}
-```
-
-**Example:**
-```json
-{
-  "threshold": 0.8,
-  "dryRun": true
-}
-```
-</details>
-
----
-
-<details>
-<summary><b>Archiving: archive_entities</b></summary>
-
-Archive entities based on criteria (OR logic).
-
-**Input:**
-```typescript
-{
-  olderThan?: string;           // ISO date
-  importanceLessThan?: number;  // 0-10
-  tags?: string[];              // Any match
-}
-```
-
-**Second parameter:** `dryRun` (boolean, default false)
-
-**Returns:**
-```typescript
-{
-  archived: number;
-  entityNames: string[];
-}
-```
-
-**Criteria (OR logic):** Archive if ANY criterion matches
-
-**Example:**
-```json
-{
-  "olderThan": "2025-01-01T00:00:00.000Z",
-  "importanceLessThan": 3,
-  "tags": ["completed", "deprecated"]
-}
-```
-</details>
-
----
-
-<details>
-<summary><b>Search: search_nodes_ranked</b></summary>
-
-Full-text search with TF-IDF relevance ranking.
-
-**Input:**
-```typescript
-{
-  query: string;
-  limit?: number;  // Default 50, max 200
-}
-```
-
-**Returns:** Ranked results with scores
-```typescript
-Array<{
-  entityName: string;
-  score: number;
-  matchedIn: string[];  // Fields matched
-}>
-```
-
-**Example:**
-```json
-{
-  "query": "machine learning algorithms",
-  "limit": 10
-}
-```
-</details>
-
-<details>
-<summary><b>Search: boolean_search</b></summary>
-
-Advanced boolean queries with logical operators.
-
-**Input:**
-```typescript
-{
-  query: string;  // Boolean expression
-}
-```
-
-**Operators:**
-- `AND`, `OR`, `NOT`, `()`
-- Field-specific: `name:`, `type:`, `observation:`, `tag:`
-- Quoted strings: `"exact phrase"`
-
-**Example:**
-```json
-{
-  "query": "type:project AND (frontend OR backend) NOT deprecated"
-}
-```
-</details>
-
-<details>
-<summary><b>Search: fuzzy_search</b></summary>
-
-Typo-tolerant search using Levenshtein distance.
-
-**Input:**
-```typescript
-{
-  query: string;
-  threshold?: number;  // Default 0.7 (70% match)
-}
-```
-
-**Returns:** Matching entities (sorted by similarity)
-
-**Example:**
-```json
-{
-  "query": "projekt",
-  "threshold": 0.8
-}
-```
-</details>
-
----
-
-<details>
-<summary><b>Saved Search: save_search</b></summary>
-
-Save a search query for reuse.
-
-**Input:**
-```typescript
-{
-  name: string;
-  query: string;
-  filters?: object;
-  description?: string;
-}
-```
-
-**Returns:** Saved search object
-</details>
-
-<details>
-<summary><b>Saved Search: list_saved_searches</b></summary>
-
-List all saved searches.
-
-**Input:** None
-
-**Returns:** Array of saved searches with metadata
-</details>
-
-<details>
-<summary><b>Saved Search: execute_saved_search</b></summary>
-
-Execute a saved search (updates usage count).
-
-**Input:**
-```typescript
-{
-  name: string;
-}
-```
-
-**Returns:** Search results
-</details>
-
-<details>
-<summary><b>Saved Search: delete_saved_search</b></summary>
-
-Delete a saved search.
-
-**Input:**
-```typescript
-{
-  name: string;
-}
-```
-
-**Returns:** Confirmation
-</details>
-
-<details>
-<summary><b>Saved Search: update_saved_search</b></summary>
-
-Update a saved search.
-
-**Input:**
-```typescript
-{
-  name: string;
-  query?: string;
-  filters?: object;
-  description?: string;
-}
-```
-
-**Returns:** Updated saved search
-</details>
-
-<details>
-<summary><b>Search: get_search_suggestions</b></summary>
-
-Get "Did you mean?" suggestions for typos.
-
-**Input:**
-```typescript
-{
-  query: string;
-  limit?: number;  // Default 5
-}
-```
-
-**Returns:** Array of suggestions with scores
-</details>
-
----
-
-<details>
-<summary><b>Tags: add_tags</b></summary>
-
-Add tags to an entity (normalized to lowercase).
-
-**Input:**
-```typescript
-{
-  entityName: string;
-  tags: string[];
-}
-```
-
-**Returns:** Entity with added tags
-</details>
-
-<details>
-<summary><b>Tags: remove_tags</b></summary>
-
-Remove tags from an entity.
-
-**Input:**
-```typescript
-{
-  entityName: string;
-  tags: string[];
-}
-```
-
-**Returns:** Entity with remaining tags
-</details>
-
-<details>
-<summary><b>Tags: add_tags_to_multiple_entities</b></summary>
-
-Add tags to multiple entities at once (bulk operation).
-
-**Input:**
-```typescript
-{
-  entityNames: string[];
-  tags: string[];
-}
-```
-
-**Returns:** Array of results per entity
-</details>
-
-<details>
-<summary><b>Tags: replace_tag</b></summary>
-
-Replace a tag globally across all entities.
-
-**Input:**
-```typescript
-{
-  oldTag: string;
-  newTag: string;
-}
-```
-
-**Returns:** Count of entities updated
-</details>
-
-<details>
-<summary><b>Tags: merge_tags</b></summary>
-
-Merge two tags into one (all entities with tag1 get tag2).
-
-**Input:**
-```typescript
-{
-  sourceTag: string;
-  targetTag: string;
-}
-```
-
-**Returns:** Count of entities updated
-</details>
-
-<details>
-<summary><b>Tag Aliases: add_tag_alias</b></summary>
-
-Create a tag synonym (alias → canonical).
-
-**Input:**
-```typescript
-{
-  alias: string;
-  canonical: string;
-  description?: string;
-}
-```
-
-**Example:** "ai" → "artificial-intelligence"
-
-**Returns:** Tag alias object
-</details>
-
-<details>
-<summary><b>Tag Aliases: list_tag_aliases</b></summary>
-
-List all tag aliases.
-
-**Input:** None
-
-**Returns:** Array of tag aliases
-</details>
-
-<details>
-<summary><b>Tag Aliases: get_aliases_for_tag</b></summary>
-
-Get all aliases for a canonical tag.
-
-**Input:**
-```typescript
-{
-  canonical: string;
-}
-```
-
-**Returns:** Array of aliases
-</details>
-
-<details>
-<summary><b>Tag Aliases: remove_tag_alias</b></summary>
-
-Remove a tag alias.
-
-**Input:**
-```typescript
-{
-  alias: string;
-}
-```
-
-**Returns:** Confirmation
-</details>
-
-<details>
-<summary><b>Tag Aliases: resolve_tag</b></summary>
-
-Resolve an alias to its canonical form.
-
-**Input:**
-```typescript
-{
-  tag: string;
-}
-```
-
-**Returns:** Canonical tag name (or original if no alias)
-</details>
-
----
-
-<details>
-<summary><b>Analytics: get_graph_stats</b></summary>
-
-Get comprehensive graph statistics.
-
-**Input:** None
-
-**Returns:**
-```typescript
-{
-  totalEntities: number;
-  totalRelations: number;
-  entityTypesCounts: { [type: string]: number };
-  relationTypesCounts: { [type: string]: number };
-  oldestEntity: { name: string; date: string };
-  newestEntity: { name: string; date: string };
-  oldestRelation: { from: string; to: string; date: string };
-  newestRelation: { from: string; to: string; date: string };
-  entityDateRange: { start: string; end: string };
-  relationDateRange: { start: string; end: string };
-}
-```
-</details>
-
-<details>
-<summary><b>Analytics: validate_graph</b></summary>
-
-Validate graph integrity and detect issues.
-
-**Input:** None
-
-**Returns:**
-```typescript
-{
-  isValid: boolean;
-  errors: string[];      // Critical issues
-  warnings: string[];    // Non-critical issues
-}
-```
-
-**Checks:**
-- Orphaned relations
-- Duplicate entities
-- Invalid data
-- Isolated entities (warning)
-- Empty observations (warning)
-</details>
-
----
-
-<details>
-<summary><b>Graph Algorithms: find_shortest_path</b></summary>
-
-Find the shortest path between two entities using BFS.
-
-**Input:**
-```typescript
-{
-  from: string;        // Source entity name
-  to: string;          // Target entity name
-  directed?: boolean;  // Follow relation direction (default: false)
-}
-```
-
-**Returns:**
-```typescript
-{
-  path: string[];           // Entity names in order
-  length: number;           // Number of hops
-  relations: string[];      // Relation types traversed
-}
-```
-
-**Example:**
-```json
-{
-  "from": "Alice",
-  "to": "Charlie"
-}
-```
-</details>
-
-<details>
-<summary><b>Graph Algorithms: find_all_paths</b></summary>
-
-Find all paths between two entities with optional depth limit.
-
-**Input:**
-```typescript
-{
-  from: string;        // Source entity name
-  to: string;          // Target entity name
-  maxDepth?: number;   // Maximum path length (default: 5)
-  directed?: boolean;  // Follow relation direction (default: false)
-}
-```
-
-**Returns:**
-```typescript
-{
-  paths: Array<{
-    path: string[];
-    length: number;
-    relations: string[];
-  }>;
-  count: number;
-}
-```
-
-**Example:**
-```json
-{
-  "from": "Alice",
-  "to": "Charlie",
-  "maxDepth": 3
-}
-```
-</details>
-
-<details>
-<summary><b>Graph Algorithms: get_connected_components</b></summary>
-
-Detect isolated subgraphs and analyze connectivity.
-
-**Input:**
-```typescript
-{
-  directed?: boolean;  // Consider direction (default: false)
-}
-```
-
-**Returns:**
-```typescript
-{
-  components: Array<{
-    id: number;
-    entities: string[];
-    size: number;
-  }>;
-  totalComponents: number;
-  largestComponent: number;  // Size of largest
-  isolatedNodes: string[];   // Entities with no connections
-}
-```
-</details>
-
-<details>
-<summary><b>Graph Algorithms: get_centrality</b></summary>
-
-Calculate centrality metrics to identify important nodes.
-
-**Input:**
-```typescript
-{
-  metric: "degree" | "betweenness" | "pagerank";
-  direction?: "in" | "out" | "both";  // For degree centrality
-  limit?: number;                      // Top N results (default: 10)
-}
-```
-
-**Returns:**
-```typescript
-Array<{
-  entity: string;
-  score: number;
-  rank: number;
-}>
-```
-
-**Metrics:**
-- **degree**: Count of connections (hub identification)
-- **betweenness**: Bridge nodes connecting subgraphs
-- **pagerank**: Influence based on connections to influential nodes
-
-**Example:**
-```json
-{
-  "metric": "pagerank",
-  "limit": 5
-}
-```
-</details>
-
----
-
-<details>
-<summary><b>Semantic Search: semantic_search</b></summary>
-
-Search using semantic similarity with embeddings.
-
-**Input:**
-```typescript
-{
-  query: string;       // Natural language query
-  limit?: number;      // Max results (default: 10)
-  threshold?: number;  // Min similarity 0-1 (default: 0.5)
-}
-```
-
-**Returns:**
-```typescript
-Array<{
-  entity: Entity;
-  similarity: number;  // 0-1 cosine similarity
-}>
-```
-
-**Example:**
-```json
-{
-  "query": "machine learning projects",
-  "limit": 5,
-  "threshold": 0.7
-}
-```
-
-**Note:** Requires embedding provider configuration. See [Configuration](#configuration).
-</details>
-
-<details>
-<summary><b>Semantic Search: find_similar_entities</b></summary>
-
-Find entities semantically similar to a reference entity.
-
-**Input:**
-```typescript
-{
-  entityName: string;  // Reference entity
-  limit?: number;      // Max results (default: 10)
-  threshold?: number;  // Min similarity 0-1 (default: 0.5)
-}
-```
-
-**Returns:**
-```typescript
-Array<{
-  entity: Entity;
-  similarity: number;
-}>
-```
-
-**Example:**
-```json
-{
-  "entityName": "Project_Alpha",
-  "limit": 5
-}
-```
-</details>
-
-<details>
-<summary><b>Semantic Search: index_embeddings</b></summary>
-
-Build or rebuild the semantic search index.
-
-**Input:**
-```typescript
-{
-  force?: boolean;  // Rebuild even if index exists (default: false)
-}
-```
-
-**Returns:**
-```typescript
-{
-  indexed: number;    // Entities indexed
-  skipped: number;    // Already indexed (if not forced)
-  duration: number;   // Time in ms
-}
-```
-
-**Note:** Required before using semantic_search if auto-indexing is disabled.
-</details>
-
----
-
-<details>
-<summary><b>Export: export_graph</b></summary>
-
-Export knowledge graph in multiple formats with optional compression.
-
-**Input:**
-```typescript
-{
-  format: "json" | "csv" | "graphml" | "gexf" | "dot" | "markdown" | "mermaid";
-  filter?: {
-    startDate?: string;
-    endDate?: string;
-    entityType?: string;
-    tags?: string[];
-  };
-  compress?: boolean;           // Enable brotli compression (auto for >100KB)
-  compressionQuality?: number;  // 0-11, default 6
-}
-```
-
-**Formats:**
-- **JSON**: Pretty-printed with all data
-- **CSV**: Entities + relations sections
-- **GraphML**: XML for Gephi, Cytoscape, yEd
-- **GEXF**: Gephi native format
-- **DOT**: GraphViz for publication
-- **Markdown**: Human-readable documentation
-- **Mermaid**: Embedded diagrams
-
-**Compression:**
-- Exports >100KB are automatically compressed unless `compress: false`
-- Compressed output is base64-encoded for safe JSON transport
-- Returns `ExportResult` with compression metadata
-
-**Example:**
-```json
-{
-  "format": "json",
-  "compress": true,
-  "compressionQuality": 9
-}
-```
-</details>
-
-<details>
-<summary><b>Import: import_graph</b></summary>
-
-Import knowledge graph from JSON, CSV, or GraphML.
-
-**Input:**
-```typescript
-{
-  format: "json" | "csv" | "graphml";
-  data: string;
-  strategy?: "replace" | "skip" | "merge" | "fail";  // Default "merge"
-  dryRun?: boolean;  // Default false
-}
-```
-
-**Merge strategies:**
-- **replace**: Overwrite existing entities
-- **skip**: Keep existing, skip imports
-- **merge**: Combine observations/tags
-- **fail**: Error on conflicts
-
-**Returns:** Import statistics
-```typescript
-{
-  entitiesImported: number;
-  relationsImported: number;
-  entitiesSkipped: number;
-  relationsSkipped: number;
-  errors: string[];
-}
-```
-</details>
-
-## Data Model
-
-### Entity Schema
-
-```typescript
-interface Entity {
-  name: string;              // Unique identifier
-  entityType: string;        // Classification
-  observations: string[];    // Facts about the entity
-  parentId?: string;         // Parent entity (v0.8.0)
-  createdAt?: string;        // ISO 8601 timestamp
-  lastModified?: string;     // ISO 8601 timestamp
-  tags?: string[];           // Lowercase tags
-  importance?: number;       // 0-10 scale
-}
-```
-
-### Relation Schema
-
-```typescript
-interface Relation {
-  from: string;              // Source entity name
-  to: string;                // Target entity name
-  relationType: string;      // Relationship type
-  createdAt?: string;        // ISO 8601 timestamp
-  lastModified?: string;     // ISO 8601 timestamp
-}
-```
-
-### Storage Files
-
-The server automatically creates and manages these files:
-
-- **`memory.jsonl`**: Main knowledge graph storage (entities and relations)
-- **`memory-saved-searches.jsonl`**: Saved search queries with metadata
-- **`memory-tag-aliases.jsonl`**: Tag synonym mappings (alias → canonical)
-- **`.backups/`**: Backup directory with timestamped snapshots
-
-All files use JSONL (JSON Lines) format where each line is a valid JSON object.
-
-**Custom path:** Set `MEMORY_FILE_PATH` environment variable (see [Configuration](#configuration))
-
-## Usage Examples
-
-### Example 1: Hierarchical Project Structure
-
-```json
-// Create entities
-{
-  "entities": [
-    { "name": "Project_Alpha", "entityType": "project", "observations": ["Web app rewrite"] },
-    { "name": "Feature_Auth", "entityType": "feature", "observations": ["User authentication"] },
-    { "name": "Task_Login", "entityType": "task", "observations": ["Implement login UI"] }
-  ]
-}
-
-// Set hierarchy
-{ "entityName": "Feature_Auth", "parentName": "Project_Alpha" }
-{ "entityName": "Task_Login", "parentName": "Feature_Auth" }
-
-// Navigate
-{ "entityName": "Project_Alpha" }  // get_children → [Feature_Auth]
-{ "entityName": "Task_Login" }     // get_ancestors → [Feature_Auth, Project_Alpha]
-```
-
-### Example 2: Duplicate Detection and Merging
-
-```json
-// Find duplicates
-{ "threshold": 0.8 }  // find_duplicates
-
-// Merge duplicates
-{
-  "entityNames": ["Project Alpha", "project-alpha", "Project-Alpha"],
-  "targetName": "Project Alpha"
-}  // merge_entities
-
-// Auto-compress
-{ "threshold": 0.8, "dryRun": true }  // compress_graph (preview)
-{ "threshold": 0.8, "dryRun": false }  // compress_graph (execute)
-```
-
-### Example 3: Smart Archiving
-
-```json
-// Archive old, low-priority, or completed entities
-{
-  "olderThan": "2025-01-01T00:00:00.000Z",
-  "importanceLessThan": 3,
-  "tags": ["completed", "deprecated"]
-}  // archive_entities (OR logic)
-```
-
-### Example 4: Advanced Search
-
-```json
-// Boolean search
-{ "query": "type:project AND (frontend OR backend) NOT deprecated" }
-
-// TF-IDF ranking
-{ "query": "machine learning algorithms", "limit": 10 }
-
-// Fuzzy search
-{ "query": "projekt", "threshold": 0.8 }
-```
-
-### Example 5: Tag Management
-
-```json
-// Bulk tag operations
-{
-  "entityNames": ["Entity1", "Entity2", "Entity3"],
-  "tags": ["new-tag"]
-}  // add_tags_to_multiple
-
-// Tag aliases
-{ "alias": "ai", "canonical": "artificial-intelligence" }  // add_tag_alias
-
-// Merge tags
-{ "sourceTag": "ml", "targetTag": "machine-learning" }  // merge_tags
-```
-
-## Documentation
-
-### 📚 **[Complete Documentation](docs/README.md)**
-
-Comprehensive documentation organized by category:
-
-**Core Documentation**
-- **[API Reference](docs/architecture/API.md)** - Complete API documentation for all 55 tools
-- **[Architecture](docs/architecture/ARCHITECTURE.md)** - Technical architecture and system design
-- **[Dependency Graph](docs/architecture/DEPENDENCY_GRAPH.md)** - Module dependencies and structure
-- **[Workflow](docs/development/WORKFLOW.md)** - Development workflow and procedures
-
-**User Guides**
-- **[Hierarchy Guide](docs/guides/HIERARCHY.md)** - Parent-child relationships (9 tools)
-- **[Compression Guide](docs/guides/COMPRESSION.md)** - Duplicate detection and merging (4 tools)
-- **[Archiving Guide](docs/guides/ARCHIVING.md)** - Memory lifecycle and archiving
-- **[Query Language](docs/guides/QUERY_LANGUAGE.md)** - Boolean search syntax reference
-- **[Migration Guide](docs/guides/MIGRATION.md)** - Version upgrade guide
-
-**Project Information**
-- **[Changelog](CHANGELOG.md)** - Version history and release notes
-- **[Sprint Progress](docs/reports/SPRINT_PROGRESS.md)** - Development progress tracking
-- **[Future Features & Roadmap](docs/roadmap/FUTURE_FEATURES.md)** - Performance optimizations and planned features
+| Tool | Description |
+|------|-------------|
+| `export_graph` | Export in 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with compression |
+| `import_graph` | Import from JSON/CSV/GraphML with merge strategies |
 
 ## Configuration
 
 ### Environment Variables
 
-#### Storage Configuration
-
-- **`MEMORY_FILE_PATH`**: Path to the main memory storage file
-  - **Default**: `memory.jsonl` in the current working directory
-  - Sets the location for the primary knowledge graph storage
-
-- **`MEMORY_STORAGE_TYPE`**: Storage backend to use
-  - **Values**: `jsonl` (default) or `sqlite`
-  - **JSONL**: Human-readable, line-based JSON format
-  - **SQLite**: Native database with better-sqlite3 (3-10x faster, FTS5 full-text search, WAL mode)
-
-#### Semantic Search Configuration
-
-- **`MEMORY_EMBEDDING_PROVIDER`**: Embedding provider for semantic search
-  - **Values**: `openai`, `local`, or `none` (default)
-  - **openai**: Use OpenAI's text-embedding API (requires API key)
-  - **local**: Use local transformer models via @xenova/transformers
-  - **none**: Disable semantic search features
-
-- **`MEMORY_OPENAI_API_KEY`**: OpenAI API key (required if provider is `openai`)
-
-- **`MEMORY_EMBEDDING_MODEL`**: Embedding model to use
-  - **OpenAI default**: `text-embedding-3-small`
-  - **Local default**: `Xenova/all-MiniLM-L6-v2`
-
-- **`MEMORY_AUTO_INDEX_EMBEDDINGS`**: Auto-index entities on creation
-  - **Values**: `true` or `false` (default)
-  - When enabled, new entities are automatically indexed for semantic search
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MEMORY_FILE_PATH` | Path to storage file | `memory.jsonl` (current directory) |
+| `MEMORY_STORAGE_TYPE` | Storage backend: `jsonl` or `sqlite` | `jsonl` |
+| `MEMORY_EMBEDDING_PROVIDER` | Embedding provider: `openai`, `local`, or `none` | `none` |
+| `MEMORY_OPENAI_API_KEY` | OpenAI API key (required if provider is `openai`) | - |
+| `MEMORY_EMBEDDING_MODEL` | Embedding model to use | `text-embedding-3-small` (OpenAI) / `Xenova/all-MiniLM-L6-v2` (local) |
+| `MEMORY_AUTO_INDEX_EMBEDDINGS` | Auto-index entities on creation | `false` |
 
 ### Storage Backends
 
@@ -1765,14 +345,12 @@ Comprehensive documentation organized by category:
 |---------|-----------------|-------------------------|
 | Format | Human-readable text | Native binary database |
 | Transactions | Basic | Full ACID with WAL mode |
-| Indexing | In-memory | B-tree + FTS5 full-text |
 | Full-Text Search | Basic | FTS5 with BM25 ranking |
 | Performance | Good | 3-10x faster |
 | Concurrency | Single-threaded | Thread-safe with async-mutex |
 | Best For | Small graphs, debugging | Large graphs (10k+ entities) |
-| File Extension | `.jsonl` | `.db`, `.sqlite` |
 
-**Using SQLite Storage:**
+**Using SQLite:**
 
 ```json
 {
@@ -1789,80 +367,34 @@ Comprehensive documentation organized by category:
 }
 ```
 
-### Migrating from JSONL to SQLite
+### Storage Files
 
-Use the included migration tool to convert your existing JSONL data to SQLite:
-
-```bash
-# Navigate to the migration tool
-cd tools/migrate-from-jsonl-to-sqlite
-npm install
-npm run build:ts
-
-# Migrate JSONL to SQLite
-node dist/migrate-from-jsonl-to-sqlite.js --from /path/to/memory.jsonl --to /path/to/memory.db
-
-# Migrate SQLite back to JSONL (if needed)
-node dist/migrate-from-jsonl-to-sqlite.js --from /path/to/memory.db --to /path/to/memory.jsonl
-
-# Or build standalone executable
-npm run build
-./migrate-from-jsonl-to-sqlite.exe --from memory.jsonl --to memory.db
-```
-
-See [tools/migrate-from-jsonl-to-sqlite/README.md](tools/migrate-from-jsonl-to-sqlite/README.md) for complete documentation.
-
-**Migration Notes:**
-- All entities, relations, and metadata are preserved
-- Saved searches and tag aliases are stored in separate files and are NOT migrated
-- The target file is created if it doesn't exist, or overwritten if it does
-
-### Storage File Organization
-
-When you set `MEMORY_FILE_PATH`, the server automatically creates related files in the same directory:
+When you set `MEMORY_FILE_PATH`, the server automatically creates related files:
 
 ```
 /your/data/directory/
-├── memory.jsonl                    # Main knowledge graph (active entities & relations)
+├── memory.jsonl                    # Main knowledge graph
 ├── memory-saved-searches.jsonl     # Saved search queries
 ├── memory-tag-aliases.jsonl        # Tag synonym mappings
-└── .backups/                       # Timestamped backup directory
-    ├── backup_2025-11-24_10-30-00-123.jsonl
-    ├── backup_2025-11-24_10-30-00-123.jsonl.meta.json
-    └── ...
+└── .backups/                       # Timestamped backups
+    ├── backup_2026-01-08_10-30-00-123.jsonl
+    └── backup_2026-01-08_10-30-00-123.jsonl.meta.json
 ```
 
-**Note**: All auxiliary files use the same base filename as `MEMORY_FILE_PATH` with descriptive suffixes.
+### Migration Tool
 
-### Example Configuration
+Convert between JSONL and SQLite formats:
 
-**Claude Desktop (`claude_desktop_config.json`):**
-```json
-{
-  "mcpServers": {
-    "memory": {
-      "command": "node",
-      "args": ["/path/to/memory-mcp/dist/index.js"],
-      "env": {
-        "MEMORY_FILE_PATH": "/path/to/data/memory.jsonl"
-      }
-    }
-  }
-}
+```bash
+cd tools/migrate-from-jsonl-to-sqlite
+npm install && npm run build
+
+# JSONL to SQLite
+node dist/migrate-from-jsonl-to-sqlite.js --from memory.jsonl --to memory.db
+
+# SQLite to JSONL
+node dist/migrate-from-jsonl-to-sqlite.js --from memory.db --to memory.jsonl
 ```
-
-**Default behavior (no environment variable):**
-```json
-{
-  "mcpServers": {
-    "memory": {
-      "command": "node",
-      "args": ["/path/to/memory-mcp/dist/index.js"]
-    }
-  }
-}
-```
-Creates `memory.jsonl` in the current working directory.
 
 ## Development
 
@@ -1872,28 +404,25 @@ Creates `memory.jsonl` in the current working directory.
 - npm 9+
 - TypeScript 5.6+
 
-### Build
+### Build Commands
 
 ```bash
-npm install
-npm run build      # Production build
-npm run watch      # Development watch mode
+npm install           # Install dependencies
+npm run build         # Build TypeScript
+npm test              # Run tests (2535 tests, 96.6% coverage)
+npm run typecheck     # Strict type checking
+npm run watch         # Development watch mode
+npm run clean         # Remove dist/ directory
+npm run docs:deps     # Generate dependency graph
 ```
 
-### Test
-
-```bash
-npm test          # Run test suite with coverage
-npm run typecheck # TypeScript type checking
-```
-
-### Architecture Overview
+### Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
-│  server/MCPServer.ts + toolDefinitions              │
-│  + toolHandlers (55 tools) + responseCompressor     │
+│  server/MCPServer.ts + toolDefinitions (55 tools)   │
+│  + toolHandlers + responseCompressor                │
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────┐
@@ -1920,11 +449,11 @@ npm run typecheck # TypeScript type checking
 
 ```
 memory-mcp/
-├── src/                            # Main source (58 TypeScript files)
+├── src/                            # Source (58 TypeScript files)
 │   ├── index.ts                    # Entry point
-│   ├── core/                       # Core managers (11 files)
+│   ├── core/                       # Core managers (12 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
-│   │   ├── EntityManager.ts            # Entity CRUD + hierarchy + archive
+│   │   ├── EntityManager.ts            # Entity CRUD + hierarchy
 │   │   ├── RelationManager.ts          # Relation CRUD
 │   │   ├── GraphStorage.ts             # JSONL I/O + caching
 │   │   ├── SQLiteStorage.ts            # SQLite with better-sqlite3
@@ -1932,81 +461,89 @@ memory-mcp/
 │   │   ├── StorageFactory.ts           # Storage backend factory
 │   │   ├── HierarchyManager.ts         # Tree operations
 │   │   ├── ObservationManager.ts       # Observation CRUD
-│   │   ├── GraphTraversal.ts           # Path finding, centrality, BFS/DFS
-│   │   └── index.ts                    # Barrel export (+ KnowledgeGraphManager alias)
-│   ├── server/                     # MCP protocol layer (4 files)
-│   │   ├── MCPServer.ts                # Server setup (67 lines)
+│   │   ├── GraphTraversal.ts           # Path finding, centrality
+│   │   ├── GraphEventEmitter.ts        # Event system
+│   │   └── index.ts
+│   ├── server/                     # MCP protocol (4 files)
+│   │   ├── MCPServer.ts                # Server setup
 │   │   ├── toolDefinitions.ts          # 55 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
-│   │   └── responseCompressor.ts       # Brotli response compression
-│   ├── search/                     # Search implementations (13 files)
-│   │   ├── SearchManager.ts            # Search orchestrator + compression + analytics
+│   │   └── responseCompressor.ts       # Brotli compression
+│   ├── search/                     # Search implementations (15 files)
+│   │   ├── SearchManager.ts            # Search orchestrator
 │   │   ├── BasicSearch.ts              # Text matching
 │   │   ├── RankedSearch.ts             # TF-IDF scoring
 │   │   ├── BooleanSearch.ts            # AND/OR/NOT logic
 │   │   ├── FuzzySearch.ts              # Typo tolerance
-│   │   ├── SavedSearchManager.ts       # Saved queries
-│   │   ├── SearchSuggestions.ts        # "Did you mean?"
-│   │   ├── TFIDFIndexManager.ts        # TF-IDF index
-│   │   ├── SearchFilterChain.ts        # Unified filters
-│   │   ├── EmbeddingService.ts         # Embedding provider abstraction
-│   │   ├── VectorStore.ts              # Vector storage + similarity
-│   │   ├── SemanticSearch.ts           # Semantic search manager
-│   │   └── index.ts
-│   ├── features/                   # Advanced capabilities (6 files)
-│   │   ├── IOManager.ts                # Import + export + backup (consolidated)
+│   │   ├── SemanticSearch.ts           # Embedding-based
+│   │   ├── EmbeddingService.ts         # Provider abstraction
+│   │   ├── VectorStore.ts              # Vector storage
+│   │   └── ...                         # + 7 more
+│   ├── features/                   # Advanced capabilities (7 files)
+│   │   ├── IOManager.ts                # Import/export/backup
 │   │   ├── TagManager.ts               # Tag aliases
-│   │   ├── AnalyticsManager.ts         # Graph stats/validation
+│   │   ├── AnalyticsManager.ts         # Graph stats
 │   │   ├── ArchiveManager.ts           # Entity archival
-│   │   ├── CompressionManager.ts       # Duplicate detection/merging
+│   │   ├── CompressionManager.ts       # Duplicate detection
+│   │   ├── StreamingExporter.ts        # Large graph exports
 │   │   └── index.ts
 │   ├── types/                      # TypeScript definitions (2 files)
-│   │   ├── types.ts                    # All type definitions (consolidated)
-│   │   └── index.ts
-│   └── utils/                      # Shared utilities (12 files)
-│       ├── schemas.ts                  # Zod validation (14 schemas)
-│       ├── constants.ts                # Shared constants (SIMILARITY_WEIGHTS)
-│       ├── errors.ts                   # Custom error types
-│       ├── searchAlgorithms.ts         # Levenshtein + TF-IDF (consolidated)
-│       ├── entityUtils.ts              # Entity/tag/date/filter/path utilities
-│       ├── formatters.ts               # Response formatting + pagination
-│       ├── indexes.ts                  # NameIndex, TypeIndex, RelationIndex
-│       ├── compressionUtil.ts          # Brotli compression utilities
-│       ├── compressedCache.ts          # LRU cache with compression
-│       ├── logger.ts                   # Logging utilities
-│       ├── searchCache.ts              # Search result caching
-│       └── index.ts
-├── tests/                          # Test suite (2493 tests, 72 files)
+│   ├── utils/                      # Shared utilities (15 files)
+│   └── workers/                    # Worker pool (2 files)
+├── tests/                          # Test suite (74 files, 2535 tests)
 │   ├── unit/                       # Unit tests
 │   ├── integration/                # Integration tests
 │   ├── e2e/                        # End-to-end tests
-│   └── performance/                # Performance benchmarks
+│   └── performance/                # Benchmarks
 ├── dist/                           # Compiled output
 ├── docs/                           # Documentation
 │   ├── architecture/               # Architecture docs
 │   ├── guides/                     # User guides
-│   └── README.md
-├── tools/                          # Development tools
-│   ├── chunking-for-files/         # File splitting for context limits
-│   ├── compress-for-context/       # CTON compression for LLMs
+│   └── reports/                    # Sprint reports
+├── tools/                          # Standalone utilities
+│   ├── chunking-for-files/         # File splitting
+│   ├── compress-for-context/       # CTON compression
 │   ├── create-dependency-graph/    # Dependency analyzer
-│   └── migrate-from-jsonl-to-sqlite/ # Storage format migration
-├── vitest.config.ts                # Test configuration
-├── tsconfig.json                   # TypeScript configuration
+│   └── migrate-from-jsonl-to-sqlite/
 ├── CHANGELOG.md                    # Version history
 └── README.md                       # This file
 ```
 
-### Scripts
+### Dependencies
 
-```bash
-npm run build      # Build TypeScript to JavaScript
-npm run watch      # Watch mode for development
-npm test           # Run 2493 tests with coverage
-npm run typecheck  # TypeScript strict type checking
-npm run clean      # Clean dist/ directories
-npm run docs:deps  # Generate dependency graph
-```
+**Production:**
+- `@modelcontextprotocol/sdk`: ^1.21.1
+- `better-sqlite3`: ^11.7.0
+- `zod`: ^4.1.13
+- `async-mutex`: ^0.5.0
+- `@danielsimonjr/workerpool`: ^10.0.1
+
+**Development:**
+- `typescript`: ^5.6.2
+- `vitest`: ^4.0.13
+- `@vitest/coverage-v8`: ^4.0.13
+- `@types/better-sqlite3`: ^7.6.12
+
+## Documentation
+
+Comprehensive documentation in `docs/`:
+
+**Architecture**
+- [API.md](docs/architecture/API.md) - Complete API documentation for all 55 tools
+- [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture and system design
+- [COMPONENTS.md](docs/architecture/COMPONENTS.md) - Component breakdown and responsibilities
+- [OVERVIEW.md](docs/architecture/OVERVIEW.md) - High-level project overview
+- [DEPENDENCY_GRAPH.md](docs/architecture/DEPENDENCY_GRAPH.md) - Module dependencies
+
+**User Guides**
+- [HIERARCHY.md](docs/guides/HIERARCHY.md) - Parent-child relationships (9 tools)
+- [COMPRESSION.md](docs/guides/COMPRESSION.md) - Duplicate detection and merging
+- [ARCHIVING.md](docs/guides/ARCHIVING.md) - Memory lifecycle and archiving
+- [QUERY_LANGUAGE.md](docs/guides/QUERY_LANGUAGE.md) - Boolean search syntax
+
+**Development**
+- [WORKFLOW.md](docs/development/WORKFLOW.md) - Development procedures
+- [MIGRATION.md](docs/guides/MIGRATION.md) - Version upgrade guide
 
 ## Contributing
 
@@ -2014,36 +551,29 @@ We welcome contributions!
 
 **See:**
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) - Feature roadmap
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community standards
 
 **Ways to Help:**
-- 🐛 Report bugs
-- ✨ Request features
-- 🔧 Submit pull requests
-- 📚 Improve documentation
-- 🧪 Add tests
-- 🌍 Translate guides
+- Report bugs
+- Request features
+- Submit pull requests
+- Improve documentation
+- Add tests
 
 ## Changelog
 
-All notable changes to this project are documented in **[CHANGELOG.md](CHANGELOG.md)**.
+All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-The changelog follows [Keep a Changelog](https://keepachangelog.com/) format and tracks:
-- **Added**: New features and capabilities
-- **Changed**: Changes to existing functionality
-- **Deprecated**: Soon-to-be removed features
-- **Removed**: Removed features
-- **Fixed**: Bug fixes
-- **Security**: Security improvements
+**Current version**: v9.8.3 - [View full changelog](CHANGELOG.md)
 
-**Current version**: v9.0.0 - [View full changelog →](CHANGELOG.md)
+Recent highlights:
+- **v9.8.3**: SQLite storage support fix, JSON-RPC communication fix
+- **v9.8.2**: Security hardening (22 vulnerabilities fixed)
+- **v9.8.1**: Architecture documentation overhaul
 
 ## License
 
 **MIT License** - see [LICENSE](LICENSE)
-
-You are free to use, modify, and distribute this software.
 
 ## Acknowledgments
 
@@ -2051,39 +581,26 @@ You are free to use, modify, and distribute this software.
 
 Enhanced fork of [Model Context Protocol memory server](https://github.com/modelcontextprotocol/servers) by [Anthropic](https://www.anthropic.com/).
 
-**Original License:** MIT
+### Developer
 
-### Enhancements
+**[Daniel Simon Jr.](https://github.com/danielsimonjr)**
 
-**Developer:** [Daniel Simon Jr.](https://github.com/danielsimonjr)
+### Major Enhancements
 
-**Major Features Added:**
 - Hierarchical nesting with parent-child relationships
 - Graph algorithms: path finding, centrality, connected components
-- Semantic search with embedding-based similarity (OpenAI/local models)
+- Semantic search with embedding-based similarity
 - Brotli compression for backups, exports, and responses
 - Memory compression with intelligent duplicate detection
 - Smart archiving with criteria-based filtering
 - Advanced search: TF-IDF, boolean, and fuzzy matching
-- Multi-format import/export with merge strategies and compression
-- Enhanced tag management with aliases and bulk operations
-- Saved searches with usage tracking
-- Graph validation and integrity checks
+- Multi-format import/export with merge strategies
+- SQLite backend with better-sqlite3 (3-10x faster)
 - Transaction support with ACID guarantees
-- Backup and restore capabilities with compression
-- Input validation and security hardening
-- Performance optimizations and multi-level caching
-- Comprehensive documentation and guides
-
-### Community
-
-Thanks to:
-- [MCP Specification](https://modelcontextprotocol.io)
-- MCP community and contributors
-- **Technologies:** Vitest, TypeScript, Node.js, better-sqlite3
+- Comprehensive test suite (2535 tests, 96.6% coverage)
 
 ---
 
 **Repository:** https://github.com/danielsimonjr/memory-mcp
-**Issues:** https://github.com/danielsimonjr/memory-mcp/issues
 **NPM:** https://www.npmjs.com/package/@danielsimonjr/memory-mcp
+**Issues:** https://github.com/danielsimonjr/memory-mcp/issues
