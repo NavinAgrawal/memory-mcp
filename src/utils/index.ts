@@ -219,6 +219,9 @@ export {
   validateFilePath,
   defaultMemoryPath,
   ensureMemoryFilePath,
+  // Security utilities
+  sanitizeObject,
+  escapeCsvFormula,
 } from './entityUtils.js';
 
 // ==================== Parallel Utilities ====================

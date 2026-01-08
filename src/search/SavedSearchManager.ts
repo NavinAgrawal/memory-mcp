@@ -9,6 +9,7 @@
 import * as fs from 'fs/promises';
 import type { SavedSearch, KnowledgeGraph } from '../types/index.js';
 import type { BasicSearch } from './BasicSearch.js';
+import { sanitizeObject } from '../utils/index.js';
 
 /**
  * Manages saved search queries with usage tracking.
@@ -167,8 +168,8 @@ export class SavedSearchManager {
       throw new Error(`Saved search "${name}" not found`);
     }
 
-    // Apply updates
-    Object.assign(search, updates);
+    // Apply updates (sanitized to prevent prototype pollution)
+    Object.assign(search, sanitizeObject(updates as Record<string, unknown>));
 
     await this.saveSavedSearches(searches);
     return search;

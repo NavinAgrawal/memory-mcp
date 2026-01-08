@@ -10,7 +10,7 @@
 
 import { createWriteStream } from 'fs';
 import type { Entity, ReadonlyKnowledgeGraph, LongRunningOperationOptions } from '../types/types.js';
-import { checkCancellation, createProgressReporter, createProgress } from '../utils/index.js';
+import { checkCancellation, createProgressReporter, createProgress, validateFilePath } from '../utils/index.js';
 
 /**
  * Result summary from a streaming export operation.
@@ -56,12 +56,25 @@ export interface StreamResult {
  * ```
  */
 export class StreamingExporter {
+  private readonly validatedFilePath: string;
+
   /**
    * Create a new streaming exporter.
    *
    * @param filePath - Path to the output file
+   * @throws {FileOperationError} If path traversal is detected
    */
-  constructor(private readonly filePath: string) {}
+  constructor(filePath: string) {
+    // Validate path to prevent path traversal attacks
+    this.validatedFilePath = validateFilePath(filePath);
+  }
+
+  /**
+   * Get the validated file path.
+   */
+  get filePath(): string {
+    return this.validatedFilePath;
+  }
 
   /**
    * Stream a knowledge graph to JSONL format.

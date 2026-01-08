@@ -17,6 +17,7 @@ import {
   checkCancellation,
   createProgressReporter,
   createProgress,
+  sanitizeObject,
 } from '../utils/index.js';
 import { GRAPH_LIMITS } from '../utils/constants.js';
 
@@ -291,8 +292,8 @@ export class EntityManager {
       throw new EntityNotFoundError(name);
     }
 
-    // Apply updates
-    Object.assign(entity, updates);
+    // Apply updates (sanitized to prevent prototype pollution)
+    Object.assign(entity, sanitizeObject(updates as Record<string, unknown>));
     entity.lastModified = new Date().toISOString();
 
     await this.storage.saveGraph(graph);
@@ -359,8 +360,8 @@ export class EntityManager {
       }
       const entity = graph.entities[idx];
 
-      // Apply updates
-      Object.assign(entity, updateData);
+      // Apply updates (sanitized to prevent prototype pollution)
+      Object.assign(entity, sanitizeObject(updateData as Record<string, unknown>));
       entity.lastModified = timestamp;
       updatedEntities.push(entity);
     }

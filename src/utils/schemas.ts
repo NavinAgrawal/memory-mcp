@@ -112,7 +112,7 @@ export const CreateEntitySchema = z.object({
   parentId: entityNameSchema.optional(),
   createdAt: isoDateSchema.optional(),
   lastModified: isoDateSchema.optional(),
-});
+}).strict();
 
 /**
  * Entity update input schema.
@@ -125,7 +125,7 @@ export const UpdateEntitySchema = z.object({
   tags: z.array(tagSchema).optional(),
   importance: importanceSchema.optional(),
   parentId: entityNameSchema.optional(),
-});
+}).strict();
 
 // ==================== Relation Schemas ====================
 
@@ -152,7 +152,7 @@ export const CreateRelationSchema = z.object({
   relationType: relationTypeSchema,
   createdAt: isoDateSchema.optional(),
   lastModified: isoDateSchema.optional(),
-});
+}).strict();
 
 // ==================== Search Schemas ====================
 
@@ -171,7 +171,7 @@ export const SearchQuerySchema = z.string()
 export const DateRangeSchema = z.object({
   start: isoDateSchema,
   end: isoDateSchema,
-}).refine(
+}).strict().refine(
   (data) => new Date(data.start) <= new Date(data.end),
   { message: 'Start date must be before or equal to end date' }
 );
@@ -184,7 +184,7 @@ export const DateRangeSchema = z.object({
 export const TagAliasSchema = z.object({
   canonical: tagSchema,
   aliases: z.array(tagSchema).min(1, 'Must have at least one alias'),
-});
+}).strict();
 
 // ==================== Export Schemas ====================
 
@@ -234,7 +234,7 @@ export const DeleteRelationsSchema = z.array(CreateRelationSchema)
 export const AddObservationInputSchema = z.object({
   entityName: entityNameSchema,
   contents: z.array(observationSchema),
-});
+}).strict();
 
 /**
  * Batch observation addition validation.
@@ -251,7 +251,7 @@ export const AddObservationsInputSchema = z.array(AddObservationInputSchema)
 export const DeleteObservationInputSchema = z.object({
   entityName: entityNameSchema,
   observations: z.array(observationSchema),
-});
+}).strict();
 
 /**
  * Batch observation deletion validation.
@@ -267,10 +267,10 @@ export const DeleteObservationsInputSchema = z.array(DeleteObservationInputSchem
  * All fields are optional - the manager handles the case when no criteria provided.
  */
 export const ArchiveCriteriaSchema = z.object({
-  olderThan: z.string().optional(),
+  olderThan: isoDateSchema.optional(),
   importanceLessThan: z.number().min(0).max(10).optional(),
   tags: z.array(tagSchema).optional(),
-});
+}).strict();
 
 // ==================== Saved Search Schemas ====================
 
@@ -285,7 +285,7 @@ export const SavedSearchInputSchema = z.object({
   minImportance: importanceSchema.optional(),
   maxImportance: importanceSchema.optional(),
   entityType: entityTypeSchema.optional(),
-});
+}).strict();
 
 /**
  * Saved search update validation.
@@ -298,7 +298,7 @@ export const SavedSearchUpdateSchema = z.object({
   minImportance: importanceSchema.optional(),
   maxImportance: importanceSchema.optional(),
   entityType: entityTypeSchema.optional(),
-});
+}).strict();
 
 // ==================== Import/Export Schemas ====================
 
@@ -325,7 +325,7 @@ export const ExportFilterSchema = z.object({
   endDate: isoDateSchema.optional(),
   entityType: entityTypeSchema.optional(),
   tags: z.array(tagSchema).optional(),
-});
+}).strict();
 
 // ==================== Search Parameter Schemas ====================
 

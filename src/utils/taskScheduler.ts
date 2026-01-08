@@ -4,10 +4,29 @@
  * Advanced task scheduling utilities using workerpool.
  * Phase 8 Sprint 4: Priority queues, concurrency control, progress tracking.
  *
+ * **SECURITY WARNING:** TaskQueue uses `new Function()` internally for worker serialization.
+ * Task functions MUST be real function objects, never user-provided strings.
+ * Runtime validation ensures only function objects are accepted.
+ *
  * @module utils/taskScheduler
  */
 
 import workerpool from '@danielsimonjr/workerpool';
+
+/**
+ * Validates that the input is a real function object.
+ * Prevents code injection through string masquerading as functions.
+ *
+ * @param fn - Function to validate
+ * @param paramName - Parameter name for error message
+ * @throws {TypeError} If fn is not a function
+ * @internal
+ */
+function validateFunction(fn: unknown, paramName: string): void {
+  if (typeof fn !== 'function') {
+    throw new TypeError(`${paramName} must be a function, got ${typeof fn}`);
+  }
+}
 
 // ==================== Types ====================
 
@@ -189,6 +208,9 @@ export class TaskQueue {
    * @returns Promise that resolves when the task completes
    */
   enqueue<T, R>(task: Task<T, R>): Promise<TaskResult<R>> {
+    // Security: Validate that task.fn is a real function, not a user-provided string
+    validateFunction(task.fn, 'task.fn');
+
     return new Promise((resolve, reject) => {
       const queuedTask: QueuedTask<T, R> = {
         ...task,

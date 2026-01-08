@@ -16,6 +16,7 @@ import {
   formatTextResponse,
   formatRawResponse,
   validateWithSchema,
+  validateFilePath,
   BatchCreateEntitiesSchema,
   BatchCreateRelationsSchema,
   EntityNamesSchema,
@@ -487,7 +488,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ? validateWithSchema(args.compressionQuality, z.number().int().min(0).max(11), 'Invalid compression quality (must be 0-11)')
       : undefined;
     const streaming = args.streaming !== undefined ? validateWithSchema(args.streaming, z.boolean(), 'Invalid streaming value') : undefined;
-    const outputPath = args.outputPath !== undefined ? validateWithSchema(args.outputPath, z.string(), 'Invalid outputPath value') : undefined;
+    const rawOutputPath = args.outputPath !== undefined ? validateWithSchema(args.outputPath, z.string(), 'Invalid outputPath value') : undefined;
+    // Validate outputPath to prevent path traversal attacks
+    const outputPath = rawOutputPath !== undefined ? validateFilePath(rawOutputPath) : undefined;
 
     // Get filtered or full graph
     let graph;

@@ -4,10 +4,29 @@
  * Utilities for parallel array operations using workerpool.
  * Phase 8 Sprint 3: Parallel array operations for improved performance.
  *
+ * **SECURITY WARNING:** These functions use `new Function()` internally for worker serialization.
+ * The `fn` parameter MUST be a real function object, never a user-provided string.
+ * Runtime validation ensures only function objects are accepted.
+ *
  * @module utils/parallelUtils
  */
 
 import workerpool from '@danielsimonjr/workerpool';
+
+/**
+ * Validates that the input is a real function object.
+ * Prevents code injection through string masquerading as functions.
+ *
+ * @param fn - Function to validate
+ * @param paramName - Parameter name for error message
+ * @throws {TypeError} If fn is not a function
+ * @internal
+ */
+function validateFunction(fn: unknown, paramName: string): void {
+  if (typeof fn !== 'function') {
+    throw new TypeError(`${paramName} must be a function, got ${typeof fn}`);
+  }
+}
 
 /**
  * Default chunk size for parallel operations.
@@ -84,6 +103,9 @@ export async function parallelMap<T, R>(
   fn: (item: T) => R,
   chunkSize: number = DEFAULT_CHUNK_SIZE
 ): Promise<R[]> {
+  // Security: Validate that fn is a real function, not a user-provided string
+  validateFunction(fn, 'fn');
+
   // Fall back to single-threaded for small arrays
   if (items.length < MIN_PARALLEL_SIZE) {
     return items.map(fn);
@@ -154,6 +176,9 @@ export async function parallelFilter<T>(
   predicate: (item: T) => boolean,
   chunkSize: number = DEFAULT_CHUNK_SIZE
 ): Promise<T[]> {
+  // Security: Validate that predicate is a real function, not a user-provided string
+  validateFunction(predicate, 'predicate');
+
   // Fall back to single-threaded for small arrays
   if (items.length < MIN_PARALLEL_SIZE) {
     return items.filter(predicate);

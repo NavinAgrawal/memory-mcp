@@ -26,6 +26,7 @@ import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 import { NameIndex, TypeIndex } from '../utils/indexes.js';
+import { sanitizeObject } from '../utils/index.js';
 
 /**
  * SQLiteStorage manages persistence of the knowledge graph using native SQLite.
@@ -541,8 +542,8 @@ export class SQLiteStorage implements IGraphStorage {
       // Track old type for index update
       const oldType = entity.entityType;
 
-      // Apply updates to cached entity
-      Object.assign(entity, updates);
+      // Apply updates to cached entity (sanitized to prevent prototype pollution)
+      Object.assign(entity, sanitizeObject(updates as Record<string, unknown>));
       entity.lastModified = new Date().toISOString();
 
       // Update in database

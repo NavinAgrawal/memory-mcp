@@ -1,6 +1,6 @@
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 9.8.0 | **Last Updated**: 2026-01-07
+**Version**: 9.8.0 | **Last Updated**: 2026-01-08
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -1204,5 +1204,5 @@ graph TD
 
 ---
 
-*Last Updated*: 2026-01-07
+*Last Updated*: 2026-01-08
 *Version*: 9.8.0

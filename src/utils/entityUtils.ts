@@ -580,6 +580,91 @@ export function entityPassesFilters(
   return true;
 }
 
+// ==================== Security Utilities ====================
+
+/**
+ * Dangerous keys that should never be allowed in object assignment.
+ * These can be used for prototype pollution attacks.
+ */
+const DANGEROUS_KEYS = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+]);
+
+/**
+ * Sanitizes an object by removing potentially dangerous keys.
+ * This prevents prototype pollution attacks when using Object.assign() or spread operators.
+ *
+ * @param obj - The object to sanitize
+ * @returns A new object with dangerous keys removed
+ *
+ * @example
+ * ```typescript
+ * // Safe usage with Object.assign
+ * const updates = sanitizeObject(userInput);
+ * Object.assign(entity, updates);
+ *
+ * // Protects against prototype pollution
+ * const malicious = { __proto__: { admin: true } };
+ * const safe = sanitizeObject(malicious); // { }
+ * ```
+ */
+export function sanitizeObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  const result: Partial<T> = {};
+
+  for (const key of Object.keys(obj)) {
+    // Skip dangerous keys
+    if (DANGEROUS_KEYS.has(key)) {
+      continue;
+    }
+
+    // Recursively sanitize nested objects
+    const value = obj[key];
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result[key as keyof T] = sanitizeObject(value as Record<string, unknown>) as T[keyof T];
+    } else {
+      result[key as keyof T] = value as T[keyof T];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * CSV formula injection dangerous characters.
+ * These can cause spreadsheet applications to execute formulas.
+ */
+const CSV_FORMULA_CHARS = new Set(['=', '+', '-', '@', '\t', '\r']);
+
+/**
+ * Escapes a CSV field to prevent formula injection attacks.
+ * Prepends a single quote to values that start with dangerous characters.
+ *
+ * @param field - The field value to escape
+ * @returns Escaped field value safe for CSV export
+ *
+ * @example
+ * ```typescript
+ * escapeCsvFormula('=SUM(A1:A10)'); // "'=SUM(A1:A10)"
+ * escapeCsvFormula('normal text'); // 'normal text'
+ * ```
+ */
+export function escapeCsvFormula(field: string | undefined | null): string {
+  if (field === undefined || field === null) return '';
+  const str = String(field);
+
+  // Prefix with single quote if starts with dangerous character
+  if (str.length > 0 && CSV_FORMULA_CHARS.has(str[0])) {
+    return "'" + str;
+  }
+  return str;
+}
+
 // ==================== Path Utilities ====================
 
 /**

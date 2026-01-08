@@ -20,7 +20,7 @@ import type {
 import type { GraphStorage } from './GraphStorage.js';
 import { IOManager } from '../features/IOManager.js';
 import { KnowledgeGraphError } from '../utils/errors.js';
-import { checkCancellation, createProgressReporter, createProgress } from '../utils/index.js';
+import { checkCancellation, createProgressReporter, createProgress, sanitizeObject } from '../utils/index.js';
 
 /**
  * Types of operations that can be performed in a transaction.
@@ -458,7 +458,8 @@ export class TransactionManager {
         if (!entity) {
           throw new KnowledgeGraphError(`Entity "${name}" not found`, 'ENTITY_NOT_FOUND');
         }
-        Object.assign(entity, updates);
+        // Sanitize updates to prevent prototype pollution
+        Object.assign(entity, sanitizeObject(updates as Record<string, unknown>));
         entity.lastModified = timestamp;
         break;
       }
@@ -924,7 +925,8 @@ export class BatchTransaction {
         if (!entity) {
           throw new KnowledgeGraphError(`Entity "${name}" not found`, 'ENTITY_NOT_FOUND');
         }
-        Object.assign(entity, updates);
+        // Sanitize updates to prevent prototype pollution
+        Object.assign(entity, sanitizeObject(updates as Record<string, unknown>));
         entity.lastModified = timestamp;
         result.entitiesUpdated++;
         break;

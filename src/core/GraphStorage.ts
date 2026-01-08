@@ -12,6 +12,7 @@ import { Mutex } from 'async-mutex';
 import type { KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData } from '../types/index.js';
 import { clearAllSearchCaches } from '../utils/searchCache.js';
 import { NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex } from '../utils/indexes.js';
+import { sanitizeObject } from '../utils/index.js';
 import { BatchTransaction } from './TransactionManager.js';
 import { GraphEventEmitter } from './GraphEventEmitter.js';
 
@@ -621,8 +622,8 @@ export class GraphStorage implements IGraphStorage {
         }
       }
 
-      // File write succeeded - NOW update cache in-place
-      Object.assign(entity, updates);
+      // File write succeeded - NOW update cache in-place (sanitized to prevent prototype pollution)
+      Object.assign(entity, sanitizeObject(updates as Record<string, unknown>));
       entity.lastModified = timestamp;
 
       // Update indexes

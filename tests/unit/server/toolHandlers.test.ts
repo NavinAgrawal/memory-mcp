@@ -330,8 +330,7 @@ describe('toolHandlers', () => {
       it('should save a search', async () => {
         const result = await toolHandlers.save_search(manager, {
           name: 'my-search',
-          query: 'test query',
-          searchType: 'basic'
+          query: 'test query'
         });
         expect(result.content[0].type).toBe('text');
       });
@@ -341,8 +340,7 @@ describe('toolHandlers', () => {
       it('should list saved searches', async () => {
         await toolHandlers.save_search(manager, {
           name: 'test-search',
-          query: 'test',
-          searchType: 'basic'
+          query: 'test'
         });
         const result = await toolHandlers.list_saved_searches(manager, {});
         const data = JSON.parse(result.content[0].text);
@@ -357,8 +355,7 @@ describe('toolHandlers', () => {
         });
         await toolHandlers.save_search(manager, {
           name: 'exec-test',
-          query: 'Test',
-          searchType: 'basic'
+          query: 'Test'
         });
         const result = await toolHandlers.execute_saved_search(manager, { name: 'exec-test' });
         expect(result.content[0].type).toBe('text');
@@ -369,8 +366,7 @@ describe('toolHandlers', () => {
       it('should delete existing search', async () => {
         await toolHandlers.save_search(manager, {
           name: 'to-delete',
-          query: 'test',
-          searchType: 'basic'
+          query: 'test'
         });
         const result = await toolHandlers.delete_saved_search(manager, { name: 'to-delete' });
         expect(result.content[0].text).toContain('deleted successfully');
@@ -386,8 +382,7 @@ describe('toolHandlers', () => {
       it('should update saved search', async () => {
         await toolHandlers.save_search(manager, {
           name: 'to-update',
-          query: 'original',
-          searchType: 'basic'
+          query: 'original'
         });
         const result = await toolHandlers.update_saved_search(manager, {
           name: 'to-update',

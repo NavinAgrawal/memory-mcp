@@ -33,6 +33,9 @@ import {
   checkCancellation,
   createProgressReporter,
   createProgress,
+  validateFilePath,
+  sanitizeObject,
+  escapeCsvFormula,
 } from '../utils/index.js';
 import { StreamingExporter, type StreamResult } from './StreamingExporter.js';
 
@@ -254,7 +257,9 @@ export class IOManager {
     graph: ReadonlyKnowledgeGraph,
     options: ExportOptions & { outputPath: string }
   ): Promise<ExportResult> {
-    const exporter = new StreamingExporter(options.outputPath);
+    // Validate path to prevent path traversal attacks (defense in depth)
+    const validatedOutputPath = validateFilePath(options.outputPath);
+    const exporter = new StreamingExporter(validatedOutputPath);
     let result: StreamResult;
 
     switch (format) {
@@ -268,7 +273,7 @@ export class IOManager {
       default:
         // Fallback to in-memory export for unsupported streaming formats
         const content = this.exportGraph(graph, format);
-        await fs.writeFile(options.outputPath, content);
+        await fs.writeFile(validatedOutputPath, content);
         result = {
           bytesWritten: Buffer.byteLength(content, 'utf-8'),
           entitiesWritten: graph.entities.length,
@@ -279,7 +284,7 @@ export class IOManager {
 
     return {
       format,
-      content: `Streamed to ${options.outputPath}`,
+      content: `Streamed to ${validatedOutputPath}`,
       entityCount: result.entitiesWritten,
       relationCount: result.relationsWritten,
       compressed: false,
@@ -288,7 +293,7 @@ export class IOManager {
       compressedSize: result.bytesWritten,
       compressionRatio: 1,
       streamed: true,
-      outputPath: options.outputPath,
+      outputPath: validatedOutputPath,
     };
   }
 
@@ -301,7 +306,9 @@ export class IOManager {
 
     const escapeCsvField = (field: string | undefined | null): string => {
       if (field === undefined || field === null) return '';
-      const str = String(field);
+      // First protect against CSV formula injection
+      let str = escapeCsvFormula(String(field));
+      // Then handle CSV special characters
       if (str.includes(',') || str.includes('"') || str.includes('\n')) {
         return `"${str.replace(/"/g, '""')}"`;
       }
@@ -635,6 +642,15 @@ export class IOManager {
   }
 
   private parseJsonImport(data: string): KnowledgeGraph {
+    // Security: Limit input size to prevent DoS (10MB max)
+    const MAX_IMPORT_SIZE = 10 * 1024 * 1024;
+    if (data.length > MAX_IMPORT_SIZE) {
+      throw new FileOperationError(
+        `JSON import data exceeds maximum size of ${MAX_IMPORT_SIZE / (1024 * 1024)}MB`,
+        'json-import'
+      );
+    }
+
     const parsed = JSON.parse(data);
 
     if (!parsed.entities || !Array.isArray(parsed.entities)) {
@@ -644,6 +660,21 @@ export class IOManager {
       throw new Error('Invalid JSON: missing or invalid relations array');
     }
 
+    // Security: Limit maximum number of entities/relations
+    const MAX_ITEMS = 100000;
+    if (parsed.entities.length > MAX_ITEMS) {
+      throw new FileOperationError(
+        `JSON import exceeds maximum entity count of ${MAX_ITEMS}`,
+        'json-import'
+      );
+    }
+    if (parsed.relations.length > MAX_ITEMS) {
+      throw new FileOperationError(
+        `JSON import exceeds maximum relation count of ${MAX_ITEMS}`,
+        'json-import'
+      );
+    }
+
     return {
       entities: parsed.entities as Entity[],
       relations: parsed.relations as Relation[],
@@ -651,6 +682,18 @@ export class IOManager {
   }
 
   private parseCsvImport(data: string): KnowledgeGraph {
+    // Security: Limit input size to prevent DoS (10MB max)
+    const MAX_IMPORT_SIZE = 10 * 1024 * 1024;
+    if (data.length > MAX_IMPORT_SIZE) {
+      throw new FileOperationError(
+        `CSV import data exceeds maximum size of ${MAX_IMPORT_SIZE / (1024 * 1024)}MB`,
+        'csv-import'
+      );
+    }
+
+    // Security: Limit maximum number of entities/relations
+    const MAX_ITEMS = 100000;
+
     const lines = data
       .split('\n')
       .map(line => line.trim())
@@ -709,6 +752,13 @@ export class IOManager {
 
         const fields = parseCsvLine(line);
         if (fields.length >= 2) {
+          // Security: Check entity limit
+          if (entities.length >= MAX_ITEMS) {
+            throw new FileOperationError(
+              `CSV import exceeds maximum entity count of ${MAX_ITEMS}`,
+              'csv-import'
+            );
+          }
           const entity: Entity = {
             name: fields[0],
             entityType: fields[1],
@@ -738,6 +788,13 @@ export class IOManager {
 
         const fields = parseCsvLine(line);
         if (fields.length >= 3) {
+          // Security: Check relation limit
+          if (relations.length >= MAX_ITEMS) {
+            throw new FileOperationError(
+              `CSV import exceeds maximum relation count of ${MAX_ITEMS}`,
+              'csv-import'
+            );
+          }
           const relation: Relation = {
             from: fields[0],
             to: fields[1],
@@ -757,10 +814,32 @@ export class IOManager {
     const entities: Entity[] = [];
     const relations: Relation[] = [];
 
+    // Security: Limit input size to prevent ReDoS attacks (10MB max)
+    const MAX_IMPORT_SIZE = 10 * 1024 * 1024;
+    if (data.length > MAX_IMPORT_SIZE) {
+      throw new FileOperationError(
+        `GraphML import data exceeds maximum size of ${MAX_IMPORT_SIZE / (1024 * 1024)}MB`,
+        'graphml-import'
+      );
+    }
+
+    // Security: Limit maximum number of entities/relations to prevent infinite loops
+    const MAX_ITEMS = 100000;
+    let nodeCount = 0;
+    let relationCount = 0;
+
+    // Use non-greedy patterns with character class restrictions
     const nodeRegex = /<node\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/node>/g;
     let nodeMatch;
 
     while ((nodeMatch = nodeRegex.exec(data)) !== null) {
+      // Security: Limit iterations to prevent ReDoS
+      if (++nodeCount > MAX_ITEMS) {
+        throw new FileOperationError(
+          `GraphML import exceeds maximum entity count of ${MAX_ITEMS}`,
+          'graphml-import'
+        );
+      }
       const nodeId = nodeMatch[1];
       const nodeContent = nodeMatch[2];
 
@@ -793,6 +872,13 @@ export class IOManager {
     let edgeMatch;
 
     while ((edgeMatch = edgeRegex.exec(data)) !== null) {
+      // Security: Limit iterations to prevent ReDoS
+      if (++relationCount > MAX_ITEMS) {
+        throw new FileOperationError(
+          `GraphML import exceeds maximum relation count of ${MAX_ITEMS}`,
+          'graphml-import'
+        );
+      }
       const source = edgeMatch[1];
       const target = edgeMatch[2];
       const edgeContent = edgeMatch[3];
@@ -871,7 +957,8 @@ export class IOManager {
           case 'replace':
             result.entitiesUpdated++;
             if (!dryRun) {
-              Object.assign(existing, importedEntity);
+              // Sanitize imported entity to prevent prototype pollution
+              Object.assign(existing, sanitizeObject(importedEntity as unknown as Record<string, unknown>));
             }
             break;
 
