@@ -5,6 +5,18 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.8.3] - 2026-01-08
+
+### Fixed
+
+- **SQLite Storage Support** - ManagerContext now uses StorageFactory to respect `MEMORY_STORAGE_TYPE` environment variable
+  - Previously hardcoded to GraphStorage (JSONL), now properly creates SQLiteStorage when `MEMORY_STORAGE_TYPE=sqlite`
+  - Uses type assertion for manager compatibility while supporting both storage backends
+
+- **JSON-RPC Communication** - Logger now outputs all messages to stderr instead of stdout
+  - Prevents log messages from interfering with JSON-RPC protocol on stdio transport
+  - Fixes MCP server communication issues when logging is enabled
+
 ## [9.8.2] - 2026-01-07
 
 ### Security

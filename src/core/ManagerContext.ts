@@ -10,6 +10,7 @@
 
 import path from 'path';
 import { GraphStorage } from './GraphStorage.js';
+import { createStorageFromPath } from './StorageFactory.js';
 import { EntityManager } from './EntityManager.js';
 import { RelationManager } from './RelationManager.js';
 import { ObservationManager } from './ObservationManager.js';
@@ -29,6 +30,8 @@ import { getEmbeddingConfig } from '../utils/constants.js';
  * Provides direct manager access for toolHandlers.
  */
 export class ManagerContext {
+  // Type as GraphStorage for manager compatibility; actual instance may be SQLiteStorage
+  // which implements the same interface via duck typing
   readonly storage: GraphStorage;
   private readonly savedSearchesFilePath: string;
   private readonly tagAliasesFilePath: string;
@@ -53,7 +56,9 @@ export class ManagerContext {
     const basename = path.basename(memoryFilePath, path.extname(memoryFilePath));
     this.savedSearchesFilePath = path.join(dir, `${basename}-saved-searches.jsonl`);
     this.tagAliasesFilePath = path.join(dir, `${basename}-tag-aliases.jsonl`);
-    this.storage = new GraphStorage(memoryFilePath);
+    // Use StorageFactory to respect MEMORY_STORAGE_TYPE environment variable
+    // Type assertion: SQLiteStorage implements same interface as GraphStorage
+    this.storage = createStorageFromPath(memoryFilePath) as GraphStorage;
   }
 
   // ==================== MANAGER ACCESSORS ====================
