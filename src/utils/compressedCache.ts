@@ -56,6 +56,22 @@ export interface CompressedCacheOptions {
    * @default true
    */
   autoCompress?: boolean;
+
+  /**
+   * Minimum entry size in bytes before compression is applied.
+   * Entries smaller than this are not compressed (overhead exceeds benefit).
+   * Phase 12 Sprint 6: Adaptive compression.
+   * @default 256
+   */
+  minCompressionSize?: number;
+
+  /**
+   * Minimum compression ratio to keep entry compressed.
+   * If compression achieves less than this ratio, entry stays uncompressed.
+   * Phase 12 Sprint 6: Adaptive compression.
+   * @default 0.7 (30% reduction minimum)
+   */
+  minCompressionRatio?: number;
 }
 
 /**
@@ -72,6 +88,8 @@ export interface CompressedCacheStats {
   memorySaved: number;
   /** Total original size of all entries in bytes */
   totalOriginalSize: number;
+  /** Total compressed size in bytes */
+  totalCompressedSize: number;
   /** Cache hit count since creation */
   hits: number;
   /** Cache miss count since creation */
@@ -80,6 +98,14 @@ export interface CompressedCacheStats {
   compressions: number;
   /** Number of decompressions performed */
   decompressions: number;
+  /** Phase 12 Sprint 6: Number of entries skipped due to size */
+  skippedSmallEntries: number;
+  /** Phase 12 Sprint 6: Number of entries skipped due to poor ratio */
+  skippedPoorRatio: number;
+  /** Phase 12 Sprint 6: Average compression ratio (0-1) */
+  avgCompressionRatio: number;
+  /** Phase 12 Sprint 6: Estimated memory usage in bytes */
+  estimatedMemoryBytes: number;
 }
 
 /**
@@ -112,17 +138,27 @@ export class CompressedCache {
   private readonly maxUncompressed: number;
   private readonly compressionThresholdMs: number;
   private readonly autoCompress: boolean;
+  // Phase 12 Sprint 6: Adaptive compression options
+  private readonly minCompressionSize: number;
+  private readonly minCompressionRatio: number;
 
   // Statistics
   private hits: number = 0;
   private misses: number = 0;
   private compressions: number = 0;
   private decompressions: number = 0;
+  // Phase 12 Sprint 6: Adaptive compression stats
+  private skippedSmallEntries: number = 0;
+  private skippedPoorRatio: number = 0;
+  private compressionRatios: number[] = [];
 
   constructor(options: CompressedCacheOptions = {}) {
     this.maxUncompressed = options.maxUncompressed ?? 1000;
     this.compressionThresholdMs = options.compressionThresholdMs ?? 5 * 60 * 1000;
     this.autoCompress = options.autoCompress ?? true;
+    // Phase 12 Sprint 6: Adaptive compression defaults
+    this.minCompressionSize = options.minCompressionSize ?? 256;
+    this.minCompressionRatio = options.minCompressionRatio ?? 0.7;
   }
 
   /**
@@ -240,18 +276,28 @@ export class CompressedCache {
     let uncompressed = 0;
     let memorySaved = 0;
     let totalOriginalSize = 0;
+    let totalCompressedSize = 0;
+    let estimatedMemoryBytes = 0;
 
     for (const entry of this._entryMap.values()) {
       totalOriginalSize += entry.originalSize;
 
       if (entry.compressed && entry.compressedData) {
         compressed++;
+        totalCompressedSize += entry.compressedData.length;
+        estimatedMemoryBytes += entry.compressedData.length;
         // Memory saved = original size - compressed size
         memorySaved += entry.originalSize - entry.compressedData.length;
       } else {
         uncompressed++;
+        estimatedMemoryBytes += entry.originalSize;
       }
     }
+
+    // Calculate average compression ratio
+    const avgCompressionRatio = this.compressionRatios.length > 0
+      ? this.compressionRatios.reduce((a, b) => a + b, 0) / this.compressionRatios.length
+      : 0;
 
     return {
       total: this._entryMap.size,
@@ -259,10 +305,16 @@ export class CompressedCache {
       uncompressed,
       memorySaved: Math.max(0, memorySaved),
       totalOriginalSize,
+      totalCompressedSize,
       hits: this.hits,
       misses: this.misses,
       compressions: this.compressions,
       decompressions: this.decompressions,
+      // Phase 12 Sprint 6: Adaptive compression stats
+      skippedSmallEntries: this.skippedSmallEntries,
+      skippedPoorRatio: this.skippedPoorRatio,
+      avgCompressionRatio,
+      estimatedMemoryBytes,
     };
   }
 
@@ -320,6 +372,12 @@ export class CompressedCache {
 
       // Compress the entry
       if (entry.entity) {
+        // Phase 12 Sprint 6: Skip small entries (adaptive compression)
+        if (entry.originalSize < this.minCompressionSize) {
+          this.skippedSmallEntries++;
+          continue;
+        }
+
         try {
           const jsonStr = JSON.stringify(entry.entity);
           const compressed = brotliCompressSync(Buffer.from(jsonStr, 'utf-8'), {
@@ -327,6 +385,17 @@ export class CompressedCache {
               [constants.BROTLI_PARAM_QUALITY]: COMPRESSION_CONFIG.BROTLI_QUALITY_CACHE,
             },
           });
+
+          // Phase 12 Sprint 6: Check compression ratio
+          const ratio = compressed.length / entry.originalSize;
+          if (ratio > this.minCompressionRatio) {
+            // Compression didn't achieve enough reduction
+            this.skippedPoorRatio++;
+            continue;
+          }
+
+          // Track compression ratio
+          this.compressionRatios.push(ratio);
 
           entry.compressedData = compressed;
           entry.compressed = true;

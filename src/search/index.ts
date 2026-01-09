@@ -143,3 +143,12 @@ export {
   type QueryPlanCacheStats,
   type QueryPlanCacheOptions,
 } from './QueryPlanCache.js';
+
+// Phase 12 Sprint 6: Quantized Vector Store
+export {
+  QuantizedVectorStore,
+  type QuantizationParams,
+  type QuantizedVectorStoreStats,
+  type QuantizedSearchResult,
+  type QuantizedVectorStoreOptions,
+} from './QuantizedVectorStore.js';

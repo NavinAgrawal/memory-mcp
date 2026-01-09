@@ -289,3 +289,14 @@ export {
   type BatchProcessResult,
   type BatchProcessorOptions,
 } from './BatchProcessor.js';
+
+// ==================== Memory Monitor (Phase 12 Sprint 6) ====================
+export {
+  MemoryMonitor,
+  globalMemoryMonitor,
+  type ComponentMemoryUsage,
+  type MemoryUsageStats,
+  type MemoryThresholds,
+  type MemoryAlert,
+  type MemoryChangeCallback,
+} from './MemoryMonitor.js';
