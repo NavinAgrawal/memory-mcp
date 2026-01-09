@@ -17,12 +17,35 @@ export { SearchManager } from './SearchManager.js';
 export { SearchFilterChain, type SearchFilters, type ValidatedPagination } from './SearchFilterChain.js';
 
 // Phase 4 Sprint 10: Embedding Service for semantic search
+// Phase 12 Sprint 5: Added l2Normalize, prefixes, and progress callback
 export {
   OpenAIEmbeddingService,
   LocalEmbeddingService,
   MockEmbeddingService,
   createEmbeddingService,
+  l2Normalize,
+  QUERY_PREFIX,
+  DOCUMENT_PREFIX,
+  type EmbeddingProgressCallback,
 } from './EmbeddingService.js';
+
+// Phase 12 Sprint 5: Embedding Cache with LRU eviction
+export {
+  EmbeddingCache,
+  DEFAULT_EMBEDDING_CACHE_OPTIONS,
+  type EmbeddingCacheStats,
+  type EmbeddingCacheOptions,
+} from './EmbeddingCache.js';
+
+// Phase 12 Sprint 5: Incremental Indexer for batch updates
+export {
+  IncrementalIndexer,
+  DEFAULT_INDEXER_OPTIONS,
+  type IndexOperationType,
+  type IndexOperation,
+  type IncrementalIndexerOptions,
+  type FlushResult,
+} from './IncrementalIndexer.js';
 
 // Phase 4 Sprint 11: Vector Store for semantic search
 export {
@@ -60,3 +83,30 @@ export {
   type ReflectionOptions,
   type ReflectionResult,
 } from './ReflectionManager.js';
+
+// Phase 12 Sprint 3: Search Algorithm Optimization
+export {
+  BM25Search,
+  STOPWORDS,
+  DEFAULT_BM25_CONFIG,
+  type BM25DocumentEntry,
+  type BM25Index,
+  type BM25Config,
+} from './BM25Search.js';
+
+export {
+  OptimizedInvertedIndex,
+  type IndexMemoryUsage,
+  type PostingListResult,
+} from './OptimizedInvertedIndex.js';
+
+export {
+  HybridScorer,
+  DEFAULT_SCORER_WEIGHTS,
+  type SemanticSearchResult,
+  type LexicalSearchResult,
+  type SymbolicSearchResult,
+  type ScoredResult,
+  type HybridWeights,
+  type HybridScorerOptions,
+} from './HybridScorer.js';

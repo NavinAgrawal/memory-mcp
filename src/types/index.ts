@@ -61,6 +61,7 @@ export type {
   CentralityResult,
   WeightedRelation,
   // Phase 4 Sprint 10-12: Semantic search types
+  EmbeddingMode,
   EmbeddingService,
   SemanticSearchResult,
   IVectorStore,
@@ -94,6 +95,8 @@ export type {
   QueryCostEstimate,
   AutoSearchResult,
   QueryCostEstimatorOptions,
+  // Phase 12 Sprint 1: Compression types
+  PreparedEntity,
   // Phase 11 Sprint 1: Hybrid search types
   SymbolicFilters,
   HybridSearchOptions,
