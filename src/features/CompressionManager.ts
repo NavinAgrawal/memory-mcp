@@ -7,33 +7,17 @@
  * @module features/CompressionManager
  */
 
-import type { Entity, Relation, CompressionResult, KnowledgeGraph, LongRunningOperationOptions } from '../types/index.js';
+import type { Entity, Relation, CompressionResult, KnowledgeGraph, LongRunningOperationOptions, PreparedEntity } from '../types/index.js';
 import type { GraphStorage } from '../core/GraphStorage.js';
 import {
   levenshteinDistance,
   checkCancellation,
   createProgressReporter,
   createProgress,
+  fnv1aHash,
 } from '../utils/index.js';
 import { EntityNotFoundError, InsufficientEntitiesError } from '../utils/errors.js';
 import { SIMILARITY_WEIGHTS, DEFAULT_DUPLICATE_THRESHOLD } from '../utils/constants.js';
-
-/**
- * Entity data pre-processed for efficient similarity comparisons.
- * Pre-computes normalized Sets once to avoid repeated creation during O(n²) comparisons.
- */
-interface PreparedEntity {
-  /** Original entity reference */
-  entity: Entity;
-  /** Lowercase name for comparison */
-  nameLower: string;
-  /** Lowercase entity type */
-  typeLower: string;
-  /** Set of lowercase observations */
-  observationSet: Set<string>;
-  /** Set of lowercase tags */
-  tagSet: Set<string>;
-}
 
 /**
  * Manages compression operations for the knowledge graph.
@@ -45,16 +29,20 @@ export class CompressionManager {
    * Prepare an entity for efficient similarity comparisons.
    * Pre-computes all normalized data to avoid repeated computation.
    *
+   * Phase 12 Sprint 1: Added nameHash for fast bucketing.
+   *
    * @param entity - The entity to prepare
-   * @returns PreparedEntity with pre-computed data
+   * @returns PreparedEntity with pre-computed data including hash
    */
   private prepareEntity(entity: Entity): PreparedEntity {
+    const nameLower = entity.name.toLowerCase();
     return {
       entity,
-      nameLower: entity.name.toLowerCase(),
+      nameLower,
       typeLower: entity.entityType.toLowerCase(),
       observationSet: new Set(entity.observations.map(o => o.toLowerCase())),
       tagSet: new Set((entity.tags ?? []).map(t => t.toLowerCase())),
+      nameHash: fnv1aHash(nameLower),
     };
   }
 
@@ -498,16 +486,22 @@ export class CompressionManager {
     const totalGroups = duplicateGroups.length;
     let mergedGroups = 0;
 
+    // OPTIMIZATION: Build entity lookup map for O(1) access during merges
+    const entityMap = new Map<string, Entity>();
+    for (const entity of graph.entities) {
+      entityMap.set(entity.name, entity);
+    }
+
     // Merge all duplicates using the same graph instance
     for (const group of duplicateGroups) {
       // Check for cancellation between merges
       checkCancellation(options?.signal, 'compressGraph');
 
       try {
-        // Count observations before merge using loaded graph
+        // Count observations before merge using O(1) lookup
         let totalObservationsBefore = 0;
         for (const name of group) {
-          const entity = graph.entities.find(e => e.name === name);
+          const entity = entityMap.get(name);
           if (entity) {
             totalObservationsBefore += entity.observations.length;
           }

@@ -415,10 +415,8 @@ export class EntityManager {
    * @throws {EntityNotFoundError} If entity is not found
    */
   async removeTags(entityName: string, tags: string[]): Promise<{ entityName: string; removedTags: string[] }> {
-    const graph = await this.storage.getGraphForMutation();
-    const timestamp = new Date().toISOString();
-
-    const entity = graph.entities.find(e => e.name === entityName);
+    // OPTIMIZED: Use O(1) NameIndex lookup instead of loadGraph() + O(n) find()
+    const entity = this.storage.getEntityByName(entityName);
     if (!entity) {
       throw new EntityNotFoundError(entityName);
     }
@@ -435,17 +433,15 @@ export class EntityManager {
     const existingTagsLower = entity.tags.map(t => t.toLowerCase());
 
     // Filter out the tags to remove
-    entity.tags = entity.tags.filter(tag => !normalizedTags.includes(tag.toLowerCase()));
+    const newTags = entity.tags.filter(tag => !normalizedTags.includes(tag.toLowerCase()));
 
     // A tag was removed if it existed in the original tags
     const removedTags = normalizedTags.filter(tag => existingTagsLower.includes(tag));
 
-    // Update lastModified timestamp if tags were removed
-    if (entity.tags.length < originalLength) {
-      entity.lastModified = timestamp;
+    // Update entity via storage if tags were removed
+    if (newTags.length < originalLength) {
+      await this.storage.updateEntity(entityName, { tags: newTags });
     }
-
-    await this.storage.saveGraph(graph);
 
     return { entityName, removedTags };
   }
@@ -480,6 +476,8 @@ export class EntityManager {
   /**
    * Add tags to multiple entities in a single operation.
    *
+   * OPTIMIZED: Uses Map for O(1) entity lookups instead of O(n) find() per entity.
+   *
    * @param entityNames - Names of entities to tag
    * @param tags - Tags to add to each entity
    * @returns Array of results showing which tags were added to each entity
@@ -490,8 +488,14 @@ export class EntityManager {
     const normalizedTags = tags.map(tag => tag.toLowerCase());
     const results: { entityName: string; addedTags: string[] }[] = [];
 
+    // OPTIMIZED: Build Map for O(1) lookups instead of O(n) find() per entity
+    const entityMap = new Map<string, Entity>();
+    for (const e of graph.entities) {
+      entityMap.set(e.name, e);
+    }
+
     for (const entityName of entityNames) {
-      const entity = graph.entities.find(e => e.name === entityName);
+      const entity = entityMap.get(entityName);
       if (!entity) {
         continue; // Skip non-existent entities
       }

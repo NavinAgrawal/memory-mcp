@@ -17,6 +17,41 @@ import { fileURLToPath } from 'url';
 import type { Entity, KnowledgeGraph } from '../types/index.js';
 import { EntityNotFoundError, FileOperationError } from './errors.js';
 
+// ==================== Hash Functions ====================
+
+/**
+ * FNV-1a hash function for fast string hashing.
+ *
+ * This is a non-cryptographic hash function that provides good distribution
+ * for bucketing and deduplication purposes. It's optimized for speed
+ * and produces a 32-bit unsigned integer.
+ *
+ * FNV-1a has the following properties:
+ * - Fast computation (single pass through string)
+ * - Good distribution for hash table use
+ * - Deterministic output for same input
+ *
+ * @param text - The string to hash
+ * @returns A 32-bit unsigned integer hash value
+ *
+ * @example
+ * ```typescript
+ * const hash = fnv1aHash('hello');
+ * console.log(hash); // 1335831723
+ *
+ * // Use for bucketing similar entities
+ * const bucket = fnv1aHash(entity.name.toLowerCase()) % numBuckets;
+ * ```
+ */
+export function fnv1aHash(text: string): number {
+  let hash = 2166136261; // FNV offset basis
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619); // FNV prime
+  }
+  return hash >>> 0; // Convert to unsigned 32-bit integer
+}
+
 // ==================== Entity Lookup Functions ====================
 
 /**

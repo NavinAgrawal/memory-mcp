@@ -185,6 +185,8 @@ export {
 // ==================== Entity Utilities ====================
 // Consolidated from: entityUtils.ts, tagUtils.ts, dateUtils.ts, filterUtils.ts, pathUtils.ts
 export {
+  // Hash functions (Phase 12 Sprint 1)
+  fnv1aHash,
   // Entity lookup
   findEntityByName,
   findEntitiesByNames,
