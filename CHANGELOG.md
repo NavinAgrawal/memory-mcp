@@ -5,6 +5,96 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.0] - 2026-01-09
+
+### Major Release: Phase 12 Performance Optimization
+
+Complete performance optimization framework preparing for memoryjs library extraction.
+
+#### Sprint 1: Foundation Performance
+- **Set-based Lookups**: Optimized entity/relation lookup operations using Set for O(1) access
+- **fnv1aHash**: Pre-computed similarity hashing for faster duplicate detection
+- Enhanced EntityManager with batch operations
+
+#### Sprint 2: Parallel Processing
+- **WorkerPoolManager**: Unified worker pool management with lifecycle control
+  - Singleton pattern with automatic cleanup on process exit
+  - Named pool registration with statistics tracking
+  - Event callbacks for monitoring
+- **BatchProcessor**: Generic batch processing with parallel execution
+  - Configurable concurrency and retry logic
+  - Progress callbacks and error collection
+  - Abort signal support for cancellation
+- **ParallelSearchExecutor**: Concurrent multi-layer search execution
+  - Parallel semantic, lexical, and symbolic search
+  - Layer timing and performance metrics
+
+#### Sprint 3: Search Algorithm Optimization
+- **BM25Search**: BM25 relevance scoring replacing pure TF-IDF
+  - Improved ranking with document length normalization
+  - Configurable k1 (1.2) and b (0.75) parameters
+  - Stopword filtering for query efficiency
+- **OptimizedInvertedIndex**: Memory-efficient inverted index
+  - Integer IDs with Uint32Array storage (4x memory reduction)
+  - Sorted array intersection for O(n+m) multi-term queries
+- **HybridScorer**: Score aggregation with min-max normalization
+  - Configurable weights for semantic/lexical/symbolic layers
+  - Handles missing layers with weight redistribution
+
+#### Sprint 4: Query Execution Optimization
+- **EarlyTerminationManager**: Result adequacy checking
+  - Stop search early when results meet threshold
+  - Configurable adequacy criteria
+- **QueryPlanCache**: LRU cache for query analysis results
+  - Reduces repeated query parsing overhead
+  - Configurable cache size and TTL
+- **QueryCostEstimator** enhancements:
+  - Adaptive search depth based on query complexity
+  - Token estimation for cost prediction
+  - Layer recommendations based on query characteristics
+
+#### Sprint 5: Embedding Performance
+- **EmbeddingCache**: LRU cache for embedding vectors
+  - Text-hash based cache keys
+  - Configurable max size with eviction
+- **IncrementalIndexer**: Batch embedding index updates
+  - Queue-based operation batching
+  - Timer-based and threshold-based flushing
+  - Graceful shutdown with final flush
+
+#### Sprint 6: Memory Efficiency
+- **QuantizedVectorStore**: 8-bit scalar quantization
+  - 4x memory reduction for embedding vectors
+  - Asymmetric similarity for search accuracy
+  - Automatic quantization at configurable threshold
+- **MemoryMonitor**: Centralized memory tracking
+  - Component registration with byte estimators
+  - Warning and critical threshold alerts
+  - Human-readable formatting with heap stats
+- **CompressedCache** enhancements:
+  - Adaptive compression based on entry size
+  - Minimum compression ratio filtering
+  - Detailed statistics including compression ratios
+
+### Tests
+
+- Added comprehensive Phase 12 test suites:
+  - `tests/unit/search/QuantizedVectorStore.test.ts` - 24 tests
+  - `tests/unit/utils/MemoryMonitor.test.ts` - 25 tests
+  - `tests/unit/search/ParallelSearchExecutor.test.ts` - parallel execution tests
+  - `tests/unit/search/EarlyTerminationManager.test.ts` - early termination tests
+  - `tests/unit/search/QueryPlanCache.test.ts` - caching tests
+  - `tests/unit/utils/BatchProcessor.test.ts` - batch processing tests
+  - `tests/unit/utils/WorkerPoolManager.test.ts` - worker pool tests
+  - `tests/performance/v10-benchmarks.test.ts` - verification suite
+- Total: 3066+ tests across 93 test files
+
+### Notes
+
+- Performance benchmarking deferred to memoryjs library extraction
+- All optimizations are correctness-verified, timing deferred
+- Backward compatible - no breaking API changes
+
 ## [9.9.1] - 2026-01-09
 
 ### Fixed
