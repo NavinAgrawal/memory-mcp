@@ -264,3 +264,28 @@ export {
   processBatchesWithProgress,
   type PhaseDefinition,
 } from './operationUtils.js';
+
+// ==================== Worker Pool Manager (Phase 12 Sprint 2) ====================
+export {
+  WorkerPoolManager,
+  getWorkerPoolManager,
+  type WorkerPoolConfig,
+  type ExtendedPoolStats,
+  type PoolEventCallback,
+} from './WorkerPoolManager.js';
+
+// ==================== Batch Processor (Phase 12 Sprint 2) ====================
+export {
+  BatchProcessor,
+  processBatch,
+  processWithRetry,
+  chunkArray,
+  parallelLimit,
+  mapParallel,
+  filterParallel,
+  type BatchProgress,
+  type BatchProgressCallback,
+  type BatchItemResult,
+  type BatchProcessResult,
+  type BatchProcessorOptions,
+} from './BatchProcessor.js';
