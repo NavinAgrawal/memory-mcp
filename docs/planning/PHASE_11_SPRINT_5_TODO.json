@@ -1,0 +1,250 @@
+{
+  "phase": 11,
+  "sprint": 5,
+  "title": "Semantic Compression",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Improves search quality through normalized observations with coreference resolution",
+  "targetMetrics": {
+    "observationQuality": {
+      "current": "Raw text with pronouns and relative dates",
+      "target": "Self-contained facts with resolved references"
+    },
+    "searchMatching": {
+      "current": "May miss matches due to pronoun usage",
+      "target": "Better matching via explicit entity names"
+    }
+  },
+  "tasks": [
+    {
+      "id": "11.5.1",
+      "category": "features",
+      "title": "Create ObservationNormalizer Class",
+      "description": "Create normalizer for coreference resolution and temporal anchoring of observations.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/features/ObservationNormalizer.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Transform observations to be self-contained facts by resolving pronouns to entity names and converting relative dates to absolute dates.",
+        "keyDecisions": [
+          "resolveCoreferences replaces 'he/she/they' with entity name",
+          "anchorTimestamps converts 'yesterday' to ISO date",
+          "normalize pipeline combines all transformations",
+          "Preserve original when uncertain"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/features/ObservationNormalizer.ts",
+          "details": "Create the new file in the features directory"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Observation Normalizer\n *\n * Phase 11: Transforms observations to be self-contained facts\n * through coreference resolution and temporal anchoring.\n *\n * @module features/ObservationNormalizer\n */\n\nimport type { Entity } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add NormalizationOptions and NormalizationResult interfaces",
+          "code": "/**\n * Options for observation normalization.\n */\nexport interface NormalizationOptions {\n  /** Resolve pronouns to entity names */\n  resolveCoreferences?: boolean;\n  /** Convert relative dates to absolute dates */\n  anchorTimestamps?: boolean;\n  /** Extract and tag keywords */\n  extractKeywords?: boolean;\n  /** Reference date for relative date conversion (default: now) */\n  referenceDate?: Date;\n}\n\n/**\n * Result of normalizing an observation.\n */\nexport interface NormalizationResult {\n  original: string;\n  normalized: string;\n  changes: string[];\n  keywords?: string[];\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add ObservationNormalizer class",
+          "code": "/**\n * Observation Normalizer transforms observations to self-contained facts.\n *\n * Applies transformations:\n * 1. Coreference resolution: 'He works' -> 'Alice works'\n * 2. Temporal anchoring: 'yesterday' -> '2026-01-07'\n * 3. Keyword extraction: Identifies important terms\n *\n * @example\n * ```typescript\n * const normalizer = new ObservationNormalizer();\n * const result = normalizer.normalize(\n *   'He started the project yesterday',\n *   { name: 'Bob', entityType: 'person', observations: [] }\n * );\n * // result.normalized = 'Bob started the project on 2026-01-07'\n * ```\n */\nexport class ObservationNormalizer {\n  private pronounPatterns = {\n    masculine: /\\b(he|him|his)\\b/gi,\n    feminine: /\\b(she|her|hers)\\b/gi,\n    neutral: /\\b(they|them|their|theirs)\\b/gi,\n  };\n\n  private relativeTimePatterns: [RegExp, (ref: Date) => string][] = [\n    [/\\byesterday\\b/i, (ref) => this.formatDate(this.addDays(ref, -1))],\n    [/\\btoday\\b/i, (ref) => this.formatDate(ref)],\n    [/\\btomorrow\\b/i, (ref) => this.formatDate(this.addDays(ref, 1))],\n    [/\\blast week\\b/i, (ref) => `week of ${this.formatDate(this.addDays(ref, -7))}`],\n    [/\\blast month\\b/i, (ref) => this.formatMonth(this.addMonths(ref, -1))],\n    [/\\blast year\\b/i, (ref) => `${ref.getFullYear() - 1}`],\n    [/\\bthis week\\b/i, (ref) => `week of ${this.formatDate(ref)}`],\n    [/\\bthis month\\b/i, (ref) => this.formatMonth(ref)],\n    [/\\bthis year\\b/i, (ref) => `${ref.getFullYear()}`],\n  ];\n\n  /**\n   * Normalize an observation for an entity.\n   */\n  normalize(\n    observation: string,\n    entity: Entity,\n    options: NormalizationOptions = {}\n  ): NormalizationResult {\n    const {\n      resolveCoreferences = true,\n      anchorTimestamps = true,\n      extractKeywords = false,\n      referenceDate = new Date(),\n    } = options;\n\n    let normalized = observation;\n    const changes: string[] = [];\n\n    if (resolveCoreferences) {\n      const corefResult = this.resolveCoreferences(normalized, entity);\n      if (corefResult.changed) {\n        normalized = corefResult.text;\n        changes.push(`Resolved pronouns to '${entity.name}'`);\n      }\n    }\n\n    if (anchorTimestamps) {\n      const timeResult = this.anchorTimestamps(normalized, referenceDate);\n      if (timeResult.changed) {\n        normalized = timeResult.text;\n        changes.push(...timeResult.replacements);\n      }\n    }\n\n    const keywords = extractKeywords\n      ? this.extractKeywords(normalized)\n      : undefined;\n\n    return {\n      original: observation,\n      normalized,\n      changes,\n      keywords,\n    };\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add coreference resolution method",
+          "code": "  /**\n   * Resolve pronouns to entity name.\n   */\n  resolveCoreferences(\n    text: string,\n    entity: Entity\n  ): { text: string; changed: boolean } {\n    let result = text;\n    let changed = false;\n\n    // Determine gender hint from entity type or name patterns\n    const isMasculine = this.guessMasculine(entity);\n    const isFeminine = this.guessFeminine(entity);\n\n    // Replace pronouns based on detected gender\n    if (isMasculine) {\n      const newText = result\n        .replace(this.pronounPatterns.masculine, entity.name);\n      if (newText !== result) {\n        result = newText;\n        changed = true;\n      }\n    } else if (isFeminine) {\n      const newText = result\n        .replace(this.pronounPatterns.feminine, entity.name);\n      if (newText !== result) {\n        result = newText;\n        changed = true;\n      }\n    }\n\n    // Always try neutral pronouns for non-person entities\n    if (entity.entityType.toLowerCase() !== 'person') {\n      const newText = result\n        .replace(this.pronounPatterns.neutral, entity.name);\n      if (newText !== result) {\n        result = newText;\n        changed = true;\n      }\n    }\n\n    return { text: result, changed };\n  }\n\n  private guessMasculine(entity: Entity): boolean {\n    const masculineNames = ['john', 'james', 'bob', 'mike', 'david', 'alex'];\n    return masculineNames.some(n => entity.name.toLowerCase().includes(n));\n  }\n\n  private guessFeminine(entity: Entity): boolean {\n    const feminineNames = ['alice', 'jane', 'sarah', 'mary', 'emma', 'lisa'];\n    return feminineNames.some(n => entity.name.toLowerCase().includes(n));\n  }"
+        },
+        {
+          "step": 6,
+          "action": "Add timestamp anchoring method",
+          "code": "  /**\n   * Convert relative timestamps to absolute dates.\n   */\n  anchorTimestamps(\n    text: string,\n    referenceDate: Date\n  ): { text: string; changed: boolean; replacements: string[] } {\n    let result = text;\n    const replacements: string[] = [];\n\n    for (const [pattern, resolver] of this.relativeTimePatterns) {\n      const match = result.match(pattern);\n      if (match) {\n        const replacement = resolver(referenceDate);\n        result = result.replace(pattern, replacement);\n        replacements.push(`'${match[0]}' -> '${replacement}'`);\n      }\n    }\n\n    return {\n      text: result,\n      changed: replacements.length > 0,\n      replacements,\n    };\n  }\n\n  private addDays(date: Date, days: number): Date {\n    const result = new Date(date);\n    result.setDate(result.getDate() + days);\n    return result;\n  }\n\n  private addMonths(date: Date, months: number): Date {\n    const result = new Date(date);\n    result.setMonth(result.getMonth() + months);\n    return result;\n  }\n\n  private formatDate(date: Date): string {\n    return date.toISOString().split('T')[0];\n  }\n\n  private formatMonth(date: Date): string {\n    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;\n  }"
+        },
+        {
+          "step": 7,
+          "action": "Add keyword extraction method",
+          "code": "  /**\n   * Extract important keywords from text.\n   */\n  extractKeywords(text: string): string[] {\n    const stopwords = new Set([\n      'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',\n      'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',\n      'would', 'could', 'should', 'may', 'might', 'must', 'shall',\n      'can', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by',\n      'from', 'as', 'into', 'through', 'during', 'before', 'after',\n      'above', 'below', 'between', 'under', 'again', 'further',\n      'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how',\n      'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such',\n      'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too',\n      'very', 's', 't', 'just', 'don', 'now', 'and', 'but', 'or',\n    ]);\n\n    const words = text\n      .toLowerCase()\n      .replace(/[^a-z0-9\\s]/g, '')\n      .split(/\\s+/)\n      .filter(w => w.length > 2 && !stopwords.has(w));\n\n    // Return unique keywords\n    return [...new Set(words)];\n  }\n\n  /**\n   * Normalize all observations for an entity.\n   */\n  normalizeEntity(\n    entity: Entity,\n    options: NormalizationOptions = {}\n  ): { entity: Entity; results: NormalizationResult[] } {\n    const results = entity.observations.map(obs =>\n      this.normalize(obs, entity, options)\n    );\n\n    return {\n      entity: {\n        ...entity,\n        observations: results.map(r => r.normalized),\n      },\n      results,\n    };\n  }\n}"
+        },
+        {
+          "step": 8,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "ObservationNormalizer class created",
+        "resolveCoreferences replaces pronouns with entity names",
+        "anchorTimestamps converts relative dates to absolute",
+        "extractKeywords identifies important terms",
+        "normalize pipeline combines all transformations",
+        "normalizeEntity processes all observations",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.5.2",
+      "category": "features",
+      "title": "Create KeywordExtractor Class",
+      "description": "Create dedicated keyword extractor for lexical layer enhancement with importance scoring.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/features/KeywordExtractor.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Extract and score keywords from text to enhance lexical search layer. Includes TF-IDF-like importance scoring.",
+        "keyDecisions": [
+          "Rule-based extraction without ML dependencies",
+          "Importance scoring based on position and frequency",
+          "Domain-specific keyword boosting",
+          "N-gram support for phrases"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/features/KeywordExtractor.ts",
+          "details": "Create the new file"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and implementation",
+          "code": "/**\n * Keyword Extractor\n *\n * Phase 11: Extracts and scores keywords from text\n * for lexical search enhancement.\n *\n * @module features/KeywordExtractor\n */\n\n/**\n * A keyword with importance score.\n */\nexport interface ScoredKeyword {\n  keyword: string;\n  score: number;\n  positions: number[];\n}\n\n/**\n * Keyword Extractor extracts and scores keywords from text.\n */\nexport class KeywordExtractor {\n  private stopwords: Set<string>;\n  private domainBoosts: Map<string, number>;\n\n  constructor() {\n    this.stopwords = new Set([\n      'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',\n      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',\n      'could', 'should', 'can', 'to', 'of', 'in', 'for', 'on',\n      'with', 'at', 'by', 'from', 'as', 'and', 'or', 'but',\n    ]);\n    this.domainBoosts = new Map([\n      ['project', 1.5],\n      ['task', 1.5],\n      ['meeting', 1.3],\n      ['deadline', 1.4],\n      ['completed', 1.2],\n      ['started', 1.2],\n    ]);\n  }\n\n  /**\n   * Extract keywords with scores from text.\n   */\n  extract(text: string): ScoredKeyword[] {\n    const words = this.tokenize(text);\n    const keywordMap = new Map<string, ScoredKeyword>();\n\n    for (let i = 0; i < words.length; i++) {\n      const word = words[i].toLowerCase();\n      if (this.isKeyword(word)) {\n        const existing = keywordMap.get(word);\n        if (existing) {\n          existing.positions.push(i);\n          existing.score += this.calculateScore(word, i, words.length);\n        } else {\n          keywordMap.set(word, {\n            keyword: word,\n            score: this.calculateScore(word, i, words.length),\n            positions: [i],\n          });\n        }\n      }\n    }\n\n    return Array.from(keywordMap.values())\n      .sort((a, b) => b.score - a.score);\n  }\n\n  private tokenize(text: string): string[] {\n    return text\n      .replace(/[^a-zA-Z0-9\\s]/g, ' ')\n      .split(/\\s+/)\n      .filter(w => w.length > 0);\n  }\n\n  private isKeyword(word: string): boolean {\n    return word.length > 2 && !this.stopwords.has(word);\n  }\n\n  private calculateScore(word: string, position: number, totalWords: number): number {\n    let score = 1.0;\n\n    // Position boost (earlier = more important)\n    const positionFactor = 1 - (position / totalWords) * 0.3;\n    score *= positionFactor;\n\n    // Domain boost\n    const boost = this.domainBoosts.get(word) ?? 1.0;\n    score *= boost;\n\n    // Length boost (longer words often more specific)\n    if (word.length > 6) score *= 1.1;\n\n    return score;\n  }\n\n  /**\n   * Extract top N keywords.\n   */\n  extractTop(text: string, n: number): string[] {\n    return this.extract(text)\n      .slice(0, n)\n      .map(k => k.keyword);\n  }\n}"
+        },
+        {
+          "step": 3,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "KeywordExtractor class created",
+        "extract method returns scored keywords",
+        "Position-based scoring implemented",
+        "Domain-specific boosting implemented",
+        "extractTop convenience method works",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.5.3",
+      "category": "server",
+      "title": "Add normalize_observations MCP Tool",
+      "description": "Add MCP tool for observation normalization.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Expose observation normalization capability via MCP for improving search quality.",
+        "keyDecisions": [
+          "Can normalize single entity or all entities",
+          "Returns before/after comparison",
+          "Optionally persist changes"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Add tool definition to toolDefinitions.ts",
+          "code": "{\n  name: 'normalize_observations',\n  description: 'Normalize entity observations by resolving pronouns and anchoring relative dates. Improves search matching quality.',\n  inputSchema: {\n    type: 'object',\n    properties: {\n      entityName: {\n        type: 'string',\n        description: 'Entity name to normalize (omit for all entities)',\n      },\n      options: {\n        type: 'object',\n        properties: {\n          resolveCoreferences: { type: 'boolean', default: true },\n          anchorTimestamps: { type: 'boolean', default: true },\n          extractKeywords: { type: 'boolean', default: false },\n        },\n      },\n      persist: {\n        type: 'boolean',\n        default: false,\n        description: 'Save normalized observations to storage',\n      },\n    },\n    required: [],\n  },\n},"
+        },
+        {
+          "step": 2,
+          "action": "Add import and handler to toolHandlers.ts",
+          "code": "import { ObservationNormalizer } from '../features/ObservationNormalizer.js';\n\n// In switch statement:\ncase 'normalize_observations': {\n  const { entityName, options = {}, persist = false } = args;\n  \n  const normalizer = new ObservationNormalizer();\n  const graph = await ctx.storage.loadGraph();\n  \n  const entities = entityName\n    ? graph.entities.filter(e => e.name === entityName)\n    : graph.entities;\n\n  const results = entities.map(entity => {\n    const { entity: normalized, results: changes } = normalizer.normalizeEntity(entity, options);\n    return {\n      entityName: entity.name,\n      changes: changes.filter(r => r.changes.length > 0),\n      normalized: normalized.observations,\n    };\n  });\n\n  if (persist) {\n    // Update entities with normalized observations\n    for (const result of results) {\n      const entity = graph.entities.find(e => e.name === result.entityName);\n      if (entity) {\n        entity.observations = result.normalized;\n        entity.lastModified = new Date().toISOString();\n      }\n    }\n    await ctx.storage.saveGraph(graph);\n  }\n\n  return {\n    content: [{\n      type: 'text',\n      text: JSON.stringify({\n        entitiesProcessed: results.length,\n        persisted: persist,\n        results: results.filter(r => r.changes.length > 0),\n      }, null, 2),\n    }],\n  };\n}"
+        },
+        {
+          "step": 3,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "normalize_observations tool definition added",
+        "Handler normalizes single entity or all entities",
+        "Returns changes made",
+        "Optional persistence of changes",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.5.4",
+      "category": "tests",
+      "title": "Create Semantic Compression Unit Tests",
+      "description": "Create unit tests for ObservationNormalizer and KeywordExtractor.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/unit/features/ObservationNormalizer.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Verify normalization correctly resolves coreferences and anchors timestamps.",
+        "keyDecisions": [
+          "Test pronoun resolution for different genders",
+          "Test temporal anchoring for various patterns",
+          "Test keyword extraction"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file tests/unit/features/ObservationNormalizer.test.ts",
+          "details": "Create the new test file"
+        },
+        {
+          "step": 2,
+          "action": "Add test suite for ObservationNormalizer",
+          "code": "import { describe, it, expect, beforeEach } from 'vitest';\nimport { ObservationNormalizer } from '../../../src/features/ObservationNormalizer.js';\nimport { KeywordExtractor } from '../../../src/features/KeywordExtractor.js';\nimport type { Entity } from '../../../src/types/index.js';\n\ndescribe('ObservationNormalizer', () => {\n  let normalizer: ObservationNormalizer;\n\n  beforeEach(() => {\n    normalizer = new ObservationNormalizer();\n  });\n\n  describe('coreference resolution', () => {\n    it('should resolve masculine pronouns', () => {\n      const entity: Entity = { name: 'Bob', entityType: 'person', observations: [] };\n      const result = normalizer.normalize('He started the project', entity);\n      expect(result.normalized).toContain('Bob');\n    });\n\n    it('should resolve feminine pronouns', () => {\n      const entity: Entity = { name: 'Alice', entityType: 'person', observations: [] };\n      const result = normalizer.normalize('She completed the task', entity);\n      expect(result.normalized).toContain('Alice');\n    });\n  });\n\n  describe('timestamp anchoring', () => {\n    it('should anchor yesterday', () => {\n      const entity: Entity = { name: 'Test', entityType: 'event', observations: [] };\n      const result = normalizer.normalize('Meeting happened yesterday', entity, {\n        referenceDate: new Date('2026-01-08'),\n      });\n      expect(result.normalized).toContain('2026-01-07');\n    });\n\n    it('should anchor last month', () => {\n      const entity: Entity = { name: 'Test', entityType: 'event', observations: [] };\n      const result = normalizer.normalize('Started last month', entity, {\n        referenceDate: new Date('2026-01-08'),\n      });\n      expect(result.normalized).toContain('2025-12');\n    });\n  });\n});\n\ndescribe('KeywordExtractor', () => {\n  let extractor: KeywordExtractor;\n\n  beforeEach(() => {\n    extractor = new KeywordExtractor();\n  });\n\n  it('should extract keywords from text', () => {\n    const keywords = extractor.extract('The software project was completed on time');\n    expect(keywords.map(k => k.keyword)).toContain('software');\n    expect(keywords.map(k => k.keyword)).toContain('project');\n  });\n\n  it('should score domain keywords higher', () => {\n    const keywords = extractor.extract('The project meeting was productive');\n    const projectKw = keywords.find(k => k.keyword === 'project');\n    const productiveKw = keywords.find(k => k.keyword === 'productive');\n    expect(projectKw!.score).toBeGreaterThan(productiveKw!.score);\n  });\n});"
+        },
+        {
+          "step": 3,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/features/ObservationNormalizer.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created",
+        "Tests for coreference resolution",
+        "Tests for temporal anchoring",
+        "Tests for keyword extraction",
+        "Tests for domain boosting",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "ObservationNormalizer resolves pronouns and anchors dates",
+    "KeywordExtractor extracts and scores keywords",
+    "normalize_observations tool available",
+    "10+ unit tests pass",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": [
+    "src/features/ObservationNormalizer.ts",
+    "src/features/KeywordExtractor.ts",
+    "tests/unit/features/ObservationNormalizer.test.ts"
+  ],
+  "filesModified": [
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts"
+  ],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 11.1 (HybridSearchManager Foundation)"],
+  "notes": [
+    "Coreference resolution uses heuristics based on entity name patterns",
+    "More sophisticated NLP can be added later without API changes",
+    "Temporal anchoring requires reference date for accuracy",
+    "Normalization can be persisted to improve future searches"
+  ]
+}

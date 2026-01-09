@@ -1,0 +1,313 @@
+{
+  "phase": 11,
+  "sprint": 6,
+  "title": "Adaptive Query Intelligence (search_auto)",
+  "priority": "LOW",
+  "effort": "5 hours",
+  "status": "pending",
+  "impact": "Automatic search strategy optimization based on query characteristics and cost budgets",
+  "targetMetrics": {
+    "searchEfficiency": {
+      "current": "Manual strategy selection",
+      "target": "Automatic optimal strategy selection with budget awareness"
+    },
+    "costTracking": {
+      "current": "No cost visibility",
+      "target": "Real-time cost tracking and budget constraints"
+    }
+  },
+  "tasks": [
+    {
+      "id": "11.6.1",
+      "category": "search",
+      "title": "Create CostAwareSearchManager Class",
+      "description": "Create a manager class that selects optimal search strategies based on query type and cost constraints.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/search/CostAwareSearchManager.ts"],
+      "testCategories": ["unit", "typecheck"],
+      "implementation": {
+        "purpose": "Provide automatic search strategy selection based on query characteristics, available search layers, and cost budget constraints.",
+        "keyDecisions": [
+          "Cost units are abstract (not real currency)",
+          "Layer costs: symbolic=1, lexical=2, semantic=5",
+          "Strategy selection based on query analysis",
+          "Budget can limit which layers are used",
+          "Returns cost breakdown in response"
+        ],
+        "existingCodeContext": "HybridSearchManager exists with configurable weights. QueryAnalyzer can classify queries. This class adds cost-aware automatic configuration."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create the new file src/search/CostAwareSearchManager.ts",
+          "details": "Create the file with imports and type definitions"
+        },
+        {
+          "step": 2,
+          "action": "Add cost and strategy types",
+          "code": "export interface LayerCosts {\n  symbolic: number;\n  lexical: number;\n  semantic: number;\n}\n\nexport interface CostBudget {\n  maxCost: number;\n  preferredLayers?: ('symbolic' | 'lexical' | 'semantic')[];\n}\n\nexport interface SearchStrategy {\n  layers: ('symbolic' | 'lexical' | 'semantic')[];\n  weights: { semantic: number; lexical: number; symbolic: number };\n  estimatedCost: number;\n  reasoning: string;\n}\n\nexport interface CostAwareResult {\n  results: HybridSearchResult[];\n  strategy: SearchStrategy;\n  actualCost: number;\n  budgetRemaining: number;\n}\n\nexport const DEFAULT_LAYER_COSTS: LayerCosts = {\n  symbolic: 1,\n  lexical: 2,\n  semantic: 5,\n};"
+        },
+        {
+          "step": 3,
+          "action": "Create CostAwareSearchManager class",
+          "code": "export class CostAwareSearchManager {\n  private hybridSearch: HybridSearchManager;\n  private queryAnalyzer: QueryAnalyzer;\n  private costs: LayerCosts;\n\n  constructor(\n    hybridSearch: HybridSearchManager,\n    queryAnalyzer: QueryAnalyzer,\n    costs: LayerCosts = DEFAULT_LAYER_COSTS\n  ) {\n    this.hybridSearch = hybridSearch;\n    this.queryAnalyzer = queryAnalyzer;\n    this.costs = costs;\n  }\n\n  selectStrategy(query: string, budget?: CostBudget): SearchStrategy {\n    const analysis = this.queryAnalyzer.analyze(query);\n    const availableLayers: ('symbolic' | 'lexical' | 'semantic')[] = [];\n    let totalCost = 0;\n\n    // Symbolic is always cheap, add first\n    if (!budget || totalCost + this.costs.symbolic <= budget.maxCost) {\n      availableLayers.push('symbolic');\n      totalCost += this.costs.symbolic;\n    }\n\n    // Lexical for keyword-heavy queries\n    if (!budget || totalCost + this.costs.lexical <= budget.maxCost) {\n      availableLayers.push('lexical');\n      totalCost += this.costs.lexical;\n    }\n\n    // Semantic for conceptual queries (most expensive)\n    if (!budget || totalCost + this.costs.semantic <= budget.maxCost) {\n      if (analysis.questionType === 'conceptual' || analysis.confidence < 0.7) {\n        availableLayers.push('semantic');\n        totalCost += this.costs.semantic;\n      }\n    }\n\n    // Calculate weights based on available layers\n    const weights = this.calculateWeights(availableLayers, analysis);\n\n    return {\n      layers: availableLayers,\n      weights,\n      estimatedCost: totalCost,\n      reasoning: this.generateReasoning(analysis, availableLayers, budget),\n    };\n  }\n\n  private calculateWeights(\n    layers: string[],\n    analysis: QueryAnalysis\n  ): { semantic: number; lexical: number; symbolic: number } {\n    const weights = { semantic: 0, lexical: 0, symbolic: 0 };\n    \n    if (layers.length === 0) return weights;\n    \n    // Distribute weight based on query type\n    if (layers.includes('semantic')) {\n      weights.semantic = analysis.questionType === 'conceptual' ? 0.5 : 0.3;\n    }\n    if (layers.includes('lexical')) {\n      weights.lexical = 0.3;\n    }\n    if (layers.includes('symbolic')) {\n      weights.symbolic = analysis.entities.length > 0 ? 0.4 : 0.2;\n    }\n\n    // Normalize to sum to 1\n    const sum = weights.semantic + weights.lexical + weights.symbolic;\n    if (sum > 0) {\n      weights.semantic /= sum;\n      weights.lexical /= sum;\n      weights.symbolic /= sum;\n    }\n\n    return weights;\n  }\n\n  private generateReasoning(\n    analysis: QueryAnalysis,\n    layers: string[],\n    budget?: CostBudget\n  ): string {\n    const parts: string[] = [];\n    \n    if (layers.includes('semantic')) {\n      parts.push('semantic layer for conceptual matching');\n    }\n    if (layers.includes('lexical')) {\n      parts.push('lexical layer for keyword matching');\n    }\n    if (layers.includes('symbolic')) {\n      parts.push('symbolic layer for metadata filtering');\n    }\n\n    if (budget) {\n      parts.push(`within budget of ${budget.maxCost} units`);\n    }\n\n    return `Selected ${parts.join(', ')}`;\n  }\n\n  async search(\n    graph: KnowledgeGraph,\n    query: string,\n    budget?: CostBudget\n  ): Promise<CostAwareResult> {\n    const strategy = this.selectStrategy(query, budget);\n    \n    const results = await this.hybridSearch.searchWithEntities(graph, query, {\n      semanticWeight: strategy.weights.semantic,\n      lexicalWeight: strategy.weights.lexical,\n      symbolicWeight: strategy.weights.symbolic,\n    });\n\n    return {\n      results,\n      strategy,\n      actualCost: strategy.estimatedCost,\n      budgetRemaining: budget ? budget.maxCost - strategy.estimatedCost : 0,\n    };\n  }\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add necessary imports at top of file",
+          "code": "import { HybridSearchManager, HybridSearchResult } from './HybridSearchManager.js';\nimport { QueryAnalyzer, QueryAnalysis } from './QueryAnalyzer.js';\nimport type { KnowledgeGraph } from '../types/index.js';"
+        },
+        {
+          "step": 5,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "CostAwareSearchManager class created",
+        "LayerCosts and CostBudget interfaces defined",
+        "selectStrategy() analyzes query and returns optimal strategy",
+        "calculateWeights() distributes weights based on available layers",
+        "search() executes strategy within budget constraints",
+        "Returns actualCost and budgetRemaining",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.6.2",
+      "category": "server",
+      "title": "Add search_auto MCP Tool",
+      "description": "Add MCP tool definition and handler for automatic cost-aware search strategy selection.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "testCategories": ["typecheck", "integration"],
+      "implementation": {
+        "purpose": "Expose CostAwareSearchManager via MCP protocol so AI assistants can use automatic search strategy selection.",
+        "keyDecisions": [
+          "Query is required, budget is optional",
+          "Returns strategy explanation along with results",
+          "Budget specified as maxCost number",
+          "Response includes cost breakdown"
+        ],
+        "existingCodeContext": "toolDefinitions.ts has hybrid_search, analyze_query, smart_search tools. Add search_auto to complete the intelligent search suite."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/server/toolDefinitions.ts",
+          "details": "Open the tool definitions file"
+        },
+        {
+          "step": 2,
+          "action": "Add search_auto tool definition in the Search category",
+          "code": "{\n  name: 'search_auto',\n  description: 'Automatically select and execute optimal search strategy based on query characteristics and optional cost budget. Returns results with strategy explanation and cost breakdown.',\n  inputSchema: {\n    type: 'object',\n    properties: {\n      query: {\n        type: 'string',\n        description: 'Search query text',\n      },\n      maxCost: {\n        type: 'number',\n        description: 'Maximum cost budget in abstract units (symbolic=1, lexical=2, semantic=5). If omitted, no budget constraint.',\n      },\n      limit: {\n        type: 'number',\n        default: 10,\n        description: 'Maximum results to return',\n      },\n    },\n    required: ['query'],\n  },\n},"
+        },
+        {
+          "step": 3,
+          "action": "Open src/server/toolHandlers.ts",
+          "details": "Open the tool handlers file"
+        },
+        {
+          "step": 4,
+          "action": "Add import for CostAwareSearchManager at the top",
+          "code": "import { CostAwareSearchManager, DEFAULT_LAYER_COSTS } from '../search/CostAwareSearchManager.js';"
+        },
+        {
+          "step": 5,
+          "action": "Add case handler for search_auto in the switch statement",
+          "code": "case 'search_auto': {\n  const { query, maxCost, limit = 10 } = args;\n\n  // NOTE: Requires rankedSearch getter added to ManagerContext (Sprint 11.1)\n  const hybridSearch = new HybridSearchManager(\n    ctx.semanticSearch,\n    ctx.rankedSearch\n  );\n  const queryAnalyzer = new QueryAnalyzer();\n  // Integrates with existing QueryCostEstimator from Phase 10\n  const costAwareSearch = new CostAwareSearchManager(\n    hybridSearch,\n    queryAnalyzer,\n    DEFAULT_LAYER_COSTS\n  );\n\n  const graph = await ctx.storage.loadGraph();\n\n  const budget = maxCost !== undefined ? { maxCost } : undefined;\n  const result = await costAwareSearch.search(graph, query, budget);\n\n  return {\n    content: [{\n      type: 'text',\n      text: JSON.stringify({\n        query,\n        strategy: {\n          layers: result.strategy.layers,\n          weights: result.strategy.weights,\n          reasoning: result.strategy.reasoning,\n        },\n        cost: {\n          estimated: result.strategy.estimatedCost,\n          actual: result.actualCost,\n          budgetRemaining: result.budgetRemaining,\n        },\n        resultCount: Math.min(result.results.length, limit),\n        results: result.results.slice(0, limit).map(r => ({\n          name: r.entity.name,\n          entityType: r.entity.entityType,\n          score: r.score,\n          observations: r.entity.observations.slice(0, 3),\n        })),\n      }, null, 2),\n    }],\n  };\n}"
+        },
+        {
+          "step": 6,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "search_auto tool definition added to toolDefinitions.ts",
+        "Query parameter is required",
+        "maxCost parameter is optional",
+        "Handler instantiates CostAwareSearchManager",
+        "Response includes strategy, cost breakdown, and results",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.6.3",
+      "category": "tests",
+      "title": "Create Adaptive Search Unit Tests",
+      "description": "Create unit tests for CostAwareSearchManager covering layer selection, cost estimation, and budget constraints.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["tests/unit/search/CostAwareSearchManager.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Verify CostAwareSearchManager correctly selects strategies and respects budget constraints.",
+        "keyDecisions": [
+          "Test layer selection based on query type",
+          "Test budget constraint enforcement",
+          "Test cost calculation accuracy",
+          "Test weight distribution"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file tests/unit/search/CostAwareSearchManager.test.ts",
+          "details": "Create the new test file"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach, vi } from 'vitest';\nimport {\n  CostAwareSearchManager,\n  DEFAULT_LAYER_COSTS,\n  LayerCosts,\n  CostBudget,\n} from '../../../src/search/CostAwareSearchManager.js';\nimport { HybridSearchManager } from '../../../src/search/HybridSearchManager.js';\nimport { QueryAnalyzer } from '../../../src/search/QueryAnalyzer.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add test suite with mocks",
+          "code": "describe('CostAwareSearchManager', () => {\n  let mockHybridSearch: HybridSearchManager;\n  let mockQueryAnalyzer: QueryAnalyzer;\n  let manager: CostAwareSearchManager;\n\n  beforeEach(() => {\n    mockHybridSearch = {\n      searchWithEntities: vi.fn().mockResolvedValue([]),\n    } as unknown as HybridSearchManager;\n\n    mockQueryAnalyzer = {\n      analyze: vi.fn().mockReturnValue({\n        query: 'test',\n        entities: [],\n        temporalRange: null,\n        questionType: 'factual',\n        confidence: 0.8,\n      }),\n    } as unknown as QueryAnalyzer;\n\n    manager = new CostAwareSearchManager(\n      mockHybridSearch,\n      mockQueryAnalyzer,\n      DEFAULT_LAYER_COSTS\n    );\n  });"
+        },
+        {
+          "step": 4,
+          "action": "Add tests for DEFAULT_LAYER_COSTS",
+          "code": "  describe('DEFAULT_LAYER_COSTS', () => {\n    it('should have correct default costs', () => {\n      expect(DEFAULT_LAYER_COSTS.symbolic).toBe(1);\n      expect(DEFAULT_LAYER_COSTS.lexical).toBe(2);\n      expect(DEFAULT_LAYER_COSTS.semantic).toBe(5);\n    });\n  });"
+        },
+        {
+          "step": 5,
+          "action": "Add tests for selectStrategy",
+          "code": "  describe('selectStrategy', () => {\n    it('should select all layers when no budget constraint', () => {\n      const strategy = manager.selectStrategy('what is the meaning of life');\n      expect(strategy.layers).toContain('symbolic');\n      expect(strategy.layers).toContain('lexical');\n    });\n\n    it('should include semantic for conceptual queries', () => {\n      (mockQueryAnalyzer.analyze as ReturnType<typeof vi.fn>).mockReturnValue({\n        query: 'what is the meaning of life',\n        entities: [],\n        temporalRange: null,\n        questionType: 'conceptual',\n        confidence: 0.9,\n      });\n\n      const strategy = manager.selectStrategy('what is the meaning of life');\n      expect(strategy.layers).toContain('semantic');\n    });\n\n    it('should respect budget constraints', () => {\n      const budget: CostBudget = { maxCost: 3 };\n      const strategy = manager.selectStrategy('test query', budget);\n      \n      // With maxCost=3, can afford symbolic(1) + lexical(2) = 3\n      expect(strategy.estimatedCost).toBeLessThanOrEqual(3);\n      expect(strategy.layers).not.toContain('semantic');\n    });\n\n    it('should calculate correct estimated cost', () => {\n      const budget: CostBudget = { maxCost: 100 };\n      (mockQueryAnalyzer.analyze as ReturnType<typeof vi.fn>).mockReturnValue({\n        query: 'test',\n        entities: [],\n        temporalRange: null,\n        questionType: 'conceptual',\n        confidence: 0.5,\n      });\n\n      const strategy = manager.selectStrategy('test', budget);\n      \n      // All layers: 1 + 2 + 5 = 8\n      expect(strategy.estimatedCost).toBe(8);\n    });\n\n    it('should generate reasoning string', () => {\n      const strategy = manager.selectStrategy('test query');\n      expect(strategy.reasoning).toBeDefined();\n      expect(strategy.reasoning.length).toBeGreaterThan(0);\n    });\n  });"
+        },
+        {
+          "step": 6,
+          "action": "Add tests for weight calculation",
+          "code": "  describe('weight calculation', () => {\n    it('should normalize weights to sum to 1', () => {\n      const strategy = manager.selectStrategy('test query');\n      const sum = strategy.weights.semantic + strategy.weights.lexical + strategy.weights.symbolic;\n      expect(sum).toBeCloseTo(1, 5);\n    });\n\n    it('should give higher symbolic weight when entities detected', () => {\n      (mockQueryAnalyzer.analyze as ReturnType<typeof vi.fn>).mockReturnValue({\n        query: 'Alice from TechCorp',\n        entities: [{ name: 'Alice', type: 'person' }, { name: 'TechCorp', type: 'organization' }],\n        temporalRange: null,\n        questionType: 'factual',\n        confidence: 0.9,\n      });\n\n      const strategy = manager.selectStrategy('Alice from TechCorp');\n      expect(strategy.weights.symbolic).toBeGreaterThan(0.2);\n    });\n  });"
+        },
+        {
+          "step": 7,
+          "action": "Add tests for search method",
+          "code": "  describe('search', () => {\n    it('should execute search with selected strategy', async () => {\n      const graph = { entities: [], relations: [] };\n      const result = await manager.search(graph, 'test query');\n\n      expect(mockHybridSearch.searchWithEntities).toHaveBeenCalled();\n      expect(result.results).toBeDefined();\n      expect(result.strategy).toBeDefined();\n      expect(result.actualCost).toBeDefined();\n    });\n\n    it('should return budget remaining', async () => {\n      const graph = { entities: [], relations: [] };\n      const budget: CostBudget = { maxCost: 10 };\n      const result = await manager.search(graph, 'test query', budget);\n\n      expect(result.budgetRemaining).toBeDefined();\n      expect(result.budgetRemaining).toBeGreaterThanOrEqual(0);\n    });\n  });\n});"
+        },
+        {
+          "step": 8,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/search/CostAwareSearchManager.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/search/CostAwareSearchManager.test.ts",
+        "Tests for DEFAULT_LAYER_COSTS values",
+        "Tests for selectStrategy layer selection",
+        "Tests for budget constraint enforcement",
+        "Tests for cost calculation accuracy",
+        "Tests for weight normalization",
+        "Tests for search execution",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": "11.6.4",
+      "category": "documentation",
+      "title": "Final Documentation and Cleanup",
+      "description": "Update documentation with new tool count, verify all exports, and run full test suite.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["CLAUDE.md", "src/search/index.ts", "src/features/index.ts"],
+      "testCategories": ["typecheck", "unit", "integration"],
+      "implementation": {
+        "purpose": "Ensure all Phase 11 additions are properly documented and exported.",
+        "keyDecisions": [
+          "Update tool count from 61 to 66 (5 new tools from Phase 11)",
+          "Add all new search classes to barrel export",
+          "Add normalizer classes to features export",
+          "Run full test suite to verify no regressions"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Update src/search/index.ts with new exports",
+          "code": "// Phase 11: Hybrid Search & Intelligent Retrieval\nexport { SymbolicSearch } from './SymbolicSearch.js';\nexport type { SymbolicResult, SymbolicFilters } from './SymbolicSearch.js';\nexport { HybridSearchManager, DEFAULT_HYBRID_WEIGHTS } from './HybridSearchManager.js';\nexport type { HybridResult, HybridWeights, HybridSearchOptions } from './HybridSearchManager.js';\nexport { QueryAnalyzer } from './QueryAnalyzer.js';\nexport type { QueryAnalysis, ExtractedEntity, TemporalRange } from './QueryAnalyzer.js';\nexport { QueryPlanner } from './QueryPlanner.js';\nexport type { SearchPlan, SearchStep } from './QueryPlanner.js';\nexport { ReflectionManager } from './ReflectionManager.js';\nexport type { ReflectionResult, ReflectionConfig } from './ReflectionManager.js';\nexport { CostAwareSearchManager, DEFAULT_LAYER_COSTS } from './CostAwareSearchManager.js';\nexport type { LayerCosts, CostBudget, SearchStrategy, CostAwareResult } from './CostAwareSearchManager.js';"
+        },
+        {
+          "step": 2,
+          "action": "Update src/features/index.ts with normalizer exports",
+          "code": "// Phase 11: Semantic Compression\nexport { ObservationNormalizer } from './ObservationNormalizer.js';\nexport type { NormalizationResult, NormalizationOptions } from './ObservationNormalizer.js';\nexport { KeywordExtractor } from './KeywordExtractor.js';\nexport type { ExtractedKeyword, ExtractionOptions } from './KeywordExtractor.js';"
+        },
+        {
+          "step": 3,
+          "action": "Update CLAUDE.md tool count",
+          "details": "Change '55 tools' to '66 tools' (61 current + 5 new from Phase 11) in the Architecture Overview section and update the Tool Categories table to include the 5 new tools: hybrid_search, analyze_query, smart_search, normalize_observations, search_auto"
+        },
+        {
+          "step": 4,
+          "action": "Update Tool Categories table in CLAUDE.md",
+          "details": "Add row for new Intelligent Search category with 5 tools: hybrid_search, analyze_query, smart_search, normalize_observations, search_auto"
+        },
+        {
+          "step": 5,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        },
+        {
+          "step": 6,
+          "action": "Run full test suite",
+          "details": "Run: npm test"
+        },
+        {
+          "step": 7,
+          "action": "Verify test coverage for new code",
+          "details": "Check coverage report for new files: HybridSearchManager, SymbolicSearch, QueryAnalyzer, QueryPlanner, ReflectionManager, CostAwareSearchManager, ObservationNormalizer, KeywordExtractor"
+        }
+      ],
+      "acceptanceCriteria": [
+        "All new search classes exported from src/search/index.ts",
+        "All new feature classes exported from src/features/index.ts",
+        "CLAUDE.md updated with 66 tools count",
+        "Tool Categories table updated with new Intelligent Search category",
+        "npm run typecheck passes with no errors",
+        "npm test passes with all tests passing",
+        "New code has test coverage"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "CostAwareSearchManager correctly selects strategies based on query type",
+    "Budget constraints properly enforced",
+    "search_auto tool available via MCP protocol",
+    "Cost breakdown included in search responses",
+    "All 66 tools documented in CLAUDE.md",
+    "All new classes properly exported from barrel files",
+    "Full test suite passes",
+    "No TypeScript compilation errors"
+  ],
+  "filesCreated": [
+    "src/search/CostAwareSearchManager.ts",
+    "tests/unit/search/CostAwareSearchManager.test.ts"
+  ],
+  "filesModified": [
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts",
+    "src/search/index.ts",
+    "src/features/index.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 12,
+  "totalEstimatedHours": 5,
+  "dependencies": ["Sprint 11.1 (HybridSearchManager - requires rankedSearch getter)", "Sprint 11.3 (Query Analysis)", "Sprint 11.4 (smart_search)"],
+  "notes": [
+    "This is the final sprint of Phase 11",
+    "CostAwareSearchManager integrates HybridSearchManager and QueryAnalyzer",
+    "Cost units are abstract (not real currency) - symbolic=1, lexical=2, semantic=5",
+    "Budget constraints allow AI assistants to control search resource usage",
+    "Final documentation task ensures all Phase 11 work is properly exported and documented",
+    "After this sprint, tool count increases from 61 to 66 (5 new tools: hybrid_search, analyze_query, smart_search, normalize_observations, search_auto)",
+    "CRITICAL: QueryCostEstimator already exists in src/search/QueryCostEstimator.ts from Phase 10 Sprint 4. CostAwareSearchManager should REUSE this existing class rather than duplicate cost estimation logic. Consider either extending QueryCostEstimator or composing with it.",
+    "CRITICAL: ctx.rankedSearch does not exist in ManagerContext. Sprint 11.1 must add this getter before this sprint can work."
+  ]
+}

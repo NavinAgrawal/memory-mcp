@@ -1,0 +1,324 @@
+{
+  "phase": 11,
+  "sprint": 3,
+  "title": "Query Analysis Infrastructure",
+  "priority": "HIGH",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Enables intelligent query understanding and automatic decomposition of complex queries",
+  "targetMetrics": {
+    "queryUnderstanding": {
+      "current": "Raw text matching",
+      "target": "Structured extraction of entities, dates, question types"
+    },
+    "complexQueryHandling": {
+      "current": "Manual decomposition required",
+      "target": "Automatic planning for multi-hop queries"
+    }
+  },
+  "tasks": [
+    {
+      "id": "11.3.1",
+      "category": "types",
+      "title": "Create Query Analysis Types",
+      "description": "Define TypeScript interfaces for query analysis including QueryAnalysis, QueryPlan, and SubQuery.",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/types/types.ts"],
+      "testCategories": ["typecheck"],
+      "implementation": {
+        "purpose": "Define types for structured query analysis results that enable intelligent search planning.",
+        "keyDecisions": [
+          "QueryAnalysis extracts persons, locations, organizations, temporal range",
+          "Question types: factual, temporal, comparative, aggregation, multi-hop, conceptual",
+          "Complexity levels: low, medium, high",
+          "QueryPlan contains SubQueries with dependencies"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/types/types.ts",
+          "details": "Open the types file"
+        },
+        {
+          "step": 2,
+          "action": "Add section comment for Query Analysis Types",
+          "details": "Add: // ==================== Query Analysis Types (Phase 11) ===================="
+        },
+        {
+          "step": 3,
+          "action": "Add QueryAnalysis interface",
+          "code": "/**\n * Result of analyzing a search query.\n */\nexport interface QueryAnalysis {\n  /** Original query text */\n  query: string;\n  /** Extracted entities (combined persons, locations, organizations) */\n  entities: ExtractedEntity[];\n  /** Extracted person names */\n  persons: string[];\n  /** Extracted location names */\n  locations: string[];\n  /** Extracted organization names */\n  organizations: string[];\n  /** Temporal range if detected */\n  temporalRange: TemporalRange | null;\n  /** Type of question */\n  questionType: 'factual' | 'temporal' | 'comparative' | 'aggregation' | 'multi-hop' | 'conceptual';\n  /** Query complexity level */\n  complexity: 'low' | 'medium' | 'high';\n  /** Confidence in the analysis (0-1) */\n  confidence: number;\n  /** Types of information being requested */\n  requiredInfoTypes: string[];\n  /** Decomposed sub-queries for multi-hop */\n  subQueries?: string[];\n}\n\n/**\n * An extracted entity from query analysis.\n */\nexport interface ExtractedEntity {\n  name: string;\n  type: 'person' | 'location' | 'organization' | 'unknown';\n}\n\n/**\n * Temporal range extracted from query.\n */\nexport interface TemporalRange {\n  start?: string;\n  end?: string;\n  relative?: string;\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add QueryPlan interface",
+          "code": "/**\n * Execution plan for a query.\n */\nexport interface QueryPlan {\n  originalQuery: string;\n  subQueries: SubQuery[];\n  executionStrategy: 'parallel' | 'sequential' | 'iterative';\n  mergeStrategy: 'union' | 'intersection' | 'weighted';\n  estimatedComplexity: number;\n}"
+        },
+        {
+          "step": 5,
+          "action": "Add SubQuery interface",
+          "code": "/**\n * A sub-query within a query plan.\n */\nexport interface SubQuery {\n  id: string;\n  query: string;\n  targetLayer: 'semantic' | 'lexical' | 'symbolic' | 'hybrid';\n  priority: number;\n  filters?: SymbolicFilters;\n  dependsOn?: string[];\n}"
+        },
+        {
+          "step": 6,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "QueryAnalysis interface defined with entity extraction fields",
+        "ExtractedEntity and TemporalRange types defined",
+        "Question type union defined with 6 types (including 'conceptual')",
+        "Confidence score (0-1) included in analysis",
+        "Complexity enum defined with 3 levels",
+        "QueryPlan interface defined with execution strategy",
+        "SubQuery interface defined with layer targeting",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.3.2",
+      "category": "search",
+      "title": "Create QueryAnalyzer Class",
+      "description": "Create the query analyzer for extracting structured information from natural language queries using rule-based heuristics.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/search/QueryAnalyzer.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Extract structured information from queries to enable intelligent search planning. Uses rule-based heuristics for reliability.",
+        "keyDecisions": [
+          "Rule-based extraction for persons (capitalized words after titles)",
+          "Temporal parsing for relative dates (yesterday, last week)",
+          "Question type detection based on keywords",
+          "Complexity estimation based on query length and structure"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/search/QueryAnalyzer.ts",
+          "details": "Create the new file in the search directory"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Query Analyzer\n *\n * Phase 11: Extracts structured information from natural language queries\n * to enable intelligent search planning.\n *\n * @module search/QueryAnalyzer\n */\n\nimport type { QueryAnalysis, ExtractedEntity, TemporalRange } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add QueryAnalyzer class with analyzeBasic method",
+          "code": "/**\n * Query Analyzer extracts structured information from queries.\n *\n * Uses rule-based heuristics for reliable extraction of:\n * - Person names\n * - Location names\n * - Organization names\n * - Temporal references\n * - Question type\n * - Query complexity\n *\n * @example\n * ```typescript\n * const analyzer = new QueryAnalyzer();\n * const analysis = analyzer.analyze(\n *   'What projects did Alice work on last month?'\n * );\n * // { query: '...', entities: [...], persons: ['Alice'], temporalRange: { relative: 'last month' }, ... }\n * ```\n */\nexport class QueryAnalyzer {\n  private personIndicators = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'];\n  private temporalKeywords = [\n    'yesterday', 'today', 'tomorrow',\n    'last week', 'last month', 'last year',\n    'this week', 'this month', 'this year',\n    'next week', 'next month', 'next year',\n  ];\n  private questionKeywords = {\n    factual: ['what', 'who', 'where', 'which'],\n    temporal: ['when', 'how long', 'since', 'until'],\n    comparative: ['compare', 'difference', 'vs', 'versus', 'better', 'worse'],\n    aggregation: ['how many', 'count', 'total', 'sum', 'average'],\n    'multi-hop': ['and then', 'which means', 'therefore', 'related to'],\n    conceptual: ['explain', 'why', 'how does', 'what is the meaning', 'understand'],\n  };\n\n  /**\n   * Analyze a query using rule-based heuristics.\n   * Main entry point - returns full QueryAnalysis.\n   */\n  analyze(query: string): QueryAnalysis {\n    const lowerQuery = query.toLowerCase();\n    const persons = this.extractPersons(query);\n    const locations = this.extractLocations(query);\n    const organizations = this.extractOrganizations(query);\n    const questionType = this.detectQuestionType(lowerQuery);\n    const complexity = this.estimateComplexity(query);\n    \n    // Build entities array from extracted names\n    const entities: ExtractedEntity[] = [\n      ...persons.map(name => ({ name, type: 'person' as const })),\n      ...locations.map(name => ({ name, type: 'location' as const })),\n      ...organizations.map(name => ({ name, type: 'organization' as const })),\n    ];\n    \n    // Calculate confidence based on extraction quality\n    const confidence = this.calculateConfidence(entities, complexity, questionType);\n    \n    return {\n      query,\n      entities,\n      persons,\n      locations,\n      organizations,\n      temporalRange: this.extractTemporalRange(query),\n      questionType,\n      complexity,\n      confidence,\n      requiredInfoTypes: this.detectRequiredInfoTypes(lowerQuery),\n      subQueries: this.decomposeQuery(query),\n    };\n  }\n  \n  /**\n   * Calculate confidence score for the analysis.\n   */\n  private calculateConfidence(\n    entities: ExtractedEntity[],\n    complexity: 'low' | 'medium' | 'high',\n    questionType: QueryAnalysis['questionType']\n  ): number {\n    let confidence = 0.5;\n    \n    // Higher confidence for simple queries\n    if (complexity === 'low') confidence += 0.3;\n    else if (complexity === 'medium') confidence += 0.1;\n    \n    // Higher confidence when entities are detected\n    if (entities.length > 0) confidence += 0.1;\n    \n    // Lower confidence for conceptual queries (harder to satisfy)\n    if (questionType === 'conceptual') confidence -= 0.2;\n    \n    return Math.max(0, Math.min(1, confidence));\n  }"
+        },
+        {
+          "step": 4,
+          "action": "Add private extraction methods",
+          "code": "  /**\n   * Extract person names from query.\n   */\n  private extractPersons(query: string): string[] {\n    const persons: string[] = [];\n    const words = query.split(/\\s+/);\n    \n    for (let i = 0; i < words.length; i++) {\n      const word = words[i];\n      // Check for titles followed by names\n      if (this.personIndicators.some(ind => word.startsWith(ind))) {\n        if (i + 1 < words.length) {\n          persons.push(words[i + 1].replace(/[^a-zA-Z]/g, ''));\n        }\n      }\n      // Check for capitalized words that might be names\n      if (/^[A-Z][a-z]+$/.test(word) && i > 0 && !/^[A-Z]/.test(words[i-1])) {\n        persons.push(word);\n      }\n    }\n    \n    return [...new Set(persons)];\n  }\n\n  /**\n   * Extract location names from query.\n   */\n  private extractLocations(query: string): string[] {\n    const locationIndicators = ['in', 'at', 'from', 'to', 'near'];\n    const locations: string[] = [];\n    const words = query.split(/\\s+/);\n    \n    for (let i = 0; i < words.length; i++) {\n      if (locationIndicators.includes(words[i].toLowerCase())) {\n        if (i + 1 < words.length && /^[A-Z]/.test(words[i + 1])) {\n          locations.push(words[i + 1].replace(/[^a-zA-Z]/g, ''));\n        }\n      }\n    }\n    \n    return [...new Set(locations)];\n  }\n\n  /**\n   * Extract organization names from query.\n   */\n  private extractOrganizations(query: string): string[] {\n    const orgIndicators = ['Inc.', 'Corp.', 'LLC', 'Ltd.', 'Company', 'Co.'];\n    const organizations: string[] = [];\n    \n    for (const indicator of orgIndicators) {\n      const regex = new RegExp(`([A-Z][a-zA-Z]*)\\\\s*${indicator.replace('.', '\\\\.')}`, 'g');\n      const matches = query.match(regex);\n      if (matches) {\n        organizations.push(...matches);\n      }\n    }\n    \n    return [...new Set(organizations)];\n  }\n\n  /**\n   * Extract temporal range from query.\n   */\n  private extractTemporalRange(query: string): QueryAnalysis['temporalRange'] | undefined {\n    const lowerQuery = query.toLowerCase();\n    \n    for (const keyword of this.temporalKeywords) {\n      if (lowerQuery.includes(keyword)) {\n        return { relative: keyword };\n      }\n    }\n    \n    // Check for date patterns\n    const datePattern = /\\d{4}-\\d{2}-\\d{2}/g;\n    const dates = query.match(datePattern);\n    if (dates && dates.length >= 1) {\n      return {\n        start: dates[0],\n        end: dates.length > 1 ? dates[1] : undefined,\n      };\n    }\n    \n    return undefined;\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add classification methods",
+          "code": "  /**\n   * Detect the type of question.\n   */\n  private detectQuestionType(query: string): QueryAnalysis['questionType'] {\n    for (const [type, keywords] of Object.entries(this.questionKeywords)) {\n      if (keywords.some(kw => query.includes(kw))) {\n        return type as QueryAnalysis['questionType'];\n      }\n    }\n    return 'factual';\n  }\n\n  /**\n   * Estimate query complexity.\n   */\n  private estimateComplexity(query: string): QueryAnalysis['complexity'] {\n    const wordCount = query.split(/\\s+/).length;\n    const hasConjunctions = /\\b(and|or|but|then|therefore)\\b/i.test(query);\n    const hasMultipleClauses = /[,;]/.test(query);\n    \n    if (wordCount > 20 || (hasConjunctions && hasMultipleClauses)) {\n      return 'high';\n    }\n    if (wordCount > 10 || hasConjunctions || hasMultipleClauses) {\n      return 'medium';\n    }\n    return 'low';\n  }\n\n  /**\n   * Detect what types of information are being requested.\n   */\n  private detectRequiredInfoTypes(query: string): string[] {\n    const infoTypes: string[] = [];\n    \n    if (/\\b(who|person|people|name)\\b/.test(query)) infoTypes.push('person');\n    if (/\\b(where|location|place|city)\\b/.test(query)) infoTypes.push('location');\n    if (/\\b(when|date|time|year|month)\\b/.test(query)) infoTypes.push('temporal');\n    if (/\\b(how many|count|number|total)\\b/.test(query)) infoTypes.push('quantity');\n    if (/\\b(why|reason|because)\\b/.test(query)) infoTypes.push('reason');\n    if (/\\b(what|which|project|task)\\b/.test(query)) infoTypes.push('entity');\n    \n    return infoTypes;\n  }\n\n  /**\n   * Decompose complex queries into sub-queries.\n   */\n  private decomposeQuery(query: string): string[] | undefined {\n    // Split on conjunctions\n    const parts = query.split(/\\b(and then|and|but|or)\\b/i)\n      .map(p => p.trim())\n      .filter(p => p && !/^(and then|and|but|or)$/i.test(p));\n    \n    if (parts.length > 1) {\n      return parts;\n    }\n    \n    return undefined;\n  }\n}"
+        },
+        {
+          "step": 6,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "QueryAnalyzer class created with analyzeBasic method",
+        "Person name extraction implemented",
+        "Location extraction implemented",
+        "Organization extraction implemented",
+        "Temporal range parsing implemented",
+        "Question type detection implemented",
+        "Complexity estimation implemented",
+        "Query decomposition implemented",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.3.3",
+      "category": "search",
+      "title": "Create QueryPlanner Class",
+      "description": "Create the query planner that generates execution plans from query analysis.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/search/QueryPlanner.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Generate optimized execution plans for queries based on their analysis, selecting appropriate layers and execution strategies.",
+        "keyDecisions": [
+          "Parallel execution for independent sub-queries",
+          "Sequential execution when queries have dependencies",
+          "Layer selection based on query characteristics",
+          "Merge strategy based on query type"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/search/QueryPlanner.ts",
+          "details": "Create the new file"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Query Planner\n *\n * Phase 11: Generates execution plans for queries based on analysis.\n *\n * @module search/QueryPlanner\n */\n\nimport type { QueryAnalysis, QueryPlan, SubQuery, SymbolicFilters } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add QueryPlanner class",
+          "code": "/**\n * Query Planner generates execution plans from query analysis.\n *\n * Creates optimized plans that:\n * - Select appropriate search layers\n * - Determine execution strategy (parallel/sequential)\n * - Set up query dependencies\n * - Configure merge strategies\n */\nexport class QueryPlanner {\n  /**\n   * Create an execution plan from query analysis.\n   */\n  createPlan(query: string, analysis: QueryAnalysis): QueryPlan {\n    const subQueries = this.createSubQueries(query, analysis);\n    const executionStrategy = this.selectExecutionStrategy(subQueries);\n    const mergeStrategy = this.selectMergeStrategy(analysis);\n    \n    return {\n      originalQuery: query,\n      subQueries,\n      executionStrategy,\n      mergeStrategy,\n      estimatedComplexity: this.calculateComplexity(subQueries),\n    };\n  }\n\n  private createSubQueries(query: string, analysis: QueryAnalysis): SubQuery[] {\n    const subQueries: SubQuery[] = [];\n    let id = 0;\n    \n    // If query was decomposed, create sub-query for each part\n    if (analysis.subQueries && analysis.subQueries.length > 1) {\n      for (const sq of analysis.subQueries) {\n        subQueries.push({\n          id: `sq_${id++}`,\n          query: sq,\n          targetLayer: this.selectLayer(analysis),\n          priority: id === 1 ? 1 : 2,\n          dependsOn: id > 1 ? [`sq_${id - 2}`] : undefined,\n        });\n      }\n    } else {\n      // Single query\n      subQueries.push({\n        id: `sq_${id}`,\n        query,\n        targetLayer: this.selectLayer(analysis),\n        priority: 1,\n        filters: this.buildFilters(analysis),\n      });\n    }\n    \n    return subQueries;\n  }\n\n  private selectLayer(analysis: QueryAnalysis): SubQuery['targetLayer'] {\n    // Use symbolic for tag/type/date filtered queries\n    if (analysis.temporalRange || analysis.requiredInfoTypes.includes('temporal')) {\n      return 'symbolic';\n    }\n    // Use semantic for complex concept queries\n    if (analysis.complexity === 'high' || analysis.questionType === 'comparative') {\n      return 'semantic';\n    }\n    // Use hybrid for balanced approach\n    return 'hybrid';\n  }\n\n  private selectExecutionStrategy(subQueries: SubQuery[]): QueryPlan['executionStrategy'] {\n    const hasDependencies = subQueries.some(sq => sq.dependsOn && sq.dependsOn.length > 0);\n    if (hasDependencies) return 'sequential';\n    if (subQueries.length > 1) return 'parallel';\n    return 'iterative';\n  }\n\n  private selectMergeStrategy(analysis: QueryAnalysis): QueryPlan['mergeStrategy'] {\n    switch (analysis.questionType) {\n      case 'aggregation': return 'union';\n      case 'comparative': return 'intersection';\n      default: return 'weighted';\n    }\n  }\n\n  private buildFilters(analysis: QueryAnalysis): SymbolicFilters | undefined {\n    const filters: SymbolicFilters = {};\n    let hasFilters = false;\n    \n    if (analysis.temporalRange) {\n      filters.dateRange = {\n        start: analysis.temporalRange.start || '',\n        end: analysis.temporalRange.end || '',\n      };\n      hasFilters = true;\n    }\n    \n    return hasFilters ? filters : undefined;\n  }\n\n  private calculateComplexity(subQueries: SubQuery[]): number {\n    let complexity = subQueries.length;\n    for (const sq of subQueries) {\n      if (sq.dependsOn) complexity += sq.dependsOn.length * 0.5;\n      if (sq.filters) complexity += 0.5;\n    }\n    return Math.min(complexity, 10);\n  }\n}"
+        },
+        {
+          "step": 4,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "QueryPlanner class created with createPlan method",
+        "Sub-queries created from decomposed queries",
+        "Layer selection based on query characteristics",
+        "Execution strategy selected based on dependencies",
+        "Merge strategy selected based on question type",
+        "Complexity calculated from plan structure",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.3.4",
+      "category": "server",
+      "title": "Add analyze_query MCP Tool",
+      "description": "Add MCP tool for exposing query analysis to AI assistants.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Expose query analysis capability via MCP so AI assistants can understand query structure before searching.",
+        "keyDecisions": [
+          "Return full QueryAnalysis structure",
+          "Optionally include QueryPlan",
+          "Tool helps AI assistants optimize their search strategy"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Add tool definition to src/server/toolDefinitions.ts",
+          "code": "{\n  name: 'analyze_query',\n  description: 'Analyze a search query to extract entities, temporal references, question type, and complexity. Useful for understanding query structure before searching.',\n  inputSchema: {\n    type: 'object',\n    properties: {\n      query: {\n        type: 'string',\n        description: 'The query to analyze',\n      },\n      includePlan: {\n        type: 'boolean',\n        default: false,\n        description: 'Include execution plan in response',\n      },\n    },\n    required: ['query'],\n  },\n},"
+        },
+        {
+          "step": 2,
+          "action": "Add imports to toolHandlers.ts",
+          "code": "import { QueryAnalyzer } from '../search/QueryAnalyzer.js';\nimport { QueryPlanner } from '../search/QueryPlanner.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add handler to toolHandlers.ts",
+          "code": "case 'analyze_query': {\n  const { query, includePlan = false } = args;\n  \n  const analyzer = new QueryAnalyzer();\n  const analysis = analyzer.analyzeBasic(query);\n  \n  let plan = undefined;\n  if (includePlan) {\n    const planner = new QueryPlanner();\n    plan = planner.createPlan(query, analysis);\n  }\n  \n  return {\n    content: [{\n      type: 'text',\n      text: JSON.stringify({\n        query,\n        analysis,\n        plan,\n      }, null, 2),\n    }],\n  };\n}"
+        },
+        {
+          "step": 4,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "analyze_query tool definition added",
+        "Handler returns QueryAnalysis",
+        "Optional QueryPlan included when includePlan=true",
+        "Response is JSON formatted",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.3.5",
+      "category": "tests",
+      "title": "Create Query Analysis Unit Tests",
+      "description": "Create comprehensive unit tests for QueryAnalyzer and QueryPlanner.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["tests/unit/search/QueryAnalyzer.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Verify query analysis correctly extracts entities, temporal references, and classifies queries.",
+        "keyDecisions": [
+          "Test person extraction with various patterns",
+          "Test temporal parsing for relative and absolute dates",
+          "Test question type detection",
+          "Test complexity estimation"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file tests/unit/search/QueryAnalyzer.test.ts",
+          "details": "Create the new test file"
+        },
+        {
+          "step": 2,
+          "action": "Add test suite for QueryAnalyzer",
+          "code": "import { describe, it, expect, beforeEach } from 'vitest';\nimport { QueryAnalyzer } from '../../../src/search/QueryAnalyzer.js';\nimport { QueryPlanner } from '../../../src/search/QueryPlanner.js';\n\ndescribe('QueryAnalyzer', () => {\n  let analyzer: QueryAnalyzer;\n\n  beforeEach(() => {\n    analyzer = new QueryAnalyzer();\n  });\n\n  describe('person extraction', () => {\n    it('should extract names after titles', () => {\n      const result = analyzer.analyzeBasic('Talk to Dr. Smith about the project');\n      expect(result.persons).toContain('Smith');\n    });\n  });\n\n  describe('temporal parsing', () => {\n    it('should detect relative dates', () => {\n      const result = analyzer.analyzeBasic('What happened last month?');\n      expect(result.temporalRange?.relative).toBe('last month');\n    });\n  });\n\n  describe('question type', () => {\n    it('should detect factual questions', () => {\n      const result = analyzer.analyzeBasic('What is the project status?');\n      expect(result.questionType).toBe('factual');\n    });\n\n    it('should detect comparative questions', () => {\n      const result = analyzer.analyzeBasic('Compare Alice and Bob performance');\n      expect(result.questionType).toBe('comparative');\n    });\n  });\n\n  describe('complexity', () => {\n    it('should estimate low complexity for simple queries', () => {\n      const result = analyzer.analyzeBasic('Find Alice');\n      expect(result.complexity).toBe('low');\n    });\n\n    it('should estimate high complexity for complex queries', () => {\n      const result = analyzer.analyzeBasic(\n        'What projects did Alice work on last year, and how do they compare to Bob\\'s projects in terms of success?'\n      );\n      expect(result.complexity).toBe('high');\n    });\n  });\n});"
+        },
+        {
+          "step": 3,
+          "action": "Add test suite for QueryPlanner",
+          "code": "describe('QueryPlanner', () => {\n  let analyzer: QueryAnalyzer;\n  let planner: QueryPlanner;\n\n  beforeEach(() => {\n    analyzer = new QueryAnalyzer();\n    planner = new QueryPlanner();\n  });\n\n  it('should create plan from analysis', () => {\n    const analysis = analyzer.analyzeBasic('Find projects by Alice');\n    const plan = planner.createPlan('Find projects by Alice', analysis);\n    \n    expect(plan.originalQuery).toBe('Find projects by Alice');\n    expect(plan.subQueries.length).toBeGreaterThan(0);\n    expect(plan.executionStrategy).toBeDefined();\n    expect(plan.mergeStrategy).toBeDefined();\n  });\n});"
+        },
+        {
+          "step": 4,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/search/QueryAnalyzer.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/search/QueryAnalyzer.test.ts",
+        "Tests for person extraction",
+        "Tests for temporal parsing",
+        "Tests for question type detection",
+        "Tests for complexity estimation",
+        "Tests for QueryPlanner plan creation",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All five tasks completed with passing tests",
+    "QueryAnalysis and QueryPlan types defined",
+    "QueryAnalyzer extracts entities, dates, and classifies queries",
+    "QueryPlanner generates execution plans",
+    "analyze_query MCP tool available",
+    "15+ unit tests pass",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": [
+    "src/search/QueryAnalyzer.ts",
+    "src/search/QueryPlanner.ts",
+    "tests/unit/search/QueryAnalyzer.test.ts"
+  ],
+  "filesModified": [
+    "src/types/types.ts",
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts"
+  ],
+  "totalNewTests": 15,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 11.1 (HybridSearchManager for layer targeting)"],
+  "notes": [
+    "Query analysis uses rule-based heuristics for reliability",
+    "More sophisticated NLP can be added later without API changes",
+    "analyze_query tool helps AI assistants optimize search strategy",
+    "This sprint provides foundation for Sprint 4 (smart_search with reflection)"
+  ]
+}

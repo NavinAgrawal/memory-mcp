@@ -1,0 +1,256 @@
+{
+  "phase": 11,
+  "sprint": 2,
+  "title": "hybrid_search MCP Tool",
+  "priority": "HIGH",
+  "effort": "5 hours",
+  "status": "pending",
+  "impact": "Exposes three-layer hybrid search via MCP protocol for AI assistants to use",
+  "targetMetrics": {
+    "toolAvailability": {
+      "current": "Separate search tools",
+      "target": "Unified hybrid_search tool with weight configuration"
+    },
+    "searchQuality": {
+      "current": "Single-signal results",
+      "target": "Multi-signal fusion with transparency"
+    }
+  },
+  "tasks": [
+    {
+      "id": "11.2.1",
+      "category": "server",
+      "title": "Add hybrid_search Tool Definition",
+      "description": "Add the hybrid_search tool definition to the MCP server's toolDefinitions.ts with full parameter schema.",
+      "status": "pending",
+      "estimatedHours": 0.75,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts"],
+      "testCategories": ["typecheck"],
+      "implementation": {
+        "purpose": "Define the MCP tool schema for hybrid_search so that AI assistants can invoke it with proper parameters.",
+        "keyDecisions": [
+          "Query is the only required parameter",
+          "Weights default to semantic=0.5, lexical=0.3, symbolic=0.2",
+          "Filters support tags, entityTypes, dateRange, importance",
+          "Response includes per-layer scores for transparency"
+        ],
+        "existingCodeContext": "toolDefinitions.ts contains all 55 existing tool definitions organized by category. Add hybrid_search to the Search category."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/server/toolDefinitions.ts",
+          "details": "Open the tool definitions file"
+        },
+        {
+          "step": 2,
+          "action": "Find the Search category section",
+          "details": "Search for 'search_nodes' or 'Search' category comment to locate where search tools are defined"
+        },
+        {
+          "step": 3,
+          "action": "Add hybrid_search tool definition after existing search tools",
+          "code": "{\n  name: 'hybrid_search',\n  description: 'Search using combined semantic, lexical, and metadata signals. Provides better recall than single-signal search by fusing multiple relevance signals.',\n  inputSchema: {\n    type: 'object',\n    properties: {\n      query: {\n        type: 'string',\n        description: 'Search query text',\n      },\n      weights: {\n        type: 'object',\n        description: 'Layer weights (should sum to 1.0)',\n        properties: {\n          semantic: { type: 'number', default: 0.5, description: 'Weight for semantic/embedding similarity' },\n          lexical: { type: 'number', default: 0.3, description: 'Weight for keyword/TF-IDF matching' },\n          symbolic: { type: 'number', default: 0.2, description: 'Weight for metadata filtering' },\n        },\n      },\n      filters: {\n        type: 'object',\n        description: 'Symbolic/metadata filters',\n        properties: {\n          tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags' },\n          entityTypes: { type: 'array', items: { type: 'string' }, description: 'Filter by entity types' },\n          dateRange: {\n            type: 'object',\n            properties: {\n              start: { type: 'string', description: 'Start date (ISO 8601)' },\n              end: { type: 'string', description: 'End date (ISO 8601)' },\n            },\n          },\n          minImportance: { type: 'number', description: 'Minimum importance score (0-10)' },\n          maxImportance: { type: 'number', description: 'Maximum importance score (0-10)' },\n        },\n      },\n      limit: { type: 'number', default: 10, description: 'Maximum results to return' },\n    },\n    required: ['query'],\n  },\n},"
+        },
+        {
+          "step": 4,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "hybrid_search tool definition added to toolDefinitions.ts",
+        "Query parameter is required",
+        "Weights object has semantic, lexical, symbolic properties with defaults",
+        "Filters object supports tags, entityTypes, dateRange, importance",
+        "Limit parameter with default of 10",
+        "Description explains three-layer approach",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.2.2",
+      "category": "server",
+      "title": "Implement hybrid_search Handler",
+      "description": "Implement the handler for hybrid_search tool in toolHandlers.ts that invokes HybridSearchManager.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["src/server/toolHandlers.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Wire up the MCP tool to the HybridSearchManager class and format the response with per-layer scores.",
+        "keyDecisions": [
+          "Create HybridSearchManager with context's semantic and ranked search instances",
+          "Transform filters parameter to SymbolicFilters format",
+          "Response includes scores, matchedLayers, and truncated observations",
+          "Handle errors gracefully"
+        ],
+        "existingCodeContext": "toolHandlers.ts contains handler functions for all tools. ctx provides access to managers and storage."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/server/toolHandlers.ts",
+          "details": "Open the tool handlers file"
+        },
+        {
+          "step": 2,
+          "action": "Add import for HybridSearchManager at the top",
+          "code": "import { HybridSearchManager } from '../search/HybridSearchManager.js';"
+        },
+        {
+          "step": 3,
+          "action": "Find the switch statement for tool handling",
+          "details": "Search for 'switch' or 'case' to find the tool handler dispatch"
+        },
+        {
+          "step": 4,
+          "action": "Add the case handler for hybrid_search",
+          "code": "case 'hybrid_search': {\n  const {\n    query,\n    weights = {},\n    filters = {},\n    limit = 10,\n  } = args;\n\n  const hybridSearch = new HybridSearchManager(\n    ctx.semanticSearch,\n    ctx.rankedSearch\n  );\n\n  const graph = await ctx.storage.loadGraph();\n\n  const results = await hybridSearch.searchWithEntities(graph, query, {\n    semanticWeight: weights.semantic ?? 0.5,\n    lexicalWeight: weights.lexical ?? 0.3,\n    symbolicWeight: weights.symbolic ?? 0.2,\n    symbolic: {\n      tags: filters.tags,\n      entityTypes: filters.entityTypes,\n      dateRange: filters.dateRange,\n      importance: filters.minImportance !== undefined || filters.maxImportance !== undefined\n        ? { min: filters.minImportance, max: filters.maxImportance }\n        : undefined,\n    },\n    limit,\n  });\n\n  return {\n    content: [{\n      type: 'text',\n      text: JSON.stringify({\n        query,\n        weights: {\n          semantic: weights.semantic ?? 0.5,\n          lexical: weights.lexical ?? 0.3,\n          symbolic: weights.symbolic ?? 0.2,\n        },\n        resultCount: results.length,\n        results: results.map(r => ({\n          name: r.entity.name,\n          entityType: r.entity.entityType,\n          scores: r.scores,\n          matchedLayers: r.matchedLayers,\n          observations: r.entity.observations.slice(0, 3),\n          tags: r.entity.tags,\n        })),\n      }, null, 2),\n    }],\n  };\n}"
+        },
+        {
+          "step": 5,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Handler implemented for hybrid_search case",
+        "HybridSearchManager instantiated with context managers",
+        "Weights correctly passed with defaults",
+        "Filters transformed to SymbolicFilters format",
+        "Response includes query, weights, resultCount, and results array",
+        "Each result includes scores, matchedLayers, truncated observations",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.2.3",
+      "category": "exports",
+      "title": "Update Search Barrel Exports",
+      "description": "Export new search classes from the search module barrel file.",
+      "status": "pending",
+      "estimatedHours": 0.25,
+      "agent": "haiku",
+      "files": ["src/search/index.ts"],
+      "testCategories": ["typecheck"],
+      "implementation": {
+        "purpose": "Make SymbolicSearch and HybridSearchManager available via the public API.",
+        "keyDecisions": [
+          "Export class and types together",
+          "Export DEFAULT_HYBRID_WEIGHTS constant"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/search/index.ts",
+          "details": "Open the search barrel export file"
+        },
+        {
+          "step": 2,
+          "action": "Add exports for new search classes at the end",
+          "code": "// Phase 11: Hybrid Search\nexport { SymbolicSearch } from './SymbolicSearch.js';\nexport type { SymbolicResult } from './SymbolicSearch.js';\nexport { HybridSearchManager, DEFAULT_HYBRID_WEIGHTS } from './HybridSearchManager.js';"
+        },
+        {
+          "step": 3,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "SymbolicSearch exported from search/index.ts",
+        "SymbolicResult type exported",
+        "HybridSearchManager exported",
+        "DEFAULT_HYBRID_WEIGHTS exported",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.2.4",
+      "category": "tests",
+      "title": "Create Integration Tests for hybrid_search",
+      "description": "Create integration tests for the hybrid_search MCP tool with real entity data.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["tests/integration/hybrid-search.test.ts"],
+      "testCategories": ["integration"],
+      "implementation": {
+        "purpose": "Verify the hybrid_search tool works end-to-end with real storage and search operations.",
+        "keyDecisions": [
+          "Test with realistic entity data",
+          "Test different weight combinations",
+          "Test filter combinations",
+          "Verify response structure"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file tests/integration/hybrid-search.test.ts",
+          "details": "Create the new test file"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach, afterEach } from 'vitest';\nimport { GraphStorage } from '../../src/core/GraphStorage.js';\nimport { HybridSearchManager } from '../../src/search/HybridSearchManager.js';\nimport { SemanticSearch } from '../../src/search/SemanticSearch.js';\nimport { RankedSearch } from '../../src/search/RankedSearch.js';\nimport { TFIDFIndexManager } from '../../src/search/TFIDFIndexManager.js';\nimport type { Entity } from '../../src/types/index.js';\nimport { promises as fs } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';"
+        },
+        {
+          "step": 3,
+          "action": "Add test suite with setup/teardown",
+          "code": "describe('hybrid_search Integration', () => {\n  let testDir: string;\n  let storage: GraphStorage;\n\n  beforeEach(async () => {\n    testDir = join(tmpdir(), `hybrid-search-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);\n    await fs.mkdir(testDir, { recursive: true });\n    storage = new GraphStorage(join(testDir, 'test.jsonl'));\n\n    // Create test entities\n    await storage.saveGraph({\n      entities: [\n        { name: 'Alice', entityType: 'person', observations: ['software engineer at TechCorp'], tags: ['tech', 'senior'], importance: 8 },\n        { name: 'Bob', entityType: 'person', observations: ['designer at DesignCo'], tags: ['creative'], importance: 5 },\n        { name: 'TechCorp', entityType: 'company', observations: ['technology company founded in 2010'], tags: ['tech', 'enterprise'], importance: 9 },\n      ] as Entity[],\n      relations: [],\n    });\n  });\n\n  afterEach(async () => {\n    try {\n      await fs.rm(testDir, { recursive: true, force: true });\n    } catch {}\n  });\n\n  // Add integration tests\n});"
+        },
+        {
+          "step": 4,
+          "action": "Add tests for hybrid search functionality",
+          "details": "Add tests covering basic search, weight customization, filter application, and response structure"
+        },
+        {
+          "step": 5,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/integration/hybrid-search.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/integration/hybrid-search.test.ts",
+        "Tests for basic hybrid search",
+        "Tests for different weight combinations",
+        "Tests for tag filters",
+        "Tests for entity type filters",
+        "Tests for importance filters",
+        "Tests verify response structure (scores, matchedLayers)",
+        "All tests pass"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "hybrid_search tool available via MCP protocol",
+    "Tool accepts query, weights, filters, limit parameters",
+    "Response includes per-layer scores and matchedLayers",
+    "New classes exported from search barrel",
+    "8+ integration tests pass",
+    "npm run typecheck passes",
+    "All existing tests pass (backward compatible)"
+  ],
+  "filesCreated": [
+    "tests/integration/hybrid-search.test.ts"
+  ],
+  "filesModified": [
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts",
+    "src/search/index.ts"
+  ],
+  "totalNewTests": 8,
+  "totalEstimatedHours": 5,
+  "dependencies": ["Sprint 11.1 (HybridSearchManager Foundation)"],
+  "notes": [
+    "CRITICAL: Handler must instantiate HybridSearchManager with context's existing search managers",
+    "Response should include enough information for debugging (per-layer scores)",
+    "Observations are truncated to first 3 to keep response size reasonable",
+    "This sprint completes the hybrid_search feature for use by AI assistants"
+  ]
+}

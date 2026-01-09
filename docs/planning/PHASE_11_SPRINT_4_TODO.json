@@ -1,0 +1,253 @@
+{
+  "phase": 11,
+  "sprint": 4,
+  "title": "Intelligent Search (smart_search)",
+  "priority": "MEDIUM",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Enables reflection-based iterative retrieval that refines results until adequate",
+  "targetMetrics": {
+    "resultAdequacy": {
+      "current": "Single-shot search, no refinement",
+      "target": "Iterative refinement until results meet adequacy threshold"
+    },
+    "queryPlanning": {
+      "current": "Manual query construction",
+      "target": "Automatic planning and execution"
+    }
+  },
+  "tasks": [
+    {
+      "id": "11.4.1",
+      "category": "search",
+      "title": "Create ReflectionManager Class",
+      "description": "Create manager for reflection-based retrieval refinement that iteratively improves search results.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/search/ReflectionManager.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Implement iterative retrieval that checks result adequacy and refines queries when results are insufficient. Based on SimpleMem's reflection-based approach.",
+        "keyDecisions": [
+          "Max iterations configurable (default: 3)",
+          "Adequacy threshold configurable (default: 0.7)",
+          "Query refinement based on missing information types",
+          "Combine results from multiple iterations"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/search/ReflectionManager.ts",
+          "details": "Create the new file in the search directory"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Reflection Manager\n *\n * Phase 11: Implements reflection-based iterative retrieval\n * that refines results until adequate.\n *\n * @module search/ReflectionManager\n */\n\nimport type {\n  ReadonlyKnowledgeGraph,\n  QueryAnalysis,\n  HybridSearchResult,\n  HybridSearchOptions,\n} from '../types/index.js';\nimport type { HybridSearchManager } from './HybridSearchManager.js';\nimport type { QueryAnalyzer } from './QueryAnalyzer.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add ReflectionOptions and ReflectionResult interfaces",
+          "code": "/**\n * Options for reflection-based retrieval.\n */\nexport interface ReflectionOptions {\n  /** Maximum number of reflection iterations (default: 3) */\n  maxIterations?: number;\n  /** Adequacy threshold 0-1 (default: 0.7) */\n  adequacyThreshold?: number;\n  /** Minimum results required (default: 3) */\n  minResults?: number;\n  /** Hybrid search options */\n  searchOptions?: Partial<HybridSearchOptions>;\n}\n\n/**\n * Result of reflection-based retrieval.\n */\nexport interface ReflectionResult {\n  results: HybridSearchResult[];\n  iterations: number;\n  adequate: boolean;\n  refinements: string[];\n  adequacyScore: number;\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add ReflectionManager class",
+          "code": "/**\n * Reflection Manager for iterative retrieval refinement.\n *\n * Implements the SimpleMem-inspired reflection loop:\n * 1. Execute initial search\n * 2. Check result adequacy\n * 3. If inadequate, refine query and repeat\n * 4. Combine results from all iterations\n *\n * @example\n * ```typescript\n * const reflection = new ReflectionManager(hybridSearch, analyzer);\n * const result = await reflection.retrieveWithReflection(\n *   graph,\n *   'What projects did Alice work on?',\n *   { maxIterations: 3 }\n * );\n * ```\n */\nexport class ReflectionManager {\n  constructor(\n    private hybridSearch: HybridSearchManager,\n    private analyzer: QueryAnalyzer\n  ) {}\n\n  /**\n   * Perform retrieval with reflection-based refinement.\n   */\n  async retrieveWithReflection(\n    graph: ReadonlyKnowledgeGraph,\n    query: string,\n    options: ReflectionOptions = {}\n  ): Promise<ReflectionResult> {\n    const {\n      maxIterations = 3,\n      adequacyThreshold = 0.7,\n      minResults = 3,\n      searchOptions = {},\n    } = options;\n\n    const allResults: HybridSearchResult[] = [];\n    const refinements: string[] = [];\n    let currentQuery = query;\n    let iteration = 0;\n    let adequacyScore = 0;\n\n    while (iteration < maxIterations) {\n      iteration++;\n      \n      // Execute search\n      const results = await this.hybridSearch.searchWithEntities(\n        graph,\n        currentQuery,\n        searchOptions\n      );\n\n      // Add new results\n      for (const result of results) {\n        if (!allResults.some(r => r.entity.name === result.entity.name)) {\n          allResults.push(result);\n        }\n      }\n\n      // Check adequacy\n      const analysis = this.analyzer.analyze(query);\n      adequacyScore = this.calculateAdequacy(allResults, analysis, minResults);\n\n      if (adequacyScore >= adequacyThreshold) {\n        break;\n      }\n\n      // Refine query if not adequate\n      const refinedQuery = this.refineQuery(currentQuery, allResults, analysis);\n      if (refinedQuery === currentQuery) {\n        // No refinement possible\n        break;\n      }\n      \n      refinements.push(refinedQuery);\n      currentQuery = refinedQuery;\n    }\n\n    return {\n      results: allResults.sort((a, b) => b.scores.combined - a.scores.combined),\n      iterations: iteration,\n      adequate: adequacyScore >= adequacyThreshold,\n      refinements,\n      adequacyScore,\n    };\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add adequacy calculation and query refinement methods",
+          "code": "  /**\n   * Calculate result adequacy score.\n   */\n  private calculateAdequacy(\n    results: HybridSearchResult[],\n    analysis: QueryAnalysis,\n    minResults: number\n  ): number {\n    let score = 0;\n    const weights = { quantity: 0.4, diversity: 0.3, relevance: 0.3 };\n\n    // Quantity: Do we have enough results?\n    const quantityScore = Math.min(results.length / minResults, 1);\n    score += quantityScore * weights.quantity;\n\n    // Diversity: Do results cover different entity types?\n    const types = new Set(results.map(r => r.entity.entityType));\n    const diversityScore = Math.min(types.size / 3, 1);\n    score += diversityScore * weights.diversity;\n\n    // Relevance: Average combined score\n    const avgScore = results.length > 0\n      ? results.reduce((sum, r) => sum + r.scores.combined, 0) / results.length\n      : 0;\n    score += avgScore * weights.relevance;\n\n    return score;\n  }\n\n  /**\n   * Refine query based on current results and analysis.\n   */\n  private refineQuery(\n    query: string,\n    results: HybridSearchResult[],\n    analysis: QueryAnalysis\n  ): string {\n    // Check what information types are missing\n    const coveredTypes = new Set<string>();\n    for (const result of results) {\n      coveredTypes.add(result.entity.entityType.toLowerCase());\n    }\n\n    // If looking for persons but no person results, refine\n    if (analysis.requiredInfoTypes.includes('person') && !coveredTypes.has('person')) {\n      return `${query} person people`;\n    }\n\n    // If temporal query but no temporal context, add time hint\n    if (analysis.temporalRange && results.length < 3) {\n      return `${query} recent history timeline`;\n    }\n\n    // Broaden query by removing constraints\n    const broader = query.replace(/\\b(only|just|exactly|specific)\\b/gi, '');\n    if (broader !== query) {\n      return broader.trim();\n    }\n\n    return query;\n  }\n}"
+        },
+        {
+          "step": 6,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "ReflectionManager class created",
+        "retrieveWithReflection method implements iterative loop",
+        "Adequacy checking with configurable threshold",
+        "Query refinement based on missing information",
+        "Results combined from all iterations",
+        "Max iteration limit prevents infinite loops",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.4.2",
+      "category": "server",
+      "title": "Implement smart_search MCP Tool",
+      "description": "Add MCP tool combining query planning, hybrid search, and reflection-based refinement.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/server/toolDefinitions.ts", "src/server/toolHandlers.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Expose intelligent search capability that automatically plans and refines queries for best results.",
+        "keyDecisions": [
+          "Orchestrate QueryAnalyzer, QueryPlanner, HybridSearch, and ReflectionManager",
+          "Return plan, iterations, and adequacy in response",
+          "Configurable reflection options"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Add tool definition to src/server/toolDefinitions.ts",
+          "code": "{\n  name: 'smart_search',\n  description: 'Intelligent search with automatic query planning and reflection-based refinement. Iteratively improves results until adequate.',\n  inputSchema: {\n    type: 'object',\n    properties: {\n      query: {\n        type: 'string',\n        description: 'Search query text',\n      },\n      maxIterations: {\n        type: 'number',\n        default: 3,\n        description: 'Maximum reflection iterations',\n      },\n      adequacyThreshold: {\n        type: 'number',\n        default: 0.7,\n        description: 'Adequacy threshold (0-1)',\n      },\n      includePlan: {\n        type: 'boolean',\n        default: true,\n        description: 'Include execution plan in response',\n      },\n      limit: {\n        type: 'number',\n        default: 10,\n        description: 'Maximum results to return',\n      },\n    },\n    required: ['query'],\n  },\n},"
+        },
+        {
+          "step": 2,
+          "action": "Add import for ReflectionManager to toolHandlers.ts",
+          "code": "import { ReflectionManager } from '../search/ReflectionManager.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add handler to toolHandlers.ts",
+          "code": "case 'smart_search': {\n  const {\n    query,\n    maxIterations = 3,\n    adequacyThreshold = 0.7,\n    includePlan = true,\n    limit = 10,\n  } = args;\n\n  const analyzer = new QueryAnalyzer();\n  const analysis = analyzer.analyze(query);\n  \n  let plan = undefined;\n  if (includePlan) {\n    const planner = new QueryPlanner();\n    plan = planner.createPlan(query, analysis);\n  }\n\n  const hybridSearch = new HybridSearchManager(\n    ctx.semanticSearch,\n    ctx.rankedSearch\n  );\n  \n  const reflection = new ReflectionManager(hybridSearch, analyzer);\n  const graph = await ctx.storage.loadGraph();\n  \n  const result = await reflection.retrieveWithReflection(graph, query, {\n    maxIterations,\n    adequacyThreshold,\n    searchOptions: { limit },\n  });\n\n  return {\n    content: [{\n      type: 'text',\n      text: JSON.stringify({\n        query,\n        analysis: {\n          questionType: analysis.questionType,\n          complexity: analysis.complexity,\n          persons: analysis.persons,\n          temporalRange: analysis.temporalRange,\n        },\n        plan,\n        reflection: {\n          iterations: result.iterations,\n          adequate: result.adequate,\n          adequacyScore: result.adequacyScore,\n          refinements: result.refinements,\n        },\n        resultCount: result.results.length,\n        results: result.results.slice(0, limit).map(r => ({\n          name: r.entity.name,\n          entityType: r.entity.entityType,\n          scores: r.scores,\n          matchedLayers: r.matchedLayers,\n          observations: r.entity.observations.slice(0, 3),\n        })),\n      }, null, 2),\n    }],\n  };\n}"
+        },
+        {
+          "step": 4,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "smart_search tool definition added",
+        "Handler orchestrates all components",
+        "Response includes analysis, plan, reflection info, and results",
+        "Configurable maxIterations and adequacyThreshold",
+        "npm run typecheck passes"
+      ]
+    },
+    {
+      "id": "11.4.3",
+      "category": "tests",
+      "title": "Create smart_search Integration Tests",
+      "description": "Create integration tests for smart_search with reflection iterations.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["tests/integration/smart-search.test.ts"],
+      "testCategories": ["integration"],
+      "implementation": {
+        "purpose": "Verify smart_search correctly plans, executes, and refines queries across iterations.",
+        "keyDecisions": [
+          "Test with scenarios requiring multiple iterations",
+          "Test adequacy calculation",
+          "Test early termination when adequate"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file tests/integration/smart-search.test.ts",
+          "details": "Create the new test file"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach, afterEach } from 'vitest';\nimport { GraphStorage } from '../../src/core/GraphStorage.js';\nimport { HybridSearchManager } from '../../src/search/HybridSearchManager.js';\nimport { ReflectionManager } from '../../src/search/ReflectionManager.js';\nimport { QueryAnalyzer } from '../../src/search/QueryAnalyzer.js';\nimport { RankedSearch } from '../../src/search/RankedSearch.js';\nimport { TFIDFIndexManager } from '../../src/search/TFIDFIndexManager.js';\nimport type { Entity } from '../../src/types/index.js';\nimport { promises as fs } from 'fs';\nimport { join } from 'path';\nimport { tmpdir } from 'os';"
+        },
+        {
+          "step": 3,
+          "action": "Add test suite",
+          "code": "describe('smart_search Integration', () => {\n  let testDir: string;\n  let storage: GraphStorage;\n\n  beforeEach(async () => {\n    testDir = join(tmpdir(), `smart-search-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);\n    await fs.mkdir(testDir, { recursive: true });\n    storage = new GraphStorage(join(testDir, 'test.jsonl'));\n\n    await storage.saveGraph({\n      entities: [\n        { name: 'Alice', entityType: 'person', observations: ['software engineer', 'works on ProjectX'], tags: ['tech'] },\n        { name: 'Bob', entityType: 'person', observations: ['designer', 'created UI for ProjectY'], tags: ['design'] },\n        { name: 'ProjectX', entityType: 'project', observations: ['AI research project', 'started 2025'], tags: ['ai'] },\n        { name: 'ProjectY', entityType: 'project', observations: ['Mobile app project', 'launched 2024'], tags: ['mobile'] },\n      ] as Entity[],\n      relations: [],\n    });\n  });\n\n  afterEach(async () => {\n    try {\n      await fs.rm(testDir, { recursive: true, force: true });\n    } catch {}\n  });\n\n  // Add tests for reflection iterations, adequacy, early termination\n});"
+        },
+        {
+          "step": 4,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/integration/smart-search.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created",
+        "Tests for query planning execution",
+        "Tests for reflection iterations",
+        "Tests for result adequacy checking",
+        "Tests for early termination",
+        "All tests pass"
+      ]
+    },
+    {
+      "id": "11.4.4",
+      "category": "docs",
+      "title": "Update Documentation",
+      "description": "Update CLAUDE.md with new intelligent search features and tool count.",
+      "status": "pending",
+      "estimatedHours": 1,
+      "agent": "haiku",
+      "files": ["CLAUDE.md"],
+      "testCategories": [],
+      "implementation": {
+        "purpose": "Document the new intelligent search capabilities and update tool count.",
+        "keyDecisions": [
+          "Add section on Three-Layer Hybrid Search",
+          "Document smart_search workflow",
+          "Update tool count (58 tools)"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open CLAUDE.md",
+          "details": "Open the documentation file"
+        },
+        {
+          "step": 2,
+          "action": "Update tool count in overview",
+          "details": "Change '55 tools' to '58 tools' in the overview section"
+        },
+        {
+          "step": 3,
+          "action": "Add section on Intelligent Search",
+          "details": "Add documentation for hybrid_search, analyze_query, smart_search tools with usage examples"
+        },
+        {
+          "step": 4,
+          "action": "Update Tool Categories table",
+          "details": "Add new tools to the Search category or create new Intelligent Search category"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Tool count updated to 58",
+        "New tools documented with descriptions",
+        "Usage examples provided",
+        "Tool Categories table updated"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "ReflectionManager implements iterative refinement",
+    "smart_search tool combines planning and reflection",
+    "Max iteration limits prevent infinite loops",
+    "Adequacy scoring determines when to stop",
+    "Documentation updated",
+    "npm run typecheck passes"
+  ],
+  "filesCreated": [
+    "src/search/ReflectionManager.ts",
+    "tests/integration/smart-search.test.ts"
+  ],
+  "filesModified": [
+    "src/server/toolDefinitions.ts",
+    "src/server/toolHandlers.ts",
+    "CLAUDE.md"
+  ],
+  "totalNewTests": 10,
+  "totalEstimatedHours": 6,
+  "dependencies": ["Sprint 11.3 (Query Analysis Infrastructure)"],
+  "notes": [
+    "Reflection loop based on SimpleMem's iterative retrieval approach",
+    "Max iterations configurable to balance quality vs. performance",
+    "Adequacy score combines quantity, diversity, and relevance",
+    "Query refinement adds hints based on missing information types"
+  ]
+}

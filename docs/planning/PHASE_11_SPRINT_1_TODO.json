@@ -1,0 +1,319 @@
+{
+  "phase": 11,
+  "sprint": 1,
+  "title": "HybridSearchManager Foundation",
+  "priority": "HIGH",
+  "effort": "6 hours",
+  "status": "pending",
+  "impact": "Foundation for three-layer hybrid search architecture combining semantic, lexical, and symbolic signals",
+  "targetMetrics": {
+    "retrievalAccuracy": {
+      "current": "Single-signal search",
+      "target": "Multi-signal fusion with 2-5x better recall"
+    },
+    "searchCoverage": {
+      "current": "Separate search tools",
+      "target": "Unified hybrid search with per-layer scores"
+    }
+  },
+  "tasks": [
+    {
+      "id": "11.1.1",
+      "category": "types",
+      "title": "Create Hybrid Search Types",
+      "description": "Define TypeScript interfaces for hybrid search including HybridSearchOptions, SymbolicFilters, and HybridSearchResult in src/types/types.ts.",
+      "status": "pending",
+      "estimatedHours": 0.5,
+      "agent": "haiku",
+      "files": ["src/types/types.ts"],
+      "testCategories": ["typecheck"],
+      "implementation": {
+        "purpose": "Define type-safe interfaces for the three-layer hybrid search system. These types enable combining semantic, lexical, and symbolic search signals with configurable weights.",
+        "keyDecisions": [
+          "HybridSearchOptions contains weights for each layer (semantic, lexical, symbolic)",
+          "SymbolicFilters provides structured metadata filtering (tags, types, dates, importance)",
+          "HybridSearchResult includes per-layer scores for transparency",
+          "Weights should sum to 1.0 (normalized automatically)"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Open src/types/types.ts",
+          "details": "Navigate to the types file which contains all type definitions for the project"
+        },
+        {
+          "step": 2,
+          "action": "Find the end of the file (before any closing exports)",
+          "details": "Scroll to the bottom of the file. Add new interfaces after existing Phase 10 types"
+        },
+        {
+          "step": 3,
+          "action": "Add section comment for Hybrid Search Types",
+          "details": "Add: // ==================== Hybrid Search Types (Phase 11) ===================="
+        },
+        {
+          "step": 4,
+          "action": "Add HybridSearchOptions interface",
+          "code": "/**\n * Options for hybrid search combining multiple signals.\n */\nexport interface HybridSearchOptions {\n  /** Weight for semantic similarity (0-1, default: 0.5) */\n  semanticWeight: number;\n  /** Weight for lexical matching (0-1, default: 0.3) */\n  lexicalWeight: number;\n  /** Weight for symbolic/metadata matching (0-1, default: 0.2) */\n  symbolicWeight: number;\n  /** Semantic layer options */\n  semantic?: {\n    minSimilarity?: number;\n    topK?: number;\n  };\n  /** Lexical layer options */\n  lexical?: {\n    useStopwords?: boolean;\n    useStemming?: boolean;\n  };\n  /** Symbolic layer filters */\n  symbolic?: SymbolicFilters;\n  /** Maximum results to return */\n  limit?: number;\n}"
+        },
+        {
+          "step": 5,
+          "action": "Add SymbolicFilters interface",
+          "code": "/**\n * Symbolic/metadata filters for search.\n */\nexport interface SymbolicFilters {\n  tags?: string[];\n  entityTypes?: string[];\n  dateRange?: { start: string; end: string };\n  importance?: { min?: number; max?: number };\n  parentId?: string;\n  hasObservations?: boolean;\n}"
+        },
+        {
+          "step": 6,
+          "action": "Add HybridSearchResult interface",
+          "code": "/**\n * Result from hybrid search with per-layer scores.\n */\nexport interface HybridSearchResult {\n  entity: Entity;\n  scores: {\n    semantic: number;\n    lexical: number;\n    symbolic: number;\n    combined: number;\n  };\n  matchedLayers: ('semantic' | 'lexical' | 'symbolic')[];\n}"
+        },
+        {
+          "step": 7,
+          "action": "Run TypeScript compilation to verify",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "HybridSearchOptions interface defined with all weight options",
+        "SymbolicFilters interface defined with all filter types",
+        "HybridSearchResult interface defined with per-layer scores",
+        "All interfaces have JSDoc documentation",
+        "npm run typecheck passes with no errors"
+      ]
+    },
+    {
+      "id": "11.1.2",
+      "category": "search",
+      "title": "Create SymbolicSearch Class",
+      "description": "Create the symbolic/metadata search layer that filters entities using structured predicates on tags, types, dates, importance, and hierarchy.",
+      "status": "pending",
+      "estimatedHours": 1.5,
+      "agent": "haiku",
+      "files": ["src/search/SymbolicSearch.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Provide metadata-based filtering as the third layer of hybrid search. Filters entities using structured predicates rather than text matching.",
+        "keyDecisions": [
+          "All filters are AND-combined (entity must match all specified filters)",
+          "Tag matching is case-insensitive",
+          "Score based on proportion of filters matched",
+          "Helper methods for common single-filter queries"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/search/SymbolicSearch.ts",
+          "details": "Create the new file in the search directory"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Symbolic Search Layer\n *\n * Phase 11: Provides metadata-based filtering using structured predicates.\n * Part of the three-layer hybrid search architecture.\n *\n * @module search/SymbolicSearch\n */\n\nimport type { Entity, SymbolicFilters } from '../types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add SymbolicResult interface",
+          "code": "/**\n * Result from symbolic search with match score.\n */\nexport interface SymbolicResult {\n  entity: Entity;\n  score: number;\n  matchedFilters: string[];\n}"
+        },
+        {
+          "step": 4,
+          "action": "Add SymbolicSearch class with search method",
+          "code": "/**\n * Symbolic Search provides metadata-based filtering.\n *\n * Filters entities using structured predicates on tags, types,\n * dates, importance, and hierarchy.\n *\n * @example\n * ```typescript\n * const symbolic = new SymbolicSearch();\n * const results = symbolic.search(entities, {\n *   tags: ['important'],\n *   entityTypes: ['person'],\n *   importance: { min: 5 }\n * });\n * ```\n */\nexport class SymbolicSearch {\n  /**\n   * Filter entities using structured metadata predicates.\n   * All filters are AND-combined.\n   *\n   * @param entities - Entities to filter\n   * @param filters - Symbolic filter criteria\n   * @returns Filtered entities with match scores\n   */\n  search(entities: Entity[], filters: SymbolicFilters): SymbolicResult[] {\n    const results: SymbolicResult[] = [];\n\n    for (const entity of entities) {\n      const { matches, score, matchedFilters } = this.evaluateFilters(entity, filters);\n      if (matches) {\n        results.push({ entity, score, matchedFilters });\n      }\n    }\n\n    // Sort by score descending\n    return results.sort((a, b) => b.score - a.score);\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add evaluateFilters private method",
+          "code": "  /**\n   * Evaluate all filters against an entity.\n   */\n  private evaluateFilters(\n    entity: Entity,\n    filters: SymbolicFilters\n  ): { matches: boolean; score: number; matchedFilters: string[] } {\n    const matchedFilters: string[] = [];\n    let totalFilters = 0;\n    let matchedCount = 0;\n\n    // Tag filter\n    if (filters.tags && filters.tags.length > 0) {\n      totalFilters++;\n      const entityTags = entity.tags ?? [];\n      const matchingTags = filters.tags.filter(t =>\n        entityTags.some(et => et.toLowerCase() === t.toLowerCase())\n      );\n      if (matchingTags.length > 0) {\n        matchedCount++;\n        matchedFilters.push(`tags:${matchingTags.join(',')}`);\n      } else {\n        return { matches: false, score: 0, matchedFilters: [] };\n      }\n    }\n\n    // Entity type filter\n    if (filters.entityTypes && filters.entityTypes.length > 0) {\n      totalFilters++;\n      if (filters.entityTypes.some(t =>\n        t.toLowerCase() === entity.entityType.toLowerCase()\n      )) {\n        matchedCount++;\n        matchedFilters.push(`type:${entity.entityType}`);\n      } else {\n        return { matches: false, score: 0, matchedFilters: [] };\n      }\n    }\n\n    // Date range filter\n    if (filters.dateRange) {\n      totalFilters++;\n      const entityDate = entity.createdAt || entity.lastModified;\n      if (entityDate) {\n        const date = new Date(entityDate);\n        const start = filters.dateRange.start ? new Date(filters.dateRange.start) : null;\n        const end = filters.dateRange.end ? new Date(filters.dateRange.end) : null;\n\n        const inRange = (!start || date >= start) && (!end || date <= end);\n        if (inRange) {\n          matchedCount++;\n          matchedFilters.push('dateRange');\n        } else {\n          return { matches: false, score: 0, matchedFilters: [] };\n        }\n      }\n    }\n\n    // Importance filter\n    if (filters.importance) {\n      totalFilters++;\n      const importance = entity.importance ?? 5;\n      const { min, max } = filters.importance;\n      const inRange = (min === undefined || importance >= min) &&\n                     (max === undefined || importance <= max);\n      if (inRange) {\n        matchedCount++;\n        matchedFilters.push(`importance:${importance}`);\n      } else {\n        return { matches: false, score: 0, matchedFilters: [] };\n      }\n    }\n\n    // Parent filter\n    if (filters.parentId !== undefined) {\n      totalFilters++;\n      if (entity.parentId === filters.parentId) {\n        matchedCount++;\n        matchedFilters.push(`parent:${filters.parentId}`);\n      } else {\n        return { matches: false, score: 0, matchedFilters: [] };\n      }\n    }\n\n    // Has observations filter\n    if (filters.hasObservations !== undefined) {\n      totalFilters++;\n      const hasObs = entity.observations.length > 0;\n      if (hasObs === filters.hasObservations) {\n        matchedCount++;\n        matchedFilters.push('hasObservations');\n      } else {\n        return { matches: false, score: 0, matchedFilters: [] };\n      }\n    }\n\n    // If no filters specified, match all with base score\n    if (totalFilters === 0) {\n      return { matches: true, score: 0.5, matchedFilters: [] };\n    }\n\n    // Score based on proportion of filters matched\n    const score = matchedCount / totalFilters;\n    return { matches: true, score, matchedFilters };\n  }"
+        },
+        {
+          "step": 6,
+          "action": "Add helper methods",
+          "code": "  /**\n   * Get entities matching a specific tag.\n   */\n  byTag(entities: Entity[], tag: string): Entity[] {\n    return entities.filter(e =>\n      e.tags?.some(t => t.toLowerCase() === tag.toLowerCase())\n    );\n  }\n\n  /**\n   * Get entities of a specific type.\n   */\n  byType(entities: Entity[], entityType: string): Entity[] {\n    return entities.filter(e =>\n      e.entityType.toLowerCase() === entityType.toLowerCase()\n    );\n  }\n\n  /**\n   * Get entities within importance range.\n   */\n  byImportance(entities: Entity[], min: number, max: number): Entity[] {\n    return entities.filter(e => {\n      const imp = e.importance ?? 5;\n      return imp >= min && imp <= max;\n    });\n  }\n}"
+        },
+        {
+          "step": 7,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "SymbolicSearch class created with search() method",
+        "All filter types implemented (tags, types, dates, importance, parent, hasObservations)",
+        "Filters are AND-combined",
+        "Score calculated based on filter match proportion",
+        "Helper methods (byTag, byType, byImportance) implemented",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.1.3",
+      "category": "search",
+      "title": "Create HybridSearchManager Class",
+      "description": "Create the main hybrid search orchestrator that combines semantic, lexical, and symbolic search layers with configurable weights.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["src/search/HybridSearchManager.ts"],
+      "testCategories": ["unit", "integration"],
+      "implementation": {
+        "purpose": "Orchestrate the three search layers (semantic, lexical, symbolic) and merge their results using weighted scoring. This is the core of the hybrid search system.",
+        "keyDecisions": [
+          "Execute all three layers in parallel for performance",
+          "Normalize weights automatically to sum to 1.0",
+          "Gracefully handle failures in individual layers",
+          "Track which layers contributed to each result"
+        ],
+        "existingCodeContext": "SemanticSearch exists in src/search/SemanticSearch.ts, RankedSearch (TF-IDF) exists in src/search/RankedSearch.ts. SymbolicSearch created in task 11.1.2."
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create new file src/search/HybridSearchManager.ts",
+          "details": "Create the new file in the search directory"
+        },
+        {
+          "step": 2,
+          "action": "Add file header and imports",
+          "code": "/**\n * Hybrid Search Manager\n *\n * Phase 11: Orchestrates three-layer hybrid search combining\n * semantic, lexical, and symbolic signals.\n *\n * @module search/HybridSearchManager\n */\n\nimport type {\n  Entity,\n  HybridSearchOptions,\n  HybridSearchResult,\n  ReadonlyKnowledgeGraph,\n} from '../types/index.js';\nimport type { SemanticSearch } from './SemanticSearch.js';\nimport type { RankedSearch } from './RankedSearch.js';\nimport { SymbolicSearch } from './SymbolicSearch.js';\nimport { SEMANTIC_SEARCH_LIMITS } from '../utils/constants.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add default weights constant",
+          "code": "/**\n * Default weights for hybrid search layers.\n */\nexport const DEFAULT_HYBRID_WEIGHTS = {\n  semantic: 0.5,\n  lexical: 0.3,\n  symbolic: 0.2,\n};"
+        },
+        {
+          "step": 4,
+          "action": "Add HybridSearchManager class with constructor",
+          "code": "/**\n * Hybrid Search Manager\n *\n * Combines three search layers:\n * 1. Semantic: Vector similarity via embeddings\n * 2. Lexical: Keyword matching via TF-IDF/BM25\n * 3. Symbolic: Structured metadata filtering\n *\n * @example\n * ```typescript\n * const hybrid = new HybridSearchManager(semanticSearch, rankedSearch);\n * const results = await hybrid.search(graph, 'machine learning', {\n *   semanticWeight: 0.5,\n *   lexicalWeight: 0.3,\n *   symbolicWeight: 0.2,\n *   symbolic: { tags: ['ai'] }\n * });\n * ```\n */\nexport class HybridSearchManager {\n  private symbolicSearch: SymbolicSearch;\n\n  constructor(\n    private semanticSearch: SemanticSearch,\n    private rankedSearch: RankedSearch\n  ) {\n    this.symbolicSearch = new SymbolicSearch();\n  }"
+        },
+        {
+          "step": 5,
+          "action": "Add main search method",
+          "code": "  /**\n   * Perform hybrid search combining all three layers.\n   *\n   * @param graph - Knowledge graph to search\n   * @param query - Search query text\n   * @param options - Hybrid search options with weights\n   * @returns Combined and ranked results\n   */\n  async search(\n    graph: ReadonlyKnowledgeGraph,\n    query: string,\n    options: Partial<HybridSearchOptions> = {}\n  ): Promise<HybridSearchResult[]> {\n    const {\n      semanticWeight = DEFAULT_HYBRID_WEIGHTS.semantic,\n      lexicalWeight = DEFAULT_HYBRID_WEIGHTS.lexical,\n      symbolicWeight = DEFAULT_HYBRID_WEIGHTS.symbolic,\n      semantic = {},\n      lexical = {},\n      symbolic = {},\n      limit = SEMANTIC_SEARCH_LIMITS.DEFAULT_LIMIT,\n    } = options;\n\n    // Normalize weights\n    const totalWeight = semanticWeight + lexicalWeight + symbolicWeight;\n    const normSemantic = semanticWeight / totalWeight;\n    const normLexical = lexicalWeight / totalWeight;\n    const normSymbolic = symbolicWeight / totalWeight;\n\n    // Execute searches in parallel\n    const [semanticResults, lexicalResults, symbolicResults] = await Promise.all([\n      this.executeSemanticSearch(graph, query, semantic, limit * 2),\n      this.executeLexicalSearch(graph, query, lexical, limit * 2),\n      this.executeSymbolicSearch(graph.entities, symbolic),\n    ]);\n\n    // Merge results\n    const merged = this.mergeResults(\n      semanticResults,\n      lexicalResults,\n      symbolicResults,\n      { semantic: normSemantic, lexical: normLexical, symbolic: normSymbolic }\n    );\n\n    // Sort by combined score and limit\n    return merged\n      .sort((a, b) => b.scores.combined - a.scores.combined)\n      .slice(0, limit);\n  }"
+        },
+        {
+          "step": 6,
+          "action": "Add private layer execution methods",
+          "code": "  /**\n   * Execute semantic search layer.\n   */\n  private async executeSemanticSearch(\n    graph: ReadonlyKnowledgeGraph,\n    query: string,\n    options: { minSimilarity?: number; topK?: number },\n    limit: number\n  ): Promise<Map<string, number>> {\n    const results = new Map<string, number>();\n\n    try {\n      const semanticResults = await this.semanticSearch.search(\n        graph,\n        query,\n        options.topK ?? limit,\n        options.minSimilarity ?? 0\n      );\n\n      for (const result of semanticResults) {\n        results.set(result.entity.name, result.similarity);\n      }\n    } catch {\n      // Semantic search may fail if not indexed\n    }\n\n    return results;\n  }\n\n  /**\n   * Execute lexical search layer (TF-IDF/BM25).\n   */\n  private async executeLexicalSearch(\n    graph: ReadonlyKnowledgeGraph,\n    query: string,\n    _options: { useStopwords?: boolean; useStemming?: boolean },\n    limit: number\n  ): Promise<Map<string, number>> {\n    const results = new Map<string, number>();\n\n    try {\n      const lexicalResults = await this.rankedSearch.search(graph, query, limit);\n\n      // Normalize scores to 0-1 range\n      const maxScore = Math.max(...lexicalResults.map(r => r.score), 1);\n      for (const result of lexicalResults) {\n        results.set(result.entity.name, result.score / maxScore);\n      }\n    } catch {\n      // Lexical search may fail\n    }\n\n    return results;\n  }\n\n  /**\n   * Execute symbolic search layer.\n   */\n  private executeSymbolicSearch(\n    entities: Entity[],\n    filters: HybridSearchOptions['symbolic']\n  ): Map<string, number> {\n    const results = new Map<string, number>();\n\n    if (!filters || Object.keys(filters).length === 0) {\n      // No symbolic filters, give all entities base score\n      for (const entity of entities) {\n        results.set(entity.name, 0.5);\n      }\n      return results;\n    }\n\n    const symbolicResults = this.symbolicSearch.search(entities, filters);\n    for (const result of symbolicResults) {\n      results.set(result.entity.name, result.score);\n    }\n\n    return results;\n  }"
+        },
+        {
+          "step": 7,
+          "action": "Add mergeResults method",
+          "code": "  /**\n   * Merge results from all three layers.\n   */\n  private mergeResults(\n    semanticScores: Map<string, number>,\n    lexicalScores: Map<string, number>,\n    symbolicScores: Map<string, number>,\n    weights: { semantic: number; lexical: number; symbolic: number }\n  ): HybridSearchResult[] {\n    // Collect all unique entity names\n    const allNames = new Set([\n      ...semanticScores.keys(),\n      ...lexicalScores.keys(),\n      ...symbolicScores.keys(),\n    ]);\n\n    const results: HybridSearchResult[] = [];\n\n    for (const name of allNames) {\n      const semantic = semanticScores.get(name) ?? 0;\n      const lexical = lexicalScores.get(name) ?? 0;\n      const symbolic = symbolicScores.get(name) ?? 0;\n\n      const combined =\n        semantic * weights.semantic +\n        lexical * weights.lexical +\n        symbolic * weights.symbolic;\n\n      const matchedLayers: ('semantic' | 'lexical' | 'symbolic')[] = [];\n      if (semantic > 0) matchedLayers.push('semantic');\n      if (lexical > 0) matchedLayers.push('lexical');\n      if (symbolic > 0) matchedLayers.push('symbolic');\n\n      // Skip if no layers matched\n      if (matchedLayers.length === 0) continue;\n\n      results.push({\n        entity: { name, entityType: '', observations: [] } as Entity,\n        scores: { semantic, lexical, symbolic, combined },\n        matchedLayers,\n      });\n    }\n\n    return results;\n  }"
+        },
+        {
+          "step": 8,
+          "action": "Add searchWithEntities method for full entity resolution",
+          "code": "  /**\n   * Search with full entity resolution.\n   */\n  async searchWithEntities(\n    graph: ReadonlyKnowledgeGraph,\n    query: string,\n    options: Partial<HybridSearchOptions> = {}\n  ): Promise<HybridSearchResult[]> {\n    const results = await this.search(graph, query, options);\n\n    // Resolve entity objects\n    const entityMap = new Map(graph.entities.map(e => [e.name, e]));\n\n    return results\n      .map(r => ({\n        ...r,\n        entity: entityMap.get(r.entity.name) ?? r.entity,\n      }))\n      .filter(r => entityMap.has(r.entity.name));\n  }\n}"
+        },
+        {
+          "step": 9,
+          "action": "Run TypeScript compilation",
+          "details": "Run: npm run typecheck"
+        }
+      ],
+      "acceptanceCriteria": [
+        "HybridSearchManager class created with constructor",
+        "search() method executes all three layers in parallel",
+        "Weight normalization implemented",
+        "Results merged with combined scores",
+        "Per-layer scores tracked in results",
+        "searchWithEntities() resolves full entity objects",
+        "Graceful error handling for layer failures",
+        "TypeScript compilation passes"
+      ]
+    },
+    {
+      "id": "11.1.4",
+      "category": "tests",
+      "title": "Create HybridSearchManager Unit Tests",
+      "description": "Create comprehensive unit tests for HybridSearchManager and SymbolicSearch classes.",
+      "status": "pending",
+      "estimatedHours": 2,
+      "agent": "haiku",
+      "files": ["tests/unit/search/HybridSearchManager.test.ts"],
+      "testCategories": ["unit"],
+      "implementation": {
+        "purpose": "Verify hybrid search correctly combines all three layers, handles edge cases, and produces accurate combined scores.",
+        "keyDecisions": [
+          "Mock SemanticSearch and RankedSearch dependencies",
+          "Test SymbolicSearch filtering in isolation",
+          "Test weight normalization",
+          "Test combined score calculation"
+        ]
+      },
+      "stepByStep": [
+        {
+          "step": 1,
+          "action": "Create test file tests/unit/search/HybridSearchManager.test.ts",
+          "details": "Create the new test file"
+        },
+        {
+          "step": 2,
+          "action": "Add imports and setup",
+          "code": "import { describe, it, expect, beforeEach, vi } from 'vitest';\nimport { HybridSearchManager, DEFAULT_HYBRID_WEIGHTS } from '../../../src/search/HybridSearchManager.js';\nimport { SymbolicSearch } from '../../../src/search/SymbolicSearch.js';\nimport type { Entity, ReadonlyKnowledgeGraph } from '../../../src/types/index.js';"
+        },
+        {
+          "step": 3,
+          "action": "Add HybridSearchManager test suite",
+          "code": "describe('HybridSearchManager', () => {\n  const mockSemanticSearch = {\n    search: vi.fn(),\n  };\n  const mockRankedSearch = {\n    search: vi.fn(),\n  };\n\n  let hybridSearch: HybridSearchManager;\n  let testGraph: ReadonlyKnowledgeGraph;\n\n  const createEntity = (name: string, type: string, obs: string[] = [], tags: string[] = []): Entity => ({\n    name,\n    entityType: type,\n    observations: obs,\n    tags,\n    createdAt: new Date().toISOString(),\n    lastModified: new Date().toISOString(),\n  });\n\n  beforeEach(() => {\n    vi.clearAllMocks();\n    hybridSearch = new HybridSearchManager(\n      mockSemanticSearch as any,\n      mockRankedSearch as any\n    );\n    testGraph = {\n      entities: [\n        createEntity('Alice', 'person', ['software engineer'], ['tech']),\n        createEntity('Bob', 'person', ['designer'], ['creative']),\n        createEntity('TechCorp', 'company', ['technology company'], ['tech']),\n      ],\n      relations: [],\n    };\n    mockSemanticSearch.search.mockResolvedValue([]);\n    mockRankedSearch.search.mockResolvedValue([]);\n  });\n\n  // Add tests for search functionality, weight normalization, etc.\n});"
+        },
+        {
+          "step": 4,
+          "action": "Add SymbolicSearch test suite",
+          "code": "describe('SymbolicSearch', () => {\n  let symbolicSearch: SymbolicSearch;\n  let testEntities: Entity[];\n\n  beforeEach(() => {\n    symbolicSearch = new SymbolicSearch();\n    testEntities = [\n      {\n        name: 'Alice',\n        entityType: 'person',\n        observations: ['works at tech'],\n        tags: ['engineer', 'senior'],\n        importance: 8,\n        createdAt: '2026-01-01T00:00:00Z',\n        lastModified: '2026-01-01T00:00:00Z',\n      },\n      {\n        name: 'Bob',\n        entityType: 'person',\n        observations: ['designer'],\n        tags: ['creative'],\n        importance: 5,\n        createdAt: '2025-06-01T00:00:00Z',\n        lastModified: '2025-06-01T00:00:00Z',\n      },\n      {\n        name: 'TechCorp',\n        entityType: 'company',\n        observations: ['tech company'],\n        tags: ['tech', 'enterprise'],\n        importance: 9,\n        createdAt: '2024-01-01T00:00:00Z',\n        lastModified: '2024-01-01T00:00:00Z',\n      },\n    ];\n  });\n\n  // Add tests for tag filtering, type filtering, importance filtering, etc.\n});"
+        },
+        {
+          "step": 5,
+          "action": "Run the tests",
+          "details": "Run: npx vitest run tests/unit/search/HybridSearchManager.test.ts"
+        }
+      ],
+      "acceptanceCriteria": [
+        "Test file created at tests/unit/search/HybridSearchManager.test.ts",
+        "Tests for HybridSearchManager search functionality",
+        "Tests for weight normalization",
+        "Tests for SymbolicSearch filtering (tags, types, importance)",
+        "Tests for combined filters (AND logic)",
+        "Tests for helper methods (byTag, byType, byImportance)",
+        "All tests pass with npx vitest run"
+      ]
+    }
+  ],
+  "successCriteria": [
+    "All four tasks completed with passing tests",
+    "HybridSearchOptions, SymbolicFilters, HybridSearchResult interfaces defined",
+    "SymbolicSearch class filters entities by metadata",
+    "HybridSearchManager orchestrates all three search layers",
+    "Weight normalization works correctly",
+    "Per-layer scores tracked and returned",
+    "npm run typecheck passes",
+    "All existing tests pass (backward compatible)"
+  ],
+  "filesCreated": [
+    "src/search/SymbolicSearch.ts",
+    "src/search/HybridSearchManager.ts",
+    "tests/unit/search/HybridSearchManager.test.ts"
+  ],
+  "filesModified": [
+    "src/types/types.ts",
+    "src/core/ManagerContext.ts"
+  ],
+  "totalNewTests": 20,
+  "totalEstimatedHours": 6,
+  "dependencies": [
+    "Phase 10 complete",
+    "SemanticSearch operational",
+    "RankedSearch (TF-IDF) operational"
+  ],
+  "notes": [
+    "CRITICAL: All three layers execute in parallel for performance",
+    "Weights are normalized automatically - user doesn't need to ensure sum = 1.0",
+    "Symbolic layer gives base score (0.5) when no filters specified",
+    "Individual layer failures are handled gracefully without failing entire search",
+    "This sprint provides foundation for Sprint 2 (hybrid_search MCP tool)",
+    "IMPORTANT: Must add 'rankedSearch' getter to ManagerContext for Sprint 2 handlers to work. Add after semanticSearch getter: get rankedSearch(): RankedSearch { return (this._rankedSearch ??= new RankedSearch(this.storage)); }",
+    "NOTE: Current tool count is 61 (not 55 as stated in CLAUDE.md). Phase 11 will bring total to 66 tools."
+  ]
+}

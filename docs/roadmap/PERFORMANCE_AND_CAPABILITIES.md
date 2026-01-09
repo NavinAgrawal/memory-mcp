@@ -1,1751 +1,1308 @@
-# Performance & Capabilities Improvement Roadmap
+# Performance & Optimization Roadmap
 
-**Version:** 1.0.0
-**Created:** 2026-01-02
-**Current Version:** 8.50.24
-**Target Version:** 9.0.0
+**Version:** 3.0.0
+**Last Updated:** 2026-01-08
+**Current Version:** 9.8.3
+**Target Version:** 12.0.0
 
 ---
 
 ## Executive Summary
 
-This roadmap defines a comprehensive plan to improve memory-mcp's speed and capabilities across 5 phases. The improvements target:
+This document defines the performance optimization roadmap for memory-mcp. All content focuses on **speed, efficiency, scalability, and resource optimization** - not new features or tools.
 
-1. **Search Performance** - 40-70% faster repeated queries through caching
-2. **Database Optimization** - O(n) → O(log n) for range queries via indexes
-3. **Graph Algorithms** - New traversal capabilities (shortest path, centrality, components)
-4. **Storage Efficiency** - 50-70% space reduction via Brotli compression
-5. **Semantic Search** - AI-powered similarity search with embeddings
+*Note: This is a **parallel development track** to `FUTURE_FEATURES.md`. Both documents use Phase 6+ numbering independently. Performance phases can be implemented alongside or after feature phases.*
 
-**Total Estimated Effort:** 80-100 hours
-**Expected Performance Gain:** 2-5x for common operations
+**Performance Targets:**
+| Metric | Current (v9.8.3) | Target (v12.0) | Improvement |
+|--------|------------------|----------------|-------------|
+| Simple search latency | 50ms | 20ms | 2.5x |
+| Complex search latency | 200ms | 100ms | 2x |
+| Token efficiency | 1x | 30x | 30x |
+| Memory (10k entities) | 150MB | 75MB | 2x |
+| Concurrent throughput | 20 qps | 100 qps | 5x |
+| Bulk entity creation (1000) | 2000ms | 500ms | 4x |
+
+**Benchmarks Inspiration** (SimpleMem research):
+| Metric | SimpleMem | Mem0 | Improvement |
+|--------|-----------|------|-------------|
+| Construction Time | 92.6s | 1350.9s | 14.6x faster |
+| Retrieval Time | 388.3s | 583.4s | 1.5x faster |
+| Token Usage | ~550 | ~3000+ | 30x reduction |
 
 ---
 
 ## Table of Contents
 
-1. [Phase 1: Quick Wins (8 hours)](#phase-1-quick-wins)
-2. [Phase 2: Search Optimization (12 hours)](#phase-2-search-optimization)
-3. [Phase 3: Graph Algorithms (24 hours)](#phase-3-graph-algorithms)
-4. [Phase 4: Brotli Compression (31 hours)](#phase-4-brotli-compression)
-5. [Phase 5: Semantic Search (25 hours)](#phase-5-semantic-search)
-6. [Implementation Schedule](#implementation-schedule)
-7. [Success Metrics](#success-metrics)
-8. [Risk Assessment](#risk-assessment)
+1. [Completed Optimizations](#completed-optimizations)
+2. [Phase 6: Foundation Performance](#phase-6-foundation-performance)
+3. [Phase 7: Parallel Processing](#phase-7-parallel-processing)
+4. [Phase 8: Search Algorithm Optimization](#phase-8-search-algorithm-optimization)
+5. [Phase 9: Query Execution Optimization](#phase-9-query-execution-optimization)
+6. [Phase 10: Embedding Performance](#phase-10-embedding-performance)
+7. [Phase 11: Memory Efficiency](#phase-11-memory-efficiency)
+8. [Phase 12: Adaptive Performance](#phase-12-adaptive-performance)
+9. [Implementation Priority Matrix](#implementation-priority-matrix)
+10. [Benchmark Suite](#benchmark-suite)
 
 ---
 
-## Phase 1: Quick Wins
+## Completed Optimizations
 
-**Effort:** 8 hours | **Priority:** CRITICAL | **ROI:** IMMEDIATE
+### Phases 1-5 Status: COMPLETE
 
-These improvements require minimal code changes but yield significant performance gains.
+| Phase | Optimization | Status | Impact Achieved |
+|-------|--------------|--------|-----------------|
+| **Phase 1** | SQLite indexes, bidirectional cache, lazy loading | ✅ | O(log n) range queries |
+| **Phase 2** | Search caching (Fuzzy, Boolean, Ranked, Pagination) | ✅ | 60-90% faster repeated queries |
+| **Phase 3** | Graph algorithms (BFS, DFS, shortest path, centrality) | ✅ | New capabilities |
+| **Phase 4** | Brotli compression (backup, export, response) | ✅ | 70% storage reduction |
+| **Phase 5** | Semantic search (OpenAI + Local embeddings) | ✅ | AI-powered similarity |
 
-### 1.1 Add Missing SQLite Indexes
+### Current Performance Baseline (v9.8.3)
 
-**Effort:** 30 minutes | **Impact:** HIGH
-
-**Problem:** Range queries on `importance`, `lastModified`, and `relationType` perform full table scans.
-
-**File:** `src/memory/core/SQLiteStorage.ts`
-
-**Current State (lines 151-154):**
-```typescript
-db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_type ON entities(entityType)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_parent ON entities(parentId)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_from ON relations(fromEntity)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_to ON relations(toEntity)`);
-```
-
-**Required Changes:**
-```typescript
-// Add after existing indexes (line 154)
-db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_importance ON entities(importance)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_lastmodified ON entities(lastModified)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_createdat ON entities(createdAt)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_relation_type ON relations(relationType)`);
-
-// Composite index for common query patterns
-db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_type_importance ON entities(entityType, importance)`);
-```
-
-**Expected Improvement:**
-| Query Type | Before | After |
-|------------|--------|-------|
-| Filter by importance | O(n) | O(log n) |
-| Filter by date range | O(n) | O(log n) |
-| Filter by relation type | O(n) | O(log n) |
-| Combined type + importance | O(n) | O(log n) |
-
-**Test Cases:**
-```typescript
-describe('SQLite Index Performance', () => {
-  it('should use importance index for range queries', async () => {
-    // Create 10,000 entities with varied importance
-    // Query importance > 7 should be < 10ms
-  });
-
-  it('should use date index for range queries', async () => {
-    // Query lastModified within date range should be < 10ms
-  });
-});
-```
+| Operation | Current Performance |
+|-----------|---------------------|
+| Entity lookup by name | O(1) via NameIndex |
+| Entity lookup by type | O(1) via TypeIndex |
+| Relation lookup | O(1) via RelationIndex |
+| Fuzzy search (cached) | <1ms |
+| Boolean search (cached) | <5ms |
+| Semantic search (10k entities) | ~200ms |
+| Startup (10k entities, SQLite) | ~50ms |
+| Backup compression ratio | 70% |
 
 ---
 
-### 1.2 Cache Bidirectional Relation Queries
+## Phase 6: Foundation Performance
 
-**Effort:** 2 hours | **Impact:** HIGH
+**Goal**: Optimize core data structure operations.
+**Effort**: 10 hours | **Impact**: 10-50x speedup for specific operations
 
-**Problem:** `getRelationsFor()` scans relations twice (from + to) and falls back to O(n) cache scan.
+### 6.1 Set-Based Bulk Operations
 
-**File:** `src/memory/core/SQLiteStorage.ts` (lines 811-830)
+**File**: `src/core/EntityManager.ts`
 
-**Current State:**
+**Current**: O(n) `includes()` checks in bulk operations.
+
 ```typescript
-getRelationsFor(entityName: string): Relation[] {
-  // Currently: Two separate queries + cache fallback
-  const fromRelations = this.getRelationsFrom(entityName);
-  const toRelations = this.getRelationsTo(entityName);
-  return [...fromRelations, ...toRelations];
-}
+// Current: O(m) per entity - SLOW
+graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
 ```
 
-**Proposed Solution:**
+**Optimized**:
 ```typescript
-// Add bidirectional cache
-private bidirectionalRelationCache: Map<string, Relation[]> = new Map();
-
-getRelationsFor(entityName: string): Relation[] {
-  // Check cache first
-  const cached = this.bidirectionalRelationCache.get(entityName);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  // Use RelationIndex for O(1) lookup
-  const relations = this.relationIndex.getRelationsFor(entityName);
-
-  // Cache the result
-  this.bidirectionalRelationCache.set(entityName, relations);
-  return relations;
-}
-
-// Invalidate on relation changes
-private invalidateBidirectionalCache(entityName: string): void {
-  this.bidirectionalRelationCache.delete(entityName);
-}
+// O(1) per entity - FAST
+const namesToDelete = new Set(entityNames);
+graph.entities = graph.entities.filter(e => !namesToDelete.has(e.name));
 ```
 
-**Cache Invalidation Points:**
-- `addRelation()` - Invalidate both `from` and `to` entities
-- `removeRelation()` - Invalidate both `from` and `to` entities
-- `deleteEntity()` - Invalidate the deleted entity
-- `saveGraph()` - Clear entire cache
+**Impact**: 10-50x speedup for bulk deletes (500+ entities)
 
-**Expected Improvement:**
-- First query: Same performance (cache miss)
-- Subsequent queries: O(1) vs O(n) - **50-90% faster**
+### 6.2 Pre-computed Similarity Data
 
----
+**File**: `src/features/CompressionManager.ts`
 
-### 1.3 Add RankedSearch Fallback Cache
+**Issue**: Creates Sets on every comparison in O(n²) duplicate detection.
 
-**Effort:** 3 hours | **Impact:** MEDIUM
-
-**Problem:** When TF-IDF index file isn't available, `RankedSearch` recomputes everything.
-
-**File:** `src/memory/search/RankedSearch.ts` (lines 193-256)
-
-**Current State:**
+**Solution**:
 ```typescript
-// Fallback path tokenizes all documents on every search
-private searchWithoutIndex(query: string, entities: Entity[]): RankedResult[] {
-  const documents = entities.map(e => this.entityToDocument(e));
-  const queryTerms = tokenize(query);
-  // ... O(n * m) computation every time
-}
-```
-
-**Proposed Solution:**
-```typescript
-// Add in-memory fallback cache
-interface TokenizedEntity {
+interface PreparedEntity {
   entity: Entity;
-  tokens: Set<string>;
-  document: string;
+  obsSet: Set<string>;       // Pre-computed lowercase observations
+  tagSet: Set<string>;       // Pre-computed tags
+  nameLower: string;         // Pre-computed lowercase name
+  textHash: number;          // Fast equality check
 }
 
-class RankedSearch {
-  private tokenCache: Map<string, TokenizedEntity> = new Map();
-  private idfCache: Map<string, number> = new Map();
-  private lastEntityCount: number = 0;
-
-  private getOrComputeTokens(entity: Entity): TokenizedEntity {
-    const cached = this.tokenCache.get(entity.name);
-    if (cached && cached.entity.lastModified === entity.lastModified) {
-      return cached;
-    }
-
-    const document = this.entityToDocument(entity);
-    const tokens = new Set(tokenize(document));
-    const result = { entity, tokens, document };
-    this.tokenCache.set(entity.name, result);
-    return result;
-  }
-
-  private searchWithoutIndex(query: string, entities: Entity[]): RankedResult[] {
-    // Rebuild IDF cache if entity count changed significantly
-    if (Math.abs(entities.length - this.lastEntityCount) > entities.length * 0.1) {
-      this.rebuildIDFCache(entities);
-      this.lastEntityCount = entities.length;
-    }
-
-    // Use cached tokens
-    const tokenizedEntities = entities.map(e => this.getOrComputeTokens(e));
-
-    // ... rest of ranking logic using cached data
-  }
+// Pre-compute once, compare many times
+function prepareBatch(entities: Entity[]): PreparedEntity[] {
+  return entities.map(entity => ({
+    entity,
+    obsSet: new Set(entity.observations.map(o => o.toLowerCase())),
+    tagSet: new Set(entity.tags || []),
+    nameLower: entity.name.toLowerCase(),
+    textHash: hashText([entity.name, ...entity.observations].join(' ')),
+  }));
 }
 ```
 
-**Expected Improvement:**
-- First search: Same performance
-- Subsequent searches: **60-80% faster** (skip tokenization)
-- After entity updates: Incremental recomputation only
+**Impact**: 1.5-2x speedup for duplicate detection
+
+### 6.3 Single-Load Compression
+
+**Current**: Each merge triggers graph reload.
+
+**Solution**: Load once → merge all → save once.
+
+```typescript
+async compressGraph(options: CompressOptions): Promise<CompressionResult> {
+  // Load graph ONCE
+  const graph = await this.storage.load();
+
+  // Find all duplicates
+  const duplicates = this.findDuplicates(graph.entities, options.threshold);
+
+  // Merge all in-memory (no I/O)
+  for (const group of duplicates) {
+    this.mergeInMemory(graph, group);
+  }
+
+  // Save ONCE
+  await this.storage.save(graph);
+}
+```
+
+**Impact**: 10x I/O reduction for large compression operations
+
+### 6.4 Enhanced NameIndex Usage
+
+Replace `graph.entities.find()` with O(1) `getEntityByName()` throughout codebase.
+
+**Locations to fix**:
+- `addTags()` line 338-339
+- `setImportance()` line 419-420
+- `batchUpdate()` line 306
+
+**Impact**: O(n) → O(1) for entity existence checks
+
+### 6.5 Performance Metrics
+
+| Operation | Before | After | Improvement |
+|-----------|--------|-------|-------------|
+| Bulk delete (1000) | 5000ms | 100ms | 50x |
+| Duplicate detection (10k) | 8000ms | 4000ms | 2x |
+| compressGraph (100 merges) | 10000ms | 1000ms | 10x |
+| addTags (single) | 5ms | 0.1ms | 50x |
 
 ---
 
-### 1.4 Implement Lazy Graph Loading
+## Phase 7: Parallel Processing
 
-**Effort:** 4 hours | **Impact:** HIGH
+**Goal**: Maximize throughput via parallel execution.
+**Effort**: 20 hours | **Impact**: 2-4x throughput improvement
 
-**Problem:** `SQLiteStorage` loads entire graph into memory on initialization.
+### 7.1 Worker Pool Architecture
 
-**File:** `src/memory/core/SQLiteStorage.ts` (lines 112-113)
+**Inspired by**: SimpleMem's ThreadPoolExecutor-based parallel processing.
 
-**Current State:**
+**File**: `src/core/WorkerPoolManager.ts`
+
 ```typescript
-constructor(memoryFilePath: string) {
-  this.initializeDatabase();
-  this.loadGraphIntoCache();  // Blocks startup, loads everything
+import { Worker } from 'worker_threads';
+import os from 'os';
+
+interface WorkerPoolConfig {
+  minWorkers: number;
+  maxWorkers: number;
+  idleTimeout: number;
+  taskQueue: 'fifo' | 'priority';
+}
+
+interface TaskResult<T> {
+  success: boolean;
+  result?: T;
+  error?: Error;
+  executionTimeMs: number;
+}
+
+class WorkerPoolManager {
+  private pools: Map<string, WorkerPool> = new Map();
+  private readonly cpuCount = os.cpus().length;
+
+  getPool(taskType: string, config?: Partial<WorkerPoolConfig>): WorkerPool {
+    if (!this.pools.has(taskType)) {
+      this.pools.set(taskType, new WorkerPool({
+        minWorkers: 2,
+        maxWorkers: Math.max(4, this.cpuCount - 1),
+        idleTimeout: 60000,
+        taskQueue: 'fifo',
+        ...config,
+      }));
+    }
+    return this.pools.get(taskType)!;
+  }
+
+  async executeParallel<T, R>(
+    tasks: T[],
+    processor: (task: T) => Promise<R>,
+    options: { maxConcurrency?: number; onProgress?: (completed: number, total: number) => void }
+  ): Promise<TaskResult<R>[]> {
+    const { maxConcurrency = this.cpuCount, onProgress } = options;
+    const results: TaskResult<R>[] = [];
+    let completed = 0;
+
+    for (let i = 0; i < tasks.length; i += maxConcurrency) {
+      const batch = tasks.slice(i, i + maxConcurrency);
+      const batchStart = Date.now();
+
+      const batchResults = await Promise.allSettled(
+        batch.map(async (task) => {
+          const taskStart = Date.now();
+          const result = await processor(task);
+          return { success: true, result, executionTimeMs: Date.now() - taskStart };
+        })
+      );
+
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          results.push({ success: false, error: result.reason, executionTimeMs: Date.now() - batchStart });
+        }
+        completed++;
+        onProgress?.(completed, tasks.length);
+      }
+    }
+
+    return results;
+  }
 }
 ```
 
-**Proposed Solution:**
+### 7.2 Parallel Search Execution
+
+**File**: `src/search/ParallelSearchExecutor.ts`
+
 ```typescript
-class SQLiteStorage {
-  private cacheLoaded: boolean = false;
-  private loadingPromise: Promise<void> | null = null;
-
-  constructor(memoryFilePath: string) {
-    this.initializeDatabase();
-    // Don't load cache immediately
-  }
-
-  private async ensureCacheLoaded(): Promise<void> {
-    if (this.cacheLoaded) return;
-
-    if (this.loadingPromise) {
-      await this.loadingPromise;
-      return;
-    }
-
-    this.loadingPromise = this.loadGraphIntoCache();
-    await this.loadingPromise;
-    this.cacheLoaded = true;
-    this.loadingPromise = null;
-  }
-
-  async loadGraph(): Promise<ReadonlyKnowledgeGraph> {
-    await this.ensureCacheLoaded();
-    return this.cache!;
-  }
-
-  // For simple lookups, query DB directly without full cache
-  async getEntity(name: string): Promise<Entity | undefined> {
-    // Fast path: check if already in cache
-    if (this.cacheLoaded && this.nameIndex.has(name)) {
-      return this.nameIndex.get(name);
-    }
-
-    // Query DB directly
-    const stmt = this.db.prepare('SELECT * FROM entities WHERE name = ?');
-    const row = stmt.get(name);
-    return row ? this.rowToEntity(row) : undefined;
-  }
-}
-```
-
-**Startup Time Improvement:**
-
-| Graph Size | Before | After |
-|------------|--------|-------|
-| 1,000 entities | 50ms | 5ms |
-| 10,000 entities | 500ms | 5ms |
-| 100,000 entities | 5,000ms | 5ms |
-
-**Trade-offs:**
-- First full-graph operation still incurs load time
-- Individual entity lookups work immediately
-- Memory usage identical once cache loaded
-
----
-
-## Phase 2: Search Optimization
-
-**Effort:** 12 hours | **Priority:** HIGH | **ROI:** HIGH
-
-### 2.1 Fuzzy Search Cache
-
-**Effort:** 4 hours | **Impact:** HIGH
-
-**Problem:** `FuzzySearch` computes Levenshtein distance for every entity on every query.
-
-**File:** `src/memory/search/FuzzySearch.ts`
-
-**Proposed Implementation:**
-```typescript
-import { createSearchCache, SearchCacheKey } from '../utils/searchCache.js';
-
-interface FuzzyCacheKey extends SearchCacheKey {
-  query: string;
-  maxDistance: number;
-  limit: number;
-  offset: number;
-}
-
-class FuzzySearch {
-  private cache = createSearchCache<FuzzyCacheKey, FuzzySearchResult[]>({
-    maxSize: 100,
-    ttlMs: 5 * 60 * 1000, // 5 minutes
-  });
-
-  async search(
+class ParallelSearchExecutor {
+  async searchParallel(
     query: string,
-    entities: Entity[],
-    options: FuzzySearchOptions
-  ): Promise<FuzzySearchResult[]> {
-    const cacheKey: FuzzyCacheKey = {
-      query: query.toLowerCase(),
-      maxDistance: options.maxDistance ?? 2,
-      limit: options.limit ?? 10,
-      offset: options.offset ?? 0,
-    };
+    options: HybridSearchOptions
+  ): Promise<HybridSearchResult[]> {
+    const startTime = Date.now();
 
-    // Check cache
-    const cached = this.cache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    // Execute all search layers CONCURRENTLY
+    const [semanticResults, lexicalResults, symbolicResults] = await Promise.all([
+      this.semanticSearch.search(query, options.limit),
+      this.rankedSearch.search(query, options),
+      this.filterChain.execute(options.filters),
+    ]);
 
-    // Compute results
-    const results = this.computeFuzzySearch(query, entities, options);
+    // Merge and score results
+    const merged = this.mergeResults(semanticResults, lexicalResults, symbolicResults, options.weights);
 
-    // Cache results
-    this.cache.set(cacheKey, results);
-    return results;
-  }
-
-  invalidateCache(): void {
-    this.cache.clear();
-  }
-}
-```
-
-**Cache Invalidation Strategy:**
-- Clear on any entity create/update/delete
-- TTL-based expiration (5 minutes)
-- LRU eviction when cache full (100 entries)
-
-**Expected Improvement:**
-| Scenario | Before | After |
-|----------|--------|-------|
-| First query | 100ms | 100ms |
-| Repeated query | 100ms | <1ms |
-| Similar query | 100ms | 100ms |
-
----
-
-### 2.2 Boolean Search Cache with AST Caching
-
-**Effort:** 4 hours | **Impact:** MEDIUM
-
-**Problem:** Boolean queries are parsed and evaluated from scratch every time.
-
-**File:** `src/memory/search/BooleanSearch.ts`
-
-**Current State (lines 38-88):**
-```typescript
-search(query: string, entities: Entity[]): Entity[] {
-  const ast = this.parse(query);      // Parsed every time
-  return this.evaluate(ast, entities); // Evaluated every time
-}
-```
-
-**Proposed Solution:**
-```typescript
-interface BooleanCacheEntry {
-  ast: BooleanAST;
-  results: Entity[];
-  entityHash: string;  // Hash of entity names for invalidation
-}
-
-class BooleanSearch {
-  private astCache: Map<string, BooleanAST> = new Map();
-  private resultCache: Map<string, BooleanCacheEntry> = new Map();
-
-  search(query: string, entities: Entity[]): Entity[] {
-    const normalizedQuery = this.normalizeQuery(query);
-    const entityHash = this.computeEntityHash(entities);
-
-    // Check result cache
-    const cached = this.resultCache.get(normalizedQuery);
-    if (cached && cached.entityHash === entityHash) {
-      return cached.results;
-    }
-
-    // Get or parse AST
-    let ast = this.astCache.get(normalizedQuery);
-    if (!ast) {
-      ast = this.parse(normalizedQuery);
-      this.astCache.set(normalizedQuery, ast);
-    }
-
-    // Evaluate and cache
-    const results = this.evaluate(ast, entities);
-    this.resultCache.set(normalizedQuery, { ast, results, entityHash });
-
-    return results;
-  }
-
-  private normalizeQuery(query: string): string {
-    // Normalize whitespace, case for operators
-    return query
-      .replace(/\s+/g, ' ')
-      .replace(/\b(AND|OR|NOT)\b/gi, m => m.toUpperCase())
-      .trim();
-  }
-
-  private computeEntityHash(entities: Entity[]): string {
-    // Fast hash based on count + first/last names + modification times
-    if (entities.length === 0) return 'empty';
-    return `${entities.length}:${entities[0].name}:${entities[entities.length-1].lastModified}`;
-  }
-}
-```
-
-**Expected Improvement:**
-- AST parsing: Cached after first use
-- Result evaluation: Cached until entities change
-- **40-60% faster** for repeated boolean queries
-
----
-
-### 2.3 Search Result Pagination Cache
-
-**Effort:** 4 hours | **Impact:** MEDIUM
-
-**Problem:** Pagination recalculates entire result set, then slices.
-
-**Files:** `src/memory/search/SearchFilterChain.ts`, `src/memory/search/SearchManager.ts`
-
-**Proposed Solution:**
-```typescript
-interface PaginatedCacheEntry<T> {
-  fullResults: T[];
-  totalCount: number;
-  timestamp: number;
-}
-
-class SearchManager {
-  private paginationCache: Map<string, PaginatedCacheEntry<Entity>> = new Map();
-  private readonly PAGINATION_CACHE_TTL = 30_000; // 30 seconds
-
-  async searchNodes(query: string, options: SearchOptions): Promise<PaginatedResult<Entity>> {
-    const cacheKey = this.buildSearchCacheKey(query, options);
-    const paginationKey = `${cacheKey}:pagination`;
-
-    // Check if we have cached full results
-    const cached = this.paginationCache.get(paginationKey);
-    if (cached && Date.now() - cached.timestamp < this.PAGINATION_CACHE_TTL) {
-      // Paginate from cached results
-      const { offset = 0, limit = 10 } = options;
-      return {
-        results: cached.fullResults.slice(offset, offset + limit),
-        totalCount: cached.totalCount,
-        hasMore: offset + limit < cached.totalCount,
-      };
-    }
-
-    // Compute full results
-    const fullResults = await this.executeSearch(query, options);
-
-    // Cache full results for pagination
-    this.paginationCache.set(paginationKey, {
-      fullResults,
-      totalCount: fullResults.length,
-      timestamp: Date.now(),
-    });
-
-    // Return paginated slice
-    const { offset = 0, limit = 10 } = options;
     return {
-      results: fullResults.slice(offset, offset + limit),
-      totalCount: fullResults.length,
-      hasMore: offset + limit < fullResults.length,
+      results: merged,
+      metadata: { totalTimeMs: Date.now() - startTime },
     };
   }
 }
 ```
 
-**Use Case:**
-- User searches "project"
-- Gets page 1 (offset=0, limit=10)
-- Clicks "next page" (offset=10, limit=10)
-- Second request uses cached full results
+### 7.3 Parallel Batch Operations
 
-**Expected Improvement:**
-- First page: Normal performance
-- Subsequent pages: **90%+ faster** (just array slice)
+**File**: `src/core/BatchProcessor.ts`
+
+```typescript
+class BatchProcessor {
+  private readonly DEFAULT_CONFIG = {
+    batchSize: 100,
+    maxParallelBatches: 4,
+    retryOnFailure: true,
+    maxRetries: 3,
+  };
+
+  async processBatches<T, R>(
+    items: T[],
+    processor: (batch: T[]) => Promise<R[]>,
+    config: Partial<BatchConfig> = {}
+  ): Promise<{ results: R[]; errors: Error[] }> {
+    const { batchSize, maxParallelBatches, retryOnFailure, maxRetries } = {
+      ...this.DEFAULT_CONFIG,
+      ...config,
+    };
+
+    const results: R[] = [];
+    const errors: Error[] = [];
+
+    // Create batches
+    const batches: T[][] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+      batches.push(items.slice(i, i + batchSize));
+    }
+
+    // Process batches in parallel groups
+    for (let i = 0; i < batches.length; i += maxParallelBatches) {
+      const parallelBatches = batches.slice(i, i + maxParallelBatches);
+
+      const batchPromises = parallelBatches.map(async (batch) => {
+        let lastError: Error | null = null;
+        for (let attempt = 0; attempt <= (retryOnFailure ? maxRetries : 0); attempt++) {
+          try {
+            return await processor(batch);
+          } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            if (attempt < maxRetries) {
+              await this.sleep(Math.pow(2, attempt) * 100);
+            }
+          }
+        }
+        throw lastError;
+      });
+
+      const batchResults = await Promise.allSettled(batchPromises);
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          results.push(...result.value);
+        } else {
+          errors.push(result.reason);
+        }
+      }
+    }
+
+    return { results, errors };
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+
+### 7.4 Performance Metrics
+
+| Operation | Before | After (Parallel) | Improvement |
+|-----------|--------|------------------|-------------|
+| Bulk entity creation (1000) | 2000ms | 500ms | 4x |
+| Full graph indexing | 5000ms | 1500ms | 3.3x |
+| Multi-layer search | 300ms | 100ms | 3x |
+| Duplicate detection (10k) | 8000ms | 2000ms | 4x |
 
 ---
 
-## Phase 3: Graph Algorithms
+## Phase 8: Search Algorithm Optimization
 
-**Effort:** 24 hours | **Priority:** MEDIUM | **ROI:** HIGH (New Capabilities)
+**Goal**: Optimize search algorithms for speed and accuracy.
+**Effort**: 15 hours | **Impact**: 2x faster lexical search
 
-### 3.1 Graph Traversal Framework
+### 8.1 BM25 Lexical Scoring
 
-**Effort:** 8 hours | **Impact:** FOUNDATIONAL
+**Inspired by**: SimpleMem's BM25-style keyword scoring.
 
-**New File:** `src/memory/core/GraphTraversal.ts`
+**File**: `src/search/BM25Search.ts`
 
 ```typescript
-/**
- * Graph Traversal Framework
- *
- * Provides general-purpose graph traversal algorithms for the knowledge graph.
- * Supports both entity hierarchy (parent-child) and relations (edges).
- *
- * @module core/GraphTraversal
- */
-
-import type { Entity, Relation, KnowledgeGraph } from '../types/index.js';
-
-export interface TraversalOptions {
-  /** Maximum depth to traverse (default: Infinity) */
-  maxDepth?: number;
-  /** Follow hierarchy (parent-child) edges */
-  includeHierarchy?: boolean;
-  /** Follow relation edges */
-  includeRelations?: boolean;
-  /** Relation types to follow (default: all) */
-  relationTypes?: string[];
-  /** Direction for relations: 'outgoing', 'incoming', 'both' */
-  direction?: 'outgoing' | 'incoming' | 'both';
-  /** Early termination condition */
-  stopCondition?: (entity: Entity, depth: number) => boolean;
+interface BM25Config {
+  k1: number;      // Term frequency saturation (default: 1.2)
+  b: number;       // Document length normalization (default: 0.75)
 }
 
-export interface PathResult {
-  /** Entities in the path, from start to end */
-  path: Entity[];
-  /** Relations traversed (if includeRelations) */
-  relations: Relation[];
-  /** Total path length */
-  length: number;
+interface BM25Index {
+  docFrequencies: Map<string, number>;
+  docLengths: Map<string, number>;
+  avgDocLength: number;
+  totalDocs: number;
+  invertedIndex: Map<string, Set<string>>;
 }
 
-export interface ComponentResult {
-  /** Entities in this connected component */
-  entities: Entity[];
-  /** Relations within this component */
-  relations: Relation[];
-  /** Size of the component */
-  size: number;
-}
+class BM25Search {
+  private config: BM25Config = { k1: 1.2, b: 0.75 };
+  private index: BM25Index | null = null;
 
-export interface CentralityResult {
-  /** Entity name */
-  entity: string;
-  /** Centrality score (interpretation depends on algorithm) */
-  score: number;
-}
+  buildIndex(entities: Entity[]): void {
+    const docFrequencies = new Map<string, number>();
+    const docLengths = new Map<string, number>();
+    const invertedIndex = new Map<string, Set<string>>();
+    let totalLength = 0;
 
-export class GraphTraversal {
-  constructor(
-    private graph: KnowledgeGraph,
-    private relationIndex: RelationIndex
-  ) {}
+    for (const entity of entities) {
+      const text = this.entityToText(entity);
+      const terms = this.tokenize(text);
+      const uniqueTerms = new Set(terms);
 
-  // ==================== TRAVERSAL ALGORITHMS ====================
+      docLengths.set(entity.name, terms.length);
+      totalLength += terms.length;
 
-  /**
-   * Breadth-First Search from a starting entity.
-   *
-   * @param startName - Entity name to start from
-   * @param options - Traversal options
-   * @returns Entities in BFS order with their depths
-   */
-  bfs(startName: string, options: TraversalOptions = {}): Map<string, number> {
-    const visited = new Map<string, number>();
-    const queue: Array<{ name: string; depth: number }> = [{ name: startName, depth: 0 }];
-    const maxDepth = options.maxDepth ?? Infinity;
-
-    while (queue.length > 0) {
-      const { name, depth } = queue.shift()!;
-
-      if (visited.has(name) || depth > maxDepth) continue;
-      visited.set(name, depth);
-
-      const entity = this.graph.entities.find(e => e.name === name);
-      if (!entity) continue;
-
-      if (options.stopCondition?.(entity, depth)) continue;
-
-      // Get neighbors
-      const neighbors = this.getNeighbors(name, options);
-      for (const neighbor of neighbors) {
-        if (!visited.has(neighbor)) {
-          queue.push({ name: neighbor, depth: depth + 1 });
+      for (const term of uniqueTerms) {
+        docFrequencies.set(term, (docFrequencies.get(term) || 0) + 1);
+        if (!invertedIndex.has(term)) {
+          invertedIndex.set(term, new Set());
         }
+        invertedIndex.get(term)!.add(entity.name);
       }
     }
 
-    return visited;
+    this.index = {
+      docFrequencies,
+      docLengths,
+      avgDocLength: totalLength / entities.length,
+      totalDocs: entities.length,
+      invertedIndex,
+    };
   }
 
-  /**
-   * Depth-First Search from a starting entity.
-   *
-   * @param startName - Entity name to start from
-   * @param options - Traversal options
-   * @returns Entities in DFS order
-   */
-  dfs(startName: string, options: TraversalOptions = {}): string[] {
-    const visited = new Set<string>();
-    const result: string[] = [];
-    const maxDepth = options.maxDepth ?? Infinity;
+  private calculateBM25(
+    tf: number, df: number, docLength: number, avgDocLength: number, totalDocs: number
+  ): number {
+    const { k1, b } = this.config;
+    const idf = Math.log((totalDocs - df + 0.5) / (df + 0.5) + 1);
+    const tfNorm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * docLength / avgDocLength));
+    return idf * tfNorm;
+  }
 
-    const visit = (name: string, depth: number): void => {
-      if (visited.has(name) || depth > maxDepth) return;
-      visited.add(name);
-      result.push(name);
+  private tokenize(text: string): string[] {
+    return text.toLowerCase().split(/\W+/).filter(t => t.length > 2);
+  }
+}
+```
 
-      const entity = this.graph.entities.find(e => e.name === name);
-      if (!entity || options.stopCondition?.(entity, depth)) return;
+### 8.2 Optimized Inverted Index
 
-      const neighbors = this.getNeighbors(name, options);
-      for (const neighbor of neighbors) {
-        visit(neighbor, depth + 1);
+**File**: `src/search/OptimizedInvertedIndex.ts`
+
+```typescript
+class OptimizedInvertedIndex {
+  private index: Map<string, Uint32Array> = new Map();
+  private entityToId: Map<string, number> = new Map();
+  private idToEntity: string[] = [];
+
+  build(entities: Entity[]): void {
+    // Assign integer IDs (faster than string comparisons)
+    for (let i = 0; i < entities.length; i++) {
+      this.entityToId.set(entities[i].name, i);
+      this.idToEntity[i] = entities[i].name;
+    }
+
+    // Build inverted index with typed arrays
+    const termToEntities = new Map<string, number[]>();
+
+    for (const entity of entities) {
+      const id = this.entityToId.get(entity.name)!;
+      const terms = this.extractTerms(entity);
+
+      for (const term of terms) {
+        if (!termToEntities.has(term)) {
+          termToEntities.set(term, []);
+        }
+        termToEntities.get(term)!.push(id);
       }
-    };
+    }
 
-    visit(startName, 0);
+    // Convert to typed arrays (memory efficient, fast iteration)
+    for (const [term, ids] of termToEntities) {
+      this.index.set(term, new Uint32Array(ids.sort((a, b) => a - b)));
+    }
+  }
+
+  search(terms: string[]): string[] {
+    const resultSets = terms
+      .map(t => this.index.get(t))
+      .filter(Boolean) as Uint32Array[];
+
+    if (resultSets.length === 0) return [];
+
+    // Intersect sorted arrays (O(n) per pair)
+    let result = Array.from(resultSets[0]);
+    for (let i = 1; i < resultSets.length; i++) {
+      result = this.intersectSorted(result, resultSets[i]);
+    }
+
+    return result.map(id => this.idToEntity[id]);
+  }
+
+  private intersectSorted(a: number[], b: Uint32Array): number[] {
+    const result: number[] = [];
+    let i = 0, j = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) {
+        result.push(a[i]);
+        i++; j++;
+      } else if (a[i] < b[j]) {
+        i++;
+      } else {
+        j++;
+      }
+    }
     return result;
   }
+}
+```
 
-  // ==================== PATH FINDING ====================
+### 8.3 Hybrid Score Aggregation
 
-  /**
-   * Find shortest path between two entities.
-   * Uses BFS for unweighted graphs.
-   *
-   * @param fromName - Starting entity name
-   * @param toName - Target entity name
-   * @param options - Traversal options
-   * @returns Shortest path or null if no path exists
-   */
-  shortestPath(
-    fromName: string,
-    toName: string,
-    options: TraversalOptions = {}
-  ): PathResult | null {
-    if (fromName === toName) {
-      const entity = this.graph.entities.find(e => e.name === fromName);
-      return entity ? { path: [entity], relations: [], length: 0 } : null;
+**File**: `src/search/HybridScorer.ts`
+
+```typescript
+class HybridScorer {
+  private readonly DEFAULT_WEIGHTS = { semantic: 0.5, lexical: 0.3, symbolic: 0.2 };
+
+  aggregate(
+    semanticResults: SemanticSearchResult[],
+    lexicalResults: BM25Result[],
+    symbolicResults: SymbolicResult[],
+    weights: Partial<HybridWeights> = {}
+  ): HybridSearchResult[] {
+    const w = { ...this.DEFAULT_WEIGHTS, ...weights };
+
+    // Normalize scores to [0, 1]
+    const normSemantic = this.minMaxNormalize(semanticResults.map(r => ({ name: r.entity.name, score: r.similarity })));
+    const normLexical = this.minMaxNormalize(lexicalResults.map(r => ({ name: r.entity.name, score: r.score })));
+    const normSymbolic = this.minMaxNormalize(symbolicResults.map(r => ({ name: r.entity.name, score: r.score })));
+
+    // Merge all entities
+    const allEntities = new Map<string, { entity: Entity; semantic: number; lexical: number; symbolic: number }>();
+
+    for (const r of semanticResults) {
+      allEntities.set(r.entity.name, {
+        entity: r.entity,
+        semantic: normSemantic.get(r.entity.name) || 0,
+        lexical: 0,
+        symbolic: 0,
+      });
     }
 
-    const visited = new Set<string>();
-    const parent = new Map<string, { from: string; relation?: Relation }>();
-    const queue: string[] = [fromName];
-    visited.add(fromName);
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-
-      const neighbors = this.getNeighborsWithRelations(current, options);
-      for (const { neighbor, relation } of neighbors) {
-        if (visited.has(neighbor)) continue;
-
-        visited.add(neighbor);
-        parent.set(neighbor, { from: current, relation });
-
-        if (neighbor === toName) {
-          // Reconstruct path
-          return this.reconstructPath(fromName, toName, parent);
-        }
-
-        queue.push(neighbor);
-      }
+    for (const r of lexicalResults) {
+      const entry = allEntities.get(r.entity.name) || { entity: r.entity, semantic: 0, lexical: 0, symbolic: 0 };
+      entry.lexical = normLexical.get(r.entity.name) || 0;
+      allEntities.set(r.entity.name, entry);
     }
 
-    return null; // No path found
+    for (const r of symbolicResults) {
+      const entry = allEntities.get(r.entity.name) || { entity: r.entity, semantic: 0, lexical: 0, symbolic: 0 };
+      entry.symbolic = normSymbolic.get(r.entity.name) || 0;
+      allEntities.set(r.entity.name, entry);
+    }
+
+    // Calculate combined scores and sort
+    return Array.from(allEntities.values())
+      .map(({ entity, semantic, lexical, symbolic }) => ({
+        entity,
+        scores: { semantic, lexical, symbolic },
+        combined: w.semantic * semantic + w.lexical * lexical + w.symbolic * symbolic,
+      }))
+      .sort((a, b) => b.combined - a.combined);
   }
 
-  /**
-   * Find all paths between two entities up to a maximum length.
-   *
-   * @param fromName - Starting entity name
-   * @param toName - Target entity name
-   * @param maxLength - Maximum path length
-   * @returns Array of all paths found
-   */
-  allPaths(
-    fromName: string,
-    toName: string,
-    maxLength: number = 5
-  ): PathResult[] {
-    const results: PathResult[] = [];
-    const currentPath: string[] = [];
-    const currentRelations: Relation[] = [];
-    const visited = new Set<string>();
+  private minMaxNormalize(scores: Array<{ name: string; score: number }>): Map<string, number> {
+    if (scores.length === 0) return new Map();
+    const min = Math.min(...scores.map(s => s.score));
+    const max = Math.max(...scores.map(s => s.score));
+    const range = max - min || 1;
+    return new Map(scores.map(({ name, score }) => [name, (score - min) / range]));
+  }
+}
+```
 
-    const dfs = (current: string): void => {
-      if (currentPath.length > maxLength) return;
+### 8.4 Performance Metrics
 
-      currentPath.push(current);
-      visited.add(current);
+| Operation | TF-IDF Only | BM25 | Improvement |
+|-----------|-------------|------|-------------|
+| Lexical search (10k) | 50ms | 30ms | 1.7x |
+| Index build | 200ms | 150ms | 1.3x |
+| Memory usage | 20MB | 15MB | 25% reduction |
 
-      if (current === toName) {
-        results.push({
-          path: currentPath.map(name =>
-            this.graph.entities.find(e => e.name === name)!
-          ),
-          relations: [...currentRelations],
-          length: currentPath.length - 1,
-        });
-      } else {
-        const neighbors = this.getNeighborsWithRelations(current, {
-          includeRelations: true,
-          direction: 'both'
-        });
+---
 
-        for (const { neighbor, relation } of neighbors) {
-          if (!visited.has(neighbor)) {
-            if (relation) currentRelations.push(relation);
-            dfs(neighbor);
-            if (relation) currentRelations.pop();
-          }
-        }
-      }
+## Phase 9: Query Execution Optimization
 
-      currentPath.pop();
-      visited.delete(current);
+**Goal**: Minimize unnecessary computation through smart query planning.
+**Effort**: 20 hours | **Impact**: 30x token efficiency
+
+### 9.1 Query Complexity Estimator
+
+**Inspired by**: SimpleMem's complexity-aware adaptive depth formula: `k_dyn = k_base × (1 + δ × C_q)`
+
+**File**: `src/search/ComplexityEstimator.ts`
+
+```typescript
+interface ComplexityFactors {
+  queryLength: number;
+  entityMentions: number;
+  temporalReferences: number;
+  multiHopIndicators: number;
+  aggregationTerms: number;
+  negationTerms: number;
+}
+
+interface ComplexityEstimate {
+  level: 'low' | 'medium' | 'high';
+  score: number;                    // 0-1
+  factors: ComplexityFactors;
+  recommendedDepth: number;         // Suggested retrieval limit
+  estimatedTokens: number;          // Expected context tokens
+}
+
+class ComplexityEstimator {
+  private readonly DEPTH_BASE = 10;
+  private readonly DEPTH_DELTA = 0.5;
+
+  estimate(query: string): ComplexityEstimate {
+    const factors = this.extractFactors(query);
+    const score = this.calculateScore(factors);
+    const level = score < 0.33 ? 'low' : score < 0.66 ? 'medium' : 'high';
+
+    // Adaptive depth: k_dyn = k_base × (1 + δ × C_q)
+    const recommendedDepth = Math.round(this.DEPTH_BASE * (1 + this.DEPTH_DELTA * score));
+
+    return {
+      level,
+      score,
+      factors,
+      recommendedDepth,
+      estimatedTokens: recommendedDepth * 50, // ~50 tokens per entity
+    };
+  }
+
+  private extractFactors(query: string): ComplexityFactors {
+    return {
+      queryLength: query.split(/\s+/).length,
+      entityMentions: (query.match(/\b[A-Z][a-z]+\b/g) || []).length,
+      temporalReferences: (query.match(/\b(yesterday|today|tomorrow|last|next|before|after|week|month|year)\b/gi) || []).length,
+      multiHopIndicators: (query.match(/\b(through|via|connected|related|between|both|all)\b/gi) || []).length,
+      aggregationTerms: (query.match(/\b(how many|count|total|sum|average|most|least)\b/gi) || []).length,
+      negationTerms: (query.match(/\b(not|never|without|except|exclude)\b/gi) || []).length,
+    };
+  }
+
+  private calculateScore(factors: ComplexityFactors): number {
+    const weights = {
+      queryLength: 0.1,
+      entityMentions: 0.2,
+      temporalReferences: 0.15,
+      multiHopIndicators: 0.25,
+      aggregationTerms: 0.15,
+      negationTerms: 0.15,
     };
 
-    dfs(fromName);
+    let score = 0;
+    score += Math.min(factors.queryLength / 20, 1) * weights.queryLength;
+    score += Math.min(factors.entityMentions / 5, 1) * weights.entityMentions;
+    score += Math.min(factors.temporalReferences / 3, 1) * weights.temporalReferences;
+    score += Math.min(factors.multiHopIndicators / 2, 1) * weights.multiHopIndicators;
+    score += Math.min(factors.aggregationTerms / 2, 1) * weights.aggregationTerms;
+    score += Math.min(factors.negationTerms / 2, 1) * weights.negationTerms;
+
+    return Math.min(score, 1);
+  }
+}
+```
+
+### 9.2 Early Termination
+
+**File**: `src/search/EarlyTermination.ts`
+
+```typescript
+class EarlyTerminationManager {
+  async searchWithEarlyTermination(
+    query: string,
+    options: { maxResults: number; adequacyThreshold: number }
+  ): Promise<Entity[]> {
+    const results: Entity[] = [];
+    const seenNames = new Set<string>();
+
+    // Try fastest layer first (symbolic/cached)
+    const symbolicResults = await this.symbolicSearch(query);
+    this.addResults(symbolicResults, results, seenNames, options.maxResults);
+
+    if (this.checkAdequacy(query, results) >= options.adequacyThreshold) {
+      return results; // EARLY TERMINATION
+    }
+
+    // Try lexical layer
+    const lexicalResults = await this.lexicalSearch(query);
+    this.addResults(lexicalResults, results, seenNames, options.maxResults);
+
+    if (this.checkAdequacy(query, results) >= options.adequacyThreshold) {
+      return results; // EARLY TERMINATION
+    }
+
+    // Finally, try expensive semantic layer
+    const semanticResults = await this.semanticSearch(query);
+    this.addResults(semanticResults, results, seenNames, options.maxResults);
+
     return results;
   }
 
-  // ==================== CONNECTED COMPONENTS ====================
+  private checkAdequacy(query: string, results: Entity[]): number {
+    const queryTerms = new Set(query.toLowerCase().split(/\s+/).filter(t => t.length > 2));
+    const resultText = results.map(e => [e.name, ...e.observations || []].join(' ').toLowerCase()).join(' ');
 
-  /**
-   * Find all connected components in the graph.
-   *
-   * @param options - Traversal options
-   * @returns Array of connected components
-   */
-  connectedComponents(options: TraversalOptions = {}): ComponentResult[] {
-    const visited = new Set<string>();
-    const components: ComponentResult[] = [];
+    let coveredTerms = 0;
+    for (const term of queryTerms) {
+      if (resultText.includes(term)) coveredTerms++;
+    }
+    return coveredTerms / queryTerms.size;
+  }
+}
+```
 
-    for (const entity of this.graph.entities) {
-      if (visited.has(entity.name)) continue;
+### 9.3 Reflection Loop Optimization
 
-      // BFS to find all entities in this component
-      const componentEntities: Entity[] = [];
-      const componentRelations: Relation[] = [];
-      const queue: string[] = [entity.name];
+**File**: `src/search/ReflectionOptimizer.ts`
 
-      while (queue.length > 0) {
-        const current = queue.shift()!;
-        if (visited.has(current)) continue;
-        visited.add(current);
+```typescript
+class ReflectionOptimizer {
+  private readonly DEFAULT_CONFIG = {
+    maxRounds: 3,
+    adequacyThreshold: 0.8,
+    earlyTermination: true,
+  };
 
-        const currentEntity = this.graph.entities.find(e => e.name === current);
-        if (currentEntity) {
-          componentEntities.push(currentEntity);
-        }
+  async retrieveWithReflection(query: string, config: Partial<ReflectionConfig> = {}): Promise<ReflectionResult> {
+    const cfg = { ...this.DEFAULT_CONFIG, ...config };
+    const startTime = Date.now();
+    const refinementHistory: string[] = [];
 
-        const neighbors = this.getNeighborsWithRelations(current, {
-          ...options,
-          direction: 'both',
-        });
+    let currentQuery = query;
+    let allResults: Entity[] = [];
+    let round = 0;
 
-        for (const { neighbor, relation } of neighbors) {
-          if (relation && !componentRelations.includes(relation)) {
-            componentRelations.push(relation);
-          }
-          if (!visited.has(neighbor)) {
-            queue.push(neighbor);
-          }
-        }
+    while (round < cfg.maxRounds) {
+      round++;
+      refinementHistory.push(currentQuery);
+
+      const searchResults = await this.hybridSearch.search(currentQuery, {
+        limit: this.calculateLimit(round, cfg.maxRounds),
+      });
+
+      allResults = this.mergeAndDeduplicate(allResults, searchResults);
+      const adequacy = this.checkAdequacy(query, allResults, cfg.adequacyThreshold);
+
+      if (adequacy.isAdequate && cfg.earlyTermination) {
+        return {
+          entities: allResults,
+          isAdequate: true,
+          rounds: round,
+          refinementHistory,
+          totalSearchTimeMs: Date.now() - startTime,
+        };
       }
 
-      components.push({
-        entities: componentEntities,
-        relations: componentRelations,
-        size: componentEntities.length,
-      });
-    }
-
-    return components.sort((a, b) => b.size - a.size);
-  }
-
-  // ==================== CENTRALITY MEASURES ====================
-
-  /**
-   * Calculate degree centrality for all entities.
-   * Degree = number of connections (relations + hierarchy).
-   *
-   * @param options - Traversal options
-   * @returns Entities sorted by centrality score
-   */
-  degreeCentrality(options: TraversalOptions = {}): CentralityResult[] {
-    const results: CentralityResult[] = [];
-
-    for (const entity of this.graph.entities) {
-      const neighbors = this.getNeighbors(entity.name, {
-        ...options,
-        direction: 'both',
-      });
-
-      results.push({
-        entity: entity.name,
-        score: neighbors.length,
-      });
-    }
-
-    return results.sort((a, b) => b.score - a.score);
-  }
-
-  /**
-   * Calculate betweenness centrality for all entities.
-   * Measures how often an entity lies on shortest paths between other entities.
-   *
-   * @param sampleSize - Number of entity pairs to sample (for large graphs)
-   * @returns Entities sorted by betweenness score
-   */
-  betweennessCentrality(sampleSize?: number): CentralityResult[] {
-    const scores = new Map<string, number>();
-
-    // Initialize scores
-    for (const entity of this.graph.entities) {
-      scores.set(entity.name, 0);
-    }
-
-    // Sample entity pairs or use all pairs
-    const entities = this.graph.entities;
-    const pairs: Array<[string, string]> = [];
-
-    if (sampleSize && entities.length > sampleSize) {
-      // Random sampling for large graphs
-      for (let i = 0; i < sampleSize; i++) {
-        const a = entities[Math.floor(Math.random() * entities.length)].name;
-        const b = entities[Math.floor(Math.random() * entities.length)].name;
-        if (a !== b) pairs.push([a, b]);
+      if (round < cfg.maxRounds) {
+        currentQuery = this.refineQuery(query, allResults, adequacy.missingInfo);
       }
-    } else {
-      // All pairs for small graphs
+    }
+
+    return {
+      entities: allResults,
+      isAdequate: false,
+      rounds: round,
+      refinementHistory,
+      totalSearchTimeMs: Date.now() - startTime,
+    };
+  }
+
+  private calculateLimit(round: number, maxRounds: number): number {
+    return 10 * round; // Increase limit in later rounds
+  }
+}
+```
+
+### 9.4 Performance Metrics
+
+| Metric | Without Optimization | With Optimization | Improvement |
+|--------|----------------------|-------------------|-------------|
+| Token usage | ~3000 | ~550 | 5.5x reduction |
+| Search calls | 1 (exhaustive) | 1-3 (targeted) | Focused |
+| Latency (simple) | 200ms | 50ms | 4x faster |
+| Early termination rate | 0% | 60% | 60% queries |
+
+---
+
+## Phase 10: Embedding Performance
+
+**Goal**: Maximize embedding operation speed.
+**Effort**: 15 hours | **Impact**: 2-3x faster embedding operations
+
+### 10.1 Query-Optimized Encoding
+
+**Inspired by**: SimpleMem's query-vs-document encoding with prefixes.
+
+**File**: `src/search/OptimizedEmbeddingService.ts`
+
+```typescript
+class OptimizedEmbeddingService {
+  private queryPrefix = 'query: ';
+  private documentPrefix = 'passage: ';
+
+  async embed(text: string, mode: 'query' | 'document' = 'query'): Promise<number[]> {
+    // Add prefix based on mode (improves retrieval quality)
+    const prefixedText = mode === 'query'
+      ? `${this.queryPrefix}${text}`
+      : `${this.documentPrefix}${text}`;
+
+    const embedding = await this.generateEmbedding(prefixedText);
+    return this.l2Normalize(embedding);
+  }
+
+  async embedBatch(texts: string[], mode: 'document' = 'document'): Promise<number[][]> {
+    const batchSize = 32;
+    const results: number[][] = [];
+
+    for (let i = 0; i < texts.length; i += batchSize) {
+      const batch = texts.slice(i, i + batchSize);
+      const batchEmbeddings = await Promise.all(batch.map(text => this.embed(text, mode)));
+      results.push(...batchEmbeddings);
+    }
+
+    return results;
+  }
+
+  private l2Normalize(vector: number[]): number[] {
+    let norm = 0;
+    for (const v of vector) norm += v * v;
+    norm = Math.sqrt(norm);
+    if (norm === 0) return vector;
+    return vector.map(v => v / norm);
+  }
+}
+```
+
+### 10.2 Embedding Cache with LRU Eviction
+
+**File**: `src/search/EmbeddingCache.ts`
+
+```typescript
+interface CacheEntry {
+  embedding: number[];
+  timestamp: number;
+  accessCount: number;
+  textHash: string;
+}
+
+class EmbeddingCache {
+  private cache: Map<string, CacheEntry> = new Map();
+  private maxSize: number;
+  private ttlMs: number;
+
+  constructor(maxSize: number = 10000, ttlMs: number = 3600000) {
+    this.maxSize = maxSize;
+    this.ttlMs = ttlMs;
+  }
+
+  get(entityName: string, textHash: string): number[] | null {
+    const entry = this.cache.get(entityName);
+    if (!entry) return null;
+
+    // Check if text changed (invalidate stale embedding)
+    if (entry.textHash !== textHash) {
+      this.cache.delete(entityName);
+      return null;
+    }
+
+    // Check TTL
+    if (Date.now() - entry.timestamp > this.ttlMs) {
+      this.cache.delete(entityName);
+      return null;
+    }
+
+    entry.accessCount++;
+    return entry.embedding;
+  }
+
+  set(entityName: string, embedding: number[], textHash: string): void {
+    if (this.cache.size >= this.maxSize) {
+      this.evictLRU();
+    }
+    this.cache.set(entityName, { embedding, timestamp: Date.now(), accessCount: 1, textHash });
+  }
+
+  private evictLRU(): void {
+    let minAccess = Infinity;
+    let evictKey: string | null = null;
+    for (const [key, entry] of this.cache) {
+      if (entry.accessCount < minAccess) {
+        minAccess = entry.accessCount;
+        evictKey = key;
+      }
+    }
+    if (evictKey) this.cache.delete(evictKey);
+  }
+}
+```
+
+### 10.3 Incremental Re-indexing
+
+**File**: `src/search/IncrementalIndexer.ts`
+
+```typescript
+class IncrementalIndexer {
+  private pendingUpdates: Map<string, 'create' | 'update' | 'delete'> = new Map();
+  private flushThreshold = 50;
+  private flushIntervalMs = 5000;
+  private flushTimer: NodeJS.Timer | null = null;
+
+  queueUpdate(entityName: string, type: 'create' | 'update' | 'delete'): void {
+    this.pendingUpdates.set(entityName, type);
+
+    if (this.pendingUpdates.size >= this.flushThreshold) {
+      this.flush();
+    } else if (!this.flushTimer) {
+      this.flushTimer = setTimeout(() => this.flush(), this.flushIntervalMs);
+    }
+  }
+
+  async flush(): Promise<void> {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+
+    if (this.pendingUpdates.size === 0) return;
+
+    const updates = new Map(this.pendingUpdates);
+    this.pendingUpdates.clear();
+
+    // Group by operation type
+    const creates: string[] = [];
+    const deletes: string[] = [];
+
+    for (const [name, type] of updates) {
+      if (type === 'delete') deletes.push(name);
+      else creates.push(name);
+    }
+
+    // Process deletions (fast)
+    for (const name of deletes) {
+      this.vectorStore.remove(name);
+      this.bm25Index.remove(name);
+    }
+
+    // Process creates/updates (batch embed)
+    if (creates.length > 0) {
+      const entities = await this.loadEntities(creates);
+      const texts = entities.map(e => this.entityToText(e));
+      const embeddings = await this.embeddingService.embedBatch(texts);
+
       for (let i = 0; i < entities.length; i++) {
-        for (let j = i + 1; j < entities.length; j++) {
-          pairs.push([entities[i].name, entities[j].name]);
-        }
+        this.vectorStore.add(entities[i].name, embeddings[i]);
+        this.bm25Index.update(entities[i]);
       }
     }
-
-    // Count shortest paths through each entity
-    for (const [from, to] of pairs) {
-      const path = this.shortestPath(from, to);
-      if (path && path.path.length > 2) {
-        // Intermediate nodes get credit
-        for (let i = 1; i < path.path.length - 1; i++) {
-          const name = path.path[i].name;
-          scores.set(name, (scores.get(name) || 0) + 1);
-        }
-      }
-    }
-
-    // Normalize and sort
-    const maxScore = Math.max(...scores.values()) || 1;
-    return Array.from(scores.entries())
-      .map(([entity, score]) => ({ entity, score: score / maxScore }))
-      .sort((a, b) => b.score - a.score);
-  }
-
-  /**
-   * Calculate PageRank-style importance scores.
-   * Propagates importance through the graph structure.
-   *
-   * @param dampingFactor - Probability of following a link (default: 0.85)
-   * @param iterations - Number of iterations (default: 20)
-   * @returns Entities sorted by PageRank score
-   */
-  pageRank(dampingFactor: number = 0.85, iterations: number = 20): CentralityResult[] {
-    const n = this.graph.entities.length;
-    if (n === 0) return [];
-
-    // Initialize scores
-    let scores = new Map<string, number>();
-    for (const entity of this.graph.entities) {
-      scores.set(entity.name, 1 / n);
-    }
-
-    // Iterate
-    for (let i = 0; i < iterations; i++) {
-      const newScores = new Map<string, number>();
-
-      for (const entity of this.graph.entities) {
-        // Base score from random jumps
-        let score = (1 - dampingFactor) / n;
-
-        // Add contributions from incoming edges
-        const incomingNeighbors = this.getNeighbors(entity.name, {
-          includeRelations: true,
-          direction: 'incoming',
-        });
-
-        for (const neighbor of incomingNeighbors) {
-          const outDegree = this.getNeighbors(neighbor, {
-            includeRelations: true,
-            direction: 'outgoing',
-          }).length || 1;
-
-          score += dampingFactor * (scores.get(neighbor) || 0) / outDegree;
-        }
-
-        newScores.set(entity.name, score);
-      }
-
-      scores = newScores;
-    }
-
-    return Array.from(scores.entries())
-      .map(([entity, score]) => ({ entity, score }))
-      .sort((a, b) => b.score - a.score);
-  }
-
-  // ==================== HELPER METHODS ====================
-
-  private getNeighbors(entityName: string, options: TraversalOptions): string[] {
-    const neighbors = new Set<string>();
-    const entity = this.graph.entities.find(e => e.name === entityName);
-
-    // Hierarchy edges
-    if (options.includeHierarchy !== false) {
-      if (entity?.parentId) {
-        neighbors.add(entity.parentId);
-      }
-      // Children
-      for (const e of this.graph.entities) {
-        if (e.parentId === entityName) {
-          neighbors.add(e.name);
-        }
-      }
-    }
-
-    // Relation edges
-    if (options.includeRelations !== false) {
-      const relations = this.relationIndex.getRelationsFor(entityName);
-      const direction = options.direction ?? 'both';
-      const allowedTypes = options.relationTypes ? new Set(options.relationTypes) : null;
-
-      for (const rel of relations) {
-        if (allowedTypes && !allowedTypes.has(rel.relationType)) continue;
-
-        if (direction === 'outgoing' || direction === 'both') {
-          if (rel.from === entityName) neighbors.add(rel.to);
-        }
-        if (direction === 'incoming' || direction === 'both') {
-          if (rel.to === entityName) neighbors.add(rel.from);
-        }
-      }
-    }
-
-    return Array.from(neighbors);
-  }
-
-  private getNeighborsWithRelations(
-    entityName: string,
-    options: TraversalOptions
-  ): Array<{ neighbor: string; relation?: Relation }> {
-    const result: Array<{ neighbor: string; relation?: Relation }> = [];
-
-    // ... similar to getNeighbors but returns relation info
-
-    return result;
-  }
-
-  private reconstructPath(
-    from: string,
-    to: string,
-    parent: Map<string, { from: string; relation?: Relation }>
-  ): PathResult {
-    const path: Entity[] = [];
-    const relations: Relation[] = [];
-    let current = to;
-
-    while (current !== from) {
-      const entity = this.graph.entities.find(e => e.name === current);
-      if (entity) path.unshift(entity);
-
-      const p = parent.get(current);
-      if (!p) break;
-      if (p.relation) relations.unshift(p.relation);
-      current = p.from;
-    }
-
-    const startEntity = this.graph.entities.find(e => e.name === from);
-    if (startEntity) path.unshift(startEntity);
-
-    return { path, relations, length: path.length - 1 };
   }
 }
 ```
+
+### 10.4 Performance Metrics
+
+| Operation | Before | After | Improvement |
+|-----------|--------|-------|-------------|
+| Query embedding | 100ms | 50ms | 2x (with cache) |
+| Batch embedding (100) | 5000ms | 1500ms | 3.3x (parallel) |
+| Index update | 500ms | 50ms | 10x (incremental) |
+| Cache hit rate | 0% | 80% | Memory savings |
 
 ---
 
-### 3.2 MCP Tool Integration
+## Phase 11: Memory Efficiency
 
-**Effort:** 4 hours | **Impact:** HIGH
+**Goal**: Reduce memory footprint for large knowledge graphs.
+**Effort**: 20 hours | **Impact**: 50% memory reduction
 
-**New Tools to Add:**
+### 11.1 Vector Quantization
 
-```typescript
-// toolDefinitions.ts additions
-
-// Shortest Path
-{
-  name: 'find_shortest_path',
-  description: 'Find the shortest path between two entities through relations',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      from: { type: 'string', description: 'Starting entity name' },
-      to: { type: 'string', description: 'Target entity name' },
-      relationTypes: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Limit to specific relation types (optional)'
-      },
-      maxDepth: { type: 'number', description: 'Maximum path length (default: 10)' }
-    },
-    required: ['from', 'to']
-  }
-},
-
-// Connected Components
-{
-  name: 'get_connected_components',
-  description: 'Find all connected subgraphs in the knowledge graph',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      minSize: { type: 'number', description: 'Minimum component size to return' }
-    }
-  }
-},
-
-// Centrality Analysis
-{
-  name: 'get_centrality',
-  description: 'Calculate centrality scores to find important entities',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      algorithm: {
-        type: 'string',
-        enum: ['degree', 'betweenness', 'pagerank'],
-        description: 'Centrality algorithm to use'
-      },
-      limit: { type: 'number', description: 'Number of top entities to return' }
-    }
-  }
-},
-
-// Find All Paths
-{
-  name: 'find_all_paths',
-  description: 'Find all paths between two entities up to a maximum length',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      from: { type: 'string' },
-      to: { type: 'string' },
-      maxLength: { type: 'number', description: 'Maximum path length (default: 5)' }
-    },
-    required: ['from', 'to']
-  }
-}
-```
-
-**Handler Implementations:**
-```typescript
-// toolHandlers.ts additions
-
-find_shortest_path: async (ctx, args) => {
-  const from = validateWithSchema(args.from, z.string(), 'Invalid from entity');
-  const to = validateWithSchema(args.to, z.string(), 'Invalid to entity');
-  const maxDepth = args.maxDepth as number | undefined;
-  const relationTypes = args.relationTypes as string[] | undefined;
-
-  const graph = await ctx.storage.loadGraph();
-  const traversal = new GraphTraversal(graph, ctx.storage.getRelationIndex());
-
-  const result = traversal.shortestPath(from, to, {
-    includeRelations: true,
-    relationTypes,
-    maxDepth,
-  });
-
-  if (!result) {
-    return formatTextResponse(`No path found between "${from}" and "${to}"`);
-  }
-
-  return formatToolResponse({
-    path: result.path.map(e => e.name),
-    relations: result.relations.map(r => `${r.from} -[${r.relationType}]-> ${r.to}`),
-    length: result.length,
-  });
-},
-
-get_connected_components: async (ctx, args) => {
-  const minSize = (args.minSize as number) ?? 1;
-
-  const graph = await ctx.storage.loadGraph();
-  const traversal = new GraphTraversal(graph, ctx.storage.getRelationIndex());
-
-  const components = traversal.connectedComponents()
-    .filter(c => c.size >= minSize);
-
-  return formatToolResponse({
-    totalComponents: components.length,
-    components: components.map(c => ({
-      size: c.size,
-      entities: c.entities.map(e => e.name),
-      relationCount: c.relations.length,
-    })),
-  });
-},
-
-get_centrality: async (ctx, args) => {
-  const algorithm = (args.algorithm as string) ?? 'degree';
-  const limit = (args.limit as number) ?? 10;
-
-  const graph = await ctx.storage.loadGraph();
-  const traversal = new GraphTraversal(graph, ctx.storage.getRelationIndex());
-
-  let results: CentralityResult[];
-  switch (algorithm) {
-    case 'degree':
-      results = traversal.degreeCentrality();
-      break;
-    case 'betweenness':
-      results = traversal.betweennessCentrality(100); // Sample 100 pairs
-      break;
-    case 'pagerank':
-      results = traversal.pageRank();
-      break;
-    default:
-      throw new Error(`Unknown algorithm: ${algorithm}`);
-  }
-
-  return formatToolResponse({
-    algorithm,
-    topEntities: results.slice(0, limit),
-  });
-},
-```
-
----
-
-### 3.3 Relation Weights Support
-
-**Effort:** 4 hours | **Impact:** MEDIUM
-
-**Schema Changes:**
-```typescript
-// types/types.ts
-export interface Relation {
-  from: string;
-  to: string;
-  relationType: string;
-  weight?: number;        // NEW: Optional weight (default: 1.0)
-  metadata?: Record<string, unknown>;  // NEW: Optional metadata
-  createdAt?: string;     // NEW: Track relation creation
-}
-```
-
-**Use Cases:**
-- Weighted shortest path (Dijkstra's algorithm)
-- Stronger/weaker relationships
-- Confidence scores for extracted relations
-
----
-
-### 3.4 Multi-Hop Relation Queries
-
-**Effort:** 8 hours | **Impact:** HIGH
-
-**New Tool:**
-```typescript
-{
-  name: 'query_relations',
-  description: 'Query entities connected through multiple relation hops',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      from: { type: 'string', description: 'Starting entity' },
-      pattern: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            relationType: { type: 'string' },
-            direction: { type: 'string', enum: ['outgoing', 'incoming', 'any'] }
-          }
-        },
-        description: 'Pattern of relation types to follow'
-      }
-    },
-    required: ['from', 'pattern']
-  }
-}
-```
-
-**Example Usage:**
-```json
-{
-  "from": "Alice",
-  "pattern": [
-    { "relationType": "works_at", "direction": "outgoing" },
-    { "relationType": "located_in", "direction": "outgoing" }
-  ]
-}
-// Returns: Alice -> Company -> City
-```
-
----
-
-## Phase 4: Brotli Compression
-
-**Effort:** 31 hours | **Priority:** MEDIUM | **ROI:** HIGH (Storage)
-
-> **Note:** Detailed implementation plan exists in `docs/planning/PHASE_3_REFACTORING_PLAN.md`
-
-### 4.1 Sprint Overview
-
-| Sprint | Feature | Effort | Impact |
-|--------|---------|--------|--------|
-| **Sprint 1** | Compression utility module | 6 hours | Foundation |
-| **Sprint 2** | Backup compression | 7 hours | 50-70% smaller backups |
-| **Sprint 3** | Export compression | 6 hours | 60-75% smaller exports |
-| **Sprint 4** | MCP response compression | 6 hours | Faster large responses |
-| **Sprint 5** | Archive + cache compression | 6 hours | Memory savings |
-
-### 4.2 Expected Metrics
-
-| Operation | Before | After | Reduction |
-|-----------|--------|-------|-----------|
-| Backup (5K entities) | 1.25 MB | 375 KB | 70% |
-| Export (100K entities) | 25 MB | 7.5 MB | 70% |
-| MCP response (large) | 1 MB | 300 KB | 70% |
-| Write overhead | 0ms | +1-2ms | Acceptable |
-| Load overhead | 0ms | +10-15ms | Acceptable |
-
-### 4.3 Implementation Notes
+**File**: `src/search/QuantizedVectorStore.ts`
 
 ```typescript
-// New file: src/memory/utils/compression.ts
-
-import { brotliCompressSync, brotliDecompressSync, constants } from 'zlib';
-
-export interface CompressionOptions {
-  level?: number;  // 1-11, default 6
-  threshold?: number;  // Min size to compress, default 1024
+interface QuantizationConfig {
+  method: 'scalar' | 'product';
+  bits: 8 | 4;
 }
 
-export function compress(data: string, options: CompressionOptions = {}): Buffer {
-  const level = options.level ?? 6;
+class QuantizedVectorStore {
+  private vectors: Map<string, Uint8Array> = new Map();
+  private config: QuantizationConfig;
 
-  if (data.length < (options.threshold ?? 1024)) {
-    return Buffer.from(data, 'utf-8');
+  constructor(config: QuantizationConfig = { method: 'scalar', bits: 8 }) {
+    this.config = config;
   }
 
-  return brotliCompressSync(Buffer.from(data, 'utf-8'), {
-    params: {
-      [constants.BROTLI_PARAM_QUALITY]: level,
-    },
-  });
-}
-
-export function decompress(data: Buffer): string {
-  // Check magic bytes for Brotli
-  if (isBrotliCompressed(data)) {
-    return brotliDecompressSync(data).toString('utf-8');
-  }
-  return data.toString('utf-8');
-}
-
-function isBrotliCompressed(data: Buffer): boolean {
-  // Brotli doesn't have magic bytes, use heuristic
-  // Try to decompress and catch error
-  try {
-    brotliDecompressSync(data);
-    return true;
-  } catch {
-    return false;
-  }
-}
-```
-
----
-
-## Phase 5: Semantic Search
-
-**Effort:** 25 hours | **Priority:** LOW | **ROI:** VERY HIGH (Capabilities)
-
-### 5.1 Overview
-
-Semantic search uses AI embeddings to find entities by meaning, not just text matching.
-
-**Benefits:**
-- "Find entities similar to X" without exact text match
-- Automatic clustering of related entities
-- Better duplicate detection via semantic similarity
-- Natural language queries ("projects about authentication")
-
-### 5.2 Architecture
-
-```
-┌─────────────────────────────────────────────────────┐
-│                   Semantic Search                    │
-├─────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │  Embedding  │  │   Vector    │  │   Nearest   │ │
-│  │   Service   │──│    Store    │──│  Neighbor   │ │
-│  │  (OpenAI/   │  │  (SQLite/   │  │   Search    │ │
-│  │   Local)    │  │   Memory)   │  │             │ │
-│  └─────────────┘  └─────────────┘  └─────────────┘ │
-└─────────────────────────────────────────────────────┘
-```
-
-### 5.3 Implementation Plan
-
-#### 5.3.1 Embedding Service Abstraction
-
-**New File:** `src/memory/search/EmbeddingService.ts`
-
-```typescript
-export interface EmbeddingService {
-  /** Generate embedding vector for text */
-  embed(text: string): Promise<number[]>;
-
-  /** Generate embeddings for multiple texts (batched) */
-  embedBatch(texts: string[]): Promise<number[][]>;
-
-  /** Embedding dimension size */
-  readonly dimensions: number;
-}
-
-// OpenAI implementation
-export class OpenAIEmbeddingService implements EmbeddingService {
-  readonly dimensions = 1536; // text-embedding-3-small
-
-  constructor(private apiKey: string) {}
-
-  async embed(text: string): Promise<number[]> {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: text,
-      }),
-    });
-
-    const data = await response.json();
-    return data.data[0].embedding;
+  add(name: string, vector: number[]): void {
+    const quantized = this.quantize(vector);
+    this.vectors.set(name, quantized);
   }
 
-  async embedBatch(texts: string[]): Promise<number[][]> {
-    // Batch up to 2048 texts per request
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: texts,
-      }),
-    });
-
-    const data = await response.json();
-    return data.data.map((d: any) => d.embedding);
-  }
-}
-
-// Local implementation using transformers.js (no API needed)
-export class LocalEmbeddingService implements EmbeddingService {
-  readonly dimensions = 384; // all-MiniLM-L6-v2
-  private pipeline: any;
-
-  async initialize(): Promise<void> {
-    const { pipeline } = await import('@xenova/transformers');
-    this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-  }
-
-  async embed(text: string): Promise<number[]> {
-    const result = await this.pipeline(text, { pooling: 'mean', normalize: true });
-    return Array.from(result.data);
-  }
-
-  async embedBatch(texts: string[]): Promise<number[][]> {
-    return Promise.all(texts.map(t => this.embed(t)));
-  }
-}
-```
-
-#### 5.3.2 Vector Store
-
-**SQLite Extension:**
-```sql
--- Add to entities table
-ALTER TABLE entities ADD COLUMN embedding BLOB;
-ALTER TABLE entities ADD COLUMN embedding_model TEXT;
-ALTER TABLE entities ADD COLUMN embedding_updated_at TEXT;
-
--- Create index for efficient similarity search (if using sqlite-vss extension)
-CREATE VIRTUAL TABLE IF NOT EXISTS entity_vectors USING vss0(
-  embedding(1536)  -- Dimension matches embedding model
-);
-```
-
-**In-Memory Fallback:**
-```typescript
-class InMemoryVectorStore {
-  private vectors: Map<string, number[]> = new Map();
-
-  add(entityName: string, vector: number[]): void {
-    this.vectors.set(entityName, vector);
-  }
-
-  search(queryVector: number[], k: number): Array<{ name: string; score: number }> {
+  search(query: number[], k: number): Array<{ name: string; score: number }> {
     const scores: Array<{ name: string; score: number }> = [];
 
-    for (const [name, vector] of this.vectors) {
-      const score = this.cosineSimilarity(queryVector, vector);
+    for (const [name, quantized] of this.vectors) {
+      const score = this.asymmetricSimilarity(query, quantized);
       scores.push({ name, score });
     }
 
-    return scores
-      .sort((a, b) => b.score - a.score)
-      .slice(0, k);
+    return scores.sort((a, b) => b.score - a.score).slice(0, k);
   }
 
-  private cosineSimilarity(a: number[], b: number[]): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
+  private quantize(vector: number[]): Uint8Array {
+    const quantized = new Uint8Array(vector.length);
+    const min = Math.min(...vector);
+    const max = Math.max(...vector);
+    const range = max - min || 1;
 
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+    for (let i = 0; i < vector.length; i++) {
+      quantized[i] = Math.round(((vector[i] - min) / range) * 255);
+    }
+    return quantized;
+  }
+
+  private asymmetricSimilarity(query: number[], quantized: Uint8Array): number {
+    let dotProduct = 0, queryNorm = 0, dbNorm = 0;
+
+    for (let i = 0; i < query.length; i++) {
+      const dbValue = quantized[i] / 255;
+      dotProduct += query[i] * dbValue;
+      queryNorm += query[i] * query[i];
+      dbNorm += dbValue * dbValue;
     }
 
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    return dotProduct / (Math.sqrt(queryNorm) * Math.sqrt(dbNorm));
+  }
+
+  getMemoryUsage(): { vectors: number; bytesPerVector: number; totalBytes: number } {
+    const count = this.vectors.size;
+    if (count === 0) return { vectors: 0, bytesPerVector: 0, totalBytes: 0 };
+    const firstVector = this.vectors.values().next().value;
+    return { vectors: count, bytesPerVector: firstVector.byteLength, totalBytes: count * firstVector.byteLength };
   }
 }
 ```
 
-#### 5.3.3 Semantic Search Manager
+### 11.2 Compressed LRU Cache
 
-**New File:** `src/memory/search/SemanticSearch.ts`
+**File**: `src/utils/CompressedCache.ts`
 
 ```typescript
-export class SemanticSearch {
-  constructor(
-    private embeddingService: EmbeddingService,
-    private vectorStore: VectorStore,
-    private storage: IGraphStorage
-  ) {}
+import { brotliCompressSync, brotliDecompressSync, constants } from 'zlib';
 
-  /**
-   * Index all entities for semantic search.
-   * Call on startup or after bulk updates.
-   */
-  async indexAll(): Promise<void> {
-    const graph = await this.storage.loadGraph();
-    const texts = graph.entities.map(e => this.entityToText(e));
+class CompressedLRUCache<K, V> {
+  private cache: Map<K, { data: Buffer; compressed: boolean; accessTime: number }> = new Map();
+  private config = { maxSize: 1000, compressionThreshold: 1024, compressionLevel: 6 };
 
-    // Batch embed
-    const embeddings = await this.embeddingService.embedBatch(texts);
+  get(key: K): V | undefined {
+    const entry = this.cache.get(key);
+    if (!entry) return undefined;
 
-    // Store vectors
-    for (let i = 0; i < graph.entities.length; i++) {
-      this.vectorStore.add(graph.entities[i].name, embeddings[i]);
+    entry.accessTime = Date.now();
+    const data = entry.compressed ? brotliDecompressSync(entry.data) : entry.data;
+    return JSON.parse(data.toString()) as V;
+  }
+
+  set(key: K, value: V): void {
+    if (this.cache.size >= this.config.maxSize) {
+      this.evictLRU();
     }
+
+    const serialized = Buffer.from(JSON.stringify(value));
+    let data: Buffer;
+    let compressed = false;
+
+    if (serialized.length > this.config.compressionThreshold) {
+      data = brotliCompressSync(serialized, {
+        params: { [constants.BROTLI_PARAM_QUALITY]: this.config.compressionLevel },
+      });
+      compressed = true;
+    } else {
+      data = serialized;
+    }
+
+    this.cache.set(key, { data, compressed, accessTime: Date.now() });
   }
 
-  /**
-   * Find entities semantically similar to the query.
-   */
-  async search(query: string, limit: number = 10): Promise<SemanticSearchResult[]> {
-    const queryVector = await this.embeddingService.embed(query);
-    const results = this.vectorStore.search(queryVector, limit);
-
-    const graph = await this.storage.loadGraph();
-    return results.map(r => ({
-      entity: graph.entities.find(e => e.name === r.name)!,
-      similarity: r.score,
-    }));
-  }
-
-  /**
-   * Find entities similar to a given entity.
-   */
-  async findSimilar(entityName: string, limit: number = 10): Promise<SemanticSearchResult[]> {
-    const graph = await this.storage.loadGraph();
-    const entity = graph.entities.find(e => e.name === entityName);
-    if (!entity) throw new EntityNotFoundError(entityName);
-
-    const text = this.entityToText(entity);
-    return this.search(text, limit + 1)
-      .then(results => results.filter(r => r.entity.name !== entityName).slice(0, limit));
-  }
-
-  /**
-   * Cluster entities by semantic similarity.
-   */
-  async cluster(k: number): Promise<EntityCluster[]> {
-    // K-means clustering on embeddings
-    // Implementation details...
-  }
-
-  private entityToText(entity: Entity): string {
-    const parts = [
-      entity.name,
-      entity.entityType,
-      ...(entity.observations || []),
-      ...(entity.tags || []),
-    ];
-    return parts.join(' ');
+  private evictLRU(): void {
+    let oldestTime = Infinity;
+    let oldestKey: K | null = null;
+    for (const [key, entry] of this.cache) {
+      if (entry.accessTime < oldestTime) {
+        oldestTime = entry.accessTime;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey !== null) this.cache.delete(oldestKey);
   }
 }
 ```
 
-#### 5.3.4 New MCP Tools
+### 11.3 Performance Metrics
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Vector memory (10k, float32) | 60MB | 15MB | 4x reduction |
+| Cache memory | 50MB | 15MB | 3.3x reduction |
+| Total memory (10k entities) | 150MB | 75MB | 2x reduction |
+
+---
+
+## Phase 12: Adaptive Performance
+
+**Goal**: Automatically optimize based on workload characteristics.
+**Effort**: 15 hours | **Impact**: Consistent high performance
+
+### 12.1 Auto-Tuning Search Parameters
+
+**File**: `src/search/AutoTuner.ts`
 
 ```typescript
-// Semantic search tool
-{
-  name: 'semantic_search',
-  description: 'Find entities by semantic similarity to a natural language query',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      query: { type: 'string', description: 'Natural language search query' },
-      limit: { type: 'number', description: 'Maximum results (default: 10)' }
-    },
-    required: ['query']
-  }
-},
+interface TuningMetrics {
+  avgLatencyMs: number;
+  p99LatencyMs: number;
+  avgResultCount: number;
+  cacheHitRate: number;
+}
 
-// Find similar entities
-{
-  name: 'find_similar_entities',
-  description: 'Find entities semantically similar to a given entity',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      entityName: { type: 'string', description: 'Entity to find similar entities for' },
-      limit: { type: 'number', description: 'Maximum results (default: 10)' }
-    },
-    required: ['entityName']
-  }
-},
+interface TunedParameters {
+  defaultLimit: number;
+  cacheSize: number;
+  parallelWorkers: number;
+  embeddingBatchSize: number;
+  hybridWeights: { semantic: number; lexical: number; symbolic: number };
+}
 
-// Cluster entities
-{
-  name: 'cluster_entities',
-  description: 'Group entities into clusters based on semantic similarity',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      clusters: { type: 'number', description: 'Number of clusters (default: auto-detect)' }
+class AutoTuner {
+  private metrics: TuningMetrics[] = [];
+  private currentParams: TunedParameters;
+
+  recordMetrics(operation: SearchOperation): void {
+    // Aggregate metrics
+  }
+
+  tune(): TunedParameters {
+    const avgMetrics = this.aggregateMetrics();
+
+    // Adjust cache size based on hit rate
+    if (avgMetrics.cacheHitRate < 0.5) {
+      this.currentParams.cacheSize *= 2;
     }
+
+    // Adjust parallel workers based on latency
+    if (avgMetrics.p99LatencyMs > 500) {
+      this.currentParams.parallelWorkers = Math.min(
+        this.currentParams.parallelWorkers + 1,
+        os.cpus().length
+      );
+    }
+
+    // Adjust default limit based on result count
+    if (avgMetrics.avgResultCount < 5) {
+      this.currentParams.defaultLimit *= 1.5;
+    }
+
+    return this.currentParams;
   }
 }
 ```
 
-### 5.4 Configuration
+### 12.2 Graph-Aware Optimization
+
+**File**: `src/search/GraphAwareOptimizer.ts`
 
 ```typescript
-// Environment variables
-MEMORY_EMBEDDING_PROVIDER=openai|local|none
-MEMORY_OPENAI_API_KEY=sk-...
-MEMORY_EMBEDDING_MODEL=text-embedding-3-small
-MEMORY_AUTO_INDEX_EMBEDDINGS=true|false
+interface GraphCharacteristics {
+  entityCount: number;
+  relationCount: number;
+  avgObservationsPerEntity: number;
+  hierarchyDepth: number;
+}
+
+class GraphAwareOptimizer {
+  selectIndexStrategy(characteristics: GraphCharacteristics): IndexStrategy {
+    // Small graphs: in-memory everything
+    if (characteristics.entityCount < 1000) {
+      return { vectorIndex: 'flat', textIndex: 'memory', cacheStrategy: 'full' };
+    }
+
+    // Medium graphs: approximate search
+    if (characteristics.entityCount < 100000) {
+      return { vectorIndex: 'hnsw', textIndex: 'bm25', cacheStrategy: 'lru' };
+    }
+
+    // Large graphs: sharded
+    return { vectorIndex: 'ivf', textIndex: 'bm25-sharded', cacheStrategy: 'distributed' };
+  }
+}
 ```
 
 ---
 
-## Implementation Schedule
+## Implementation Priority Matrix
 
-### Timeline Overview
-
-```
-Week 1-2:   Phase 1 (Quick Wins) ──────────────── 8 hours
-Week 3-4:   Phase 2 (Search Optimization) ─────── 12 hours
-Week 5-8:   Phase 3 (Graph Algorithms) ────────── 24 hours
-Week 9-14:  Phase 4 (Brotli Compression) ──────── 31 hours
-Week 15-18: Phase 5 (Semantic Search) ─────────── 25 hours
-```
-
-### Detailed Schedule
-
-| Week | Phase | Tasks | Hours |
-|------|-------|-------|-------|
-| 1 | 1 | SQLite indexes, bidirectional cache | 4 |
-| 2 | 1 | RankedSearch cache, lazy loading | 4 |
-| 3 | 2 | Fuzzy search cache | 4 |
-| 4 | 2 | Boolean cache, pagination cache | 8 |
-| 5 | 3 | GraphTraversal framework | 8 |
-| 6 | 3 | BFS, DFS, shortest path | 6 |
-| 7 | 3 | Connected components, centrality | 6 |
-| 8 | 3 | MCP tools, relation weights | 4 |
-| 9-10 | 4 | Compression module, backup compression | 13 |
-| 11-12 | 4 | Export compression, MCP compression | 12 |
-| 13-14 | 4 | Archive compression, polish | 6 |
-| 15-16 | 5 | Embedding service, vector store | 12 |
-| 17-18 | 5 | Semantic search, clustering, tools | 13 |
+| Priority | Phase | Optimization | Effort | Impact |
+|----------|-------|--------------|--------|--------|
+| **P0** | 6 | Set-based bulk operations | 2h | 50x bulk deletes |
+| **P0** | 6 | Pre-computed similarity | 4h | 2x duplicate detection |
+| **P0** | 7 | Parallel search execution | 8h | 3x throughput |
+| **P1** | 6 | Single-load compression | 3h | 10x I/O reduction |
+| **P1** | 8 | BM25 lexical scoring | 8h | Better accuracy |
+| **P1** | 9 | Complexity estimator | 6h | Token reduction |
+| **P2** | 7 | Worker pool architecture | 12h | Foundation |
+| **P2** | 10 | Embedding cache | 4h | 2x faster embedding |
+| **P2** | 10 | Incremental indexing | 8h | 10x update speed |
+| **P3** | 11 | Vector quantization | 10h | 4x memory reduction |
+| **P3** | 11 | Compressed cache | 6h | 3x memory reduction |
+| **P4** | 12 | Auto-tuning | 8h | Self-optimization |
+| **P4** | 12 | Graph-aware optimizer | 7h | Adaptive strategy |
 
 ---
 
-## Success Metrics
+## Benchmark Suite
 
-### Performance Metrics
-
-| Metric | Baseline | Phase 1 | Phase 2 | Phase 3 | Target |
-|--------|----------|---------|---------|---------|--------|
-| Repeated fuzzy search | 100ms | 100ms | <5ms | <5ms | <5ms |
-| Repeated boolean search | 50ms | 50ms | <5ms | <5ms | <5ms |
-| Relation lookup (bidirectional) | 20ms | <5ms | <5ms | <5ms | <5ms |
-| Startup time (10K entities) | 500ms | 50ms | 50ms | 50ms | <100ms |
-| Shortest path (1000 nodes) | N/A | N/A | N/A | <50ms | <100ms |
-
-### Storage Metrics
-
-| Metric | Baseline | After Phase 4 | Reduction |
-|--------|----------|---------------|-----------|
-| Backup size (5K entities) | 1.25 MB | 375 KB | 70% |
-| Export size (100K entities) | 25 MB | 7.5 MB | 70% |
-
-### Capability Metrics
-
-| Capability | Before | After |
-|------------|--------|-------|
-| Search algorithms | 5 | 6 (+ semantic) |
-| Graph algorithms | 0 | 5 (BFS, DFS, shortest path, components, centrality) |
-| MCP tools | 47 | 52+ |
-| Embedding support | No | Yes |
-
----
-
-## Risk Assessment
-
-### Technical Risks
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Embedding API costs | MEDIUM | MEDIUM | Offer local embedding option |
-| SQLite VSS extension availability | LOW | HIGH | In-memory fallback |
-| Backward compatibility | MEDIUM | HIGH | Version migration scripts |
-| Performance regression | LOW | HIGH | Comprehensive benchmarks |
-
-### Dependency Risks
-
-| Dependency | Risk | Mitigation |
-|------------|------|------------|
-| OpenAI API | Rate limits, pricing changes | Local embedding fallback |
-| better-sqlite3 | Native compilation issues | Document requirements |
-| @xenova/transformers | Large bundle size | Optional dependency |
-
-### Migration Risks
-
-| Risk | Mitigation |
-|------|------------|
-| Existing data format changes | Versioned schemas, auto-migration |
-| Index changes | Rebuild indexes on upgrade |
-| API changes | Deprecation warnings, compatibility shims |
-
----
-
-## Appendix A: File Changes Summary
-
-### New Files
-
-| File | Phase | Purpose |
-|------|-------|---------|
-| `src/memory/core/GraphTraversal.ts` | 3 | Graph algorithms |
-| `src/memory/utils/compression.ts` | 4 | Brotli utilities |
-| `src/memory/search/EmbeddingService.ts` | 5 | Embedding abstraction |
-| `src/memory/search/VectorStore.ts` | 5 | Vector storage |
-| `src/memory/search/SemanticSearch.ts` | 5 | Semantic search |
-
-### Modified Files
-
-| File | Phases | Changes |
-|------|--------|---------|
-| `src/memory/core/SQLiteStorage.ts` | 1, 5 | Indexes, embeddings |
-| `src/memory/search/FuzzySearch.ts` | 2 | Caching |
-| `src/memory/search/BooleanSearch.ts` | 2 | AST + result caching |
-| `src/memory/search/SearchManager.ts` | 2 | Pagination cache |
-| `src/memory/search/RankedSearch.ts` | 2 | Fallback cache |
-| `src/memory/server/toolDefinitions.ts` | 3, 5 | New tools |
-| `src/memory/server/toolHandlers.ts` | 3, 5 | New handlers |
-| `src/memory/types/types.ts` | 3 | Relation weights |
-| `src/memory/features/IOManager.ts` | 4 | Compression |
-
----
-
-## Appendix B: Environment Variables
+### Running Benchmarks
 
 ```bash
-# Storage
-MEMORY_FILE_PATH=/path/to/memory.jsonl
-MEMORY_STORAGE_TYPE=sqlite|jsonl
+# Run all benchmarks
+npm run benchmark
 
-# Compression (Phase 4)
-MEMORY_COMPRESSION_ENABLED=true|false
-MEMORY_COMPRESSION_LEVEL=6  # 1-11
-MEMORY_COMPRESSION_THRESHOLD=1024  # bytes
+# Run specific benchmark
+npx vitest run tests/performance/hybrid-search.bench.ts
+npx vitest run tests/performance/parallel-execution.bench.ts
+npx vitest run tests/performance/memory-usage.bench.ts
+```
 
-# Embeddings (Phase 5)
-MEMORY_EMBEDDING_PROVIDER=openai|local|none
-MEMORY_OPENAI_API_KEY=sk-...
-MEMORY_EMBEDDING_MODEL=text-embedding-3-small
-MEMORY_AUTO_INDEX_EMBEDDINGS=true|false
+### Benchmark Scenarios
+
+| Scenario | Description | Target |
+|----------|-------------|--------|
+| **simple-query** | Single-term search | <20ms |
+| **complex-query** | Multi-hop, temporal | <200ms |
+| **bulk-create** | 1000 entities | <1000ms |
+| **full-index** | 10k entity embedding | <30s |
+| **memory-10k** | Memory with 10k entities | <100MB |
+| **concurrent-50** | 50 concurrent searches | <500ms p99 |
+
+### Success Metrics Summary
+
+| Metric | Current (v9.8.3) | Target (v12.0) | Improvement |
+|--------|------------------|----------------|-------------|
+| Simple search latency | 50ms | 20ms | 2.5x |
+| Complex search latency | 200ms | 100ms | 2x |
+| Token efficiency | 1x | 30x | 30x |
+| Memory (10k entities) | 150MB | 75MB | 2x |
+| Concurrent throughput | 20 qps | 100 qps | 5x |
+
+---
+
+## Environment Variables
+
+```bash
+# Parallel Processing
+MEMORY_PARALLEL_WORKERS=4
+MEMORY_BATCH_SIZE=100
+MEMORY_MAX_CONCURRENT_SEARCHES=10
+
+# Search Optimization
+MEMORY_SEMANTIC_WEIGHT=0.5
+MEMORY_LEXICAL_WEIGHT=0.3
+MEMORY_SYMBOLIC_WEIGHT=0.2
+
+# Query Optimization
+MEMORY_ENABLE_QUERY_PLANNING=true
+MEMORY_COMPLEXITY_THRESHOLD=0.5
+
+# Embedding Performance
+MEMORY_EMBEDDING_CACHE_SIZE=10000
+MEMORY_EMBEDDING_BATCH_SIZE=32
+
+# Memory Optimization
+MEMORY_VECTOR_QUANTIZATION=scalar8
+MEMORY_CACHE_COMPRESSION=true
+MEMORY_COMPRESSION_THRESHOLD=1024
+
+# Auto-Tuning
+MEMORY_AUTO_TUNE=true
+MEMORY_TUNE_INTERVAL_MS=300000
 ```
 
 ---
 
-*Document Version: 1.0.0 | Created: 2026-01-02 | Author: Claude*
+*Document Version: 3.0.0 | Last Updated: 2026-01-08*
+*Performance insights from: SimpleMem three-stage semantic lossless compression architecture*
