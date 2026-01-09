@@ -1190,6 +1190,14 @@ export interface WeightedRelation extends Relation {
 // ==================== Semantic Search Types (Phase 4 Sprint 10-12) ====================
 
 /**
+ * Phase 12 Sprint 5: Embedding mode for query-optimized encoding.
+ *
+ * - 'query': For search queries (shorter, typically prepended with query prefix)
+ * - 'document': For document/passage indexing (longer, prepended with document prefix)
+ */
+export type EmbeddingMode = 'query' | 'document';
+
+/**
  * Phase 4 Sprint 10: Embedding service interface for vector embeddings.
  *
  * Provides abstraction over different embedding providers (OpenAI, local models).
@@ -1216,17 +1224,19 @@ export interface EmbeddingService {
    * Generate embedding for a single text.
    *
    * @param text - Text to embed
+   * @param mode - Optional embedding mode ('query' or 'document', default: 'document')
    * @returns Promise resolving to embedding vector (array of numbers)
    */
-  embed(text: string): Promise<number[]>;
+  embed(text: string, mode?: EmbeddingMode): Promise<number[]>;
 
   /**
    * Generate embeddings for multiple texts in batch.
    *
    * @param texts - Array of texts to embed
+   * @param mode - Optional embedding mode ('query' or 'document', default: 'document')
    * @returns Promise resolving to array of embedding vectors
    */
-  embedBatch(texts: string[]): Promise<number[][]>;
+  embedBatch(texts: string[], mode?: EmbeddingMode): Promise<number[][]>;
 
   /**
    * Check if the service is initialized and ready.
@@ -1844,6 +1854,39 @@ export interface QueryCostEstimatorOptions {
 
   /** Threshold for "high" complexity (entity count, default: 1000) */
   highComplexityThreshold?: number;
+}
+
+// ==================== Compression Types (Phase 12) ====================
+
+/**
+ * Phase 12 Sprint 1: Entity data pre-processed for efficient similarity comparisons.
+ * Pre-computes normalized Sets once to avoid repeated creation during O(n^2) comparisons.
+ *
+ * @example
+ * ```typescript
+ * const prepared: PreparedEntity = {
+ *   entity: originalEntity,
+ *   nameLower: 'alice',
+ *   typeLower: 'person',
+ *   observationSet: new Set(['works at techcorp', 'loves typescript']),
+ *   tagSet: new Set(['employee', 'developer']),
+ *   nameHash: 2851307223
+ * };
+ * ```
+ */
+export interface PreparedEntity {
+  /** Original entity reference */
+  entity: Entity;
+  /** Lowercase name for comparison */
+  nameLower: string;
+  /** Lowercase entity type */
+  typeLower: string;
+  /** Set of lowercase observations */
+  observationSet: Set<string>;
+  /** Set of lowercase tags */
+  tagSet: Set<string>;
+  /** FNV-1a hash of name for fast bucketing (optional) */
+  nameHash?: number;
 }
 
 // ==================== Hybrid Search Types (Phase 11) ====================
