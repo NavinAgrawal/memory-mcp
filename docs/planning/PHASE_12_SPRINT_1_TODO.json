@@ -1,0 +1,125 @@
+{
+  "sprint": {
+    "phase": 12,
+    "sprint": 1,
+    "name": "Foundation Performance",
+    "goal": "Optimize core data structure operations for O(1) lookups and efficient bulk operations",
+    "effort": "12 hours",
+    "impact": "10-50x speedup for bulk operations",
+    "status": "not_started",
+    "created": "2026-01-09",
+    "targetVersion": "10.0.0"
+  },
+  "tasks": [
+    {
+      "id": "12.1.1",
+      "name": "Set-Based Bulk Operations",
+      "description": "Replace O(n) includes() checks with O(1) Set.has() in bulk delete/update operations",
+      "status": "not_started",
+      "priority": "P0",
+      "effort": "2 hours",
+      "files": [
+        "src/core/EntityManager.ts",
+        "src/core/RelationManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Bulk delete (1000 entities) completes in <100ms (from 5000ms)",
+        "All existing tests pass",
+        "New benchmark tests added"
+      ],
+      "tests": [
+        "tests/unit/core/EntityManager.test.ts",
+        "tests/performance/bulk-operations.test.ts"
+      ]
+    },
+    {
+      "id": "12.1.2",
+      "name": "Pre-computed Similarity Data",
+      "description": "Create PreparedEntity interface with pre-computed Sets and hash for faster duplicate detection",
+      "status": "not_started",
+      "priority": "P0",
+      "effort": "3 hours",
+      "files": [
+        "src/features/CompressionManager.ts",
+        "src/types/types.ts",
+        "src/utils/entityUtils.ts"
+      ],
+      "acceptanceCriteria": [
+        "Duplicate detection (10k entities) completes in <4000ms (from 8000ms)",
+        "Hash function handles Unicode correctly",
+        "Memory overhead is documented"
+      ],
+      "tests": [
+        "tests/unit/features/CompressionManager.test.ts"
+      ]
+    },
+    {
+      "id": "12.1.3",
+      "name": "Single-Load Compression",
+      "description": "Optimize compressGraph to load once, merge all in-memory, save once",
+      "status": "not_started",
+      "priority": "P1",
+      "effort": "3 hours",
+      "files": [
+        "src/features/CompressionManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "compressGraph (100 merges) completes in <1000ms (from 10000ms)",
+        "Single load/save verified via test",
+        "Event emitted after all merges"
+      ],
+      "tests": [
+        "tests/unit/features/CompressionManager.test.ts"
+      ]
+    },
+    {
+      "id": "12.1.4",
+      "name": "Enhanced NameIndex Utilization",
+      "description": "Replace all graph.entities.find() calls with O(1) getEntityByName() lookups",
+      "status": "not_started",
+      "priority": "P1",
+      "effort": "2 hours",
+      "files": [
+        "src/core/EntityManager.ts",
+        "src/features/TagManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Zero entities.find() calls remain in hot paths",
+        "addTags (single) completes in <0.5ms (from 5ms)",
+        "TypeScript strict mode passes"
+      ],
+      "tests": [
+        "tests/unit/core/EntityManager.test.ts",
+        "tests/unit/features/TagManager.test.ts"
+      ]
+    },
+    {
+      "id": "12.1.5",
+      "name": "Foundation Performance Benchmarks",
+      "description": "Create comprehensive benchmark suite for Sprint 1 optimizations",
+      "status": "not_started",
+      "priority": "P1",
+      "effort": "2 hours",
+      "files": [
+        "tests/performance/foundation-benchmarks.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "All Sprint 1 benchmarks pass",
+        "Benchmark results logged to console",
+        "CI-friendly with generous thresholds"
+      ],
+      "tests": [
+        "tests/performance/foundation-benchmarks.test.ts"
+      ]
+    }
+  ],
+  "dependencies": [],
+  "blockedBy": [],
+  "deliverables": [
+    "Set-based bulk operations in EntityManager and RelationManager",
+    "PreparedEntity interface with pre-computed data",
+    "Single-load compressGraph implementation",
+    "O(1) index lookups throughout codebase",
+    "Foundation performance benchmark suite"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "sprint": {
+    "phase": 12,
+    "sprint": 5,
+    "name": "Embedding Performance",
+    "goal": "Maximize embedding operation speed through caching and incremental indexing",
+    "effort": "12 hours",
+    "impact": "2-3x faster embedding operations",
+    "status": "not_started",
+    "created": "2026-01-09",
+    "targetVersion": "10.0.0"
+  },
+  "tasks": [
+    {
+      "id": "12.5.1",
+      "name": "Query-Optimized Embedding Encoding",
+      "description": "Add query vs document prefixes for improved retrieval quality and L2 normalization",
+      "status": "not_started",
+      "priority": "P2",
+      "effort": "3 hours",
+      "files": [
+        "src/search/EmbeddingService.ts"
+      ],
+      "acceptanceCriteria": [
+        "Query prefix for search queries",
+        "Document prefix for entity indexing",
+        "L2 normalization for cosine similarity"
+      ],
+      "tests": [
+        "tests/unit/search/EmbeddingService.test.ts"
+      ]
+    },
+    {
+      "id": "12.5.2",
+      "name": "Embedding Cache with LRU Eviction",
+      "description": "Create embedding cache that invalidates on text change and evicts LRU entries",
+      "status": "not_started",
+      "priority": "P2",
+      "effort": "3 hours",
+      "files": [
+        "src/search/EmbeddingCache.ts"
+      ],
+      "acceptanceCriteria": [
+        "80%+ cache hit rate for repeated queries",
+        "Automatic invalidation on text change",
+        "Memory usage tracking"
+      ],
+      "tests": [
+        "tests/unit/search/EmbeddingCache.test.ts"
+      ]
+    },
+    {
+      "id": "12.5.3",
+      "name": "Incremental Re-indexing",
+      "description": "Queue index updates and batch-process them efficiently with flush threshold and timer",
+      "status": "not_started",
+      "priority": "P2",
+      "effort": "4 hours",
+      "files": [
+        "src/search/IncrementalIndexer.ts"
+      ],
+      "acceptanceCriteria": [
+        "Index updates batched and flushed",
+        "10x faster updates vs full re-index",
+        "Graceful shutdown with final flush"
+      ],
+      "tests": [
+        "tests/unit/search/IncrementalIndexer.test.ts"
+      ]
+    },
+    {
+      "id": "12.5.4",
+      "name": "Embedding Performance Benchmarks",
+      "description": "Create benchmark suite for embedding cache, batch embedding, and incremental indexing",
+      "status": "not_started",
+      "priority": "P1",
+      "effort": "2 hours",
+      "files": [
+        "tests/performance/embedding-benchmarks.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "All Sprint 5 benchmarks pass",
+        "Cache hit rate logged",
+        "Batch vs sequential comparison"
+      ],
+      "tests": [
+        "tests/performance/embedding-benchmarks.test.ts"
+      ]
+    }
+  ],
+  "dependencies": [],
+  "blockedBy": [],
+  "deliverables": [
+    "Enhanced EmbeddingService with query/document prefixes",
+    "EmbeddingCache with LRU eviction and invalidation",
+    "IncrementalIndexer for batched index updates",
+    "Embedding performance benchmark suite"
+  ]
+}

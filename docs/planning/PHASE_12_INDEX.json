@@ -1,0 +1,178 @@
+{
+  "phase": {
+    "number": 12,
+    "name": "Performance Optimization",
+    "description": "Consolidates high-impact performance optimizations targeting v10.0.0 release, establishing a solid foundation before the memoryjs/memory-mcp codebase split",
+    "status": "not_started",
+    "created": "2026-01-09",
+    "sourceDocument": "docs/roadmap/PERFORMANCE_AND_CAPABILITIES.md",
+    "planDocument": "docs/planning/PHASE_12_PERFORMANCE_OPTIMIZATION_PLAN.md",
+    "targetVersion": "10.0.0",
+    "currentVersion": "9.9.1"
+  },
+  "performanceTargets": {
+    "simpleSearchLatency": {
+      "current": "50ms",
+      "target": "20ms",
+      "improvement": "2.5x"
+    },
+    "complexSearchLatency": {
+      "current": "200ms",
+      "target": "100ms",
+      "improvement": "2x"
+    },
+    "bulkEntityCreation1000": {
+      "current": "2000ms",
+      "target": "500ms",
+      "improvement": "4x"
+    },
+    "memory10kEntities": {
+      "current": "150MB",
+      "target": "75MB",
+      "improvement": "2x"
+    },
+    "concurrentThroughput": {
+      "current": "20 qps",
+      "target": "100 qps",
+      "improvement": "5x"
+    },
+    "duplicateDetection10k": {
+      "current": "8000ms",
+      "target": "2000ms",
+      "improvement": "4x"
+    }
+  },
+  "sprints": [
+    {
+      "number": 1,
+      "name": "Foundation Performance",
+      "file": "PHASE_12_SPRINT_1_TODO.json",
+      "tasks": 5,
+      "effort": "12 hours",
+      "impact": "10-50x speedup for bulk operations",
+      "status": "not_started"
+    },
+    {
+      "number": 2,
+      "name": "Parallel Processing",
+      "file": "PHASE_12_SPRINT_2_TODO.json",
+      "tasks": 4,
+      "effort": "16 hours",
+      "impact": "2-4x throughput improvement",
+      "status": "not_started"
+    },
+    {
+      "number": 3,
+      "name": "Search Algorithm Optimization",
+      "file": "PHASE_12_SPRINT_3_TODO.json",
+      "tasks": 4,
+      "effort": "12 hours",
+      "impact": "2x faster lexical search",
+      "status": "not_started"
+    },
+    {
+      "number": 4,
+      "name": "Query Execution Optimization",
+      "file": "PHASE_12_SPRINT_4_TODO.json",
+      "tasks": 5,
+      "effort": "15 hours",
+      "impact": "30x token efficiency",
+      "status": "not_started"
+    },
+    {
+      "number": 5,
+      "name": "Embedding Performance",
+      "file": "PHASE_12_SPRINT_5_TODO.json",
+      "tasks": 4,
+      "effort": "12 hours",
+      "impact": "2-3x faster embedding ops",
+      "status": "not_started"
+    },
+    {
+      "number": 6,
+      "name": "Memory Efficiency & Final Benchmarks",
+      "file": "PHASE_12_SPRINT_6_TODO.json",
+      "tasks": 5,
+      "effort": "15 hours",
+      "impact": "50% memory reduction, v10.0.0 release",
+      "status": "not_started"
+    }
+  ],
+  "summary": {
+    "totalSprints": 6,
+    "totalTasks": 27,
+    "totalEffort": "82 hours",
+    "estimatedDuration": "2-3 weeks focused development"
+  },
+  "dependencies": {
+    "sprint1": [],
+    "sprint2": ["sprint1"],
+    "sprint3": [],
+    "sprint4": ["sprint3"],
+    "sprint5": [],
+    "sprint6": ["sprint1", "sprint2", "sprint3", "sprint4", "sprint5"]
+  },
+  "newFiles": [
+    "src/utils/WorkerPoolManager.ts",
+    "src/utils/BatchProcessor.ts",
+    "src/utils/MemoryMonitor.ts",
+    "src/search/ParallelSearchExecutor.ts",
+    "src/search/BM25Search.ts",
+    "src/search/OptimizedInvertedIndex.ts",
+    "src/search/HybridScorer.ts",
+    "src/search/EarlyTerminationManager.ts",
+    "src/search/QueryPlanCache.ts",
+    "src/search/EmbeddingCache.ts",
+    "src/search/IncrementalIndexer.ts",
+    "src/search/QuantizedVectorStore.ts"
+  ],
+  "modifiedFiles": [
+    "src/core/EntityManager.ts",
+    "src/core/RelationManager.ts",
+    "src/features/CompressionManager.ts",
+    "src/features/TagManager.ts",
+    "src/search/HybridSearchManager.ts",
+    "src/search/QueryCostEstimator.ts",
+    "src/search/ReflectionManager.ts",
+    "src/search/SearchManager.ts",
+    "src/search/EmbeddingService.ts",
+    "src/types/types.ts",
+    "src/utils/entityUtils.ts",
+    "src/utils/compressedCache.ts"
+  ],
+  "testFiles": [
+    "tests/performance/foundation-benchmarks.test.ts",
+    "tests/performance/parallel-benchmarks.test.ts",
+    "tests/performance/search-algorithm-benchmarks.test.ts",
+    "tests/performance/query-execution-benchmarks.test.ts",
+    "tests/performance/embedding-benchmarks.test.ts",
+    "tests/performance/v10-benchmarks.test.ts",
+    "tests/unit/utils/WorkerPoolManager.test.ts",
+    "tests/unit/utils/BatchProcessor.test.ts",
+    "tests/unit/utils/MemoryMonitor.test.ts",
+    "tests/unit/search/ParallelSearchExecutor.test.ts",
+    "tests/unit/search/BM25Search.test.ts",
+    "tests/unit/search/OptimizedInvertedIndex.test.ts",
+    "tests/unit/search/HybridScorer.test.ts",
+    "tests/unit/search/EarlyTerminationManager.test.ts",
+    "tests/unit/search/QueryPlanCache.test.ts",
+    "tests/unit/search/EmbeddingCache.test.ts",
+    "tests/unit/search/IncrementalIndexer.test.ts",
+    "tests/unit/search/QuantizedVectorStore.test.ts"
+  ],
+  "releaseChecklist": [
+    "All 27 tasks completed",
+    "All benchmark targets achieved",
+    "2693+ tests passing (existing + new)",
+    "No performance regressions",
+    "Documentation updated",
+    "Changelog complete",
+    "npm publish successful"
+  ],
+  "memoryJsConsiderations": [
+    "New utility classes belong in src/utils/ or src/search/ (future memoryjs)",
+    "Avoid tight coupling with MCP-specific code",
+    "Use dependency injection for storage and worker adapters",
+    "Document public APIs clearly for future extraction"
+  ]
+}
