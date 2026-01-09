@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 9.8.0
-**Last Updated**: 2026-01-07
+**Version**: 9.9.0
+**Last Updated**: 2026-01-09
 
 ## What Is This?
 
@@ -13,9 +13,9 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 |---------|-------------|
 | **Knowledge Graph** | Store entities and relations in a flexible graph structure |
 | **Persistent Memory** | Data persists across sessions in JSONL files |
-| **55 Tools** | Comprehensive API for graph operations |
+| **59 Tools** | Comprehensive API for graph operations |
 | **Hierarchical Nesting** | Parent-child relationships for tree organization |
-| **Advanced Search** | Basic, TF-IDF ranked, boolean, and fuzzy search |
+| **Advanced Search** | Basic, TF-IDF ranked, boolean, fuzzy, and intelligent hybrid search |
 | **Duplicate Detection** | Intelligent compression with similarity scoring |
 | **Multi-format Export** | JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid |
 | **Tag Management** | Aliases, bulk operations, and validation |
@@ -78,7 +78,7 @@ interface Relation {
 ## Directory Structure
 
 ```
-src/ (58 TypeScript files, 22,608 lines of code)
+src/ (65 TypeScript files, ~24,800 lines of code)
 ├── index.ts              # Entry point, main() function
 │
 ├── core/ (12 files)      # Core managers and storage
@@ -97,11 +97,11 @@ src/ (58 TypeScript files, 22,608 lines of code)
 │
 ├── server/ (4 files)     # MCP protocol layer
 │   ├── MCPServer.ts              # Server initialization
-│   ├── toolDefinitions.ts        # 55 tool schemas
+│   ├── toolDefinitions.ts        # 59 tool schemas
 │   ├── toolHandlers.ts           # Tool implementation registry
 │   └── responseCompressor.ts     # Brotli compression for large responses
 │
-├── search/ (15 files)    # Search implementations (17 classes)
+├── search/ (20 files)    # Search implementations (22 classes)
 │   ├── SearchManager.ts          # Search orchestrator + compression + analytics
 │   ├── BasicSearch.ts            # Text matching
 │   ├── RankedSearch.ts           # TF-IDF scoring
@@ -116,15 +116,22 @@ src/ (58 TypeScript files, 22,608 lines of code)
 │   ├── EmbeddingService.ts       # OpenAI/Local/Mock embedding providers
 │   ├── VectorStore.ts            # In-memory/SQLite vector storage
 │   ├── TFIDFEventSync.ts         # Event-driven TF-IDF updates
+│   ├── HybridSearchManager.ts    # Three-layer hybrid search (semantic+lexical+symbolic)
+│   ├── QueryAnalyzer.ts          # Query understanding + entity extraction
+│   ├── QueryPlanner.ts           # Query decomposition + planning
+│   ├── SymbolicSearch.ts         # Metadata-based symbolic filtering
+│   ├── ReflectionManager.ts      # Iterative result refinement
 │   └── index.ts
 │
-├── features/ (7 files)   # Advanced capabilities
+├── features/ (9 files)   # Advanced capabilities
 │   ├── TagManager.ts             # Tag aliases
 │   ├── IOManager.ts              # Import + export + backup
 │   ├── StreamingExporter.ts      # Memory-efficient large exports
 │   ├── AnalyticsManager.ts       # Graph stats and validation
 │   ├── ArchiveManager.ts         # Entity archival
 │   ├── CompressionManager.ts     # Duplicate detection and merging
+│   ├── ObservationNormalizer.ts  # Coreference resolution + temporal anchoring
+│   ├── KeywordExtractor.ts       # Scored keyword extraction
 │   └── index.ts
 │
 ├── types/ (2 files)      # TypeScript definitions (consolidated)
@@ -152,14 +159,15 @@ src/ (58 TypeScript files, 22,608 lines of code)
     └── index.ts
 ```
 
-## Tool Categories (55 Total)
+## Tool Categories (59 Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
 | **Entity** | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | **Relation** | 2 | create_relations, delete_relations |
-| **Observation** | 2 | add_observations, delete_observations |
+| **Observation** | 3 | add_observations, delete_observations, normalize_observations |
 | **Search** | 7 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions, search_auto |
+| **Intelligent Search** | 3 | hybrid_search, analyze_query, smart_search |
 | **Semantic Search** | 3 | semantic_search, find_similar_entities, index_embeddings |
 | **Saved Search** | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | **Tag** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
@@ -205,7 +213,7 @@ npm install
 # Build
 npm run build
 
-# Run tests (2493 tests)
+# Run tests (2692+ tests)
 npm test
 
 # Run server

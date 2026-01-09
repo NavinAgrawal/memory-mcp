@@ -1,10 +1,10 @@
 metadata:
   name: "@danielsimonjr/memory-mcp"
-  version: 9.8.0
-  lastUpdated: "2026-01-08"
-  totalFiles: 58
+  version: 9.8.3
+  lastUpdated: "2026-01-09"
+  totalFiles: 65
   totalModules: 8
-  totalExports: 436
+  totalExports: 462
 entryPoints:
   - file: src/index.ts
     type: main
@@ -38,6 +38,7 @@ modules:
             - checkCancellation
             - createProgressReporter
             - createProgress
+            - sanitizeObject
         - file: ../utils/constants.js
           imports:
             - GRAPH_LIMITS
@@ -102,6 +103,9 @@ modules:
             - LowercaseCache
             - RelationIndex
             - ObservationIndex
+        - file: ../utils/index.js
+          imports:
+            - sanitizeObject
         - file: ./TransactionManager.js
           imports:
             - BatchTransaction
@@ -264,6 +268,9 @@ modules:
         - file: ./GraphStorage.js
           imports:
             - GraphStorage
+        - file: ./StorageFactory.js
+          imports:
+            - createStorageFromPath
         - file: ./EntityManager.js
           imports:
             - EntityManager
@@ -282,6 +289,9 @@ modules:
         - file: ../search/SearchManager.js
           imports:
             - SearchManager
+        - file: ../search/RankedSearch.js
+          imports:
+            - RankedSearch
         - file: ../search/index.js
           imports:
             - SemanticSearch
@@ -382,6 +392,9 @@ modules:
           imports:
             - NameIndex
             - TypeIndex
+        - file: ../utils/index.js
+          imports:
+            - sanitizeObject
       exports:
         - SQLiteStorage
       classes:
@@ -438,6 +451,7 @@ modules:
             - checkCancellation
             - createProgressReporter
             - createProgress
+            - sanitizeObject
       exports:
         - TransactionManager
         - BatchTransaction
@@ -579,6 +593,17 @@ modules:
             - StreamingExporter
             - type StreamResult
           reExport: true
+        - file: ./ObservationNormalizer.js
+          imports:
+            - ObservationNormalizer
+            - type NormalizationOptions
+            - type NormalizationResult
+          reExport: true
+        - file: ./KeywordExtractor.js
+          imports:
+            - KeywordExtractor
+            - type ScoredKeyword
+          reExport: true
       exports:
         - TagManager
         - IOManager
@@ -595,6 +620,11 @@ modules:
         - type ArchiveResult
         - StreamingExporter
         - type StreamResult
+        - ObservationNormalizer
+        - type NormalizationOptions
+        - type NormalizationResult
+        - KeywordExtractor
+        - type ScoredKeyword
       reExported:
         - TagManager
         - IOManager
@@ -611,6 +641,11 @@ modules:
         - type ArchiveResult
         - StreamingExporter
         - type StreamResult
+        - ObservationNormalizer
+        - type NormalizationOptions
+        - type NormalizationResult
+        - KeywordExtractor
+        - type ScoredKeyword
     src/features/IOManager.ts:
       description: IO Manager
       externalDependencies: []
@@ -654,6 +689,9 @@ modules:
             - checkCancellation
             - createProgressReporter
             - createProgress
+            - validateFilePath
+            - sanitizeObject
+            - escapeCsvFormula
         - file: ./StreamingExporter.js
           imports:
             - StreamingExporter
@@ -665,6 +703,33 @@ modules:
       interfaces:
         - BackupMetadata
         - BackupInfo
+    src/features/KeywordExtractor.ts:
+      description: Keyword Extractor
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies: []
+      exports:
+        - KeywordExtractor
+      classes:
+        - KeywordExtractor
+      interfaces:
+        - ScoredKeyword
+    src/features/ObservationNormalizer.ts:
+      description: Observation Normalizer
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+          typeOnly: true
+      exports:
+        - ObservationNormalizer
+      classes:
+        - ObservationNormalizer
+      interfaces:
+        - NormalizationOptions
+        - NormalizationResult
     src/features/StreamingExporter.ts:
       description: Streaming Export Module
       externalDependencies: []
@@ -684,6 +749,7 @@ modules:
             - checkCancellation
             - createProgressReporter
             - createProgress
+            - validateFilePath
       exports:
         - StreamingExporter
       classes:
@@ -871,6 +937,40 @@ modules:
         - FuzzySearchOptions
       constants:
         - DEFAULT_FUZZY_THRESHOLD
+    src/search/HybridSearchManager.ts:
+      description: Hybrid Search Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - HybridSearchOptions
+            - HybridSearchResult
+            - ReadonlyKnowledgeGraph
+            - SymbolicFilters
+          typeOnly: true
+        - file: ./SemanticSearch.js
+          imports:
+            - SemanticSearch
+          typeOnly: true
+        - file: ./RankedSearch.js
+          imports:
+            - RankedSearch
+          typeOnly: true
+        - file: ./SymbolicSearch.js
+          imports:
+            - SymbolicSearch
+        - file: ../utils/constants.js
+          imports:
+            - SEMANTIC_SEARCH_LIMITS
+      exports:
+        - DEFAULT_HYBRID_WEIGHTS
+        - HybridSearchManager
+      classes:
+        - HybridSearchManager
+      constants:
+        - DEFAULT_HYBRID_WEIGHTS
     src/search/index.ts:
       description: Search Module Barrel Export
       externalDependencies: []
@@ -943,6 +1043,30 @@ modules:
           imports:
             - QueryCostEstimator
           reExport: true
+        - file: ./SymbolicSearch.js
+          imports:
+            - SymbolicSearch
+            - type SymbolicResult
+          reExport: true
+        - file: ./HybridSearchManager.js
+          imports:
+            - HybridSearchManager
+            - DEFAULT_HYBRID_WEIGHTS
+          reExport: true
+        - file: ./QueryAnalyzer.js
+          imports:
+            - QueryAnalyzer
+          reExport: true
+        - file: ./QueryPlanner.js
+          imports:
+            - QueryPlanner
+          reExport: true
+        - file: ./ReflectionManager.js
+          imports:
+            - ReflectionManager
+            - type ReflectionOptions
+            - type ReflectionResult
+          reExport: true
       exports:
         - BasicSearch
         - RankedSearch
@@ -969,6 +1093,15 @@ modules:
         - TFIDFIndexManager
         - TFIDFEventSync
         - QueryCostEstimator
+        - SymbolicSearch
+        - type SymbolicResult
+        - HybridSearchManager
+        - DEFAULT_HYBRID_WEIGHTS
+        - QueryAnalyzer
+        - QueryPlanner
+        - ReflectionManager
+        - type ReflectionOptions
+        - type ReflectionResult
       reExported:
         - BasicSearch
         - RankedSearch
@@ -995,6 +1128,30 @@ modules:
         - TFIDFIndexManager
         - TFIDFEventSync
         - QueryCostEstimator
+        - SymbolicSearch
+        - type SymbolicResult
+        - HybridSearchManager
+        - DEFAULT_HYBRID_WEIGHTS
+        - QueryAnalyzer
+        - QueryPlanner
+        - ReflectionManager
+        - type ReflectionOptions
+        - type ReflectionResult
+    src/search/QueryAnalyzer.ts:
+      description: Query Analyzer
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - QueryAnalysis
+            - ExtractedEntity
+            - TemporalRange
+          typeOnly: true
+      exports:
+        - QueryAnalyzer
+      classes:
+        - QueryAnalyzer
     src/search/QueryCostEstimator.ts:
       description: Query Cost Estimator
       externalDependencies: []
@@ -1010,6 +1167,22 @@ modules:
         - QueryCostEstimator
       classes:
         - QueryCostEstimator
+    src/search/QueryPlanner.ts:
+      description: Query Planner
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - QueryAnalysis
+            - QueryPlan
+            - SubQuery
+            - SymbolicFilters
+          typeOnly: true
+      exports:
+        - QueryPlanner
+      classes:
+        - QueryPlanner
     src/search/RankedSearch.ts:
       description: Ranked Search
       externalDependencies: []
@@ -1045,6 +1218,33 @@ modules:
         - RankedSearch
       classes:
         - RankedSearch
+    src/search/ReflectionManager.ts:
+      description: Reflection Manager
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - ReadonlyKnowledgeGraph
+            - QueryAnalysis
+            - HybridSearchResult
+            - HybridSearchOptions
+          typeOnly: true
+        - file: ./HybridSearchManager.js
+          imports:
+            - HybridSearchManager
+          typeOnly: true
+        - file: ./QueryAnalyzer.js
+          imports:
+            - QueryAnalyzer
+          typeOnly: true
+      exports:
+        - ReflectionManager
+      classes:
+        - ReflectionManager
+      interfaces:
+        - ReflectionOptions
+        - ReflectionResult
     src/search/SavedSearchManager.ts:
       description: Saved Search Manager
       externalDependencies: []
@@ -1062,6 +1262,9 @@ modules:
           imports:
             - BasicSearch
           typeOnly: true
+        - file: ../utils/index.js
+          imports:
+            - sanitizeObject
       exports:
         - SavedSearchManager
       classes:
@@ -1178,6 +1381,22 @@ modules:
         - SemanticSearch
       functions:
         - entityToText
+    src/search/SymbolicSearch.ts:
+      description: Symbolic Search Layer
+      externalDependencies: []
+      nodeDependencies: []
+      internalDependencies:
+        - file: ../types/index.js
+          imports:
+            - Entity
+            - SymbolicFilters
+          typeOnly: true
+      exports:
+        - SymbolicSearch
+      classes:
+        - SymbolicSearch
+      interfaces:
+        - SymbolicResult
     src/search/TFIDFEventSync.ts:
       description: TF-IDF Event Sync
       externalDependencies: []
@@ -1337,6 +1556,7 @@ modules:
             - formatTextResponse
             - formatRawResponse
             - validateWithSchema
+            - validateFilePath
             - BatchCreateEntitiesSchema
             - BatchCreateRelationsSchema
             - EntityNamesSchema
@@ -1355,6 +1575,21 @@ modules:
           imports:
             - ManagerContext
           typeOnly: true
+        - file: ../search/HybridSearchManager.js
+          imports:
+            - HybridSearchManager
+        - file: ../search/QueryAnalyzer.js
+          imports:
+            - QueryAnalyzer
+        - file: ../search/QueryPlanner.js
+          imports:
+            - QueryPlanner
+        - file: ../search/ReflectionManager.js
+          imports:
+            - ReflectionManager
+        - file: ../features/ObservationNormalizer.js
+          imports:
+            - ObservationNormalizer
         - file: ./responseCompressor.js
           imports:
             - maybeCompressResponse
@@ -1450,6 +1685,14 @@ modules:
         - QueryCostEstimate
         - AutoSearchResult
         - QueryCostEstimatorOptions
+        - SymbolicFilters
+        - HybridSearchOptions
+        - HybridSearchResult
+        - ExtractedEntity
+        - TemporalRange
+        - QueryAnalysis
+        - SubQuery
+        - QueryPlan
   utils:
     src/utils/compressedCache.ts:
       description: Compressed Cache Utility
@@ -1616,6 +1859,8 @@ modules:
         - filterByModifiedDate
         - filterByEntityType
         - entityPassesFilters
+        - sanitizeObject
+        - escapeCsvFormula
         - validateFilePath
         - ensureMemoryFilePath
       interfaces:
@@ -1649,6 +1894,8 @@ modules:
         - filterByModifiedDate
         - filterByEntityType
         - entityPassesFilters
+        - sanitizeObject
+        - escapeCsvFormula
         - validateFilePath
         - ensureMemoryFilePath
       constants:
@@ -1901,6 +2148,8 @@ modules:
             - "// Path utilities\r\n  validateFilePath"
             - defaultMemoryPath
             - ensureMemoryFilePath
+            - "// Security utilities\r\n  sanitizeObject"
+            - escapeCsvFormula
           reExport: true
         - file: ./parallelUtils.js
           imports:
@@ -2087,6 +2336,8 @@ modules:
         - "// Path utilities\r\n  validateFilePath"
         - defaultMemoryPath
         - ensureMemoryFilePath
+        - "// Security utilities\r\n  sanitizeObject"
+        - escapeCsvFormula
         - parallelMap
         - parallelFilter
         - getPoolStats
@@ -2263,6 +2514,8 @@ modules:
         - "// Path utilities\r\n  validateFilePath"
         - defaultMemoryPath
         - ensureMemoryFilePath
+        - "// Security utilities\r\n  sanitizeObject"
+        - escapeCsvFormula
         - parallelMap
         - parallelFilter
         - getPoolStats
@@ -2604,6 +2857,8 @@ dependencyGraph:
         - src/features/CompressionManager.ts
         - src/features/index.ts
         - src/features/IOManager.ts
+        - src/features/KeywordExtractor.ts
+        - src/features/ObservationNormalizer.ts
         - src/features/StreamingExporter.ts
         - src/features/TagManager.ts
     - name: Entry
@@ -2615,14 +2870,19 @@ dependencyGraph:
         - src/search/BooleanSearch.ts
         - src/search/EmbeddingService.ts
         - src/search/FuzzySearch.ts
+        - src/search/HybridSearchManager.ts
         - src/search/index.ts
+        - src/search/QueryAnalyzer.ts
         - src/search/QueryCostEstimator.ts
+        - src/search/QueryPlanner.ts
         - src/search/RankedSearch.ts
+        - src/search/ReflectionManager.ts
         - src/search/SavedSearchManager.ts
         - src/search/SearchFilterChain.ts
         - src/search/SearchManager.ts
         - src/search/SearchSuggestions.ts
         - src/search/SemanticSearch.ts
+        - src/search/SymbolicSearch.ts
         - src/search/TFIDFEventSync.ts
         - src/search/TFIDFIndexManager.ts
         - src/search/VectorStore.ts
@@ -2658,19 +2918,19 @@ dependencyGraph:
         - src/workers/index.ts
         - src/workers/levenshteinWorker.ts
 statistics:
-  totalTypeScriptFiles: 58
+  totalTypeScriptFiles: 65
   totalModules: 8
-  totalLinesOfCode: 22608
-  totalExports: 436
-  totalClasses: 55
-  totalInterfaces: 89
-  totalFunctions: 94
+  totalLinesOfCode: 24861
+  totalExports: 462
+  totalClasses: 62
+  totalInterfaces: 103
+  totalFunctions: 96
   totalTypeGuards: 4
   totalEnums: 3
-  totalConstants: 50
-  totalReExports: 234
-  totalTypeOnlyImports: 57
+  totalConstants: 51
+  totalReExports: 250
+  totalTypeOnlyImports: 67
   runtimeCircularDeps: 0
   typeOnlyCircularDeps: 2
   unusedFilesCount: 0
-  unusedExportsCount: 142
+  unusedExportsCount: 157

@@ -1,9 +1,9 @@
 # Memory MCP - API Reference
 
-**Version**: 9.8.0
-**Last Updated**: 2026-01-07
+**Version**: 9.9.0
+**Last Updated**: 2026-01-09
 
-Complete reference for all 55 MCP tools provided by the Memory MCP server.
+Complete reference for all 59 MCP tools provided by the Memory MCP server.
 
 ---
 
@@ -11,17 +11,18 @@ Complete reference for all 55 MCP tools provided by the Memory MCP server.
 
 1. [Entity Operations](#entity-operations) (4 tools)
 2. [Relation Operations](#relation-operations) (2 tools)
-3. [Observation Management](#observation-management) (2 tools)
+3. [Observation Management](#observation-management) (3 tools)
 4. [Search Operations](#search-operations) (7 tools)
-5. [Semantic Search](#semantic-search) (3 tools)
-6. [Saved Searches](#saved-searches) (5 tools)
-7. [Tag Management](#tag-management) (6 tools)
-8. [Tag Aliases](#tag-aliases) (5 tools)
-9. [Hierarchy Operations](#hierarchy-operations) (9 tools)
-10. [Graph Algorithms](#graph-algorithms) (4 tools)
-11. [Analytics](#analytics) (2 tools)
-12. [Compression & Deduplication](#compression--deduplication) (4 tools)
-13. [Import/Export Operations](#importexport-operations) (2 tools)
+5. [Intelligent Search](#intelligent-search) (3 tools)
+6. [Semantic Search](#semantic-search) (3 tools)
+7. [Saved Searches](#saved-searches) (5 tools)
+8. [Tag Management](#tag-management) (6 tools)
+9. [Tag Aliases](#tag-aliases) (5 tools)
+10. [Hierarchy Operations](#hierarchy-operations) (9 tools)
+11. [Graph Algorithms](#graph-algorithms) (4 tools)
+12. [Analytics](#analytics) (2 tools)
+13. [Compression & Deduplication](#compression--deduplication) (4 tools)
+14. [Import/Export Operations](#importexport-operations) (2 tools)
 
 ---
 
@@ -324,6 +325,75 @@ Remove specific observations from entities.
 
 ---
 
+### normalize_observations
+
+Normalize observations for an entity by resolving coreferences and anchoring temporal references.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;            // Entity to normalize
+  options?: {
+    resolveCoreferences?: boolean;   // Replace pronouns with entity name (default: true)
+    anchorDates?: boolean;           // Convert relative dates to absolute (default: true)
+    extractKeywords?: boolean;       // Extract and score keywords (default: false)
+    referenceDate?: string;          // ISO 8601 date for temporal anchoring (default: now)
+  }
+}
+```
+
+**Returns:**
+```typescript
+{
+  entityName: string;
+  originalCount: number;
+  normalizedCount: number;
+  observations: Array<{
+    original: string;
+    normalized: string;
+    keywords?: Array<{
+      keyword: string;
+      score: number;
+    }>;
+  }>;
+}
+```
+
+**Features:**
+- **Coreference Resolution**: Replaces pronouns (he, she, they, it, etc.) with the entity name
+- **Temporal Anchoring**: Converts relative dates ("yesterday", "last week", "3 days ago") to absolute ISO dates
+- **Keyword Extraction**: Extracts significant keywords with TF-IDF-like scoring
+
+**Example:**
+```json
+{
+  "entityName": "Alice",
+  "options": {
+    "resolveCoreferences": true,
+    "anchorDates": true,
+    "extractKeywords": true
+  }
+}
+```
+
+**Example Response:**
+```json
+{
+  "entityName": "Alice",
+  "originalCount": 2,
+  "normalizedCount": 2,
+  "observations": [
+    {
+      "original": "She joined the team yesterday",
+      "normalized": "Alice joined the team on 2026-01-08",
+      "keywords": [{ "keyword": "joined", "score": 0.85 }, { "keyword": "team", "score": 0.72 }]
+    }
+  ]
+}
+```
+
+---
+
 ## Search Operations
 
 ### search_nodes
@@ -596,6 +666,204 @@ Automatically select the best search strategy based on query analysis.
 {
   "query": "engineer AND python",
   "minImportance": 5
+}
+```
+
+---
+
+## Intelligent Search
+
+Three-layer hybrid search architecture combining semantic, lexical, and symbolic signals for advanced query understanding and result refinement.
+
+### hybrid_search
+
+Multi-layer search combining semantic (vector similarity), lexical (TF-IDF/BM25), and symbolic (metadata filtering) signals.
+
+**Parameters:**
+```typescript
+{
+  query: string;                    // Natural language query
+  weights?: {
+    semantic?: number;              // Weight for semantic similarity (default: 0.4)
+    lexical?: number;               // Weight for lexical matching (default: 0.4)
+    symbolic?: number;              // Weight for metadata filtering (default: 0.2)
+  };
+  filters?: {
+    entityTypes?: string[];         // Filter by entity types
+    tags?: string[];                // Filter by tags
+    minImportance?: number;         // Minimum importance
+    maxImportance?: number;         // Maximum importance
+    dateRange?: {
+      start?: string;               // ISO 8601 start date
+      end?: string;                 // ISO 8601 end date
+    };
+  };
+  limit?: number;                   // Max results (default: 20)
+  minScore?: number;                // Minimum combined score (0.0-1.0)
+}
+```
+
+**Returns:**
+```typescript
+{
+  results: Array<{
+    entity: Entity;
+    scores: {
+      semantic: number;             // Vector similarity score
+      lexical: number;              // TF-IDF/BM25 score
+      symbolic: number;             // Metadata match score
+      combined: number;             // Weighted combined score
+    };
+    matchedFields: string[];        // Fields that matched
+  }>;
+  queryAnalysis: {
+    extractedEntities: string[];    // Entities mentioned in query
+    temporalReferences: string[];   // Time expressions found
+    questionType: string;           // Type of question (who, what, when, etc.)
+  };
+}
+```
+
+**Example:**
+```json
+{
+  "query": "engineers who worked on AI projects last year",
+  "weights": { "semantic": 0.5, "lexical": 0.3, "symbolic": 0.2 },
+  "filters": { "entityTypes": ["person"], "minImportance": 5 },
+  "limit": 10
+}
+```
+
+---
+
+### analyze_query
+
+Analyze a natural language query to extract entities, temporal references, and question characteristics.
+
+**Parameters:**
+```typescript
+{
+  query: string;                    // Natural language query to analyze
+}
+```
+
+**Returns:**
+```typescript
+{
+  query: string;                    // Original query
+  analysis: {
+    extractedEntities: Array<{
+      text: string;                 // Entity mention
+      type: string;                 // Inferred entity type
+      confidence: number;           // Confidence score
+    }>;
+    temporalReferences: Array<{
+      text: string;                 // Time expression (e.g., "last week")
+      resolved: string;             // ISO 8601 date or range
+      type: string;                 // absolute, relative, range
+    }>;
+    questionType: string;           // who, what, when, where, why, how, boolean, list
+    complexity: string;             // simple, moderate, complex
+    suggestedSearchMethods: string[]; // Recommended search approaches
+  };
+}
+```
+
+**Example:**
+```json
+{
+  "query": "Who are the senior engineers who joined after January 2025?"
+}
+```
+
+**Example Response:**
+```json
+{
+  "query": "Who are the senior engineers who joined after January 2025?",
+  "analysis": {
+    "extractedEntities": [
+      { "text": "senior engineers", "type": "person", "confidence": 0.9 }
+    ],
+    "temporalReferences": [
+      { "text": "after January 2025", "resolved": "2025-01-01T00:00:00Z", "type": "relative" }
+    ],
+    "questionType": "who",
+    "complexity": "moderate",
+    "suggestedSearchMethods": ["hybrid_search", "search_by_date_range"]
+  }
+}
+```
+
+---
+
+### smart_search
+
+Orchestrates query analysis, planning, and reflection-based iterative refinement until results meet adequacy threshold.
+
+**Parameters:**
+```typescript
+{
+  query: string;                    // Natural language query
+  maxIterations?: number;           // Max refinement iterations (default: 3)
+  targetAdequacy?: number;          // Target adequacy score 0.0-1.0 (default: 0.7)
+  filters?: {
+    entityTypes?: string[];
+    tags?: string[];
+    minImportance?: number;
+    maxImportance?: number;
+  };
+}
+```
+
+**Returns:**
+```typescript
+{
+  results: Array<{
+    entity: Entity;
+    score: number;
+    relevanceExplanation: string;   // Why this result is relevant
+  }>;
+  searchProcess: {
+    iterations: number;             // Number of refinement iterations
+    finalAdequacy: number;          // Final adequacy score achieved
+    queryRefinements: string[];     // How the query was refined
+    searchMethodsUsed: string[];    // Methods used during search
+  };
+  analysis: {
+    questionType: string;
+    complexity: string;
+    extractedEntities: string[];
+  };
+}
+```
+
+**Example:**
+```json
+{
+  "query": "Find all people related to the machine learning initiative",
+  "maxIterations": 3,
+  "targetAdequacy": 0.8
+}
+```
+
+**Example Response:**
+```json
+{
+  "results": [...],
+  "searchProcess": {
+    "iterations": 2,
+    "finalAdequacy": 0.85,
+    "queryRefinements": [
+      "Added entity type filter: person",
+      "Expanded query to include 'AI' and 'ML' synonyms"
+    ],
+    "searchMethodsUsed": ["analyze_query", "hybrid_search", "fuzzy_search"]
+  },
+  "analysis": {
+    "questionType": "list",
+    "complexity": "moderate",
+    "extractedEntities": ["machine learning initiative"]
+  }
 }
 ```
 
@@ -1883,7 +2151,7 @@ All tools return errors in this format:
 
 ---
 
-**Document Version**: 3.0
-**Last Updated**: 2026-01-07
-**Total Tools**: 55
+**Document Version**: 4.0
+**Last Updated**: 2026-01-09
+**Total Tools**: 59
 **Maintained By**: Daniel Simon Jr.

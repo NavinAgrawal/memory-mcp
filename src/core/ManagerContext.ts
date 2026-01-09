@@ -17,6 +17,7 @@ import { ObservationManager } from './ObservationManager.js';
 import { HierarchyManager } from './HierarchyManager.js';
 import { GraphTraversal } from './GraphTraversal.js';
 import { SearchManager } from '../search/SearchManager.js';
+import { RankedSearch } from '../search/RankedSearch.js';
 import { SemanticSearch, createEmbeddingService, createVectorStore } from '../search/index.js';
 import { IOManager } from '../features/IOManager.js';
 import { TagManager } from '../features/TagManager.js';
@@ -44,6 +45,7 @@ export class ManagerContext {
   private _graphTraversal?: GraphTraversal;
   private _searchManager?: SearchManager;
   private _semanticSearch?: SemanticSearch | null;
+  private _rankedSearch?: RankedSearch;
   private _ioManager?: IOManager;
   private _tagManager?: TagManager;
   private _analyticsManager?: AnalyticsManager;
@@ -111,6 +113,11 @@ export class ManagerContext {
       }
     }
     return this._semanticSearch;
+  }
+
+  /** RankedSearch - Phase 11: TF-IDF/BM25 ranked search for hybrid search */
+  get rankedSearch(): RankedSearch {
+    return (this._rankedSearch ??= new RankedSearch(this.storage));
   }
 
   /** IOManager - Import, export, and backup operations */

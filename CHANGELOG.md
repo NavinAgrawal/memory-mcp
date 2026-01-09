@@ -5,6 +5,66 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.9.0] - 2026-01-09
+
+### Added
+
+- **Phase 11: Three-Layer Hybrid Search** - Intelligent search architecture combining semantic, lexical, and symbolic signals
+
+  #### Sprint 1: Symbolic Search Layer
+  - `SymbolicSearch` class - metadata-based filtering (entity type, tags, importance, dates)
+  - `SymbolicFilters` interface - unified filter configuration
+  - Integrates with existing SearchFilterChain for consistent behavior
+
+  #### Sprint 2: Query Analysis
+  - `QueryAnalyzer` class - natural language query understanding
+  - Entity extraction from natural language queries
+  - Temporal expression parsing ("yesterday", "last week", "after January 2025")
+  - Question type classification (who, what, when, where, why, how, boolean, list)
+  - Complexity estimation (simple, moderate, complex)
+
+  #### Sprint 3: Hybrid Search Fusion
+  - `HybridSearchManager` class - three-layer search fusion engine
+  - Configurable weights for semantic (0.4), lexical (0.4), and symbolic (0.2) layers
+  - Score normalization and weighted combination
+  - **New MCP Tool**: `hybrid_search` - multi-layer search with configurable weights
+
+  #### Sprint 4: Query Planning
+  - `QueryPlanner` class - query decomposition and execution planning
+  - Sub-query generation for complex queries
+  - Execution order optimization
+  - Complexity estimation for query plans
+
+  #### Sprint 5: Observation Normalization
+  - `ObservationNormalizer` class - observation preprocessing for better search
+  - Coreference resolution: replaces pronouns (he, she, they, it) with entity name
+  - Temporal anchoring: converts relative dates to absolute ISO dates
+  - `KeywordExtractor` class - scored keyword extraction with TF-IDF-like scoring
+  - **New MCP Tool**: `normalize_observations` - normalize entity observations
+  - **New MCP Tool**: `analyze_query` - analyze natural language queries
+
+  #### Sprint 6: Reflection-Based Search
+  - `ReflectionManager` class - iterative result refinement
+  - Adequacy scoring for search results
+  - Query refinement based on result quality
+  - **New MCP Tool**: `smart_search` - reflection-based iterative search
+
+### Changed
+
+- Updated tool count from 55 to 59 (added hybrid_search, analyze_query, smart_search, normalize_observations)
+- features/ module expanded from 7 to 9 files (added ObservationNormalizer.ts, KeywordExtractor.ts)
+- search/ module now contains 20 files with 22 classes
+- Updated all architecture documentation (API.md, OVERVIEW.md, COMPONENTS.md)
+
+### Tests
+
+- Added `tests/unit/search/HybridSearchManager.test.ts` - 33 tests for hybrid search
+- Added `tests/unit/search/QueryAnalyzer.test.ts` - 56 tests for query analysis
+- Added `tests/unit/features/ObservationNormalizer.test.ts` - 35 tests for observation normalization
+- Added `tests/integration/hybrid-search.test.ts` - 18 integration tests
+- Added `tests/integration/smart-search.test.ts` - 15 integration tests
+- Total: 2692+ tests across 77 test files (up from 2535 tests in 74 files)
+
 ## [9.8.3] - 2026-01-08
 
 ### Fixed

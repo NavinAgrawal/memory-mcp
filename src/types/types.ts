@@ -1845,3 +1845,127 @@ export interface QueryCostEstimatorOptions {
   /** Threshold for "high" complexity (entity count, default: 1000) */
   highComplexityThreshold?: number;
 }
+
+// ==================== Hybrid Search Types (Phase 11) ====================
+
+/**
+ * Symbolic/metadata filters for search.
+ */
+export interface SymbolicFilters {
+  tags?: string[];
+  entityTypes?: string[];
+  dateRange?: { start: string; end: string };
+  importance?: { min?: number; max?: number };
+  parentId?: string;
+  hasObservations?: boolean;
+}
+
+/**
+ * Options for hybrid search combining multiple signals.
+ */
+export interface HybridSearchOptions {
+  /** Weight for semantic similarity (0-1, default: 0.5) */
+  semanticWeight: number;
+  /** Weight for lexical matching (0-1, default: 0.3) */
+  lexicalWeight: number;
+  /** Weight for symbolic/metadata matching (0-1, default: 0.2) */
+  symbolicWeight: number;
+  /** Semantic layer options */
+  semantic?: {
+    minSimilarity?: number;
+    topK?: number;
+  };
+  /** Lexical layer options */
+  lexical?: {
+    useStopwords?: boolean;
+    useStemming?: boolean;
+  };
+  /** Symbolic layer filters */
+  symbolic?: SymbolicFilters;
+  /** Maximum results to return */
+  limit?: number;
+}
+
+/**
+ * Result from hybrid search with per-layer scores.
+ */
+export interface HybridSearchResult {
+  entity: Entity;
+  scores: {
+    semantic: number;
+    lexical: number;
+    symbolic: number;
+    combined: number;
+  };
+  matchedLayers: ('semantic' | 'lexical' | 'symbolic')[];
+}
+
+// ==================== Query Analysis Types (Phase 11) ====================
+
+/**
+ * An extracted entity from query analysis.
+ */
+export interface ExtractedEntity {
+  name: string;
+  type: 'person' | 'location' | 'organization' | 'unknown';
+}
+
+/**
+ * Temporal range extracted from query.
+ */
+export interface TemporalRange {
+  start?: string;
+  end?: string;
+  relative?: string;
+}
+
+/**
+ * Result of analyzing a search query.
+ */
+export interface QueryAnalysis {
+  /** Original query text */
+  query: string;
+  /** Extracted entities (combined persons, locations, organizations) */
+  entities: ExtractedEntity[];
+  /** Extracted person names */
+  persons: string[];
+  /** Extracted location names */
+  locations: string[];
+  /** Extracted organization names */
+  organizations: string[];
+  /** Temporal range if detected */
+  temporalRange: TemporalRange | null;
+  /** Type of question */
+  questionType: 'factual' | 'temporal' | 'comparative' | 'aggregation' | 'multi-hop' | 'conceptual';
+  /** Query complexity level */
+  complexity: 'low' | 'medium' | 'high';
+  /** Confidence in the analysis (0-1) */
+  confidence: number;
+  /** Types of information being requested */
+  requiredInfoTypes: string[];
+  /** Decomposed sub-queries for multi-hop */
+  subQueries?: string[];
+}
+
+/**
+ * A sub-query within a query plan.
+ */
+export interface SubQuery {
+  id: string;
+  query: string;
+  targetLayer: 'semantic' | 'lexical' | 'symbolic' | 'hybrid';
+  priority: number;
+  filters?: SymbolicFilters;
+  dependsOn?: string[];
+}
+
+/**
+ * Execution plan for a query.
+ */
+export interface QueryPlan {
+  originalQuery: string;
+  subQueries: SubQuery[];
+  executionStrategy: 'parallel' | 'sequential' | 'iterative';
+  mergeStrategy: 'union' | 'intersection' | 'weighted';
+  estimatedComplexity: number;
+}

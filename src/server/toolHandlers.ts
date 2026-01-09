@@ -34,6 +34,11 @@ import {
 } from '../utils/index.js';
 import type { ManagerContext } from '../core/ManagerContext.js';
 import { z } from 'zod';
+import { HybridSearchManager } from '../search/HybridSearchManager.js';
+import { QueryAnalyzer } from '../search/QueryAnalyzer.js';
+import { QueryPlanner } from '../search/QueryPlanner.js';
+import { ReflectionManager } from '../search/ReflectionManager.js';
+import { ObservationNormalizer } from '../features/ObservationNormalizer.js';
 import { maybeCompressResponse } from './responseCompressor.js';
 
 /**
@@ -144,6 +149,64 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatTextResponse('Observations deleted successfully');
   },
 
+  // Phase 11 Sprint 5: Observation Normalization
+  normalize_observations: async (ctx, args) => {
+    const entityName = args.entityName !== undefined
+      ? validateWithSchema(args.entityName, z.string().min(1), 'Invalid entity name')
+      : undefined;
+    const options = (args.options as {
+      resolveCoreferences?: boolean;
+      anchorTimestamps?: boolean;
+      extractKeywords?: boolean;
+    }) ?? {};
+    const persist = args.persist === true;
+
+    const normalizer = new ObservationNormalizer();
+    const graph = await ctx.storage.loadGraph();
+
+    const entities = entityName
+      ? graph.entities.filter(e => e.name === entityName)
+      : graph.entities;
+
+    if (entities.length === 0 && entityName) {
+      return formatTextResponse(`Entity "${entityName}" not found`);
+    }
+
+    const results = entities.map(entity => {
+      const { entity: normalized, results: changes } = normalizer.normalizeEntity(entity, options);
+      return {
+        entityName: entity.name,
+        changes: changes.filter(r => r.changes.length > 0),
+        normalized: normalized.observations,
+      };
+    });
+
+    if (persist) {
+      // Update entities with normalized observations
+      const updatedEntities = graph.entities.map(entity => {
+        const result = results.find(r => r.entityName === entity.name);
+        if (result && result.changes.length > 0) {
+          return {
+            ...entity,
+            observations: result.normalized,
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return entity;
+      });
+      await ctx.storage.saveGraph({
+        entities: updatedEntities,
+        relations: [...graph.relations],
+      });
+    }
+
+    return formatToolResponse({
+      entitiesProcessed: results.length,
+      persisted: persist,
+      results: results.filter(r => r.changes.length > 0),
+    });
+  },
+
   // ==================== SEARCH HANDLERS ====================
   search_nodes: async (ctx, args) => {
     const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
@@ -200,6 +263,143 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
     const limit = args.limit !== undefined ? validateWithSchema(args.limit, z.number().int().positive().max(200), 'Invalid limit') : undefined;
     return formatToolResponse(await ctx.searchManager.autoSearch(query, limit));
+  },
+
+  // Phase 11 Sprint 2: Hybrid search
+  hybrid_search: async (ctx, args) => {
+    const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
+    const weights = args.weights as { semantic?: number; lexical?: number; symbolic?: number } | undefined;
+    const filters = args.filters as {
+      tags?: string[];
+      entityTypes?: string[];
+      dateRange?: { start: string; end: string };
+      minImportance?: number;
+      maxImportance?: number;
+    } | undefined;
+    const limit = args.limit !== undefined
+      ? validateWithSchema(args.limit, z.number().int().positive().max(200), 'Invalid limit')
+      : 10;
+
+    const hybridSearch = new HybridSearchManager(ctx.semanticSearch, ctx.rankedSearch);
+    const graph = await ctx.storage.loadGraph();
+
+    const results = await hybridSearch.searchWithEntities(graph, query, {
+      semanticWeight: weights?.semantic ?? 0.5,
+      lexicalWeight: weights?.lexical ?? 0.3,
+      symbolicWeight: weights?.symbolic ?? 0.2,
+      symbolic:
+        filters?.tags || filters?.entityTypes || filters?.dateRange ||
+        filters?.minImportance !== undefined || filters?.maxImportance !== undefined
+          ? {
+              tags: filters?.tags,
+              entityTypes: filters?.entityTypes,
+              dateRange: filters?.dateRange,
+              importance:
+                filters?.minImportance !== undefined || filters?.maxImportance !== undefined
+                  ? { min: filters?.minImportance, max: filters?.maxImportance }
+                  : undefined,
+            }
+          : undefined,
+      limit,
+    });
+
+    return formatToolResponse({
+      query,
+      weights: {
+        semantic: weights?.semantic ?? 0.5,
+        lexical: weights?.lexical ?? 0.3,
+        symbolic: weights?.symbolic ?? 0.2,
+      },
+      resultCount: results.length,
+      results: results.map((r) => ({
+        name: r.entity.name,
+        entityType: r.entity.entityType,
+        scores: r.scores,
+        matchedLayers: r.matchedLayers,
+        observations: r.entity.observations.slice(0, 3),
+        tags: r.entity.tags,
+      })),
+    });
+  },
+
+  // Phase 11 Sprint 3: Query Analysis
+  analyze_query: async (_ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const includePlan = args.includePlan === true;
+
+    const analyzer = new QueryAnalyzer();
+    const analysis = analyzer.analyze(query);
+
+    let plan = undefined;
+    if (includePlan) {
+      const planner = new QueryPlanner();
+      plan = planner.createPlan(query, analysis);
+    }
+
+    return formatToolResponse({
+      query,
+      analysis,
+      plan,
+    });
+  },
+
+  // Phase 11 Sprint 4: Smart Search
+  smart_search: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const maxIterations = args.maxIterations !== undefined
+      ? validateWithSchema(args.maxIterations, z.number().int().positive().max(10), 'Invalid maxIterations')
+      : 3;
+    const adequacyThreshold = args.adequacyThreshold !== undefined
+      ? validateWithSchema(args.adequacyThreshold, z.number().min(0).max(1), 'Invalid adequacyThreshold')
+      : 0.7;
+    const includePlan = args.includePlan !== false;
+    const limit = args.limit !== undefined
+      ? validateWithSchema(args.limit, z.number().int().positive().max(200), 'Invalid limit')
+      : 10;
+
+    const analyzer = new QueryAnalyzer();
+    const analysis = analyzer.analyze(query);
+
+    let plan = undefined;
+    if (includePlan) {
+      const planner = new QueryPlanner();
+      plan = planner.createPlan(query, analysis);
+    }
+
+    const hybridSearch = new HybridSearchManager(ctx.semanticSearch, ctx.rankedSearch);
+    const reflection = new ReflectionManager(hybridSearch, analyzer);
+    const graph = await ctx.storage.loadGraph();
+
+    const result = await reflection.retrieveWithReflection(graph, query, {
+      maxIterations,
+      adequacyThreshold,
+      searchOptions: { limit },
+    });
+
+    return formatToolResponse({
+      query,
+      analysis: {
+        questionType: analysis.questionType,
+        complexity: analysis.complexity,
+        persons: analysis.persons,
+        temporalRange: analysis.temporalRange,
+      },
+      plan,
+      reflection: {
+        iterations: result.iterations,
+        adequate: result.adequate,
+        adequacyScore: result.adequacyScore,
+        refinements: result.refinements,
+      },
+      resultCount: result.results.length,
+      results: result.results.slice(0, limit).map(r => ({
+        name: r.entity.name,
+        entityType: r.entity.entityType,
+        scores: r.scores,
+        matchedLayers: r.matchedLayers,
+        observations: r.entity.observations.slice(0, 3),
+      })),
+    });
   },
 
   // ==================== SAVED SEARCH HANDLERS ====================

@@ -45,3 +45,18 @@ export { TFIDFEventSync } from './TFIDFEventSync.js';
 
 // Phase 10 Sprint 4: Query Cost Estimation
 export { QueryCostEstimator } from './QueryCostEstimator.js';
+
+// Phase 11 Sprint 1: Hybrid Search
+export { SymbolicSearch, type SymbolicResult } from './SymbolicSearch.js';
+export { HybridSearchManager, DEFAULT_HYBRID_WEIGHTS } from './HybridSearchManager.js';
+
+// Phase 11 Sprint 3: Query Analysis
+export { QueryAnalyzer } from './QueryAnalyzer.js';
+export { QueryPlanner } from './QueryPlanner.js';
+
+// Phase 11 Sprint 4: Reflection-based Retrieval
+export {
+  ReflectionManager,
+  type ReflectionOptions,
+  type ReflectionResult,
+} from './ReflectionManager.js';

@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 9.8.0
-**Last Updated**: 2026-01-07
+**Version**: 9.9.0
+**Last Updated**: 2026-01-09
 
 ---
 
@@ -28,9 +28,9 @@ Memory MCP follows a layered architecture with specialized components:
 ├─────────────────────────────────────────────────────────────┤
 │  core/             │  Central managers and storage (12 files)│
 ├─────────────────────────────────────────────────────────────┤
-│  search/           │  Search implementations (15 files)     │
+│  search/           │  Search implementations (20 files)     │
 ├─────────────────────────────────────────────────────────────┤
-│  features/         │  Advanced capabilities (7 files)       │
+│  features/         │  Advanced capabilities (9 files)       │
 ├─────────────────────────────────────────────────────────────┤
 │  utils/            │  Shared utilities (15 files)           │
 ├─────────────────────────────────────────────────────────────┤
@@ -44,15 +44,15 @@ Memory MCP follows a layered architecture with specialized components:
 
 | Metric | Count |
 |--------|-------|
-| Total TypeScript Files | 58 |
-| Total Lines of Code | 22,608 |
-| Total Exports | 436 |
-| Total Re-exports | 234 |
-| Total Classes | 55 |
-| Total Interfaces | 89 |
-| Total Functions | 94 |
+| Total TypeScript Files | 65 |
+| Total Lines of Code | ~24,800 |
+| Total Exports | 462 |
+| Total Re-exports | 250 |
+| Total Classes | 62 |
+| Total Interfaces | 103 |
+| Total Functions | 96 |
 | Total Enums | 3 |
-| Type-only Imports | 57 |
+| Type-only Imports | 67 |
 
 ---
 
@@ -83,7 +83,7 @@ export class MCPServer {
 
 ### toolDefinitions (`server/toolDefinitions.ts`)
 
-**Purpose**: Schema definitions for all 55 MCP tools
+**Purpose**: Schema definitions for all 59 MCP tools
 
 **Lines**: ~400
 
@@ -107,8 +107,9 @@ export const toolDefinitions: ToolDefinition[]
 |----------|-------|-------|
 | Entity | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | Relation | 2 | create_relations, delete_relations |
-| Observation | 2 | add_observations, delete_observations |
+| Observation | 3 | add_observations, delete_observations, normalize_observations |
 | Search | 7 | search_nodes, search_nodes_ranked, boolean_search, fuzzy_search, search_by_date_range, get_search_suggestions, search_auto |
+| Intelligent Search | 3 | hybrid_search, analyze_query, smart_search |
 | Semantic Search | 3 | semantic_search, find_similar_entities, index_embeddings |
 | Saved Searches | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | Tag Management | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
@@ -123,7 +124,7 @@ export const toolDefinitions: ToolDefinition[]
 
 ### toolHandlers (`server/toolHandlers.ts`)
 
-**Purpose**: Handler implementations for all 55 tools
+**Purpose**: Handler implementations for all 59 tools
 
 **Lines**: ~301
 
@@ -349,7 +350,7 @@ export class SearchManager {
 }
 ```
 
-**Composed Components** (17 classes in search/):
+**Composed Components** (22 classes in search/):
 - **BasicSearch**: Simple text matching with filters
 - **RankedSearch**: TF-IDF relevance scoring
 - **BooleanSearch**: AND/OR/NOT query parsing
@@ -366,6 +367,11 @@ export class SearchManager {
 - **MockEmbeddingService**: Testing provider
 - **InMemoryVectorStore**: In-memory vector storage
 - **SQLiteVectorStore**: SQLite-backed vector storage
+- **HybridSearchManager**: Three-layer hybrid search (semantic + lexical + symbolic)
+- **QueryAnalyzer**: Query understanding + entity extraction + temporal parsing
+- **QueryPlanner**: Query decomposition and execution planning
+- **SymbolicSearch**: Metadata-based symbolic filtering
+- **ReflectionManager**: Iterative result refinement for smart_search
 
 ---
 
@@ -496,6 +502,118 @@ export class SearchFilterChain {
 
 ---
 
+### HybridSearchManager (`search/HybridSearchManager.ts`)
+
+**Purpose**: Three-layer hybrid search combining semantic, lexical, and symbolic signals (Phase 11)
+
+```typescript
+export class HybridSearchManager {
+  constructor(
+    storage: GraphStorage,
+    semanticSearch?: SemanticSearch,
+    tfidfManager?: TFIDFIndexManager
+  )
+
+  async search(
+    query: string,
+    options?: HybridSearchOptions
+  ): Promise<HybridSearchResult>
+}
+
+export interface HybridSearchOptions {
+  weights?: { semantic?: number; lexical?: number; symbolic?: number };
+  filters?: SymbolicFilters;
+  limit?: number;
+  minScore?: number;
+}
+```
+
+**Scoring Layers**:
+- **Semantic**: Vector similarity via embeddings (default weight: 0.4)
+- **Lexical**: TF-IDF/BM25 text matching (default weight: 0.4)
+- **Symbolic**: Metadata filtering (default weight: 0.2)
+
+---
+
+### QueryAnalyzer (`search/QueryAnalyzer.ts`)
+
+**Purpose**: Natural language query understanding and decomposition (Phase 11)
+
+```typescript
+export class QueryAnalyzer {
+  analyze(query: string): QueryAnalysis
+}
+
+export interface QueryAnalysis {
+  extractedEntities: ExtractedEntity[];
+  temporalReferences: TemporalRange[];
+  questionType: string;  // who, what, when, where, why, how, boolean, list
+  complexity: string;    // simple, moderate, complex
+  suggestedSearchMethods: string[];
+}
+```
+
+**Capabilities**:
+- Entity extraction from natural language
+- Temporal expression parsing ("last week", "after January 2025")
+- Question type classification
+- Complexity estimation
+
+---
+
+### QueryPlanner (`search/QueryPlanner.ts`)
+
+**Purpose**: Query decomposition and execution planning (Phase 11)
+
+```typescript
+export class QueryPlanner {
+  constructor(analyzer: QueryAnalyzer)
+
+  createPlan(query: string, analysis?: QueryAnalysis): QueryPlan
+}
+
+export interface QueryPlan {
+  subQueries: SubQuery[];
+  executionOrder: string[];
+  estimatedComplexity: number;
+}
+```
+
+---
+
+### ReflectionManager (`search/ReflectionManager.ts`)
+
+**Purpose**: Iterative result refinement for smart_search (Phase 11)
+
+```typescript
+export class ReflectionManager {
+  constructor(
+    hybridSearch: HybridSearchManager,
+    analyzer: QueryAnalyzer
+  )
+
+  async search(
+    query: string,
+    options?: ReflectionOptions
+  ): Promise<ReflectionResult>
+}
+
+export interface ReflectionOptions {
+  maxIterations?: number;      // Default: 3
+  targetAdequacy?: number;     // Default: 0.7
+  filters?: SymbolicFilters;
+}
+```
+
+**Algorithm**:
+1. Analyze query with QueryAnalyzer
+2. Execute initial hybrid search
+3. Evaluate result adequacy
+4. If below threshold, refine query and repeat
+5. Return results with search process metadata
+
+---
+
 ## Feature Components
 
 ### IOManager (`features/IOManager.ts`)
@@ -565,6 +683,70 @@ export class TagManager {
 ```
 
 **Use Case**: Map synonyms to canonical tags (e.g., "js" → "javascript")
+
+---
+
+### ObservationNormalizer (`features/ObservationNormalizer.ts`)
+
+**Purpose**: Observation normalization with coreference resolution and temporal anchoring (Phase 11)
+
+```typescript
+export class ObservationNormalizer {
+  constructor(private keywordExtractor?: KeywordExtractor)
+
+  normalize(
+    entityName: string,
+    observations: string[],
+    options?: NormalizationOptions
+  ): NormalizationResult
+}
+
+export interface NormalizationOptions {
+  resolveCoreferences?: boolean;  // Default: true
+  anchorDates?: boolean;          // Default: true
+  extractKeywords?: boolean;      // Default: false
+  referenceDate?: string;         // ISO 8601 date for temporal anchoring
+}
+
+export interface NormalizationResult {
+  entityName: string;
+  originalCount: number;
+  normalizedCount: number;
+  observations: Array<{
+    original: string;
+    normalized: string;
+    keywords?: ScoredKeyword[];
+  }>;
+}
+```
+
+**Features**:
+- **Coreference Resolution**: Replaces pronouns (he, she, they, it) with entity name
+- **Temporal Anchoring**: Converts relative dates ("yesterday", "last week") to absolute ISO dates
+- **Keyword Extraction**: Extracts significant keywords with TF-IDF-like scoring
+
+---
+
+### KeywordExtractor (`features/KeywordExtractor.ts`)
+
+**Purpose**: Scored keyword extraction from text (Phase 11)
+
+```typescript
+export class KeywordExtractor {
+  extract(text: string, topN?: number): ScoredKeyword[]
+}
+
+export interface ScoredKeyword {
+  keyword: string;
+  score: number;  // 0.0-1.0
+}
+```
+
+**Algorithm**:
+- Tokenizes text and filters stopwords
+- Calculates term frequency scores
+- Applies length and position bonuses
+- Returns top N keywords by score
 
 ---
 
@@ -818,6 +1000,6 @@ interface ValidationReport {
 
 ---
 
-**Document Version**: 3.0
-**Last Updated**: 2026-01-07
+**Document Version**: 4.0
+**Last Updated**: 2026-01-09
 **Maintained By**: Daniel Simon Jr.

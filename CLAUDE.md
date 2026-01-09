@@ -22,7 +22,7 @@ npx vitest run -t "should create entities"
 
 ## Architecture Overview
 
-This is an enhanced MCP memory server with **55 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
+This is an enhanced MCP memory server with **59 tools** (vs 11 in official version), providing knowledge graph storage with hierarchical organization.
 
 **npm:** @danielsimonjr/memory-mcp
 
@@ -32,7 +32,7 @@ This is an enhanced MCP memory server with **55 tools** (vs 11 in official versi
 ┌─────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer            │
 │  server/MCPServer.ts + toolDefinitions  │
-│  + toolHandlers (55 tools)              │
+│  + toolHandlers (59 tools)              │
 └──────────────────┬──────────────────────┘
                    │ (direct manager access)
 ┌──────────────────┴──────────────────────┐
@@ -50,20 +50,20 @@ This is an enhanced MCP memory server with **55 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/) - 53 TypeScript files
+### Source Structure (src/) - 65 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| **core/** | 11 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (graph algorithms), index |
-| **features/** | 7 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, index |
-| **search/** | 13 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, SearchFilterChain, SearchSuggestions, EmbeddingService, VectorStore, SemanticSearch, index |
+| **core/** | 12 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (graph algorithms), GraphEventEmitter, index |
+| **features/** | 9 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, ObservationNormalizer (coreference resolution + temporal anchoring), KeywordExtractor (scored keyword extraction), index |
+| **search/** | 20 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, TFIDFEventSync, SearchFilterChain, SearchSuggestions, EmbeddingService, VectorStore, SemanticSearch, SymbolicSearch, HybridSearchManager, QueryAnalyzer, QueryPlanner, QueryCostEstimator, ReflectionManager, index |
 | **server/** | 4 | MCPServer.ts, toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
-| **utils/** | 12 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, index |
-| **workers/** | 3 | levenshteinWorker (workerpool-based fuzzy search worker), index |
+| **utils/** | 15 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, operationUtils, parallelUtils, taskScheduler, index |
+| **workers/** | 2 | levenshteinWorker (workerpool-based fuzzy search worker), index |
 | **root** | 1 | index.ts (entry point) |
 
-> **Note**: utils/ consolidated to 10 files, types/ consolidated to 2 files for maintainability
+> **Note**: types/ consolidated to 2 files, utils/ extended to 15 files for improved modularity
 
 ### Key Design Patterns
 
@@ -130,14 +130,15 @@ Data files are stored in the **project root directory** (not in `dist/`):
 - `MEMORY_EMBEDDING_MODEL` - Embedding model (default: text-embedding-3-small for OpenAI, Xenova/all-MiniLM-L6-v2 for local)
 - `MEMORY_AUTO_INDEX_EMBEDDINGS` - Auto-index entities on creation: 'true' or 'false' (default: false)
 
-## Tool Categories (55 Total)
+## Tool Categories (59 Total)
 
 | Category | Count | Tools |
 |----------|-------|-------|
 | **Entity Operations** | 4 | create_entities, delete_entities, read_graph, open_nodes |
 | **Relation Operations** | 2 | create_relations, delete_relations |
-| **Observation Management** | 2 | add_observations, delete_observations |
+| **Observation Management** | 3 | add_observations, delete_observations, normalize_observations |
 | **Search** | 7 | search_nodes, search_by_date_range, search_nodes_ranked, boolean_search, fuzzy_search, get_search_suggestions, search_auto |
+| **Intelligent Search** | 3 | hybrid_search (multi-layer fusion), analyze_query (query understanding), smart_search (reflection-based refinement) |
 | **Semantic Search** | 3 | semantic_search, find_similar_entities, index_embeddings |
 | **Saved Searches** | 5 | save_search, execute_saved_search, list_saved_searches, delete_saved_search, update_saved_search |
 | **Tag Management** | 6 | add_tags, remove_tags, set_importance, add_tags_to_multiple_entities, replace_tag, merge_tags |
@@ -147,6 +148,15 @@ Data files are stored in the **project root directory** (not in `dist/`):
 | **Analytics** | 2 | get_graph_stats, validate_graph |
 | **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | **Import/Export** | 2 | import_graph (3 formats), export_graph (7 formats + compression + streaming for large graphs) |
+
+### Intelligent Search (Phase 11)
+
+Three-layer hybrid search architecture combining semantic, lexical, and symbolic signals:
+
+- **hybrid_search**: Combines semantic (vector similarity), lexical (TF-IDF/BM25), and symbolic (metadata filtering) signals with configurable weights
+- **analyze_query**: Extracts entities, temporal references, question type, and complexity from natural language queries
+- **smart_search**: Orchestrates query analysis, planning, and reflection-based iterative refinement until results meet adequacy threshold
+- **normalize_observations**: Transforms observations into self-contained facts by resolving pronouns to entity names and converting relative dates to absolute dates
 
 ## Test Structure
 
@@ -184,6 +194,11 @@ Tests are in `tests/`:
 | unit/search/EmbeddingService.test.ts | 31 | Embedding service abstraction |
 | unit/search/VectorStore.test.ts | 32 | Vector storage & similarity search |
 | unit/search/SemanticSearch.test.ts | 27 | Semantic search manager |
+| unit/search/HybridSearchManager.test.ts | 33 | Hybrid search with three-layer fusion |
+| unit/search/QueryAnalyzer.test.ts | 56 | Query analysis and planning |
+| integration/hybrid-search.test.ts | 18 | Hybrid search integration |
+| integration/smart-search.test.ts | 15 | Smart search with reflection |
+| unit/features/ObservationNormalizer.test.ts | 35 | Coreference resolution + keyword extraction |
 | unit/utils/entityUtils.test.ts | 32 | Entity utilities |
 | unit/utils/indexes.test.ts | 24 | Search indexes |
 | unit/utils/levenshtein.test.ts | 12 | String distance |
@@ -242,7 +257,7 @@ tests/test-results/
 ## Server Architecture
 
 - **MCPServer.ts**: Main server entry point
-- **toolDefinitions.ts**: All 54 tool schemas organized by category
+- **toolDefinitions.ts**: All 59 tool schemas organized by category
 - **toolHandlers.ts**: Handler registry and dispatch logic
 - **responseCompressor.ts**: Automatic brotli compression for large responses (>256KB)
 - **GraphTraversal.ts**: Graph algorithms (BFS, DFS, shortest path, centrality)

@@ -22,3 +22,14 @@ export {
   type ArchiveResult,
 } from './ArchiveManager.js';
 export { StreamingExporter, type StreamResult } from './StreamingExporter.js';
+
+// Phase 11 Sprint 5: Semantic Compression
+export {
+  ObservationNormalizer,
+  type NormalizationOptions,
+  type NormalizationResult,
+} from './ObservationNormalizer.js';
+export {
+  KeywordExtractor,
+  type ScoredKeyword,
+} from './KeywordExtractor.js';

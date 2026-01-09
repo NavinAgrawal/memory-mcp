@@ -1,11 +1,11 @@
 {
   "metadata": {
     "name": "@danielsimonjr/memory-mcp",
-    "version": "9.8.0",
-    "lastUpdated": "2026-01-08",
-    "totalFiles": 58,
+    "version": "9.8.3",
+    "lastUpdated": "2026-01-09",
+    "totalFiles": 65,
     "totalModules": 8,
-    "totalExports": 436
+    "totalExports": 462
   },
   "entryPoints": [
     {
@@ -52,7 +52,8 @@
               "EntityNamesSchema",
               "checkCancellation",
               "createProgressReporter",
-              "createProgress"
+              "createProgress",
+              "sanitizeObject"
             ]
           },
           {
@@ -148,6 +149,12 @@
               "LowercaseCache",
               "RelationIndex",
               "ObservationIndex"
+            ]
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "sanitizeObject"
             ]
           },
           {
@@ -396,6 +403,12 @@
             ]
           },
           {
+            "file": "./StorageFactory.js",
+            "imports": [
+              "createStorageFromPath"
+            ]
+          },
+          {
             "file": "./EntityManager.js",
             "imports": [
               "EntityManager"
@@ -429,6 +442,12 @@
             "file": "../search/SearchManager.js",
             "imports": [
               "SearchManager"
+            ]
+          },
+          {
+            "file": "../search/RankedSearch.js",
+            "imports": [
+              "RankedSearch"
             ]
           },
           {
@@ -603,6 +622,12 @@
               "NameIndex",
               "TypeIndex"
             ]
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "sanitizeObject"
+            ]
           }
         ],
         "exports": [
@@ -689,7 +714,8 @@
             "imports": [
               "checkCancellation",
               "createProgressReporter",
-              "createProgress"
+              "createProgress",
+              "sanitizeObject"
             ]
           }
         ],
@@ -907,6 +933,23 @@
               "type StreamResult"
             ],
             "reExport": true
+          },
+          {
+            "file": "./ObservationNormalizer.js",
+            "imports": [
+              "ObservationNormalizer",
+              "type NormalizationOptions",
+              "type NormalizationResult"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./KeywordExtractor.js",
+            "imports": [
+              "KeywordExtractor",
+              "type ScoredKeyword"
+            ],
+            "reExport": true
           }
         ],
         "exports": [
@@ -924,7 +967,12 @@
           "type ArchiveOptions",
           "type ArchiveResult",
           "StreamingExporter",
-          "type StreamResult"
+          "type StreamResult",
+          "ObservationNormalizer",
+          "type NormalizationOptions",
+          "type NormalizationResult",
+          "KeywordExtractor",
+          "type ScoredKeyword"
         ],
         "reExported": [
           "TagManager",
@@ -941,7 +989,12 @@
           "type ArchiveOptions",
           "type ArchiveResult",
           "StreamingExporter",
-          "type StreamResult"
+          "type StreamResult",
+          "ObservationNormalizer",
+          "type NormalizationOptions",
+          "type NormalizationResult",
+          "KeywordExtractor",
+          "type ScoredKeyword"
         ]
       },
       "src/features/IOManager.ts": {
@@ -1003,7 +1056,10 @@
               "STREAMING_CONFIG",
               "checkCancellation",
               "createProgressReporter",
-              "createProgress"
+              "createProgress",
+              "validateFilePath",
+              "sanitizeObject",
+              "escapeCsvFormula"
             ]
           },
           {
@@ -1023,6 +1079,45 @@
         "interfaces": [
           "BackupMetadata",
           "BackupInfo"
+        ]
+      },
+      "src/features/KeywordExtractor.ts": {
+        "description": "Keyword Extractor",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "KeywordExtractor"
+        ],
+        "classes": [
+          "KeywordExtractor"
+        ],
+        "interfaces": [
+          "ScoredKeyword"
+        ]
+      },
+      "src/features/ObservationNormalizer.ts": {
+        "description": "Observation Normalizer",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "Entity"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "ObservationNormalizer"
+        ],
+        "classes": [
+          "ObservationNormalizer"
+        ],
+        "interfaces": [
+          "NormalizationOptions",
+          "NormalizationResult"
         ]
       },
       "src/features/StreamingExporter.ts": {
@@ -1051,7 +1146,8 @@
             "imports": [
               "checkCancellation",
               "createProgressReporter",
-              "createProgress"
+              "createProgress",
+              "validateFilePath"
             ]
           }
         ],
@@ -1352,6 +1448,60 @@
           "DEFAULT_FUZZY_THRESHOLD"
         ]
       },
+      "src/search/HybridSearchManager.ts": {
+        "description": "Hybrid Search Manager",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "Entity",
+              "HybridSearchOptions",
+              "HybridSearchResult",
+              "ReadonlyKnowledgeGraph",
+              "SymbolicFilters"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./SemanticSearch.js",
+            "imports": [
+              "SemanticSearch"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./RankedSearch.js",
+            "imports": [
+              "RankedSearch"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./SymbolicSearch.js",
+            "imports": [
+              "SymbolicSearch"
+            ]
+          },
+          {
+            "file": "../utils/constants.js",
+            "imports": [
+              "SEMANTIC_SEARCH_LIMITS"
+            ]
+          }
+        ],
+        "exports": [
+          "DEFAULT_HYBRID_WEIGHTS",
+          "HybridSearchManager"
+        ],
+        "classes": [
+          "HybridSearchManager"
+        ],
+        "constants": [
+          "DEFAULT_HYBRID_WEIGHTS"
+        ]
+      },
       "src/search/index.ts": {
         "description": "Search Module Barrel Export",
         "externalDependencies": [],
@@ -1465,6 +1615,45 @@
               "QueryCostEstimator"
             ],
             "reExport": true
+          },
+          {
+            "file": "./SymbolicSearch.js",
+            "imports": [
+              "SymbolicSearch",
+              "type SymbolicResult"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./HybridSearchManager.js",
+            "imports": [
+              "HybridSearchManager",
+              "DEFAULT_HYBRID_WEIGHTS"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./QueryAnalyzer.js",
+            "imports": [
+              "QueryAnalyzer"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./QueryPlanner.js",
+            "imports": [
+              "QueryPlanner"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./ReflectionManager.js",
+            "imports": [
+              "ReflectionManager",
+              "type ReflectionOptions",
+              "type ReflectionResult"
+            ],
+            "reExport": true
           }
         ],
         "exports": [
@@ -1492,7 +1681,16 @@
           "entityToText",
           "TFIDFIndexManager",
           "TFIDFEventSync",
-          "QueryCostEstimator"
+          "QueryCostEstimator",
+          "SymbolicSearch",
+          "type SymbolicResult",
+          "HybridSearchManager",
+          "DEFAULT_HYBRID_WEIGHTS",
+          "QueryAnalyzer",
+          "QueryPlanner",
+          "ReflectionManager",
+          "type ReflectionOptions",
+          "type ReflectionResult"
         ],
         "reExported": [
           "BasicSearch",
@@ -1519,7 +1717,38 @@
           "entityToText",
           "TFIDFIndexManager",
           "TFIDFEventSync",
-          "QueryCostEstimator"
+          "QueryCostEstimator",
+          "SymbolicSearch",
+          "type SymbolicResult",
+          "HybridSearchManager",
+          "DEFAULT_HYBRID_WEIGHTS",
+          "QueryAnalyzer",
+          "QueryPlanner",
+          "ReflectionManager",
+          "type ReflectionOptions",
+          "type ReflectionResult"
+        ]
+      },
+      "src/search/QueryAnalyzer.ts": {
+        "description": "Query Analyzer",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "QueryAnalysis",
+              "ExtractedEntity",
+              "TemporalRange"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "QueryAnalyzer"
+        ],
+        "classes": [
+          "QueryAnalyzer"
         ]
       },
       "src/search/QueryCostEstimator.ts": {
@@ -1542,6 +1771,29 @@
         ],
         "classes": [
           "QueryCostEstimator"
+        ]
+      },
+      "src/search/QueryPlanner.ts": {
+        "description": "Query Planner",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "QueryAnalysis",
+              "QueryPlan",
+              "SubQuery",
+              "SymbolicFilters"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "QueryPlanner"
+        ],
+        "classes": [
+          "QueryPlanner"
         ]
       },
       "src/search/RankedSearch.ts": {
@@ -1601,6 +1853,47 @@
           "RankedSearch"
         ]
       },
+      "src/search/ReflectionManager.ts": {
+        "description": "Reflection Manager",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "ReadonlyKnowledgeGraph",
+              "QueryAnalysis",
+              "HybridSearchResult",
+              "HybridSearchOptions"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./HybridSearchManager.js",
+            "imports": [
+              "HybridSearchManager"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./QueryAnalyzer.js",
+            "imports": [
+              "QueryAnalyzer"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "ReflectionManager"
+        ],
+        "classes": [
+          "ReflectionManager"
+        ],
+        "interfaces": [
+          "ReflectionOptions",
+          "ReflectionResult"
+        ]
+      },
       "src/search/SavedSearchManager.ts": {
         "description": "Saved Search Manager",
         "externalDependencies": [],
@@ -1627,6 +1920,12 @@
               "BasicSearch"
             ],
             "typeOnly": true
+          },
+          {
+            "file": "../utils/index.js",
+            "imports": [
+              "sanitizeObject"
+            ]
           }
         ],
         "exports": [
@@ -1815,6 +2114,30 @@
         ],
         "functions": [
           "entityToText"
+        ]
+      },
+      "src/search/SymbolicSearch.ts": {
+        "description": "Symbolic Search Layer",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "Entity",
+              "SymbolicFilters"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "SymbolicSearch"
+        ],
+        "classes": [
+          "SymbolicSearch"
+        ],
+        "interfaces": [
+          "SymbolicResult"
         ]
       },
       "src/search/TFIDFEventSync.ts": {
@@ -2065,6 +2388,7 @@
               "formatTextResponse",
               "formatRawResponse",
               "validateWithSchema",
+              "validateFilePath",
               "BatchCreateEntitiesSchema",
               "BatchCreateRelationsSchema",
               "EntityNamesSchema",
@@ -2087,6 +2411,36 @@
               "ManagerContext"
             ],
             "typeOnly": true
+          },
+          {
+            "file": "../search/HybridSearchManager.js",
+            "imports": [
+              "HybridSearchManager"
+            ]
+          },
+          {
+            "file": "../search/QueryAnalyzer.js",
+            "imports": [
+              "QueryAnalyzer"
+            ]
+          },
+          {
+            "file": "../search/QueryPlanner.js",
+            "imports": [
+              "QueryPlanner"
+            ]
+          },
+          {
+            "file": "../search/ReflectionManager.js",
+            "imports": [
+              "ReflectionManager"
+            ]
+          },
+          {
+            "file": "../features/ObservationNormalizer.js",
+            "imports": [
+              "ObservationNormalizer"
+            ]
           },
           {
             "file": "./responseCompressor.js",
@@ -2200,7 +2554,15 @@
           "GraphEventMap",
           "QueryCostEstimate",
           "AutoSearchResult",
-          "QueryCostEstimatorOptions"
+          "QueryCostEstimatorOptions",
+          "SymbolicFilters",
+          "HybridSearchOptions",
+          "HybridSearchResult",
+          "ExtractedEntity",
+          "TemporalRange",
+          "QueryAnalysis",
+          "SubQuery",
+          "QueryPlan"
         ]
       }
     },
@@ -2424,6 +2786,8 @@
           "filterByModifiedDate",
           "filterByEntityType",
           "entityPassesFilters",
+          "sanitizeObject",
+          "escapeCsvFormula",
           "validateFilePath",
           "ensureMemoryFilePath"
         ],
@@ -2459,6 +2823,8 @@
           "filterByModifiedDate",
           "filterByEntityType",
           "entityPassesFilters",
+          "sanitizeObject",
+          "escapeCsvFormula",
           "validateFilePath",
           "ensureMemoryFilePath"
         ],
@@ -2755,7 +3121,9 @@
               "type CommonSearchFilters",
               "// Path utilities\r\n  validateFilePath",
               "defaultMemoryPath",
-              "ensureMemoryFilePath"
+              "ensureMemoryFilePath",
+              "// Security utilities\r\n  sanitizeObject",
+              "escapeCsvFormula"
             ],
             "reExport": true
           },
@@ -2954,6 +3322,8 @@
           "// Path utilities\r\n  validateFilePath",
           "defaultMemoryPath",
           "ensureMemoryFilePath",
+          "// Security utilities\r\n  sanitizeObject",
+          "escapeCsvFormula",
           "parallelMap",
           "parallelFilter",
           "getPoolStats",
@@ -3131,6 +3501,8 @@
           "// Path utilities\r\n  validateFilePath",
           "defaultMemoryPath",
           "ensureMemoryFilePath",
+          "// Security utilities\r\n  sanitizeObject",
+          "escapeCsvFormula",
           "parallelMap",
           "parallelFilter",
           "getPoolStats",
@@ -3569,6 +3941,8 @@
           "src/features/CompressionManager.ts",
           "src/features/index.ts",
           "src/features/IOManager.ts",
+          "src/features/KeywordExtractor.ts",
+          "src/features/ObservationNormalizer.ts",
           "src/features/StreamingExporter.ts",
           "src/features/TagManager.ts"
         ]
@@ -3586,14 +3960,19 @@
           "src/search/BooleanSearch.ts",
           "src/search/EmbeddingService.ts",
           "src/search/FuzzySearch.ts",
+          "src/search/HybridSearchManager.ts",
           "src/search/index.ts",
+          "src/search/QueryAnalyzer.ts",
           "src/search/QueryCostEstimator.ts",
+          "src/search/QueryPlanner.ts",
           "src/search/RankedSearch.ts",
+          "src/search/ReflectionManager.ts",
           "src/search/SavedSearchManager.ts",
           "src/search/SearchFilterChain.ts",
           "src/search/SearchManager.ts",
           "src/search/SearchSuggestions.ts",
           "src/search/SemanticSearch.ts",
+          "src/search/SymbolicSearch.ts",
           "src/search/TFIDFEventSync.ts",
           "src/search/TFIDFIndexManager.ts",
           "src/search/VectorStore.ts"
@@ -3645,21 +4024,21 @@
     ]
   },
   "statistics": {
-    "totalTypeScriptFiles": 58,
+    "totalTypeScriptFiles": 65,
     "totalModules": 8,
-    "totalLinesOfCode": 22608,
-    "totalExports": 436,
-    "totalClasses": 55,
-    "totalInterfaces": 89,
-    "totalFunctions": 94,
+    "totalLinesOfCode": 24861,
+    "totalExports": 462,
+    "totalClasses": 62,
+    "totalInterfaces": 103,
+    "totalFunctions": 96,
     "totalTypeGuards": 4,
     "totalEnums": 3,
-    "totalConstants": 50,
-    "totalReExports": 234,
-    "totalTypeOnlyImports": 57,
+    "totalConstants": 51,
+    "totalReExports": 250,
+    "totalTypeOnlyImports": 67,
     "runtimeCircularDeps": 0,
     "typeOnlyCircularDeps": 2,
     "unusedFilesCount": 0,
-    "unusedExportsCount": 142
+    "unusedExportsCount": 157
   }
 }

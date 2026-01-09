@@ -1,11 +1,11 @@
 # Unused Files and Exports Analysis
 
-**Generated**: 2026-01-08
+**Generated**: 2026-01-09
 
 ## Summary
 
 - **Potentially unused files**: 0
-- **Potentially unused exports**: 142
+- **Potentially unused exports**: 157
 
 ## Potentially Unused Files
 
@@ -35,10 +35,28 @@ These exports are not imported by any other file in the codebase:
 - `ImportFormat` (type)
 - `MergeStrategy` (type)
 
+### `src/features/KeywordExtractor.ts`
+
+- `ScoredKeyword` (interface)
+
+### `src/features/ObservationNormalizer.ts`
+
+- `NormalizationOptions` (interface)
+- `NormalizationResult` (interface)
+
 ### `src/search/FuzzySearch.ts`
 
 - `FuzzySearchOptions` (interface)
 - `DEFAULT_FUZZY_THRESHOLD` (constant)
+
+### `src/search/ReflectionManager.ts`
+
+- `ReflectionOptions` (interface)
+- `ReflectionResult` (interface)
+
+### `src/search/SymbolicSearch.ts`
+
+- `SymbolicResult` (interface)
 
 ### `src/search/VectorStore.ts`
 
@@ -119,6 +137,14 @@ These exports are not imported by any other file in the codebase:
 - `QueryCostEstimate` (interface)
 - `AutoSearchResult` (interface)
 - `QueryCostEstimatorOptions` (interface)
+- `SymbolicFilters` (interface)
+- `HybridSearchOptions` (interface)
+- `HybridSearchResult` (interface)
+- `ExtractedEntity` (interface)
+- `TemporalRange` (interface)
+- `QueryAnalysis` (interface)
+- `SubQuery` (interface)
+- `QueryPlan` (interface)
 - `BooleanQueryNode` (type)
 - `BatchOperationType` (type)
 - `BatchOperation` (type)
@@ -152,6 +178,7 @@ These exports are not imported by any other file in the codebase:
 - `normalizeTag` (function)
 - `isWithinDateRange` (function)
 - `isWithinImportanceRange` (function)
+- `sanitizeObject` (function)
 - `validateFilePath` (function)
 - `CommonSearchFilters` (interface)
 

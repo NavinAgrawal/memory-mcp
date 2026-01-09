@@ -94,4 +94,14 @@ export type {
   QueryCostEstimate,
   AutoSearchResult,
   QueryCostEstimatorOptions,
+  // Phase 11 Sprint 1: Hybrid search types
+  SymbolicFilters,
+  HybridSearchOptions,
+  HybridSearchResult,
+  // Phase 11 Sprint 3: Query analysis types
+  ExtractedEntity,
+  TemporalRange,
+  QueryAnalysis,
+  SubQuery,
+  QueryPlan,
 } from './types.js';

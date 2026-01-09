@@ -2,7 +2,7 @@
  * MCP Tool Definitions
  *
  * Extracted from MCPServer.ts to reduce file size and improve maintainability.
- * Contains all 47 tool schemas for the Knowledge Graph MCP Server.
+ * Contains all 59 tool schemas for the Knowledge Graph MCP Server.
  *
  * @module server/toolDefinitions
  */
@@ -204,6 +204,34 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  // Phase 11 Sprint 5: Observation Normalization
+  {
+    name: 'normalize_observations',
+    description: 'Normalize entity observations by resolving pronouns and anchoring relative dates. Improves search matching quality.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: {
+          type: 'string',
+          description: 'Entity name to normalize (omit for all entities)',
+        },
+        options: {
+          type: 'object',
+          properties: {
+            resolveCoreferences: { type: 'boolean', default: true },
+            anchorTimestamps: { type: 'boolean', default: true },
+            extractKeywords: { type: 'boolean', default: false },
+          },
+        },
+        persist: {
+          type: 'boolean',
+          default: false,
+          description: 'Save normalized observations to storage',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 
   // ==================== SEARCH TOOLS ====================
   {
@@ -313,6 +341,121 @@ export const toolDefinitions: ToolDefinition[] = [
       properties: {
         query: { type: 'string', description: 'Search query' },
         limit: { type: 'number', description: 'Maximum results to return (default: 10)' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  // Phase 11 Sprint 2: Hybrid Search
+  {
+    name: 'hybrid_search',
+    description:
+      'Search using combined semantic, lexical, and metadata signals. Provides better recall than single-signal search by fusing multiple relevance signals.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query text',
+        },
+        weights: {
+          type: 'object',
+          description: 'Layer weights (automatically normalized to sum to 1.0)',
+          properties: {
+            semantic: {
+              type: 'number',
+              description: 'Weight for semantic/embedding similarity (default: 0.5)',
+            },
+            lexical: {
+              type: 'number',
+              description: 'Weight for keyword/TF-IDF matching (default: 0.3)',
+            },
+            symbolic: {
+              type: 'number',
+              description: 'Weight for metadata filtering (default: 0.2)',
+            },
+          },
+        },
+        filters: {
+          type: 'object',
+          description: 'Symbolic/metadata filters',
+          properties: {
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Filter by tags',
+            },
+            entityTypes: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Filter by entity types',
+            },
+            dateRange: {
+              type: 'object',
+              properties: {
+                start: { type: 'string', description: 'Start date (ISO 8601)' },
+                end: { type: 'string', description: 'End date (ISO 8601)' },
+              },
+            },
+            minImportance: { type: 'number', description: 'Minimum importance score (0-10)' },
+            maxImportance: { type: 'number', description: 'Maximum importance score (0-10)' },
+          },
+        },
+        limit: { type: 'number', description: 'Maximum results to return (default: 10)' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  // Phase 11 Sprint 3: Query Analysis
+  {
+    name: 'analyze_query',
+    description:
+      'Analyze a search query to extract entities, temporal references, question type, and complexity. Useful for understanding query structure before searching.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The query to analyze',
+        },
+        includePlan: {
+          type: 'boolean',
+          description: 'Include execution plan in response (default: false)',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  // Phase 11 Sprint 4: Smart Search
+  {
+    name: 'smart_search',
+    description:
+      'Intelligent search with automatic query planning and reflection-based refinement. Iteratively improves results until adequate.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query text',
+        },
+        maxIterations: {
+          type: 'number',
+          description: 'Maximum reflection iterations (default: 3)',
+        },
+        adequacyThreshold: {
+          type: 'number',
+          description: 'Adequacy threshold 0-1 (default: 0.7)',
+        },
+        includePlan: {
+          type: 'boolean',
+          description: 'Include execution plan in response (default: true)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return (default: 10)',
+        },
       },
       required: ['query'],
       additionalProperties: false,

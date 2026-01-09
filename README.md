@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 55 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
+> **Enterprise-grade knowledge graph** with 59 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
 
 ## Table of Contents
 
@@ -41,9 +41,11 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 |----------|-------|-------------|
 | **Hierarchical Nesting** | 9 | Parent-child relationships for organizing tree structures |
 | **Graph Algorithms** | 4 | Path finding, connected components, centrality metrics |
+| **Intelligent Search** | 3 | Hybrid multi-layer search with query analysis and reflection |
 | **Semantic Search** | 3 | Embedding-based similarity search with OpenAI or local models |
 | **Memory Compression** | 4 | Intelligent duplicate detection and merging with similarity scoring |
 | **Advanced Search** | 7 | TF-IDF ranking, boolean queries, fuzzy matching, auto-select |
+| **Observation Normalization** | 1 | Coreference resolution and temporal anchoring |
 | **Tag Management** | 11 | Tags, aliases, bulk operations, importance scores |
 | **Saved Searches** | 5 | Store and execute frequent queries |
 | **Import/Export** | 2 | 7 export formats with brotli compression, 3 import formats |
@@ -68,8 +70,10 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Import/Export Formats** | ❌ | ✅ 7 export / 3 import |
 | **Input Validation** | ❌ | ✅ Zod schemas |
 | **Backup & Restore** | ❌ | ✅ Compressed snapshots |
-| **Total Tools** | 11 | **55** |
-| **Code Structure** | Monolithic | **Modular** (58 files) |
+| **Intelligent Search** | ❌ | ✅ Hybrid + Query Analysis + Reflection |
+| **Observation Normalization** | ❌ | ✅ Coreference resolution + temporal anchoring |
+| **Total Tools** | 11 | **59** |
+| **Code Structure** | Monolithic | **Modular** (65 files) |
 
 ## Quick Start
 
@@ -138,7 +142,7 @@ cd memory-mcp
 npm install
 npm run build
 
-# Run tests (2535 tests, 96.6% coverage)
+# Run tests (2692+ tests)
 npm test
 
 # Type check
@@ -217,7 +221,7 @@ Discrete facts about entities. Each observation should be atomic and independent
 
 ## API Reference
 
-### Complete Tool List (55 Tools)
+### Complete Tool List (59 Tools)
 
 #### Entity Operations (4 tools)
 | Tool | Description |
@@ -233,11 +237,12 @@ Discrete facts about entities. Each observation should be atomic and independent
 | `create_relations` | Create relations between entities |
 | `delete_relations` | Remove specific relations |
 
-#### Observation Management (2 tools)
+#### Observation Management (3 tools)
 | Tool | Description |
 |------|-------------|
 | `add_observations` | Add observations to entities |
 | `delete_observations` | Remove specific observations |
+| `normalize_observations` | Normalize observations (resolve pronouns, anchor dates) |
 
 #### Search (7 tools)
 | Tool | Description |
@@ -249,6 +254,13 @@ Discrete facts about entities. Each observation should be atomic and independent
 | `fuzzy_search` | Typo-tolerant search |
 | `get_search_suggestions` | "Did you mean?" suggestions |
 | `search_auto` | Auto-select best search method |
+
+#### Intelligent Search (3 tools)
+| Tool | Description |
+|------|-------------|
+| `hybrid_search` | Multi-layer search combining semantic, lexical, and symbolic signals |
+| `analyze_query` | Extract entities, temporal references, and classify query complexity |
+| `smart_search` | Reflection-based iterative search until results meet adequacy threshold |
 
 #### Semantic Search (3 tools)
 | Tool | Description |
@@ -409,7 +421,7 @@ node dist/migrate-from-jsonl-to-sqlite.js --from memory.db --to memory.jsonl
 ```bash
 npm install           # Install dependencies
 npm run build         # Build TypeScript
-npm test              # Run tests (2535 tests, 96.6% coverage)
+npm test              # Run tests (2692+ tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Development watch mode
 npm run clean         # Remove dist/ directory
@@ -421,7 +433,7 @@ npm run docs:deps     # Generate dependency graph
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
-│  server/MCPServer.ts + toolDefinitions (55 tools)   │
+│  server/MCPServer.ts + toolDefinitions (59 tools)   │
 │  + toolHandlers + responseCompressor                │
 └──────────────────────┬──────────────────────────────┘
                        │
@@ -449,7 +461,7 @@ npm run docs:deps     # Generate dependency graph
 
 ```
 memory-mcp/
-├── src/                            # Source (58 TypeScript files)
+├── src/                            # Source (65 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── core/                       # Core managers (12 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
@@ -466,10 +478,10 @@ memory-mcp/
 │   │   └── index.ts
 │   ├── server/                     # MCP protocol (4 files)
 │   │   ├── MCPServer.ts                # Server setup
-│   │   ├── toolDefinitions.ts          # 55 tool schemas
+│   │   ├── toolDefinitions.ts          # 59 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
 │   │   └── responseCompressor.ts       # Brotli compression
-│   ├── search/                     # Search implementations (15 files)
+│   ├── search/                     # Search implementations (20 files)
 │   │   ├── SearchManager.ts            # Search orchestrator
 │   │   ├── BasicSearch.ts              # Text matching
 │   │   ├── RankedSearch.ts             # TF-IDF scoring
@@ -478,14 +490,16 @@ memory-mcp/
 │   │   ├── SemanticSearch.ts           # Embedding-based
 │   │   ├── EmbeddingService.ts         # Provider abstraction
 │   │   ├── VectorStore.ts              # Vector storage
-│   │   └── ...                         # + 7 more
-│   ├── features/                   # Advanced capabilities (7 files)
+│   │   └── ...                         # + 12 more
+│   ├── features/                   # Advanced capabilities (9 files)
 │   │   ├── IOManager.ts                # Import/export/backup
 │   │   ├── TagManager.ts               # Tag aliases
 │   │   ├── AnalyticsManager.ts         # Graph stats
 │   │   ├── ArchiveManager.ts           # Entity archival
 │   │   ├── CompressionManager.ts       # Duplicate detection
 │   │   ├── StreamingExporter.ts        # Large graph exports
+│   │   ├── ObservationNormalizer.ts    # Coreference resolution
+│   │   ├── KeywordExtractor.ts         # Keyword extraction
 │   │   └── index.ts
 │   ├── types/                      # TypeScript definitions (2 files)
 │   ├── utils/                      # Shared utilities (15 files)
@@ -529,7 +543,7 @@ memory-mcp/
 Comprehensive documentation in `docs/`:
 
 **Architecture**
-- [API.md](docs/architecture/API.md) - Complete API documentation for all 55 tools
+- [API.md](docs/architecture/API.md) - Complete API documentation for all 59 tools
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture and system design
 - [COMPONENTS.md](docs/architecture/COMPONENTS.md) - Component breakdown and responsibilities
 - [OVERVIEW.md](docs/architecture/OVERVIEW.md) - High-level project overview

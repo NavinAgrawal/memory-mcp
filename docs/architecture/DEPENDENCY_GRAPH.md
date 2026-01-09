@@ -1,6 +1,6 @@
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 9.8.0 | **Last Updated**: 2026-01-08
+**Version**: 9.8.3 | **Last Updated**: 2026-01-09
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -29,9 +29,9 @@ This document provides a comprehensive dependency graph of all files, components
 The codebase is organized into the following modules:
 
 - **core**: 12 files
-- **features**: 7 files
+- **features**: 9 files
 - **entry**: 1 file
-- **search**: 15 files
+- **search**: 20 files
 - **server**: 4 files
 - **types**: 2 files
 - **utils**: 15 files
@@ -49,7 +49,7 @@ The codebase is organized into the following modules:
 | `../types/index.js` | `Entity, LongRunningOperationOptions` | Import (type-only) |
 | `./GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `../utils/errors.js` | `EntityNotFoundError, InvalidImportanceError, ValidationError` | Import |
-| `../utils/index.js` | `BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema, checkCancellation, createProgressReporter, createProgress` | Import |
+| `../utils/index.js` | `BatchCreateEntitiesSchema, UpdateEntitySchema, EntityNamesSchema, checkCancellation, createProgressReporter, createProgress, sanitizeObject` | Import |
 | `../utils/constants.js` | `GRAPH_LIMITS` | Import |
 
 **Exports:**
@@ -87,6 +87,7 @@ The codebase is organized into the following modules:
 | `../types/index.js` | `KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData` | Import (type-only) |
 | `../utils/searchCache.js` | `clearAllSearchCaches` | Import |
 | `../utils/indexes.js` | `NameIndex, TypeIndex, LowercaseCache, RelationIndex, ObservationIndex` | Import |
+| `../utils/index.js` | `sanitizeObject` | Import |
 | `./TransactionManager.js` | `BatchTransaction` | Import |
 | `./GraphEventEmitter.js` | `GraphEventEmitter` | Import |
 
@@ -157,12 +158,14 @@ The codebase is organized into the following modules:
 | File | Imports | Type |
 |------|---------|------|
 | `./GraphStorage.js` | `GraphStorage` | Import |
+| `./StorageFactory.js` | `createStorageFromPath` | Import |
 | `./EntityManager.js` | `EntityManager` | Import |
 | `./RelationManager.js` | `RelationManager` | Import |
 | `./ObservationManager.js` | `ObservationManager` | Import |
 | `./HierarchyManager.js` | `HierarchyManager` | Import |
 | `./GraphTraversal.js` | `GraphTraversal` | Import |
 | `../search/SearchManager.js` | `SearchManager` | Import |
+| `../search/RankedSearch.js` | `RankedSearch` | Import |
 | `../search/index.js` | `SemanticSearch, createEmbeddingService, createVectorStore` | Import |
 | `../features/IOManager.js` | `IOManager` | Import |
 | `../features/TagManager.js` | `TagManager` | Import |
@@ -220,6 +223,7 @@ The codebase is organized into the following modules:
 | `../types/index.js` | `KnowledgeGraph, Entity, Relation, ReadonlyKnowledgeGraph, IGraphStorage, LowercaseData` | Import (type-only) |
 | `../utils/searchCache.js` | `clearAllSearchCaches` | Import |
 | `../utils/indexes.js` | `NameIndex, TypeIndex` | Import |
+| `../utils/index.js` | `sanitizeObject` | Import |
 
 **Exports:**
 - Classes: `SQLiteStorage`
@@ -249,7 +253,7 @@ The codebase is organized into the following modules:
 | `./GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `../features/IOManager.js` | `IOManager` | Import |
 | `../utils/errors.js` | `KnowledgeGraphError` | Import |
-| `../utils/index.js` | `checkCancellation, createProgressReporter, createProgress` | Import |
+| `../utils/index.js` | `checkCancellation, createProgressReporter, createProgress, sanitizeObject` | Import |
 
 **Exports:**
 - Classes: `TransactionManager`, `BatchTransaction`
@@ -321,9 +325,11 @@ The codebase is organized into the following modules:
 | `./CompressionManager.js` | `CompressionManager` | Re-export |
 | `./ArchiveManager.js` | `ArchiveManager, type ArchiveCriteria, type ArchiveOptions, type ArchiveResult` | Re-export |
 | `./StreamingExporter.js` | `StreamingExporter, type StreamResult` | Re-export |
+| `./ObservationNormalizer.js` | `ObservationNormalizer, type NormalizationOptions, type NormalizationResult` | Re-export |
+| `./KeywordExtractor.js` | `KeywordExtractor, type ScoredKeyword` | Re-export |
 
 **Exports:**
-- Re-exports: `TagManager`, `IOManager`, `type ExportFormat`, `type ImportFormat`, `type MergeStrategy`, `type BackupMetadata`, `type BackupInfo`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveOptions`, `type ArchiveResult`, `StreamingExporter`, `type StreamResult`
+- Re-exports: `TagManager`, `IOManager`, `type ExportFormat`, `type ImportFormat`, `type MergeStrategy`, `type BackupMetadata`, `type BackupInfo`, `AnalyticsManager`, `CompressionManager`, `ArchiveManager`, `type ArchiveCriteria`, `type ArchiveOptions`, `type ArchiveResult`, `StreamingExporter`, `type StreamResult`, `ObservationNormalizer`, `type NormalizationOptions`, `type NormalizationResult`, `KeywordExtractor`, `type ScoredKeyword`
 
 ---
 
@@ -341,12 +347,33 @@ The codebase is organized into the following modules:
 | `../types/index.js` | `Entity, Relation, KnowledgeGraph, ReadonlyKnowledgeGraph, ImportResult, BackupOptions, BackupResult, RestoreResult, ExportOptions, ExportResult, LongRunningOperationOptions` | Import (type-only) |
 | `../core/GraphStorage.js` | `GraphStorage` | Import (type-only) |
 | `../utils/errors.js` | `FileOperationError` | Import |
-| `../utils/index.js` | `compress, decompress, hasBrotliExtension, COMPRESSION_CONFIG, STREAMING_CONFIG, checkCancellation, createProgressReporter, createProgress` | Import |
+| `../utils/index.js` | `compress, decompress, hasBrotliExtension, COMPRESSION_CONFIG, STREAMING_CONFIG, checkCancellation, createProgressReporter, createProgress, validateFilePath, sanitizeObject, escapeCsvFormula` | Import |
 | `./StreamingExporter.js` | `StreamingExporter, StreamResult` | Import |
 
 **Exports:**
 - Classes: `IOManager`
 - Interfaces: `BackupMetadata`, `BackupInfo`
+
+---
+
+### `src/features/KeywordExtractor.ts` - Keyword Extractor
+
+**Exports:**
+- Classes: `KeywordExtractor`
+- Interfaces: `ScoredKeyword`
+
+---
+
+### `src/features/ObservationNormalizer.ts` - Observation Normalizer
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `Entity` | Import (type-only) |
+
+**Exports:**
+- Classes: `ObservationNormalizer`
+- Interfaces: `NormalizationOptions`, `NormalizationResult`
 
 ---
 
@@ -361,7 +388,7 @@ The codebase is organized into the following modules:
 | File | Imports | Type |
 |------|---------|------|
 | `../types/types.js` | `Entity, ReadonlyKnowledgeGraph, LongRunningOperationOptions` | Import (type-only) |
-| `../utils/index.js` | `checkCancellation, createProgressReporter, createProgress` | Import |
+| `../utils/index.js` | `checkCancellation, createProgressReporter, createProgress, validateFilePath` | Import |
 
 **Exports:**
 - Classes: `StreamingExporter`
@@ -478,6 +505,23 @@ The codebase is organized into the following modules:
 
 ---
 
+### `src/search/HybridSearchManager.ts` - Hybrid Search Manager
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `Entity, HybridSearchOptions, HybridSearchResult, ReadonlyKnowledgeGraph, SymbolicFilters` | Import (type-only) |
+| `./SemanticSearch.js` | `SemanticSearch` | Import (type-only) |
+| `./RankedSearch.js` | `RankedSearch` | Import (type-only) |
+| `./SymbolicSearch.js` | `SymbolicSearch` | Import |
+| `../utils/constants.js` | `SEMANTIC_SEARCH_LIMITS` | Import |
+
+**Exports:**
+- Classes: `HybridSearchManager`
+- Constants: `DEFAULT_HYBRID_WEIGHTS`
+
+---
+
 ### `src/search/index.ts` - Search Module Barrel Export
 
 **Internal Dependencies:**
@@ -497,9 +541,26 @@ The codebase is organized into the following modules:
 | `./TFIDFIndexManager.js` | `TFIDFIndexManager` | Re-export |
 | `./TFIDFEventSync.js` | `TFIDFEventSync` | Re-export |
 | `./QueryCostEstimator.js` | `QueryCostEstimator` | Re-export |
+| `./SymbolicSearch.js` | `SymbolicSearch, type SymbolicResult` | Re-export |
+| `./HybridSearchManager.js` | `HybridSearchManager, DEFAULT_HYBRID_WEIGHTS` | Re-export |
+| `./QueryAnalyzer.js` | `QueryAnalyzer` | Re-export |
+| `./QueryPlanner.js` | `QueryPlanner` | Re-export |
+| `./ReflectionManager.js` | `ReflectionManager, type ReflectionOptions, type ReflectionResult` | Re-export |
 
 **Exports:**
-- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `type FuzzySearchOptions`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`, `OpenAIEmbeddingService`, `LocalEmbeddingService`, `MockEmbeddingService`, `createEmbeddingService`, `InMemoryVectorStore`, `SQLiteVectorStore`, `createVectorStore`, `cosineSimilarity`, `type SQLiteStorageWithEmbeddings`, `SemanticSearch`, `entityToText`, `TFIDFIndexManager`, `TFIDFEventSync`, `QueryCostEstimator`
+- Re-exports: `BasicSearch`, `RankedSearch`, `BooleanSearch`, `FuzzySearch`, `type FuzzySearchOptions`, `SearchSuggestions`, `SavedSearchManager`, `SearchManager`, `SearchFilterChain`, `type SearchFilters`, `type ValidatedPagination`, `OpenAIEmbeddingService`, `LocalEmbeddingService`, `MockEmbeddingService`, `createEmbeddingService`, `InMemoryVectorStore`, `SQLiteVectorStore`, `createVectorStore`, `cosineSimilarity`, `type SQLiteStorageWithEmbeddings`, `SemanticSearch`, `entityToText`, `TFIDFIndexManager`, `TFIDFEventSync`, `QueryCostEstimator`, `SymbolicSearch`, `type SymbolicResult`, `HybridSearchManager`, `DEFAULT_HYBRID_WEIGHTS`, `QueryAnalyzer`, `QueryPlanner`, `ReflectionManager`, `type ReflectionOptions`, `type ReflectionResult`
+
+---
+
+### `src/search/QueryAnalyzer.ts` - Query Analyzer
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `QueryAnalysis, ExtractedEntity, TemporalRange` | Import (type-only) |
+
+**Exports:**
+- Classes: `QueryAnalyzer`
 
 ---
 
@@ -512,6 +573,18 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Classes: `QueryCostEstimator`
+
+---
+
+### `src/search/QueryPlanner.ts` - Query Planner
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `QueryAnalysis, QueryPlan, SubQuery, SymbolicFilters` | Import (type-only) |
+
+**Exports:**
+- Classes: `QueryPlanner`
 
 ---
 
@@ -532,6 +605,21 @@ The codebase is organized into the following modules:
 
 ---
 
+### `src/search/ReflectionManager.ts` - Reflection Manager
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `ReadonlyKnowledgeGraph, QueryAnalysis, HybridSearchResult, HybridSearchOptions` | Import (type-only) |
+| `./HybridSearchManager.js` | `HybridSearchManager` | Import (type-only) |
+| `./QueryAnalyzer.js` | `QueryAnalyzer` | Import (type-only) |
+
+**Exports:**
+- Classes: `ReflectionManager`
+- Interfaces: `ReflectionOptions`, `ReflectionResult`
+
+---
+
 ### `src/search/SavedSearchManager.ts` - Saved Search Manager
 
 **Node.js Built-in Dependencies:**
@@ -544,6 +632,7 @@ The codebase is organized into the following modules:
 |------|---------|------|
 | `../types/index.js` | `SavedSearch, KnowledgeGraph` | Import (type-only) |
 | `./BasicSearch.js` | `BasicSearch` | Import (type-only) |
+| `../utils/index.js` | `sanitizeObject` | Import |
 
 **Exports:**
 - Classes: `SavedSearchManager`
@@ -610,6 +699,19 @@ The codebase is organized into the following modules:
 **Exports:**
 - Classes: `SemanticSearch`
 - Functions: `entityToText`
+
+---
+
+### `src/search/SymbolicSearch.ts` - Symbolic Search Layer
+
+**Internal Dependencies:**
+| File | Imports | Type |
+|------|---------|------|
+| `../types/index.js` | `Entity, SymbolicFilters` | Import (type-only) |
+
+**Exports:**
+- Classes: `SymbolicSearch`
+- Interfaces: `SymbolicResult`
 
 ---
 
@@ -717,8 +819,13 @@ The codebase is organized into the following modules:
 **Internal Dependencies:**
 | File | Imports | Type |
 |------|---------|------|
-| `../utils/index.js` | `formatToolResponse, formatTextResponse, formatRawResponse, validateWithSchema, BatchCreateEntitiesSchema, BatchCreateRelationsSchema, EntityNamesSchema, DeleteRelationsSchema, AddObservationsInputSchema, DeleteObservationsInputSchema, ArchiveCriteriaSchema, SavedSearchInputSchema, SavedSearchUpdateSchema, ImportFormatSchema, ExtendedExportFormatSchema, MergeStrategySchema, ExportFilterSchema, SearchQuerySchema` | Import |
+| `../utils/index.js` | `formatToolResponse, formatTextResponse, formatRawResponse, validateWithSchema, validateFilePath, BatchCreateEntitiesSchema, BatchCreateRelationsSchema, EntityNamesSchema, DeleteRelationsSchema, AddObservationsInputSchema, DeleteObservationsInputSchema, ArchiveCriteriaSchema, SavedSearchInputSchema, SavedSearchUpdateSchema, ImportFormatSchema, ExtendedExportFormatSchema, MergeStrategySchema, ExportFilterSchema, SearchQuerySchema` | Import |
 | `../core/ManagerContext.js` | `ManagerContext` | Import (type-only) |
+| `../search/HybridSearchManager.js` | `HybridSearchManager` | Import |
+| `../search/QueryAnalyzer.js` | `QueryAnalyzer` | Import |
+| `../search/QueryPlanner.js` | `QueryPlanner` | Import |
+| `../search/ReflectionManager.js` | `ReflectionManager` | Import |
+| `../features/ObservationNormalizer.js` | `ObservationNormalizer` | Import |
 | `./responseCompressor.js` | `maybeCompressResponse` | Import |
 
 **Exports:**
@@ -813,7 +920,7 @@ The codebase is organized into the following modules:
 
 **Exports:**
 - Interfaces: `CommonSearchFilters`
-- Functions: `findEntityByName`, `findEntityByName`, `findEntityByName`, `findEntityByName`, `findEntitiesByNames`, `entityExists`, `getEntityIndex`, `removeEntityByName`, `getEntityNameSet`, `groupEntitiesByType`, `touchEntity`, `normalizeTag`, `normalizeTags`, `hasMatchingTag`, `hasAllTags`, `filterByTags`, `addUniqueTags`, `removeTags`, `isWithinDateRange`, `parseDateRange`, `isValidISODate`, `getCurrentTimestamp`, `isWithinImportanceRange`, `filterByImportance`, `filterByCreatedDate`, `filterByModifiedDate`, `filterByEntityType`, `entityPassesFilters`, `validateFilePath`, `ensureMemoryFilePath`
+- Functions: `findEntityByName`, `findEntityByName`, `findEntityByName`, `findEntityByName`, `findEntitiesByNames`, `entityExists`, `getEntityIndex`, `removeEntityByName`, `getEntityNameSet`, `groupEntitiesByType`, `touchEntity`, `normalizeTag`, `normalizeTags`, `hasMatchingTag`, `hasAllTags`, `filterByTags`, `addUniqueTags`, `removeTags`, `isWithinDateRange`, `parseDateRange`, `isValidISODate`, `getCurrentTimestamp`, `isWithinImportanceRange`, `filterByImportance`, `filterByCreatedDate`, `filterByModifiedDate`, `filterByEntityType`, `entityPassesFilters`, `sanitizeObject`, `escapeCsvFormula`, `validateFilePath`, `ensureMemoryFilePath`
 - Constants: `defaultMemoryPath`
 
 ---
@@ -870,7 +977,8 @@ The codebase is organized into the following modules:
   normalizeTag, normalizeTags, hasMatchingTag, hasAllTags, filterByTags, addUniqueTags, removeTags, // Date utilities
   isWithinDateRange, parseDateRange, isValidISODate, getCurrentTimestamp, // Filter utilities
   isWithinImportanceRange, filterByImportance, filterByCreatedDate, filterByModifiedDate, filterByEntityType, entityPassesFilters, type CommonSearchFilters, // Path utilities
-  validateFilePath, defaultMemoryPath, ensureMemoryFilePath` | Re-export |
+  validateFilePath, defaultMemoryPath, ensureMemoryFilePath, // Security utilities
+  sanitizeObject, escapeCsvFormula` | Re-export |
 | `./parallelUtils.js` | `parallelMap, parallelFilter, getPoolStats, shutdownParallelUtils` | Re-export |
 | `./taskScheduler.js` | `// Types and Enums
   TaskPriority, TaskStatus, type Task, type TaskResult, type ProgressCallback, type BatchOptions, type QueueStats, // Task Queue
@@ -897,7 +1005,8 @@ The codebase is organized into the following modules:
   normalizeTag`, `normalizeTags`, `hasMatchingTag`, `hasAllTags`, `filterByTags`, `addUniqueTags`, `removeTags`, `// Date utilities
   isWithinDateRange`, `parseDateRange`, `isValidISODate`, `getCurrentTimestamp`, `// Filter utilities
   isWithinImportanceRange`, `filterByImportance`, `filterByCreatedDate`, `filterByModifiedDate`, `filterByEntityType`, `entityPassesFilters`, `type CommonSearchFilters`, `// Path utilities
-  validateFilePath`, `defaultMemoryPath`, `ensureMemoryFilePath`, `parallelMap`, `parallelFilter`, `getPoolStats`, `shutdownParallelUtils`, `// Types and Enums
+  validateFilePath`, `defaultMemoryPath`, `ensureMemoryFilePath`, `// Security utilities
+  sanitizeObject`, `escapeCsvFormula`, `parallelMap`, `parallelFilter`, `getPoolStats`, `shutdownParallelUtils`, `// Types and Enums
   TaskPriority`, `TaskStatus`, `type Task`, `type TaskResult`, `type ProgressCallback`, `type BatchOptions`, `type QueueStats`, `// Task Queue
   TaskQueue`, `// Batch Processing
   batchProcess`, `rateLimitedProcess`, `withRetry`, `// Rate Limiting
@@ -1042,21 +1151,23 @@ The codebase is organized into the following modules:
 |------|--------------|------------|
 | `EntityManager` | 5 files | 2 files |
 | `GraphEventEmitter` | 1 files | 3 files |
-| `GraphStorage` | 5 files | 19 files |
+| `GraphStorage` | 6 files | 19 files |
 | `GraphTraversal` | 3 files | 2 files |
 | `HierarchyManager` | 3 files | 2 files |
 | `index` | 11 files | 0 files |
-| `ManagerContext` | 14 files | 4 files |
+| `ManagerContext` | 16 files | 4 files |
 | `ObservationManager` | 2 files | 2 files |
 | `RelationManager` | 5 files | 2 files |
-| `SQLiteStorage` | 3 files | 2 files |
-| `StorageFactory` | 3 files | 1 files |
+| `SQLiteStorage` | 4 files | 2 files |
+| `StorageFactory` | 3 files | 2 files |
 | `TransactionManager` | 5 files | 2 files |
 | `AnalyticsManager` | 2 files | 2 files |
 | `ArchiveManager` | 3 files | 2 files |
 | `CompressionManager` | 5 files | 2 files |
-| `index` | 6 files | 0 files |
+| `index` | 8 files | 0 files |
 | `IOManager` | 5 files | 3 files |
+| `KeywordExtractor` | 0 files | 1 files |
+| `ObservationNormalizer` | 1 files | 2 files |
 | `StreamingExporter` | 2 files | 2 files |
 | `TagManager` | 1 files | 2 files |
 | `index` | 4 files | 0 files |
@@ -1064,12 +1175,10 @@ The codebase is organized into the following modules:
 | `BooleanSearch` | 5 files | 2 files |
 | `EmbeddingService` | 2 files | 1 files |
 | `FuzzySearch` | 5 files | 2 files |
-| `index` | 14 files | 1 files |
+| `HybridSearchManager` | 5 files | 3 files |
+| `index` | 19 files | 1 files |
+| `QueryAnalyzer` | 1 files | 3 files |
 | `QueryCostEstimator` | 1 files | 2 files |
-| `RankedSearch` | 6 files | 2 files |
-| `SavedSearchManager` | 2 files | 2 files |
-| `SearchFilterChain` | 2 files | 5 files |
-| `SearchManager` | 9 files | 2 files |
 
 ---
 
@@ -1108,7 +1217,7 @@ graph TD
         N8[CompressionManager]
         N9[index]
         N10[IOManager]
-        N11[...2 more]
+        N11[...4 more]
     end
 
     subgraph Entry
@@ -1120,8 +1229,8 @@ graph TD
         N14[BooleanSearch]
         N15[EmbeddingService]
         N16[FuzzySearch]
-        N17[index]
-        N18[...10 more]
+        N17[HybridSearchManager]
+        N18[...15 more]
     end
 
     subgraph Server
@@ -1188,21 +1297,21 @@ graph TD
 
 | Category | Count |
 |----------|-------|
-| Total TypeScript Files | 58 |
+| Total TypeScript Files | 65 |
 | Total Modules | 8 |
-| Total Lines of Code | 22608 |
-| Total Exports | 436 |
-| Total Re-exports | 234 |
-| Total Classes | 55 |
-| Total Interfaces | 89 |
-| Total Functions | 94 |
+| Total Lines of Code | 24861 |
+| Total Exports | 462 |
+| Total Re-exports | 250 |
+| Total Classes | 62 |
+| Total Interfaces | 103 |
+| Total Functions | 96 |
 | Total Type Guards | 4 |
 | Total Enums | 3 |
-| Type-only Imports | 57 |
+| Type-only Imports | 67 |
 | Runtime Circular Deps | 0 |
 | Type-only Circular Deps | 2 |
 
 ---
 
-*Last Updated*: 2026-01-08
-*Version*: 9.8.0
+*Last Updated*: 2026-01-09
+*Version*: 9.8.3
