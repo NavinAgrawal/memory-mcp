@@ -67,7 +67,15 @@ export { TFIDFIndexManager } from './TFIDFIndexManager.js';
 export { TFIDFEventSync } from './TFIDFEventSync.js';
 
 // Phase 10 Sprint 4: Query Cost Estimation
-export { QueryCostEstimator } from './QueryCostEstimator.js';
+// Phase 12 Sprint 4: Enhanced with adaptive depth, token estimation, layer recommendations
+export {
+  QueryCostEstimator,
+  type SearchLayer,
+  type ExtendedQueryCostEstimate,
+  type LayerRecommendationOptions,
+  type TokenEstimationOptions,
+  type AdaptiveDepthConfig,
+} from './QueryCostEstimator.js';
 
 // Phase 11 Sprint 1: Hybrid Search
 export { SymbolicSearch, type SymbolicResult } from './SymbolicSearch.js';
@@ -78,10 +86,12 @@ export { QueryAnalyzer } from './QueryAnalyzer.js';
 export { QueryPlanner } from './QueryPlanner.js';
 
 // Phase 11 Sprint 4: Reflection-based Retrieval
+// Phase 12 Sprint 4: Enhanced with progressive limits, focused refinement, history tracking
 export {
   ReflectionManager,
   type ReflectionOptions,
   type ReflectionResult,
+  type RefinementHistoryEntry,
 } from './ReflectionManager.js';
 
 // Phase 12 Sprint 3: Search Algorithm Optimization
@@ -110,3 +120,26 @@ export {
   type HybridWeights,
   type HybridScorerOptions,
 } from './HybridScorer.js';
+
+// Phase 12 Sprint 2: Parallel Search Execution
+export {
+  ParallelSearchExecutor,
+  type LayerTiming,
+  type ParallelSearchResult,
+  type ParallelSearchOptions,
+} from './ParallelSearchExecutor.js';
+
+// Phase 12 Sprint 4: Query Execution Optimization
+export {
+  EarlyTerminationManager,
+  type AdequacyCheck,
+  type EarlyTerminationOptions,
+  type EarlyTerminationResult,
+} from './EarlyTerminationManager.js';
+
+export {
+  QueryPlanCache,
+  type CachedQueryEntry,
+  type QueryPlanCacheStats,
+  type QueryPlanCacheOptions,
+} from './QueryPlanCache.js';

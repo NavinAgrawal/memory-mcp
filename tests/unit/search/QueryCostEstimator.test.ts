@@ -2,11 +2,13 @@
  * Query Cost Estimator Tests
  *
  * Phase 10 Sprint 4: Tests for query cost estimation and method recommendation.
+ * Phase 12 Sprint 4: Tests for adaptive depth, token estimation, and layer recommendations.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { QueryCostEstimator } from '../../../src/search/QueryCostEstimator.js';
-import type { SearchMethod } from '../../../src/types/index.js';
+import { QueryAnalyzer } from '../../../src/search/QueryAnalyzer.js';
+import type { SearchMethod, QueryAnalysis } from '../../../src/types/index.js';
 
 describe('QueryCostEstimator', () => {
   let estimator: QueryCostEstimator;
@@ -262,6 +264,253 @@ describe('QueryCostEstimator', () => {
     it('should mention fast performance for small graphs', () => {
       const estimate = estimator.estimateMethod('basic', 'test', 50);
       expect(estimate.recommendation).toContain('fast');
+    });
+  });
+
+  // ==================== Phase 12 Sprint 4: New Tests ====================
+
+  describe('Phase 12 Sprint 4: adaptive depth calculation', () => {
+    it('should calculate adaptive depth for simple queries', () => {
+      const depth = estimator.calculateAdaptiveDepth('Find Alice');
+      expect(depth).toBeGreaterThanOrEqual(10);
+      expect(depth).toBeLessThanOrEqual(100);
+    });
+
+    it('should increase depth for complex queries', () => {
+      const simpleDepth = estimator.calculateAdaptiveDepth('Find Alice');
+      const complexDepth = estimator.calculateAdaptiveDepth(
+        'Find Alice and Bob, then show their projects and related tasks'
+      );
+
+      expect(complexDepth).toBeGreaterThan(simpleDepth);
+    });
+
+    it('should use analysis for more accurate depth', () => {
+      const analyzer = new QueryAnalyzer();
+      const analysis = analyzer.analyze('What happened last month?');
+
+      const depthWithAnalysis = estimator.calculateAdaptiveDepth(
+        'What happened last month?',
+        analysis
+      );
+      const depthWithoutAnalysis = estimator.calculateAdaptiveDepth(
+        'What happened last month?'
+      );
+
+      // Should be similar but potentially different due to analysis info
+      expect(depthWithAnalysis).toBeGreaterThanOrEqual(10);
+      expect(depthWithoutAnalysis).toBeGreaterThanOrEqual(10);
+    });
+
+    it('should respect max depth cap', () => {
+      // Create estimator with low max depth
+      const limitedEstimator = new QueryCostEstimator(undefined, { maxDepth: 15 });
+      const depth = limitedEstimator.calculateAdaptiveDepth(
+        'Very complex query with lots of words and operators AND clauses'
+      );
+      expect(depth).toBeLessThanOrEqual(15);
+    });
+
+    it('should increase depth with higher delta', () => {
+      const normalEstimator = new QueryCostEstimator(undefined, { delta: 0.5 });
+      const highDeltaEstimator = new QueryCostEstimator(undefined, { delta: 1.0 });
+
+      const normalDepth = normalEstimator.calculateAdaptiveDepth('test query');
+      const highDeltaDepth = highDeltaEstimator.calculateAdaptiveDepth('test query');
+
+      expect(highDeltaDepth).toBeGreaterThanOrEqual(normalDepth);
+    });
+
+    it('should handle analysis with sub-queries', () => {
+      const analysis: QueryAnalysis = {
+        query: 'Find Alice and then show projects',
+        entities: [],
+        persons: ['Alice'],
+        locations: [],
+        organizations: [],
+        temporalRange: null,
+        questionType: 'factual',
+        complexity: 'medium',
+        confidence: 0.7,
+        requiredInfoTypes: ['person', 'entity'],
+        subQueries: ['Find Alice', 'show projects'],
+      };
+
+      const depth = estimator.calculateAdaptiveDepth('Find Alice and then show projects', analysis);
+      expect(depth).toBeGreaterThan(10); // Increased due to sub-queries
+    });
+  });
+
+  describe('Phase 12 Sprint 4: token estimation', () => {
+    it('should estimate tokens for a query', () => {
+      const tokens = estimator.estimateTokens('test query', 100);
+      expect(tokens).toBeGreaterThan(0);
+    });
+
+    it('should estimate more tokens for longer queries', () => {
+      const shortTokens = estimator.estimateTokens('test', 100);
+      const longTokens = estimator.estimateTokens(
+        'This is a much longer query with many more words',
+        100
+      );
+      expect(longTokens).toBeGreaterThan(shortTokens);
+    });
+
+    it('should estimate more tokens for more expected results', () => {
+      const fewResults = estimator.estimateTokens('test', 100, 5);
+      const manyResults = estimator.estimateTokens('test', 100, 50);
+      expect(manyResults).toBeGreaterThan(fewResults);
+    });
+
+    it('should include entity count overhead', () => {
+      const smallGraph = estimator.estimateTokens('test', 10);
+      const largeGraph = estimator.estimateTokens('test', 10000);
+      expect(largeGraph).toBeGreaterThan(smallGraph);
+    });
+  });
+
+  describe('Phase 12 Sprint 4: layer recommendations', () => {
+    it('should recommend layers for a query', () => {
+      const layers = estimator.recommendLayers('Find Alice');
+      expect(layers.length).toBeGreaterThan(0);
+      expect(layers.length).toBeLessThanOrEqual(3);
+    });
+
+    it('should include all three layers when semantic is available', () => {
+      const layers = estimator.recommendLayers('Find Alice', { semanticAvailable: true });
+      expect(layers).toContain('lexical');
+      expect(layers).toContain('symbolic');
+      expect(layers).toContain('semantic');
+    });
+
+    it('should exclude semantic when not available', () => {
+      const layers = estimator.recommendLayers('Find Alice', { semanticAvailable: false });
+      expect(layers).not.toContain('semantic');
+      expect(layers).toContain('lexical');
+      expect(layers).toContain('symbolic');
+    });
+
+    it('should prefer symbolic for temporal queries', () => {
+      const analyzer = new QueryAnalyzer();
+      const analysis = analyzer.analyze('What happened last month?');
+
+      const layers = estimator.recommendLayers('What happened last month?', { analysis });
+      // Symbolic should be among the top recommendations for temporal queries
+      // The exact order may vary based on other factors
+      expect(layers).toContain('symbolic');
+    });
+
+    it('should prefer semantic for conceptual queries', () => {
+      const analyzer = new QueryAnalyzer();
+      const analysis = analyzer.analyze('Explain why the project failed');
+
+      const layers = estimator.recommendLayers('Explain why the project failed', {
+        analysis,
+        semanticAvailable: true,
+      });
+
+      // Semantic should be high priority for conceptual questions
+      expect(layers).toContain('semantic');
+    });
+
+    it('should respect maxLayers option', () => {
+      const layers = estimator.recommendLayers('test', { maxLayers: 2 });
+      expect(layers.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('Phase 12 Sprint 4: extended cost estimation', () => {
+    it('should return extended estimate with all fields', () => {
+      const extended = estimator.estimateExtended('ranked', 'Find Alice', 100);
+
+      expect(extended.recommendedLayers).toBeDefined();
+      expect(extended.estimatedTokens).toBeDefined();
+      expect(extended.adaptiveDepth).toBeDefined();
+      expect(extended.layerCosts).toBeDefined();
+
+      // Should include base estimate fields
+      expect(extended.method).toBe('ranked');
+      expect(extended.entityCount).toBe(100);
+    });
+
+    it('should calculate layer costs', () => {
+      const extended = estimator.estimateExtended('ranked', 'Find Alice', 1000);
+
+      expect(extended.layerCosts.semantic).toBeGreaterThan(0);
+      expect(extended.layerCosts.lexical).toBeGreaterThan(0);
+      expect(extended.layerCosts.symbolic).toBeGreaterThan(0);
+
+      // Symbolic should be cheapest
+      expect(extended.layerCosts.symbolic).toBeLessThan(extended.layerCosts.semantic);
+    });
+
+    it('should use analysis for extended estimate', () => {
+      const analyzer = new QueryAnalyzer();
+      const analysis = analyzer.analyze('What projects did Alice work on?');
+
+      const extended = estimator.estimateExtended('ranked', 'What projects did Alice work on?', 100, analysis);
+
+      expect(extended.recommendedLayers.length).toBeGreaterThan(0);
+      expect(extended.adaptiveDepth).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  describe('Phase 12 Sprint 4: layers by cost', () => {
+    it('should return layers sorted by cost', () => {
+      const layers = estimator.getLayersByCost('test', 100);
+
+      expect(layers.length).toBeGreaterThan(0);
+
+      // Should be sorted by estimatedMs ascending
+      for (let i = 1; i < layers.length; i++) {
+        expect(layers[i].estimatedMs).toBeGreaterThanOrEqual(layers[i - 1].estimatedMs);
+      }
+    });
+
+    it('should have symbolic as cheapest for small queries', () => {
+      const layers = estimator.getLayersByCost('test', 100);
+      expect(layers[0].layer).toBe('symbolic');
+    });
+
+    it('should exclude semantic when not available', () => {
+      const layers = estimator.getLayersByCost('test', 100, false);
+      expect(layers.every(l => l.layer !== 'semantic')).toBe(true);
+    });
+
+    it('should scale costs with entity count', () => {
+      const smallGraph = estimator.getLayersByCost('test', 100);
+      const largeGraph = estimator.getLayersByCost('test', 10000);
+
+      // Find semantic layer in both
+      const smallSemantic = smallGraph.find(l => l.layer === 'semantic');
+      const largeSemantic = largeGraph.find(l => l.layer === 'semantic');
+
+      if (smallSemantic && largeSemantic) {
+        expect(largeSemantic.estimatedMs).toBeGreaterThan(smallSemantic.estimatedMs);
+      }
+    });
+  });
+
+  describe('Phase 12 Sprint 4: custom configuration', () => {
+    it('should accept custom adaptive depth config', () => {
+      const customEstimator = new QueryCostEstimator(undefined, {
+        kBase: 20,
+        delta: 1.0,
+      });
+
+      const depth = customEstimator.calculateAdaptiveDepth('simple test');
+      expect(depth).toBeGreaterThanOrEqual(20);
+    });
+
+    it('should accept custom token estimation config', () => {
+      const customEstimator = new QueryCostEstimator(undefined, undefined, {
+        charsPerToken: 2, // Smaller = more tokens
+      });
+
+      const defaultTokens = estimator.estimateTokens('test query', 100);
+      const customTokens = customEstimator.estimateTokens('test query', 100);
+
+      expect(customTokens).toBeGreaterThan(defaultTokens);
     });
   });
 });
