@@ -50,20 +50,20 @@ This is an enhanced MCP memory server with **59 tools** (vs 11 in official versi
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/) - 65 TypeScript files
+### Source Structure (src/) - 77 TypeScript files
 
 | Module | Files | Purpose |
 |--------|-------|---------|
 | **core/** | 12 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (graph algorithms), GraphEventEmitter, index |
 | **features/** | 9 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, ObservationNormalizer (coreference resolution + temporal anchoring), KeywordExtractor (scored keyword extraction), index |
-| **search/** | 20 | SearchManager (orchestrator), BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, SavedSearchManager, TFIDFIndexManager, TFIDFEventSync, SearchFilterChain, SearchSuggestions, EmbeddingService, VectorStore, SemanticSearch, SymbolicSearch, HybridSearchManager, QueryAnalyzer, QueryPlanner, QueryCostEstimator, ReflectionManager, index |
+| **search/** | 29 | SearchManager, BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, BM25Search, OptimizedInvertedIndex, HybridScorer, SavedSearchManager, TFIDFIndexManager, TFIDFEventSync, SearchFilterChain, SearchSuggestions, EmbeddingService, EmbeddingCache, VectorStore, QuantizedVectorStore, SemanticSearch, SymbolicSearch, HybridSearchManager, QueryAnalyzer, QueryPlanner, QueryCostEstimator, QueryPlanCache, EarlyTerminationManager, ReflectionManager, ParallelSearchExecutor, IncrementalIndexer, index |
 | **server/** | 4 | MCPServer.ts, toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
 | **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
-| **utils/** | 15 | schemas.ts (Zod + validation), entityUtils.ts (entity/tag/date/filter/path), formatters.ts (response + pagination), compressionUtil.ts (brotli compression), compressedCache.ts (LRU cache with compression), constants, errors, searchAlgorithms, logger, indexes, searchCache, operationUtils, parallelUtils, taskScheduler, index |
+| **utils/** | 18 | schemas.ts (Zod + validation), entityUtils.ts, formatters.ts, compressionUtil.ts, compressedCache.ts, constants, errors, searchAlgorithms, logger, indexes, searchCache, operationUtils, parallelUtils, taskScheduler, BatchProcessor, WorkerPoolManager, MemoryMonitor, index |
 | **workers/** | 2 | levenshteinWorker (workerpool-based fuzzy search worker), index |
 | **root** | 1 | index.ts (entry point) |
 
-> **Note**: types/ consolidated to 2 files, utils/ extended to 15 files for improved modularity
+> **Note**: Phase 12 added 12 new files for performance optimization (BM25Search, HybridScorer, EmbeddingCache, QuantizedVectorStore, etc.)
 
 ### Key Design Patterns
 
@@ -212,6 +212,19 @@ Tests are in `tests/`:
 | unit/features/StreamingExporter.test.ts | 9 | Streaming export |
 | integration/streaming-export.test.ts | 6 | Streaming export integration |
 | unit/workers/WorkerPool.test.ts | 8 | Worker pool for parallel processing |
+| unit/search/BM25Search.test.ts | 23 | BM25 tokenization, indexing, and search |
+| unit/search/OptimizedInvertedIndex.test.ts | 26 | Memory-efficient inverted index |
+| unit/search/HybridScorer.test.ts | 21 | Score normalization and weighting |
+| unit/search/EmbeddingCache.test.ts | 30 | LRU caching with TTL for embeddings |
+| unit/search/IncrementalIndexer.test.ts | 25 | Batch embedding index updates |
+| unit/search/QuantizedVectorStore.test.ts | 24 | 8-bit scalar quantization for vectors |
+| unit/utils/MemoryMonitor.test.ts | 25 | Centralized memory tracking |
+| unit/utils/BatchProcessor.test.ts | varies | Generic batch processing |
+| unit/utils/WorkerPoolManager.test.ts | varies | Unified worker pool management |
+| unit/search/ParallelSearchExecutor.test.ts | varies | Concurrent multi-layer search |
+| unit/search/QueryPlanCache.test.ts | varies | LRU cache for query plans |
+| unit/search/EarlyTerminationManager.test.ts | varies | Result adequacy checking |
+| performance/v10-benchmarks.test.ts | varies | Phase 12 verification suite |
 
 **Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
 

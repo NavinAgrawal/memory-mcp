@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-9.8.3-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-10.1.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -73,7 +73,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Intelligent Search** | ❌ | ✅ Hybrid + Query Analysis + Reflection |
 | **Observation Normalization** | ❌ | ✅ Coreference resolution + temporal anchoring |
 | **Total Tools** | 11 | **59** |
-| **Code Structure** | Monolithic | **Modular** (65 files) |
+| **Code Structure** | Monolithic | **Modular** (77 files) |
 
 ## Quick Start
 
@@ -142,7 +142,7 @@ cd memory-mcp
 npm install
 npm run build
 
-# Run tests (2692+ tests)
+# Run tests (2800+ tests)
 npm test
 
 # Type check
@@ -421,7 +421,7 @@ node dist/migrate-from-jsonl-to-sqlite.js --from memory.db --to memory.jsonl
 ```bash
 npm install           # Install dependencies
 npm run build         # Build TypeScript
-npm test              # Run tests (2692+ tests)
+npm test              # Run tests (2800+ tests)
 npm run typecheck     # Strict type checking
 npm run watch         # Development watch mode
 npm run clean         # Remove dist/ directory
@@ -461,7 +461,7 @@ npm run docs:deps     # Generate dependency graph
 
 ```
 memory-mcp/
-├── src/                            # Source (65 TypeScript files)
+├── src/                            # Source (77 TypeScript files)
 │   ├── index.ts                    # Entry point
 │   ├── core/                       # Core managers (12 files)
 │   │   ├── ManagerContext.ts           # Context holder (lazy init)
@@ -481,7 +481,7 @@ memory-mcp/
 │   │   ├── toolDefinitions.ts          # 59 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
 │   │   └── responseCompressor.ts       # Brotli compression
-│   ├── search/                     # Search implementations (20 files)
+│   ├── search/                     # Search implementations (29 files)
 │   │   ├── SearchManager.ts            # Search orchestrator
 │   │   ├── BasicSearch.ts              # Text matching
 │   │   ├── RankedSearch.ts             # TF-IDF scoring
@@ -502,9 +502,9 @@ memory-mcp/
 │   │   ├── KeywordExtractor.ts         # Keyword extraction
 │   │   └── index.ts
 │   ├── types/                      # TypeScript definitions (2 files)
-│   ├── utils/                      # Shared utilities (15 files)
+│   ├── utils/                      # Shared utilities (18 files)
 │   └── workers/                    # Worker pool (2 files)
-├── tests/                          # Test suite (74 files, 2535 tests)
+├── tests/                          # Test suite (97 files, 2800+ tests)
 │   ├── unit/                       # Unit tests
 │   ├── integration/                # Integration tests
 │   ├── e2e/                        # End-to-end tests
@@ -578,12 +578,12 @@ We welcome contributions!
 
 All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-**Current version**: v9.8.3 - [View full changelog](CHANGELOG.md)
+**Current version**: v10.1.0 - [View full changelog](CHANGELOG.md)
 
 Recent highlights:
+- **v10.1.0**: Documentation updates, 5 missing Phase 12 test files, architecture docs refresh
+- **v10.0.0**: Phase 12 Performance Optimization - BM25 search, parallel execution, query plan caching, embedding cache, incremental indexing
 - **v9.8.3**: SQLite storage support fix, JSON-RPC communication fix
-- **v9.8.2**: Security hardening (22 vulnerabilities fixed)
-- **v9.8.1**: Architecture documentation overhaul
 
 ## License
 
@@ -611,7 +611,7 @@ Enhanced fork of [Model Context Protocol memory server](https://github.com/model
 - Multi-format import/export with merge strategies
 - SQLite backend with better-sqlite3 (3-10x faster)
 - Transaction support with ACID guarantees
-- Comprehensive test suite (2535 tests, 96.6% coverage)
+- Comprehensive test suite (2800+ tests, 97 test files)
 
 ---
 

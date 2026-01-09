@@ -6,8 +6,9 @@
     "goal": "Maximize embedding operation speed through caching and incremental indexing",
     "effort": "12 hours",
     "impact": "2-3x faster embedding operations",
-    "status": "not_started",
+    "status": "completed",
     "created": "2026-01-09",
+    "completed": "2026-01-09",
     "targetVersion": "10.0.0"
   },
   "tasks": [
@@ -15,7 +16,7 @@
       "id": "12.5.1",
       "name": "Query-Optimized Embedding Encoding",
       "description": "Add query vs document prefixes for improved retrieval quality and L2 normalization",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P2",
       "effort": "3 hours",
       "files": [
@@ -34,7 +35,7 @@
       "id": "12.5.2",
       "name": "Embedding Cache with LRU Eviction",
       "description": "Create embedding cache that invalidates on text change and evicts LRU entries",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P2",
       "effort": "3 hours",
       "files": [
@@ -53,7 +54,7 @@
       "id": "12.5.3",
       "name": "Incremental Re-indexing",
       "description": "Queue index updates and batch-process them efficiently with flush threshold and timer",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P2",
       "effort": "4 hours",
       "files": [
@@ -72,7 +73,7 @@
       "id": "12.5.4",
       "name": "Embedding Performance Benchmarks",
       "description": "Create benchmark suite for embedding cache, batch embedding, and incremental indexing",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P1",
       "effort": "2 hours",
       "files": [

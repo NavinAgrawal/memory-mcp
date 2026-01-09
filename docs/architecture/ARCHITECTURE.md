@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
-**Version**: 9.8.0
-**Last Updated**: 2026-01-07
+**Version**: 10.0.0
+**Last Updated**: 2026-01-09
 
 ---
 
@@ -32,14 +32,15 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 - **Timestamps**: Automatic tracking of creation and modification times
 - **Batch Operations**: Efficient bulk updates
 
-### Key Statistics (v9.8.0)
+### Key Statistics (v10.0.0)
 
-- **2493 Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
-- **Test Coverage**: 96.6% source file coverage (56/58 source files tested by 74 test files)
+- **2800+ Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
+- **Test Coverage**: 97 test files testing 77 source files
 - **Performance**: Handles 2000+ entities, 5000+ total elements efficiently
-- **TypeScript**: Strict mode, full type safety (58 source files, ~22.5K lines)
-- **55 Tools**: Organized across 14 categories (entity, search, semantic, graph algorithms, etc.)
+- **TypeScript**: Strict mode, full type safety (77 source files, ~31K lines)
+- **59 Tools**: Organized across 14 categories (entity, search, semantic, graph algorithms, etc.)
 - **Lazy Initialization**: 7 managers instantiated on-demand
+- **Phase 12 Performance**: BM25 search, parallel execution, query plan caching, embedding cache, incremental indexing
 
 ---
 
@@ -944,6 +945,6 @@ This architecture serves the current use case well and provides a solid foundati
 
 ---
 
-**Document Version**: 3.1
-**Last Updated**: 2026-01-07
+**Document Version**: 3.2
+**Last Updated**: 2026-01-09
 **Maintained By**: Daniel Simon Jr.

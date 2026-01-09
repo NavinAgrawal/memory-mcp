@@ -5,6 +5,52 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.1.0] - 2026-01-09
+
+### Documentation & Test Suite Updates
+
+#### Fixed
+
+- **Phase 12 Documentation**: Fixed all Phase 12 index and sprint TODO statuses
+  - Updated `PHASE_12_INDEX.json` status from "not_started" to "completed"
+  - Updated all 6 sprint TODO files (PHASE_12_SPRINT_1_TODO.json through PHASE_12_SPRINT_6_TODO.json)
+  - Fixed all 27 task statuses to "completed"
+
+#### Added
+
+- **Missing Phase 12 Test Files**: Created 5 comprehensive test suites
+  - `tests/unit/search/BM25Search.test.ts` - 23 tests for BM25 tokenization, indexing, and search
+  - `tests/unit/search/OptimizedInvertedIndex.test.ts` - 26 tests for memory-efficient indexing
+  - `tests/unit/search/HybridScorer.test.ts` - 21 tests for score normalization and weighting
+  - `tests/unit/search/EmbeddingCache.test.ts` - 30 tests for LRU caching with TTL
+  - `tests/unit/search/IncrementalIndexer.test.ts` - 25 tests for batch embedding updates
+
+#### Updated
+
+- **README.md**: Updated version badges, file counts, test counts, and changelog highlights
+  - Version: 9.8.3 → 10.0.0
+  - Source files: 65 → 77 TypeScript files
+  - Test files: 74 → 97 test files
+  - Tests: 2692+ → 2800+
+
+- **Architecture Documentation**: Comprehensive updates across all architecture docs
+  - `OVERVIEW.md`, `ARCHITECTURE.md`, `COMPONENTS.md`, `DATAFLOW.md`, `API.md`
+  - Updated version numbers, file counts, statistics, and metrics
+  - Updated `TEST_COVERAGE.md` summary statistics
+
+- **Dependency Graph**: Regenerated with latest codebase metrics
+  - 77 source files, 570 exports (329 re-exports)
+  - 8 modules, 2 type-only circular dependencies (safe)
+  - 208 potentially unused exports identified
+
+### Statistics
+
+- Total tests: 2800+ across 97 test files
+- Source files: 77 TypeScript files (~31,165 LOC)
+- Test coverage: 97.4% (75/77 source files tested)
+
+---
+
 ## [10.0.0] - 2026-01-09
 
 ### Major Release: Phase 12 Performance Optimization

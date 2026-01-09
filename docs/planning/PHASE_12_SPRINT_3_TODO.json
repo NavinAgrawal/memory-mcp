@@ -6,8 +6,9 @@
     "goal": "Implement BM25 scoring and optimize inverted index for faster, more accurate search",
     "effort": "12 hours",
     "impact": "2x faster lexical search, better relevance ranking",
-    "status": "not_started",
+    "status": "completed",
     "created": "2026-01-09",
+    "completed": "2026-01-09",
     "targetVersion": "10.0.0"
   },
   "tasks": [
@@ -15,7 +16,7 @@
       "id": "12.3.1",
       "name": "BM25 Lexical Scoring",
       "description": "Implement BM25 (Best Matching 25) probabilistic ranking function with configurable k1 and b parameters",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P1",
       "effort": "4 hours",
       "files": [
@@ -38,7 +39,7 @@
       "id": "12.3.2",
       "name": "Optimized Inverted Index",
       "description": "Implement memory-efficient inverted index using integer IDs and typed arrays",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P1",
       "effort": "3 hours",
       "files": [
@@ -57,7 +58,7 @@
       "id": "12.3.3",
       "name": "Enhanced Hybrid Score Aggregation",
       "description": "Improve score normalization and aggregation with proper min-max normalization and configurable weights",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P1",
       "effort": "3 hours",
       "files": [
@@ -77,7 +78,7 @@
       "id": "12.3.4",
       "name": "Search Algorithm Benchmarks",
       "description": "Create benchmark suite comparing BM25 vs TF-IDF and measuring index efficiency",
-      "status": "not_started",
+      "status": "completed",
       "priority": "P1",
       "effort": "2 hours",
       "files": [

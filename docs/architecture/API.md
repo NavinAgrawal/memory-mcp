@@ -1,6 +1,6 @@
 # Memory MCP - API Reference
 
-**Version**: 9.9.0
+**Version**: 10.0.0
 **Last Updated**: 2026-01-09
 
 Complete reference for all 59 MCP tools provided by the Memory MCP server.

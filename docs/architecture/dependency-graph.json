@@ -1,11 +1,11 @@
 {
   "metadata": {
     "name": "@danielsimonjr/memory-mcp",
-    "version": "9.8.3",
+    "version": "10.0.0",
     "lastUpdated": "2026-01-09",
-    "totalFiles": 65,
+    "totalFiles": 77,
     "totalModules": 8,
-    "totalExports": 462
+    "totalExports": 570
   },
   "entryPoints": [
     {
@@ -836,7 +836,8 @@
               "Relation",
               "CompressionResult",
               "KnowledgeGraph",
-              "LongRunningOperationOptions"
+              "LongRunningOperationOptions",
+              "PreparedEntity"
             ],
             "typeOnly": true
           },
@@ -853,7 +854,8 @@
               "levenshteinDistance",
               "checkCancellation",
               "createProgressReporter",
-              "createProgress"
+              "createProgress",
+              "fnv1aHash"
             ]
           },
           {
@@ -1285,6 +1287,51 @@
           "BasicSearch"
         ]
       },
+      "src/search/BM25Search.ts": {
+        "description": "BM25 Search",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "Entity",
+              "SearchResult"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "../core/GraphStorage.js",
+            "imports": [
+              "GraphStorage"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "../utils/constants.js",
+            "imports": [
+              "SEARCH_LIMITS"
+            ]
+          }
+        ],
+        "exports": [
+          "STOPWORDS",
+          "DEFAULT_BM25_CONFIG",
+          "BM25Search"
+        ],
+        "classes": [
+          "BM25Search"
+        ],
+        "interfaces": [
+          "BM25DocumentEntry",
+          "BM25Index",
+          "BM25Config"
+        ],
+        "constants": [
+          "STOPWORDS",
+          "DEFAULT_BM25_CONFIG"
+        ]
+      },
       "src/search/BooleanSearch.ts": {
         "description": "Boolean Search",
         "externalDependencies": [],
@@ -1334,6 +1381,80 @@
           "BooleanSearch"
         ]
       },
+      "src/search/EarlyTerminationManager.ts": {
+        "description": "Early Termination Manager",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "HybridSearchResult",
+              "QueryAnalysis",
+              "ReadonlyKnowledgeGraph"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./HybridSearchManager.js",
+            "imports": [
+              "HybridSearchManager"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./QueryCostEstimator.js",
+            "imports": [
+              "SearchLayer"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./QueryCostEstimator.js",
+            "imports": [
+              "QueryCostEstimator"
+            ]
+          }
+        ],
+        "exports": [
+          "EarlyTerminationManager"
+        ],
+        "classes": [
+          "EarlyTerminationManager"
+        ],
+        "interfaces": [
+          "AdequacyCheck",
+          "EarlyTerminationOptions",
+          "EarlyTerminationResult"
+        ]
+      },
+      "src/search/EmbeddingCache.ts": {
+        "description": "Embedding Cache",
+        "externalDependencies": [],
+        "nodeDependencies": [
+          {
+            "module": "crypto",
+            "imports": [
+              "createHash"
+            ]
+          }
+        ],
+        "internalDependencies": [],
+        "exports": [
+          "DEFAULT_EMBEDDING_CACHE_OPTIONS",
+          "EmbeddingCache"
+        ],
+        "classes": [
+          "EmbeddingCache"
+        ],
+        "interfaces": [
+          "EmbeddingCacheStats",
+          "EmbeddingCacheOptions"
+        ],
+        "constants": [
+          "DEFAULT_EMBEDDING_CACHE_OPTIONS"
+        ]
+      },
       "src/search/EmbeddingService.ts": {
         "description": "Embedding Service",
         "externalDependencies": [],
@@ -1343,7 +1464,8 @@
             "file": "../types/index.js",
             "imports": [
               "EmbeddingService",
-              "EmbeddingConfig"
+              "EmbeddingConfig",
+              "EmbeddingMode"
             ],
             "typeOnly": true
           },
@@ -1357,6 +1479,9 @@
           }
         ],
         "exports": [
+          "QUERY_PREFIX",
+          "DOCUMENT_PREFIX",
+          "l2Normalize",
           "createEmbeddingService",
           "OpenAIEmbeddingService",
           "LocalEmbeddingService",
@@ -1368,7 +1493,12 @@
           "MockEmbeddingService"
         ],
         "functions": [
+          "l2Normalize",
           "createEmbeddingService"
+        ],
+        "constants": [
+          "QUERY_PREFIX",
+          "DOCUMENT_PREFIX"
         ]
       },
       "src/search/FuzzySearch.ts": {
@@ -1448,6 +1578,38 @@
           "DEFAULT_FUZZY_THRESHOLD"
         ]
       },
+      "src/search/HybridScorer.ts": {
+        "description": "Hybrid Scorer",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "Entity"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "DEFAULT_SCORER_WEIGHTS",
+          "HybridScorer"
+        ],
+        "classes": [
+          "HybridScorer"
+        ],
+        "interfaces": [
+          "SemanticSearchResult",
+          "LexicalSearchResult",
+          "SymbolicSearchResult",
+          "ScoredResult",
+          "HybridWeights",
+          "HybridScorerOptions"
+        ],
+        "constants": [
+          "DEFAULT_SCORER_WEIGHTS"
+        ]
+      },
       "src/search/HybridSearchManager.ts": {
         "description": "Hybrid Search Manager",
         "externalDependencies": [],
@@ -1500,6 +1662,50 @@
         ],
         "constants": [
           "DEFAULT_HYBRID_WEIGHTS"
+        ]
+      },
+      "src/search/IncrementalIndexer.ts": {
+        "description": "Incremental Indexer",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "EmbeddingService",
+              "EmbeddingMode"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "IVectorStore"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./EmbeddingService.js",
+            "imports": [
+              "EmbeddingProgressCallback"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "DEFAULT_INDEXER_OPTIONS",
+          "IncrementalIndexer"
+        ],
+        "classes": [
+          "IncrementalIndexer"
+        ],
+        "interfaces": [
+          "IndexOperation",
+          "IncrementalIndexerOptions",
+          "FlushResult"
+        ],
+        "constants": [
+          "DEFAULT_INDEXER_OPTIONS"
         ]
       },
       "src/search/index.ts": {
@@ -1572,7 +1778,33 @@
               "OpenAIEmbeddingService",
               "LocalEmbeddingService",
               "MockEmbeddingService",
-              "createEmbeddingService"
+              "createEmbeddingService",
+              "l2Normalize",
+              "QUERY_PREFIX",
+              "DOCUMENT_PREFIX",
+              "type EmbeddingProgressCallback"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./EmbeddingCache.js",
+            "imports": [
+              "EmbeddingCache",
+              "DEFAULT_EMBEDDING_CACHE_OPTIONS",
+              "type EmbeddingCacheStats",
+              "type EmbeddingCacheOptions"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./IncrementalIndexer.js",
+            "imports": [
+              "IncrementalIndexer",
+              "DEFAULT_INDEXER_OPTIONS",
+              "type IndexOperationType",
+              "type IndexOperation",
+              "type IncrementalIndexerOptions",
+              "type FlushResult"
             ],
             "reExport": true
           },
@@ -1612,7 +1844,12 @@
           {
             "file": "./QueryCostEstimator.js",
             "imports": [
-              "QueryCostEstimator"
+              "QueryCostEstimator",
+              "type SearchLayer",
+              "type ExtendedQueryCostEstimate",
+              "type LayerRecommendationOptions",
+              "type TokenEstimationOptions",
+              "type AdaptiveDepthConfig"
             ],
             "reExport": true
           },
@@ -1651,7 +1888,84 @@
             "imports": [
               "ReflectionManager",
               "type ReflectionOptions",
-              "type ReflectionResult"
+              "type ReflectionResult",
+              "type RefinementHistoryEntry"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./BM25Search.js",
+            "imports": [
+              "BM25Search",
+              "STOPWORDS",
+              "DEFAULT_BM25_CONFIG",
+              "type BM25DocumentEntry",
+              "type BM25Index",
+              "type BM25Config"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./OptimizedInvertedIndex.js",
+            "imports": [
+              "OptimizedInvertedIndex",
+              "type IndexMemoryUsage",
+              "type PostingListResult"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./HybridScorer.js",
+            "imports": [
+              "HybridScorer",
+              "DEFAULT_SCORER_WEIGHTS",
+              "type SemanticSearchResult",
+              "type LexicalSearchResult",
+              "type SymbolicSearchResult",
+              "type ScoredResult",
+              "type HybridWeights",
+              "type HybridScorerOptions"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./ParallelSearchExecutor.js",
+            "imports": [
+              "ParallelSearchExecutor",
+              "type LayerTiming",
+              "type ParallelSearchResult",
+              "type ParallelSearchOptions"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./EarlyTerminationManager.js",
+            "imports": [
+              "EarlyTerminationManager",
+              "type AdequacyCheck",
+              "type EarlyTerminationOptions",
+              "type EarlyTerminationResult"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./QueryPlanCache.js",
+            "imports": [
+              "QueryPlanCache",
+              "type CachedQueryEntry",
+              "type QueryPlanCacheStats",
+              "type QueryPlanCacheOptions"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./QuantizedVectorStore.js",
+            "imports": [
+              "QuantizedVectorStore",
+              "type QuantizationParams",
+              "type QuantizedVectorStoreStats",
+              "type QuantizedSearchResult",
+              "type QuantizedVectorStoreOptions"
             ],
             "reExport": true
           }
@@ -1672,6 +1986,20 @@
           "LocalEmbeddingService",
           "MockEmbeddingService",
           "createEmbeddingService",
+          "l2Normalize",
+          "QUERY_PREFIX",
+          "DOCUMENT_PREFIX",
+          "type EmbeddingProgressCallback",
+          "EmbeddingCache",
+          "DEFAULT_EMBEDDING_CACHE_OPTIONS",
+          "type EmbeddingCacheStats",
+          "type EmbeddingCacheOptions",
+          "IncrementalIndexer",
+          "DEFAULT_INDEXER_OPTIONS",
+          "type IndexOperationType",
+          "type IndexOperation",
+          "type IncrementalIndexerOptions",
+          "type FlushResult",
           "InMemoryVectorStore",
           "SQLiteVectorStore",
           "createVectorStore",
@@ -1682,6 +2010,11 @@
           "TFIDFIndexManager",
           "TFIDFEventSync",
           "QueryCostEstimator",
+          "type SearchLayer",
+          "type ExtendedQueryCostEstimate",
+          "type LayerRecommendationOptions",
+          "type TokenEstimationOptions",
+          "type AdaptiveDepthConfig",
           "SymbolicSearch",
           "type SymbolicResult",
           "HybridSearchManager",
@@ -1690,7 +2023,42 @@
           "QueryPlanner",
           "ReflectionManager",
           "type ReflectionOptions",
-          "type ReflectionResult"
+          "type ReflectionResult",
+          "type RefinementHistoryEntry",
+          "BM25Search",
+          "STOPWORDS",
+          "DEFAULT_BM25_CONFIG",
+          "type BM25DocumentEntry",
+          "type BM25Index",
+          "type BM25Config",
+          "OptimizedInvertedIndex",
+          "type IndexMemoryUsage",
+          "type PostingListResult",
+          "HybridScorer",
+          "DEFAULT_SCORER_WEIGHTS",
+          "type SemanticSearchResult",
+          "type LexicalSearchResult",
+          "type SymbolicSearchResult",
+          "type ScoredResult",
+          "type HybridWeights",
+          "type HybridScorerOptions",
+          "ParallelSearchExecutor",
+          "type LayerTiming",
+          "type ParallelSearchResult",
+          "type ParallelSearchOptions",
+          "EarlyTerminationManager",
+          "type AdequacyCheck",
+          "type EarlyTerminationOptions",
+          "type EarlyTerminationResult",
+          "QueryPlanCache",
+          "type CachedQueryEntry",
+          "type QueryPlanCacheStats",
+          "type QueryPlanCacheOptions",
+          "QuantizedVectorStore",
+          "type QuantizationParams",
+          "type QuantizedVectorStoreStats",
+          "type QuantizedSearchResult",
+          "type QuantizedVectorStoreOptions"
         ],
         "reExported": [
           "BasicSearch",
@@ -1708,6 +2076,20 @@
           "LocalEmbeddingService",
           "MockEmbeddingService",
           "createEmbeddingService",
+          "l2Normalize",
+          "QUERY_PREFIX",
+          "DOCUMENT_PREFIX",
+          "type EmbeddingProgressCallback",
+          "EmbeddingCache",
+          "DEFAULT_EMBEDDING_CACHE_OPTIONS",
+          "type EmbeddingCacheStats",
+          "type EmbeddingCacheOptions",
+          "IncrementalIndexer",
+          "DEFAULT_INDEXER_OPTIONS",
+          "type IndexOperationType",
+          "type IndexOperation",
+          "type IncrementalIndexerOptions",
+          "type FlushResult",
           "InMemoryVectorStore",
           "SQLiteVectorStore",
           "createVectorStore",
@@ -1718,6 +2100,11 @@
           "TFIDFIndexManager",
           "TFIDFEventSync",
           "QueryCostEstimator",
+          "type SearchLayer",
+          "type ExtendedQueryCostEstimate",
+          "type LayerRecommendationOptions",
+          "type TokenEstimationOptions",
+          "type AdaptiveDepthConfig",
           "SymbolicSearch",
           "type SymbolicResult",
           "HybridSearchManager",
@@ -1726,7 +2113,129 @@
           "QueryPlanner",
           "ReflectionManager",
           "type ReflectionOptions",
-          "type ReflectionResult"
+          "type ReflectionResult",
+          "type RefinementHistoryEntry",
+          "BM25Search",
+          "STOPWORDS",
+          "DEFAULT_BM25_CONFIG",
+          "type BM25DocumentEntry",
+          "type BM25Index",
+          "type BM25Config",
+          "OptimizedInvertedIndex",
+          "type IndexMemoryUsage",
+          "type PostingListResult",
+          "HybridScorer",
+          "DEFAULT_SCORER_WEIGHTS",
+          "type SemanticSearchResult",
+          "type LexicalSearchResult",
+          "type SymbolicSearchResult",
+          "type ScoredResult",
+          "type HybridWeights",
+          "type HybridScorerOptions",
+          "ParallelSearchExecutor",
+          "type LayerTiming",
+          "type ParallelSearchResult",
+          "type ParallelSearchOptions",
+          "EarlyTerminationManager",
+          "type AdequacyCheck",
+          "type EarlyTerminationOptions",
+          "type EarlyTerminationResult",
+          "QueryPlanCache",
+          "type CachedQueryEntry",
+          "type QueryPlanCacheStats",
+          "type QueryPlanCacheOptions",
+          "QuantizedVectorStore",
+          "type QuantizationParams",
+          "type QuantizedVectorStoreStats",
+          "type QuantizedSearchResult",
+          "type QuantizedVectorStoreOptions"
+        ]
+      },
+      "src/search/OptimizedInvertedIndex.ts": {
+        "description": "Optimized Inverted Index",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "OptimizedInvertedIndex"
+        ],
+        "classes": [
+          "OptimizedInvertedIndex"
+        ],
+        "interfaces": [
+          "IndexMemoryUsage",
+          "PostingListResult"
+        ]
+      },
+      "src/search/ParallelSearchExecutor.ts": {
+        "description": "Parallel Search Executor",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "Entity",
+              "ReadonlyKnowledgeGraph",
+              "SymbolicFilters"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./SemanticSearch.js",
+            "imports": [
+              "SemanticSearch"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./RankedSearch.js",
+            "imports": [
+              "RankedSearch"
+            ],
+            "typeOnly": true
+          },
+          {
+            "file": "./SymbolicSearch.js",
+            "imports": [
+              "SymbolicSearch"
+            ]
+          },
+          {
+            "file": "../utils/constants.js",
+            "imports": [
+              "SEMANTIC_SEARCH_LIMITS"
+            ]
+          }
+        ],
+        "exports": [
+          "ParallelSearchExecutor"
+        ],
+        "classes": [
+          "ParallelSearchExecutor"
+        ],
+        "interfaces": [
+          "LayerTiming",
+          "ParallelSearchResult",
+          "ParallelSearchOptions"
+        ]
+      },
+      "src/search/QuantizedVectorStore.ts": {
+        "description": "Quantized Vector Store",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "QuantizedVectorStore"
+        ],
+        "classes": [
+          "QuantizedVectorStore"
+        ],
+        "interfaces": [
+          "QuantizationParams",
+          "QuantizedVectorStoreStats",
+          "QuantizedSearchResult",
+          "QuantizedVectorStoreOptions"
         ]
       },
       "src/search/QueryAnalyzer.ts": {
@@ -1761,7 +2270,8 @@
             "imports": [
               "SearchMethod",
               "QueryCostEstimate",
-              "QueryCostEstimatorOptions"
+              "QueryCostEstimatorOptions",
+              "QueryAnalysis"
             ],
             "typeOnly": true
           }
@@ -1771,6 +2281,38 @@
         ],
         "classes": [
           "QueryCostEstimator"
+        ],
+        "interfaces": [
+          "ExtendedQueryCostEstimate",
+          "LayerRecommendationOptions",
+          "TokenEstimationOptions",
+          "AdaptiveDepthConfig"
+        ]
+      },
+      "src/search/QueryPlanCache.ts": {
+        "description": "Query Plan Cache",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [
+          {
+            "file": "../types/index.js",
+            "imports": [
+              "QueryAnalysis",
+              "QueryPlan"
+            ],
+            "typeOnly": true
+          }
+        ],
+        "exports": [
+          "QueryPlanCache"
+        ],
+        "classes": [
+          "QueryPlanCache"
+        ],
+        "interfaces": [
+          "CachedQueryEntry",
+          "QueryPlanCacheStats",
+          "QueryPlanCacheOptions"
         ]
       },
       "src/search/QueryPlanner.ts": {
@@ -1891,6 +2433,7 @@
         ],
         "interfaces": [
           "ReflectionOptions",
+          "RefinementHistoryEntry",
           "ReflectionResult"
         ]
       },
@@ -2555,6 +3098,7 @@
           "QueryCostEstimate",
           "AutoSearchResult",
           "QueryCostEstimatorOptions",
+          "PreparedEntity",
           "SymbolicFilters",
           "HybridSearchOptions",
           "HybridSearchResult",
@@ -2567,6 +3111,38 @@
       }
     },
     "utils": {
+      "src/utils/BatchProcessor.ts": {
+        "description": "Batch Processor",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "processBatch",
+          "processWithRetry",
+          "chunkArray",
+          "parallelLimit",
+          "mapParallel",
+          "filterParallel",
+          "BatchProcessor"
+        ],
+        "classes": [
+          "BatchProcessor"
+        ],
+        "interfaces": [
+          "BatchProgress",
+          "BatchItemResult",
+          "BatchProcessResult",
+          "BatchProcessorOptions"
+        ],
+        "functions": [
+          "processBatch",
+          "processWithRetry",
+          "chunkArray",
+          "parallelLimit",
+          "mapParallel",
+          "filterParallel"
+        ]
+      },
       "src/utils/compressedCache.ts": {
         "description": "Compressed Cache Utility",
         "externalDependencies": [],
@@ -2761,6 +3337,7 @@
         ],
         "exports": [
           "defaultMemoryPath",
+          "fnv1aHash",
           "findEntityByName",
           "findEntitiesByNames",
           "entityExists",
@@ -2795,6 +3372,7 @@
           "CommonSearchFilters"
         ],
         "functions": [
+          "fnv1aHash",
           "findEntityByName",
           "findEntityByName",
           "findEntityByName",
@@ -3093,6 +3671,7 @@
           {
             "file": "./entityUtils.js",
             "imports": [
+              "// Hash functions (Phase 12 Sprint 1)\r\n  fnv1aHash",
               "// Entity lookup\r\n  findEntityByName",
               "findEntitiesByNames",
               "entityExists",
@@ -3165,6 +3744,48 @@
               "executeWithPhases",
               "processBatchesWithProgress",
               "type PhaseDefinition"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./WorkerPoolManager.js",
+            "imports": [
+              "WorkerPoolManager",
+              "getWorkerPoolManager",
+              "type WorkerPoolConfig",
+              "type ExtendedPoolStats",
+              "type PoolEventCallback"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./BatchProcessor.js",
+            "imports": [
+              "BatchProcessor",
+              "processBatch",
+              "processWithRetry",
+              "chunkArray",
+              "parallelLimit",
+              "mapParallel",
+              "filterParallel",
+              "type BatchProgress",
+              "type BatchProgressCallback",
+              "type BatchItemResult",
+              "type BatchProcessResult",
+              "type BatchProcessorOptions"
+            ],
+            "reExport": true
+          },
+          {
+            "file": "./MemoryMonitor.js",
+            "imports": [
+              "MemoryMonitor",
+              "globalMemoryMonitor",
+              "type ComponentMemoryUsage",
+              "type MemoryUsageStats",
+              "type MemoryThresholds",
+              "type MemoryAlert",
+              "type MemoryChangeCallback"
             ],
             "reExport": true
           }
@@ -3293,6 +3914,7 @@
           "paginateArray",
           "getPaginationMeta",
           "type ValidatedPagination",
+          "// Hash functions (Phase 12 Sprint 1)\r\n  fnv1aHash",
           "// Entity lookup\r\n  findEntityByName",
           "findEntitiesByNames",
           "entityExists",
@@ -3346,7 +3968,31 @@
           "createProgress",
           "executeWithPhases",
           "processBatchesWithProgress",
-          "type PhaseDefinition"
+          "type PhaseDefinition",
+          "WorkerPoolManager",
+          "getWorkerPoolManager",
+          "type WorkerPoolConfig",
+          "type ExtendedPoolStats",
+          "type PoolEventCallback",
+          "BatchProcessor",
+          "processBatch",
+          "processWithRetry",
+          "chunkArray",
+          "parallelLimit",
+          "mapParallel",
+          "filterParallel",
+          "type BatchProgress",
+          "type BatchProgressCallback",
+          "type BatchItemResult",
+          "type BatchProcessResult",
+          "type BatchProcessorOptions",
+          "MemoryMonitor",
+          "globalMemoryMonitor",
+          "type ComponentMemoryUsage",
+          "type MemoryUsageStats",
+          "type MemoryThresholds",
+          "type MemoryAlert",
+          "type MemoryChangeCallback"
         ],
         "reExported": [
           "KnowledgeGraphError",
@@ -3472,6 +4118,7 @@
           "paginateArray",
           "getPaginationMeta",
           "type ValidatedPagination",
+          "// Hash functions (Phase 12 Sprint 1)\r\n  fnv1aHash",
           "// Entity lookup\r\n  findEntityByName",
           "findEntitiesByNames",
           "entityExists",
@@ -3525,7 +4172,31 @@
           "createProgress",
           "executeWithPhases",
           "processBatchesWithProgress",
-          "type PhaseDefinition"
+          "type PhaseDefinition",
+          "WorkerPoolManager",
+          "getWorkerPoolManager",
+          "type WorkerPoolConfig",
+          "type ExtendedPoolStats",
+          "type PoolEventCallback",
+          "BatchProcessor",
+          "processBatch",
+          "processWithRetry",
+          "chunkArray",
+          "parallelLimit",
+          "mapParallel",
+          "filterParallel",
+          "type BatchProgress",
+          "type BatchProgressCallback",
+          "type BatchItemResult",
+          "type BatchProcessResult",
+          "type BatchProcessorOptions",
+          "MemoryMonitor",
+          "globalMemoryMonitor",
+          "type ComponentMemoryUsage",
+          "type MemoryUsageStats",
+          "type MemoryThresholds",
+          "type MemoryAlert",
+          "type MemoryChangeCallback"
         ]
       },
       "src/utils/indexes.ts": {
@@ -3568,6 +4239,28 @@
         ],
         "constants": [
           "logger"
+        ]
+      },
+      "src/utils/MemoryMonitor.ts": {
+        "description": "Memory Usage Monitor",
+        "externalDependencies": [],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "globalMemoryMonitor",
+          "MemoryMonitor"
+        ],
+        "classes": [
+          "MemoryMonitor"
+        ],
+        "interfaces": [
+          "ComponentMemoryUsage",
+          "MemoryUsageStats",
+          "MemoryThresholds",
+          "MemoryAlert"
+        ],
+        "constants": [
+          "globalMemoryMonitor"
         ]
       },
       "src/utils/operationUtils.ts": {
@@ -3837,6 +4530,40 @@
           "TaskPriority",
           "TaskStatus"
         ]
+      },
+      "src/utils/WorkerPoolManager.ts": {
+        "description": "Worker Pool Manager",
+        "externalDependencies": [
+          {
+            "package": "@danielsimonjr/workerpool",
+            "imports": [
+              "workerpool"
+            ]
+          },
+          {
+            "package": "@danielsimonjr/workerpool",
+            "imports": [
+              "Pool",
+              "PoolStats"
+            ]
+          }
+        ],
+        "nodeDependencies": [],
+        "internalDependencies": [],
+        "exports": [
+          "getWorkerPoolManager",
+          "WorkerPoolManager"
+        ],
+        "classes": [
+          "WorkerPoolManager"
+        ],
+        "interfaces": [
+          "WorkerPoolConfig",
+          "ExtendedPoolStats"
+        ],
+        "functions": [
+          "getWorkerPoolManager"
+        ]
       }
     },
     "workers": {
@@ -3957,13 +4684,22 @@
         "name": "Search",
         "files": [
           "src/search/BasicSearch.ts",
+          "src/search/BM25Search.ts",
           "src/search/BooleanSearch.ts",
+          "src/search/EarlyTerminationManager.ts",
+          "src/search/EmbeddingCache.ts",
           "src/search/EmbeddingService.ts",
           "src/search/FuzzySearch.ts",
+          "src/search/HybridScorer.ts",
           "src/search/HybridSearchManager.ts",
+          "src/search/IncrementalIndexer.ts",
           "src/search/index.ts",
+          "src/search/OptimizedInvertedIndex.ts",
+          "src/search/ParallelSearchExecutor.ts",
+          "src/search/QuantizedVectorStore.ts",
           "src/search/QueryAnalyzer.ts",
           "src/search/QueryCostEstimator.ts",
+          "src/search/QueryPlanCache.ts",
           "src/search/QueryPlanner.ts",
           "src/search/RankedSearch.ts",
           "src/search/ReflectionManager.ts",
@@ -3997,6 +4733,7 @@
       {
         "name": "Utils",
         "files": [
+          "src/utils/BatchProcessor.ts",
           "src/utils/compressedCache.ts",
           "src/utils/compressionUtil.ts",
           "src/utils/constants.ts",
@@ -4006,12 +4743,14 @@
           "src/utils/index.ts",
           "src/utils/indexes.ts",
           "src/utils/logger.ts",
+          "src/utils/MemoryMonitor.ts",
           "src/utils/operationUtils.ts",
           "src/utils/parallelUtils.ts",
           "src/utils/schemas.ts",
           "src/utils/searchAlgorithms.ts",
           "src/utils/searchCache.ts",
-          "src/utils/taskScheduler.ts"
+          "src/utils/taskScheduler.ts",
+          "src/utils/WorkerPoolManager.ts"
         ]
       },
       {
@@ -4024,21 +4763,21 @@
     ]
   },
   "statistics": {
-    "totalTypeScriptFiles": 65,
+    "totalTypeScriptFiles": 77,
     "totalModules": 8,
-    "totalLinesOfCode": 24861,
-    "totalExports": 462,
-    "totalClasses": 62,
-    "totalInterfaces": 103,
-    "totalFunctions": 96,
+    "totalLinesOfCode": 31165,
+    "totalExports": 570,
+    "totalClasses": 74,
+    "totalInterfaces": 148,
+    "totalFunctions": 105,
     "totalTypeGuards": 4,
     "totalEnums": 3,
-    "totalConstants": 51,
-    "totalReExports": 250,
-    "totalTypeOnlyImports": 67,
+    "totalConstants": 59,
+    "totalReExports": 329,
+    "totalTypeOnlyImports": 80,
     "runtimeCircularDeps": 0,
     "typeOnlyCircularDeps": 2,
     "unusedFilesCount": 0,
-    "unusedExportsCount": 157
+    "unusedExportsCount": 208
   }
 }

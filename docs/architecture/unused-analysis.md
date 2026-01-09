@@ -5,7 +5,7 @@
 ## Summary
 
 - **Potentially unused files**: 0
-- **Potentially unused exports**: 157
+- **Potentially unused exports**: 208
 
 ## Potentially Unused Files
 
@@ -44,14 +44,79 @@ These exports are not imported by any other file in the codebase:
 - `NormalizationOptions` (interface)
 - `NormalizationResult` (interface)
 
+### `src/search/BM25Search.ts`
+
+- `BM25DocumentEntry` (interface)
+- `BM25Index` (interface)
+- `BM25Config` (interface)
+
+### `src/search/EarlyTerminationManager.ts`
+
+- `AdequacyCheck` (interface)
+- `EarlyTerminationOptions` (interface)
+- `EarlyTerminationResult` (interface)
+
+### `src/search/EmbeddingCache.ts`
+
+- `EmbeddingCacheStats` (interface)
+- `EmbeddingCacheOptions` (interface)
+
 ### `src/search/FuzzySearch.ts`
 
 - `FuzzySearchOptions` (interface)
 - `DEFAULT_FUZZY_THRESHOLD` (constant)
 
+### `src/search/HybridScorer.ts`
+
+- `SemanticSearchResult` (interface)
+- `LexicalSearchResult` (interface)
+- `SymbolicSearchResult` (interface)
+- `ScoredResult` (interface)
+- `HybridWeights` (interface)
+- `HybridScorerOptions` (interface)
+
+### `src/search/IncrementalIndexer.ts`
+
+- `IndexOperation` (interface)
+- `IncrementalIndexerOptions` (interface)
+- `FlushResult` (interface)
+- `IndexOperationType` (type)
+
+### `src/search/OptimizedInvertedIndex.ts`
+
+- `IndexMemoryUsage` (interface)
+- `PostingListResult` (interface)
+
+### `src/search/ParallelSearchExecutor.ts`
+
+- `LayerTiming` (interface)
+- `ParallelSearchResult` (interface)
+- `ParallelSearchOptions` (interface)
+
+### `src/search/QuantizedVectorStore.ts`
+
+- `QuantizationParams` (interface)
+- `QuantizedVectorStoreStats` (interface)
+- `QuantizedSearchResult` (interface)
+- `QuantizedVectorStoreOptions` (interface)
+
+### `src/search/QueryCostEstimator.ts`
+
+- `ExtendedQueryCostEstimate` (interface)
+- `LayerRecommendationOptions` (interface)
+- `TokenEstimationOptions` (interface)
+- `AdaptiveDepthConfig` (interface)
+
+### `src/search/QueryPlanCache.ts`
+
+- `CachedQueryEntry` (interface)
+- `QueryPlanCacheStats` (interface)
+- `QueryPlanCacheOptions` (interface)
+
 ### `src/search/ReflectionManager.ts`
 
 - `ReflectionOptions` (interface)
+- `RefinementHistoryEntry` (interface)
 - `ReflectionResult` (interface)
 
 ### `src/search/SymbolicSearch.ts`
@@ -137,6 +202,7 @@ These exports are not imported by any other file in the codebase:
 - `QueryCostEstimate` (interface)
 - `AutoSearchResult` (interface)
 - `QueryCostEstimatorOptions` (interface)
+- `PreparedEntity` (interface)
 - `SymbolicFilters` (interface)
 - `HybridSearchOptions` (interface)
 - `HybridSearchResult` (interface)
@@ -146,12 +212,21 @@ These exports are not imported by any other file in the codebase:
 - `SubQuery` (interface)
 - `QueryPlan` (interface)
 - `BooleanQueryNode` (type)
+- `EmbeddingMode` (type)
 - `BatchOperationType` (type)
 - `BatchOperation` (type)
 - `GraphEventType` (type)
 - `GraphEvent` (type)
 - `GraphEventListener` (type)
 - `SearchMethod` (type)
+
+### `src/utils/BatchProcessor.ts`
+
+- `BatchProgress` (interface)
+- `BatchItemResult` (interface)
+- `BatchProcessResult` (interface)
+- `BatchProcessorOptions` (interface)
+- `BatchProgressCallback` (type)
 
 ### `src/utils/compressedCache.ts`
 
@@ -171,6 +246,7 @@ These exports are not imported by any other file in the codebase:
 
 ### `src/utils/entityUtils.ts`
 
+- `fnv1aHash` (function)
 - `findEntityByName` (function)
 - `findEntityByName` (function)
 - `findEntityByName` (function)
@@ -188,6 +264,14 @@ These exports are not imported by any other file in the codebase:
 - `validatePagination` (function)
 - `ValidatedPagination` (interface)
 - `ToolResponse` (type)
+
+### `src/utils/MemoryMonitor.ts`
+
+- `ComponentMemoryUsage` (interface)
+- `MemoryUsageStats` (interface)
+- `MemoryThresholds` (interface)
+- `MemoryAlert` (interface)
+- `MemoryChangeCallback` (type)
 
 ### `src/utils/operationUtils.ts`
 
@@ -236,6 +320,12 @@ These exports are not imported by any other file in the codebase:
 - `TaskResult` (interface)
 - `BatchOptions` (interface)
 - `QueueStats` (interface)
+
+### `src/utils/WorkerPoolManager.ts`
+
+- `WorkerPoolConfig` (interface)
+- `ExtendedPoolStats` (interface)
+- `PoolEventCallback` (type)
 
 ### `src/workers/levenshteinWorker.ts`
 

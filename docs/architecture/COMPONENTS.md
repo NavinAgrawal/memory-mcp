@@ -1,6 +1,6 @@
 # Memory MCP - Component Reference
 
-**Version**: 9.9.0
+**Version**: 10.0.0
 **Last Updated**: 2026-01-09
 
 ---
@@ -28,11 +28,11 @@ Memory MCP follows a layered architecture with specialized components:
 ├─────────────────────────────────────────────────────────────┤
 │  core/             │  Central managers and storage (12 files)│
 ├─────────────────────────────────────────────────────────────┤
-│  search/           │  Search implementations (20 files)     │
+│  search/           │  Search implementations (29 files)     │
 ├─────────────────────────────────────────────────────────────┤
 │  features/         │  Advanced capabilities (9 files)       │
 ├─────────────────────────────────────────────────────────────┤
-│  utils/            │  Shared utilities (15 files)           │
+│  utils/            │  Shared utilities (18 files)           │
 ├─────────────────────────────────────────────────────────────┤
 │  types/            │  TypeScript definitions (2 files)      │
 ├─────────────────────────────────────────────────────────────┤
@@ -44,15 +44,15 @@ Memory MCP follows a layered architecture with specialized components:
 
 | Metric | Count |
 |--------|-------|
-| Total TypeScript Files | 65 |
-| Total Lines of Code | ~24,800 |
-| Total Exports | 462 |
-| Total Re-exports | 250 |
-| Total Classes | 62 |
-| Total Interfaces | 103 |
-| Total Functions | 96 |
+| Total TypeScript Files | 77 |
+| Total Lines of Code | ~31,165 |
+| Total Exports | 570 |
+| Total Re-exports | 329 |
+| Total Classes | 74 |
+| Total Interfaces | 148 |
+| Total Functions | 105 |
 | Total Enums | 3 |
-| Type-only Imports | 67 |
+| Constants | 59 |
 
 ---
 

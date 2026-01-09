@@ -1,7 +1,7 @@
 # Memory MCP - Data Flow Documentation
 
-**Version**: 9.8.0
-**Last Updated**: 2026-01-07
+**Version**: 10.0.0
+**Last Updated**: 2026-01-09
 
 ---
 

@@ -1,6 +1,6 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 9.9.0
+**Version**: 10.0.0
 **Last Updated**: 2026-01-09
 
 ## What Is This?
@@ -78,7 +78,7 @@ interface Relation {
 ## Directory Structure
 
 ```
-src/ (65 TypeScript files, ~24,800 lines of code)
+src/ (77 TypeScript files, ~31,000 lines of code)
 ├── index.ts              # Entry point, main() function
 │
 ├── core/ (12 files)      # Core managers and storage
@@ -101,7 +101,7 @@ src/ (65 TypeScript files, ~24,800 lines of code)
 │   ├── toolHandlers.ts           # Tool implementation registry
 │   └── responseCompressor.ts     # Brotli compression for large responses
 │
-├── search/ (20 files)    # Search implementations (22 classes)
+├── search/ (29 files)    # Search implementations (31 classes)
 │   ├── SearchManager.ts          # Search orchestrator + compression + analytics
 │   ├── BasicSearch.ts            # Text matching
 │   ├── RankedSearch.ts           # TF-IDF scoring
@@ -138,7 +138,7 @@ src/ (65 TypeScript files, ~24,800 lines of code)
 │   ├── types.ts                  # All type definitions (89 interfaces)
 │   └── index.ts                  # Barrel export
 │
-├── utils/ (15 files)     # Shared utilities (20 classes, 50+ functions)
+├── utils/ (18 files)     # Shared utilities (23 classes, 50+ functions)
 │   ├── schemas.ts                # Zod validation schemas (26 validators)
 │   ├── constants.ts              # Shared constants (16+ exports)
 │   ├── formatters.ts             # Response + pagination formatting
@@ -213,7 +213,7 @@ npm install
 # Build
 npm run build
 
-# Run tests (2692+ tests)
+# Run tests (2800+ tests)
 npm test
 
 # Run server

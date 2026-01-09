@@ -1,16 +1,16 @@
 # Test Coverage Analysis
 
-**Generated**: 2026-01-08
+**Generated**: 2026-01-09
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
-| Total Source Files | 58 |
-| Total Test Files | 74 |
-| Source Files with Tests | 56 |
+| Total Source Files | 77 |
+| Total Test Files | 97 |
+| Source Files with Tests | 75 |
 | Source Files without Tests | 2 |
-| Coverage | 96.6% |
+| Coverage | 97.4% |
 
 ---
 
