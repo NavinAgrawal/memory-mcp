@@ -5,9 +5,8 @@ describe('logger', () => {
   const originalLogLevel = process.env.LOG_LEVEL;
 
   // Spy on console methods
+  // Note: debug and info use console.error to avoid interfering with JSON-RPC on stdout
   const consoleSpy = {
-    debug: vi.spyOn(console, 'debug').mockImplementation(() => {}),
-    log: vi.spyOn(console, 'log').mockImplementation(() => {}),
     warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),
     error: vi.spyOn(console, 'error').mockImplementation(() => {}),
   };
@@ -31,7 +30,8 @@ describe('logger', () => {
 
       logger.debug('Test debug message');
 
-      expect(consoleSpy.debug).toHaveBeenCalledWith('[DEBUG] Test debug message');
+      // debug uses console.error to avoid interfering with JSON-RPC on stdout
+      expect(consoleSpy.error).toHaveBeenCalledWith('[DEBUG] Test debug message');
     });
 
     it('should log debug messages with additional arguments', () => {
@@ -39,7 +39,7 @@ describe('logger', () => {
 
       logger.debug('Debug with args', { key: 'value' }, 123);
 
-      expect(consoleSpy.debug).toHaveBeenCalledWith('[DEBUG] Debug with args', { key: 'value' }, 123);
+      expect(consoleSpy.error).toHaveBeenCalledWith('[DEBUG] Debug with args', { key: 'value' }, 123);
     });
 
     it('should NOT log debug messages when LOG_LEVEL is not set', () => {
@@ -47,7 +47,8 @@ describe('logger', () => {
 
       logger.debug('This should not appear');
 
-      expect(consoleSpy.debug).not.toHaveBeenCalled();
+      // No [DEBUG] prefix calls should be made
+      expect(consoleSpy.error).not.toHaveBeenCalledWith(expect.stringMatching(/^\[DEBUG\]/));
     });
 
     it('should NOT log debug messages when LOG_LEVEL is info', () => {
@@ -55,7 +56,7 @@ describe('logger', () => {
 
       logger.debug('This should not appear');
 
-      expect(consoleSpy.debug).not.toHaveBeenCalled();
+      expect(consoleSpy.error).not.toHaveBeenCalledWith(expect.stringMatching(/^\[DEBUG\]/));
     });
 
     it('should NOT log debug messages when LOG_LEVEL is warn', () => {
@@ -63,7 +64,7 @@ describe('logger', () => {
 
       logger.debug('This should not appear');
 
-      expect(consoleSpy.debug).not.toHaveBeenCalled();
+      expect(consoleSpy.error).not.toHaveBeenCalledWith(expect.stringMatching(/^\[DEBUG\]/));
     });
 
     it('should NOT log debug messages when LOG_LEVEL is error', () => {
@@ -71,7 +72,7 @@ describe('logger', () => {
 
       logger.debug('This should not appear');
 
-      expect(consoleSpy.debug).not.toHaveBeenCalled();
+      expect(consoleSpy.error).not.toHaveBeenCalledWith(expect.stringMatching(/^\[DEBUG\]/));
     });
 
     it('should handle empty message', () => {
@@ -79,7 +80,7 @@ describe('logger', () => {
 
       logger.debug('');
 
-      expect(consoleSpy.debug).toHaveBeenCalledWith('[DEBUG] ');
+      expect(consoleSpy.error).toHaveBeenCalledWith('[DEBUG] ');
     });
 
     it('should handle multiple arguments of different types', () => {
@@ -87,7 +88,7 @@ describe('logger', () => {
 
       logger.debug('Mixed args', null, undefined, true, ['array'], { obj: true });
 
-      expect(consoleSpy.debug).toHaveBeenCalledWith(
+      expect(consoleSpy.error).toHaveBeenCalledWith(
         '[DEBUG] Mixed args',
         null,
         undefined,
@@ -102,13 +103,14 @@ describe('logger', () => {
     it('should log info messages', () => {
       logger.info('Test info message');
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] Test info message');
+      // info uses console.error to avoid interfering with JSON-RPC on stdout
+      expect(consoleSpy.error).toHaveBeenCalledWith('[INFO] Test info message');
     });
 
     it('should log info messages with additional arguments', () => {
       logger.info('Info with args', { data: 'test' }, 42);
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] Info with args', { data: 'test' }, 42);
+      expect(consoleSpy.error).toHaveBeenCalledWith('[INFO] Info with args', { data: 'test' }, 42);
     });
 
     it('should always log info regardless of LOG_LEVEL', () => {
@@ -116,19 +118,19 @@ describe('logger', () => {
 
       logger.info('Info should appear');
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] Info should appear');
+      expect(consoleSpy.error).toHaveBeenCalledWith('[INFO] Info should appear');
     });
 
     it('should handle empty message', () => {
       logger.info('');
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] ');
+      expect(consoleSpy.error).toHaveBeenCalledWith('[INFO] ');
     });
 
     it('should handle no additional arguments', () => {
       logger.info('Simple message');
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] Simple message');
+      expect(consoleSpy.error).toHaveBeenCalledWith('[INFO] Simple message');
     });
   });
 
@@ -239,8 +241,10 @@ describe('logger', () => {
       logger.warn('test');
       logger.error('test');
 
-      expect(consoleSpy.debug).toHaveBeenCalledWith(expect.stringMatching(/^\[DEBUG\] /));
-      expect(consoleSpy.log).toHaveBeenCalledWith(expect.stringMatching(/^\[INFO\] /));
+      // debug, info, and error all use console.error (to keep stdout clean for JSON-RPC)
+      // warn uses console.warn
+      expect(consoleSpy.error).toHaveBeenCalledWith(expect.stringMatching(/^\[DEBUG\] /));
+      expect(consoleSpy.error).toHaveBeenCalledWith(expect.stringMatching(/^\[INFO\] /));
       expect(consoleSpy.warn).toHaveBeenCalledWith(expect.stringMatching(/^\[WARN\] /));
       expect(consoleSpy.error).toHaveBeenCalledWith(expect.stringMatching(/^\[ERROR\] /));
     });

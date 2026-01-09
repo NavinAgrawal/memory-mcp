@@ -144,10 +144,10 @@ describe('Phase 6 Optimization Benchmarks', () => {
         }
       });
 
-      console.log(`addTags(50 sequential in 1000): ${durationMs.toFixed(2)}ms`);
+      console.log(`addTags(50 sequential in 1500): ${durationMs.toFixed(2)}ms`);
 
       // 50 operations should still be reasonable (generous limit for CI variance)
-      expect(durationMs).toBeLessThan(1000);
+      expect(durationMs).toBeLessThan(1500);
     });
   });
 

@@ -5,6 +5,27 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.9.1] - 2026-01-09
+
+### Fixed
+
+- **Test Suite Updates**: Updated tests to reflect Phase 11 tool count (59 tools)
+  - Updated `toolDefinitions.test.ts` tool count from 55 to 59
+  - Updated `server.test.ts` integration test tool count
+  - Fixed logger tests to match stderr-based output (JSON-RPC compatibility)
+  - Added intelligent search tools category test
+
+- **Flaky Performance Tests**: Increased thresholds for CI environment variance
+  - `addTags` sequential benchmark: 1000ms → 1500ms
+  - `StreamingExporter` I/O overhead: now uses MAX_IO_OVERHEAD_PERCENT (400%)
+
+### Added
+
+- **memoryjs Extraction Plan**: Comprehensive planning document for extracting core library
+  - `docs/planning/MEMORYJS_EXTRACTION_PLAN.md` - 6-phase extraction plan
+  - Adapter patterns for storage (IStorageAdapter) and workers (IWorkerAdapter)
+  - Cross-runtime portability design (Node.js, Bun, Deno)
+
 ## [9.9.0] - 2026-01-09
 
 ### Added

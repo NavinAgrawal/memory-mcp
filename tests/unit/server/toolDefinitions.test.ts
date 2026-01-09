@@ -9,11 +9,12 @@ import { toolDefinitions, ToolDefinition } from '../../../src/server/toolDefinit
 
 describe('toolDefinitions', () => {
   describe('Schema Structure', () => {
-    it('should have 55 tool definitions', () => {
+    it('should have 59 tool definitions', () => {
       // Phase 4 Sprint 9: Added 4 graph algorithm tools
       // Phase 4 Sprint 12: Added 3 semantic search tools
       // Phase 10 Sprint 4: Added search_auto tool
-      expect(toolDefinitions).toHaveLength(55);
+      // Phase 11: Added 4 intelligent search tools (hybrid_search, analyze_query, smart_search, normalize_observations)
+      expect(toolDefinitions).toHaveLength(59);
     });
 
     it('should have unique tool names', () => {
@@ -147,6 +148,16 @@ describe('toolDefinitions', () => {
     it('should have import/export tools', () => {
       const ioTools = ['import_graph', 'export_graph'];
       for (const name of ioTools) {
+        expect(toolDefinitions.find(t => t.name === name)).toBeDefined();
+      }
+    });
+
+    it('should have intelligent search tools', () => {
+      // Phase 11: Three-layer hybrid search
+      const intelligentSearchTools = [
+        'hybrid_search', 'analyze_query', 'smart_search', 'normalize_observations'
+      ];
+      for (const name of intelligentSearchTools) {
         expect(toolDefinitions.find(t => t.name === name)).toBeDefined();
       }
     });
