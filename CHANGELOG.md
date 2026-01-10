@@ -5,6 +5,75 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.0.0] - 2026-01-10
+
+### Major Release: Phase 13 MemoryJS Extraction Complete
+
+Refactored memory-mcp to use `@danielsimonjr/memoryjs` as the core knowledge graph library. This is a major architectural change that separates the MCP server layer from the underlying knowledge graph implementation.
+
+#### Breaking Changes
+
+- **Core code extracted**: All core/, features/, search/, types/, utils/, and workers/ directories removed from memory-mcp
+- **New dependency**: Requires `@danielsimonjr/memoryjs@^1.0.0` as sole source of knowledge graph functionality
+- **Import paths changed**: All imports now come from `@danielsimonjr/memoryjs`
+
+#### What's New
+
+**Architectural Separation**:
+- memory-mcp is now a thin MCP protocol layer (~4 source files)
+- All 59 MCP tools remain available with identical functionality
+- Core knowledge graph functionality provided by memoryjs library
+
+**Source Files Removed** (72+ files):
+- `src/core/` - EntityManager, RelationManager, GraphStorage, etc.
+- `src/features/` - TagManager, IOManager, ArchiveManager, etc.
+- `src/search/` - SearchManager, BooleanSearch, FuzzySearch, SemanticSearch, etc.
+- `src/types/` - Type definitions
+- `src/utils/` - Utilities, validation, compression
+- `src/workers/` - Worker pool implementation
+
+**Retained Source Files**:
+- `src/index.ts` - Entry point with re-exports for backward compatibility
+- `src/server/MCPServer.ts` - MCP server initialization
+- `src/server/toolDefinitions.ts` - 59 MCP tool schemas
+- `src/server/toolHandlers.ts` - Tool handler implementations
+- `src/server/responseCompressor.ts` - Response compression
+
+**Tests Updated**:
+- Removed redundant unit/integration tests (covered by memoryjs)
+- Retained: server integration tests, e2e tool tests
+- 194 tests passing
+
+#### Migration Guide
+
+No API changes for MCP tool users - all 59 tools work identically.
+
+For programmatic users:
+```typescript
+// Before (still works via re-exports)
+import { KnowledgeGraphManager } from '@danielsimonjr/memory-mcp';
+
+// After (recommended)
+import { ManagerContext } from '@danielsimonjr/memoryjs';
+```
+
+#### Phase 13 Summary
+
+| Sprint | Focus | Status |
+|--------|-------|--------|
+| 1-22 | Extract memoryjs library | ✅ Complete |
+| 23 | Update dependencies, delete extracted code | ✅ Complete |
+| 24 | Update imports to memoryjs | ✅ Complete |
+| 25 | Build and test verification | ✅ Complete |
+| 26 | Version bump and release | ✅ Complete |
+
+**memoryjs Library**: `@danielsimonjr/memoryjs` v1.0.0 on npm
+- 74 TypeScript source files
+- 2882 tests across 90 test files
+- Full documentation
+
+---
+
 ## [10.1.0] - 2026-01-09
 
 ### Documentation & Test Suite Updates

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { KnowledgeGraphManager } from '../../../src/core/index.js';
+import { ManagerContext as KnowledgeGraphManager } from '@danielsimonjr/memoryjs';
 import { handleToolCall } from '../../../src/server/toolHandlers.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';

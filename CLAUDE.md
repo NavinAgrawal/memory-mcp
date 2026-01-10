@@ -26,6 +26,23 @@ This is an enhanced MCP memory server with **59 tools** (vs 11 in official versi
 
 **npm:** @danielsimonjr/memory-mcp
 
+### Phase 13: MemoryJS Extraction (In Progress)
+
+The core knowledge graph functionality is being extracted into a standalone library:
+
+**[@danielsimonjr/memoryjs](https://www.npmjs.com/package/@danielsimonjr/memoryjs)** v1.0.0 (published)
+
+| Component | memoryjs | memory-mcp |
+|-----------|----------|------------|
+| **Purpose** | Core knowledge graph library | MCP server wrapping memoryjs |
+| **Exports** | Managers, storage, search, types | MCP tools (59 tools) |
+| **Dependencies** | zod, better-sqlite3, async-mutex | memoryjs + @modelcontextprotocol/sdk |
+| **Use Case** | Standalone graph operations | AI assistant integration |
+
+**Status:** Sprints 1-22 complete (memoryjs published). Sprints 23-26 pending (refactor memory-mcp to use memoryjs as dependency → v11.0.0).
+
+After Phase 13 completion, memory-mcp will import all core functionality from memoryjs rather than containing it directly.
+
 ### Layered Architecture
 
 ```

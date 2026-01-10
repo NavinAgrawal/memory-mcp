@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { MCPServer } from '../../src/server/MCPServer.js';
-import { KnowledgeGraphManager } from '../../src/core/index.js';
+import { ManagerContext as KnowledgeGraphManager } from '@danielsimonjr/memoryjs';
 import { toolDefinitions } from '../../src/server/toolDefinitions.js';
 import { handleToolCall } from '../../src/server/toolHandlers.js';
 import { promises as fs } from 'fs';

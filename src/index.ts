@@ -1,23 +1,35 @@
 #!/usr/bin/env node
 
-import { logger, defaultMemoryPath, ensureMemoryFilePath } from './utils/index.js';
-import { ManagerContext } from './core/ManagerContext.js';
+/**
+ * MCP Memory Server Entry Point
+ *
+ * This is the main entry point for the MCP memory server.
+ * All core functionality is imported from @danielsimonjr/memoryjs.
+ *
+ * @module index
+ */
+
+import {
+  logger,
+  defaultMemoryPath,
+  ensureMemoryFilePath,
+  ManagerContext,
+  // Re-export types for backward compatibility
+  type Entity,
+  type Relation,
+  type KnowledgeGraph,
+  type GraphStats,
+  type ValidationReport,
+  type ValidationIssue,
+  type ValidationWarning,
+  type SavedSearch,
+  type TagAlias,
+  type SearchResult,
+  type BooleanQueryNode,
+  type ImportResult,
+  type CompressionResult,
+} from '@danielsimonjr/memoryjs';
 import { MCPServer } from './server/MCPServer.js';
-import type {
-  Entity,
-  Relation,
-  KnowledgeGraph,
-  GraphStats,
-  ValidationReport,
-  ValidationIssue,
-  ValidationWarning,
-  SavedSearch,
-  TagAlias,
-  SearchResult,
-  BooleanQueryNode,
-  ImportResult,
-  CompressionResult,
-} from './types/index.js';
 
 // Re-export path utilities for backward compatibility
 export { defaultMemoryPath, ensureMemoryFilePath };

@@ -1,12 +1,9 @@
 /**
  * MCP Tool Handlers
  *
- * Contains handler functions for all 51 Knowledge Graph tools.
+ * Contains handler functions for all 59 Knowledge Graph tools.
  * Handlers call managers directly via ManagerContext.
- * Phase 4: Updated to use specialized managers for single responsibility.
- * Phase 4 Sprint 9: Added 4 graph algorithm tools (find_shortest_path, find_all_paths, get_connected_components, get_centrality).
- * Phase 6: Updated to use Zod validation instead of type assertions.
- * Phase 3 Sprint 4: Added response compression for large payloads.
+ * All core functionality is imported from @danielsimonjr/memoryjs.
  *
  * @module server/toolHandlers
  */
@@ -31,14 +28,14 @@ import {
   MergeStrategySchema,
   ExportFilterSchema,
   SearchQuerySchema,
-} from '../utils/index.js';
-import type { ManagerContext } from '../core/ManagerContext.js';
+  HybridSearchManager,
+  QueryAnalyzer,
+  QueryPlanner,
+  ReflectionManager,
+  ObservationNormalizer,
+  type ManagerContext,
+} from '@danielsimonjr/memoryjs';
 import { z } from 'zod';
-import { HybridSearchManager } from '../search/HybridSearchManager.js';
-import { QueryAnalyzer } from '../search/QueryAnalyzer.js';
-import { QueryPlanner } from '../search/QueryPlanner.js';
-import { ReflectionManager } from '../search/ReflectionManager.js';
-import { ObservationNormalizer } from '../features/ObservationNormalizer.js';
 import { maybeCompressResponse } from './responseCompressor.js';
 
 /**

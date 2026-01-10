@@ -1,6 +1,6 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "10.1.0",
+  "version": "11.0.0",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, graph algorithms, semantic search, and 59 advanced tools",
   "license": "MIT",
   "engines": {
@@ -35,26 +35,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./types": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.js"
-    },
-    "./utils": {
-      "types": "./dist/utils/index.d.ts",
-      "import": "./dist/utils/index.js"
-    },
-    "./core": {
-      "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.js"
-    },
-    "./search": {
-      "types": "./dist/search/index.d.ts",
-      "import": "./dist/search/index.js"
-    },
-    "./features": {
-      "types": "./dist/features/index.d.ts",
-      "import": "./dist/features/index.js"
-    },
     "./server": {
       "types": "./dist/server/MCPServer.d.ts",
       "import": "./dist/server/MCPServer.js"
@@ -76,11 +56,9 @@
     "docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts"
   },
   "dependencies": {
-    "@danielsimonjr/workerpool": "^10.0.1",
+    "@danielsimonjr/memoryjs": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.21.1",
-    "async-mutex": "^0.5.0",
-    "better-sqlite3": "^11.7.0",
-    "zod": "^4.1.13"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

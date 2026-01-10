@@ -13,10 +13,9 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { logger } from '../utils/logger.js';
+import { logger, type ManagerContext } from '@danielsimonjr/memoryjs';
 import { toolDefinitions } from './toolDefinitions.js';
 import { handleToolCall } from './toolHandlers.js';
-import type { ManagerContext } from '../core/ManagerContext.js';
 
 /**
  * MCP Server for Knowledge Graph operations.
@@ -31,7 +30,7 @@ export class MCPServer {
     this.server = new Server(
       {
         name: "memory-server",
-        version: "0.8.0",
+        version: "11.0.0",
       },
       {
         capabilities: {

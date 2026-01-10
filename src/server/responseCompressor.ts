@@ -8,8 +8,7 @@
  * @module server/responseCompressor
  */
 
-import { compress, decompress } from '../utils/compressionUtil.js';
-import { COMPRESSION_CONFIG } from '../utils/constants.js';
+import { compress, decompress, COMPRESSION_CONFIG } from '@danielsimonjr/memoryjs';
 
 /**
  * Structure of a compressed MCP response.
