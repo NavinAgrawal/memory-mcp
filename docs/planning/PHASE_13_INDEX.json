@@ -1,0 +1,361 @@
+{
+  "phase": {
+    "number": 13,
+    "name": "MemoryJS Extraction",
+    "description": "Extract reusable knowledge graph functionality from memory-mcp into a standalone @danielsimonjr/memoryjs npm package, enabling use in non-MCP contexts while maintaining full MCP server functionality",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "sourceDocument": "docs/planning/PHASE_13_MEMORYJS_EXTRACTION_PLAN.md",
+    "planDocument": "docs/planning/PHASE_13_MEMORYJS_EXTRACTION_PLAN.md",
+    "targetVersions": {
+      "memoryjs": "1.0.0",
+      "memory-mcp": "11.0.0"
+    },
+    "currentVersion": "10.1.0"
+  },
+  "sprints": [
+    {
+      "number": 1,
+      "name": "Setup New Package",
+      "file": "PHASE_13_SPRINT_1_TODO.json",
+      "tasks": 5,
+      "effort": "3 hours",
+      "impact": "Package skeleton with TypeScript config",
+      "status": "pending"
+    },
+    {
+      "number": 2,
+      "name": "Types and Interfaces",
+      "file": "PHASE_13_SPRINT_2_TODO.json",
+      "tasks": 4,
+      "effort": "4 hours",
+      "impact": "Complete type system foundation",
+      "status": "pending"
+    },
+    {
+      "number": 3,
+      "name": "Validation Schemas",
+      "file": "PHASE_13_SPRINT_3_TODO.json",
+      "tasks": 5,
+      "effort": "3 hours",
+      "impact": "Zod validation layer",
+      "status": "pending"
+    },
+    {
+      "number": 4,
+      "name": "Basic Utilities",
+      "file": "PHASE_13_SPRINT_4_TODO.json",
+      "tasks": 11,
+      "effort": "4 hours",
+      "impact": "Core utility functions",
+      "status": "pending"
+    },
+    {
+      "number": 5,
+      "name": "Advanced Utilities",
+      "file": "PHASE_13_SPRINT_5_TODO.json",
+      "tasks": 12,
+      "effort": "5 hours",
+      "impact": "Caching, compression, parallel processing, memory monitoring",
+      "status": "pending"
+    },
+    {
+      "number": 6,
+      "name": "Core Event System",
+      "file": "PHASE_13_SPRINT_6_TODO.json",
+      "tasks": 4,
+      "effort": "2 hours",
+      "impact": "Event emitter for graph changes",
+      "status": "pending"
+    },
+    {
+      "number": 7,
+      "name": "Storage Layer",
+      "file": "PHASE_13_SPRINT_7_TODO.json",
+      "tasks": 6,
+      "effort": "6 hours",
+      "impact": "JSONL and SQLite storage adapters",
+      "status": "pending"
+    },
+    {
+      "number": 8,
+      "name": "Core Managers 1",
+      "file": "PHASE_13_SPRINT_8_TODO.json",
+      "tasks": 5,
+      "effort": "8 hours",
+      "impact": "EntityManager, RelationManager, ObservationManager",
+      "status": "pending"
+    },
+    {
+      "number": 9,
+      "name": "Core Managers 2",
+      "file": "PHASE_13_SPRINT_9_TODO.json",
+      "tasks": 4,
+      "effort": "4 hours",
+      "impact": "HierarchyManager, TransactionManager",
+      "status": "pending"
+    },
+    {
+      "number": 10,
+      "name": "Graph Traversal",
+      "file": "PHASE_13_SPRINT_10_TODO.json",
+      "tasks": 4,
+      "effort": "4 hours",
+      "impact": "BFS, DFS, shortest path, centrality algorithms",
+      "status": "pending"
+    },
+    {
+      "number": 11,
+      "name": "Feature Managers",
+      "file": "PHASE_13_SPRINT_11_TODO.json",
+      "tasks": 5,
+      "effort": "5 hours",
+      "impact": "TagManager, IOManager, AnalyticsManager",
+      "status": "pending"
+    },
+    {
+      "number": 12,
+      "name": "Compression & Archiving",
+      "file": "PHASE_13_SPRINT_12_TODO.json",
+      "tasks": 4,
+      "effort": "4 hours",
+      "impact": "CompressionManager, ArchiveManager, StreamingExporter",
+      "status": "pending"
+    },
+    {
+      "number": 13,
+      "name": "Observation Normalizer",
+      "file": "PHASE_13_SPRINT_13_TODO.json",
+      "tasks": 4,
+      "effort": "3 hours",
+      "impact": "Coreference resolution, keyword extraction",
+      "status": "pending"
+    },
+    {
+      "number": 14,
+      "name": "Basic Search",
+      "file": "PHASE_13_SPRINT_14_TODO.json",
+      "tasks": 6,
+      "effort": "5 hours",
+      "impact": "BasicSearch, RankedSearch, BooleanSearch, FuzzySearch",
+      "status": "pending"
+    },
+    {
+      "number": 15,
+      "name": "Semantic Search",
+      "file": "PHASE_13_SPRINT_15_TODO.json",
+      "tasks": 6,
+      "effort": "5 hours",
+      "impact": "VectorStore, EmbeddingService, SemanticSearch",
+      "status": "pending"
+    },
+    {
+      "number": 16,
+      "name": "Hybrid Search Components",
+      "file": "PHASE_13_SPRINT_16_TODO.json",
+      "tasks": 8,
+      "effort": "6 hours",
+      "impact": "Three-layer intelligent search with Phase 12 optimizations",
+      "status": "pending"
+    },
+    {
+      "number": 17,
+      "name": "SearchManager & Saved Searches",
+      "file": "PHASE_13_SPRINT_17_TODO.json",
+      "tasks": 5,
+      "effort": "4 hours",
+      "impact": "Search orchestration and persistence",
+      "status": "pending"
+    },
+    {
+      "number": 18,
+      "name": "ManagerContext & Workers",
+      "file": "PHASE_13_SPRINT_18_TODO.json",
+      "tasks": 5,
+      "effort": "5 hours",
+      "impact": "Central context holder, worker pool",
+      "status": "pending"
+    },
+    {
+      "number": 19,
+      "name": "Public API & Build",
+      "file": "PHASE_13_SPRINT_19_TODO.json",
+      "tasks": 6,
+      "effort": "4 hours",
+      "impact": "Index exports, build config, npm publish",
+      "status": "pending"
+    },
+    {
+      "number": 20,
+      "name": "Extract Tests",
+      "file": "PHASE_13_SPRINT_20_TODO.json",
+      "tasks": 10,
+      "effort": "8 hours",
+      "impact": "~1000 tests migrated to memoryjs",
+      "status": "pending"
+    },
+    {
+      "number": 21,
+      "name": "Documentation",
+      "file": "PHASE_13_SPRINT_21_TODO.json",
+      "tasks": 6,
+      "effort": "4 hours",
+      "impact": "README, API docs, migration guide",
+      "status": "pending"
+    },
+    {
+      "number": 22,
+      "name": "Publish memoryjs",
+      "file": "PHASE_13_SPRINT_22_TODO.json",
+      "tasks": 5,
+      "effort": "2 hours",
+      "impact": "@danielsimonjr/memoryjs@1.0.0 on npm",
+      "status": "pending"
+    },
+    {
+      "number": 23,
+      "name": "Refactor memory-mcp",
+      "file": "PHASE_13_SPRINT_23_TODO.json",
+      "tasks": 6,
+      "effort": "5 hours",
+      "impact": "Remove extracted code, add memoryjs dependency",
+      "status": "pending"
+    },
+    {
+      "number": 24,
+      "name": "Update Imports",
+      "file": "PHASE_13_SPRINT_24_TODO.json",
+      "tasks": 6,
+      "effort": "4 hours",
+      "impact": "All imports using @danielsimonjr/memoryjs",
+      "status": "pending"
+    },
+    {
+      "number": 25,
+      "name": "Verify MCP Functionality",
+      "file": "PHASE_13_SPRINT_25_TODO.json",
+      "tasks": 8,
+      "effort": "6 hours",
+      "impact": "All 59 MCP tools verified working",
+      "status": "pending"
+    },
+    {
+      "number": 26,
+      "name": "Merge and Release",
+      "file": "PHASE_13_SPRINT_26_TODO.json",
+      "tasks": 9,
+      "effort": "3 hours",
+      "impact": "memory-mcp@11.0.0 release",
+      "status": "pending"
+    }
+  ],
+  "summary": {
+    "totalSprints": 26,
+    "totalTasks": 154,
+    "totalEffort": "117 hours",
+    "estimatedDuration": "3-4 weeks focused development"
+  },
+  "milestones": {
+    "memoryjs_foundation": {
+      "sprints": [1, 2, 3, 4, 5, 6],
+      "description": "Package setup, types, utilities"
+    },
+    "memoryjs_storage": {
+      "sprints": [7, 8, 9, 10],
+      "description": "Storage layer and core managers"
+    },
+    "memoryjs_features": {
+      "sprints": [11, 12, 13],
+      "description": "Feature managers"
+    },
+    "memoryjs_search": {
+      "sprints": [14, 15, 16, 17],
+      "description": "Complete search system"
+    },
+    "memoryjs_complete": {
+      "sprints": [18, 19, 20, 21, 22],
+      "description": "API, tests, docs, publish"
+    },
+    "memory_mcp_integration": {
+      "sprints": [23, 24, 25, 26],
+      "description": "Refactor, integrate, verify, release"
+    }
+  },
+  "dependencies": {
+    "sprint1": [],
+    "sprint2": ["sprint1"],
+    "sprint3": ["sprint2"],
+    "sprint4": ["sprint3"],
+    "sprint5": ["sprint4"],
+    "sprint6": ["sprint2"],
+    "sprint7": ["sprint3", "sprint6"],
+    "sprint8": ["sprint7"],
+    "sprint9": ["sprint8"],
+    "sprint10": ["sprint9"],
+    "sprint11": ["sprint7"],
+    "sprint12": ["sprint11"],
+    "sprint13": ["sprint5"],
+    "sprint14": ["sprint3", "sprint5"],
+    "sprint15": ["sprint14"],
+    "sprint16": ["sprint15"],
+    "sprint17": ["sprint16"],
+    "sprint18": ["sprint10", "sprint12", "sprint13", "sprint17"],
+    "sprint19": ["sprint18"],
+    "sprint20": ["sprint19"],
+    "sprint21": ["sprint19"],
+    "sprint22": ["sprint20", "sprint21"],
+    "sprint23": ["sprint22"],
+    "sprint24": ["sprint23"],
+    "sprint25": ["sprint24"],
+    "sprint26": ["sprint25"]
+  },
+  "packages": {
+    "memoryjs": {
+      "name": "@danielsimonjr/memoryjs",
+      "version": "1.0.0",
+      "description": "Core knowledge graph library with search, storage, and graph algorithms",
+      "files": 75,
+      "exports": [
+        "ManagerContext",
+        "EntityManager",
+        "RelationManager",
+        "SearchManager",
+        "IOManager",
+        "TagManager",
+        "GraphTraversal",
+        "Entity",
+        "Relation",
+        "KnowledgeGraph"
+      ]
+    },
+    "memory-mcp": {
+      "name": "@danielsimonjr/memory-mcp",
+      "version": "11.0.0",
+      "description": "MCP server providing 59 knowledge graph tools",
+      "dependency": "@danielsimonjr/memoryjs@^1.0.0",
+      "remainingFiles": [
+        "src/index.ts",
+        "src/server/MCPServer.ts",
+        "src/server/toolDefinitions.ts",
+        "src/server/toolHandlers.ts",
+        "src/server/responseCompressor.ts"
+      ]
+    }
+  },
+  "testStrategy": {
+    "memoryjs": "~1000 tests covering core, search, features, utils",
+    "memory-mcp": "~500 tests covering MCP protocol, tools, e2e",
+    "note": "E2E and server tests remain in memory-mcp"
+  },
+  "releaseChecklist": [
+    "All 26 sprints completed",
+    "@danielsimonjr/memoryjs@1.0.0 published",
+    "memory-mcp uses memoryjs dependency",
+    "All 59 MCP tools working",
+    "No performance regression",
+    "Documentation complete",
+    "Changelog updated",
+    "@danielsimonjr/memory-mcp@11.0.0 published"
+  ]
+}

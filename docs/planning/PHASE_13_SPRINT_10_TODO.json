@@ -1,0 +1,131 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 10,
+    "name": "Core Managers Part 1",
+    "goal": "Extract GraphStorage, GraphEventEmitter, EntityManager, RelationManager",
+    "effort": "5 hours",
+    "impact": "Core entity and relation CRUD operations",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.10.1",
+      "name": "Create core directory",
+      "description": "Create memoryjs/src/core/ directory",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/src/core/"
+      ],
+      "acceptanceCriteria": [
+        "Directory memoryjs/src/core/ exists"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.10.2",
+      "name": "Extract GraphStorage.ts",
+      "description": "Refactor GraphStorage to use IStorageAdapter instead of direct file/SQLite access",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1.5 hours",
+      "files": [
+        "memoryjs/src/core/GraphStorage.ts"
+      ],
+      "acceptanceCriteria": [
+        "GraphStorage accepts IStorageAdapter in constructor",
+        "All file/SQLite logic delegated to adapter",
+        "In-memory cache maintained",
+        "Indexes (NameIndex, TypeIndex, ObservationIndex) work"
+      ],
+      "tests": [
+        "tests/unit/core/GraphStorage.test.ts"
+      ]
+    },
+    {
+      "id": "13.10.3",
+      "name": "Extract GraphEventEmitter.ts",
+      "description": "Copy GraphEventEmitter for event-driven architecture",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/core/GraphEventEmitter.ts"
+      ],
+      "acceptanceCriteria": [
+        "Event emitter copied",
+        "All event types preserved"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.10.4",
+      "name": "Extract EntityManager.ts",
+      "description": "Copy EntityManager and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/core/EntityManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "All entity CRUD operations work",
+        "Hierarchy operations preserved",
+        "Archive operations work",
+        "Imports updated to local modules"
+      ],
+      "tests": [
+        "tests/unit/core/EntityManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.10.5",
+      "name": "Extract RelationManager.ts",
+      "description": "Copy RelationManager and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/core/RelationManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "All relation CRUD operations work",
+        "Cascade delete on entity removal",
+        "Imports updated to local modules"
+      ],
+      "tests": [
+        "tests/unit/core/RelationManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.10.6",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit core managers part 1",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Basic tests pass",
+        "Commit message: 'feat: add core managers (part 1)'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.9"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/core/GraphStorage.ts",
+    "memoryjs/src/core/GraphEventEmitter.ts",
+    "memoryjs/src/core/EntityManager.ts",
+    "memoryjs/src/core/RelationManager.ts"
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 2,
+    "name": "Types Module",
+    "goal": "Extract type definitions from memory-mcp to memoryjs",
+    "effort": "2 hours",
+    "impact": "Foundation for all other modules",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.2.1",
+      "name": "Extract types.ts",
+      "description": "Copy src/types/types.ts to memoryjs with all Entity, Relation, KnowledgeGraph interfaces",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memory-mcp/src/types/types.ts",
+        "memoryjs/src/types/types.ts"
+      ],
+      "acceptanceCriteria": [
+        "All interfaces copied: Entity, Relation, KnowledgeGraph, etc.",
+        "No import changes needed (self-contained)",
+        "TypeScript compiles without errors"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.2.2",
+      "name": "Create types/index.ts",
+      "description": "Create barrel export for types module",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/types/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All types re-exported from index.ts",
+        "Import works: import { Entity } from './types/index.js'"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.2.3",
+      "name": "Verify Types Module",
+      "description": "Run typecheck to verify types module compiles correctly",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes with 0 errors",
+        "npm run build succeeds"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.2.4",
+      "name": "Commit Types Module",
+      "description": "Commit types module to memoryjs main branch",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'feat: add types module'",
+        "All type files committed"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.1"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/types/types.ts",
+    "memoryjs/src/types/index.ts",
+    "Verified typecheck passes"
+  ]
+}

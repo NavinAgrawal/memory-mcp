@@ -1,0 +1,246 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 20,
+    "name": "Extract Tests",
+    "goal": "Migrate all non-MCP tests from memory-mcp to memoryjs (e2e and server tests remain)",
+    "effort": "8 hours",
+    "impact": "~1000 tests covering core functionality",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0",
+    "notes": "E2E tests (tests/e2e/*) and server tests (tests/unit/server/*, tests/integration/server.test.ts) remain in memory-mcp as they test MCP-specific functionality"
+  },
+  "tasks": [
+    {
+      "id": "13.20.1",
+      "name": "Copy Unit Tests - Core",
+      "description": "Copy tests/unit/core/ tests and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1.5 hours",
+      "files": [
+        "memoryjs/tests/unit/core/"
+      ],
+      "acceptanceCriteria": [
+        "EntityManager.test.ts migrated",
+        "RelationManager.test.ts migrated",
+        "GraphStorage.test.ts migrated",
+        "SQLiteStorage.test.ts migrated",
+        "GraphTraversal.test.ts migrated",
+        "GraphEventEmitter.test.ts migrated",
+        "ManagerContext.test.ts migrated",
+        "TransactionManager.test.ts migrated",
+        "BatchTransaction.test.ts migrated",
+        "HierarchyManager.test.ts migrated",
+        "ObservationManager.test.ts migrated",
+        "StorageFactory.test.ts migrated",
+        "ConcurrencyControl.test.ts migrated",
+        "All imports updated to @danielsimonjr/memoryjs"
+      ],
+      "tests": [
+        "memoryjs/tests/unit/core/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.2",
+      "name": "Copy Unit Tests - Features",
+      "description": "Copy tests/unit/features/ tests and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1.5 hours",
+      "files": [
+        "memoryjs/tests/unit/features/"
+      ],
+      "acceptanceCriteria": [
+        "TagManager.test.ts migrated",
+        "IOManager tests migrated",
+        "CompressionManager.test.ts migrated",
+        "All feature tests pass"
+      ],
+      "tests": [
+        "memoryjs/tests/unit/features/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.3",
+      "name": "Copy Unit Tests - Search",
+      "description": "Copy tests/unit/search/ tests and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "2 hours",
+      "files": [
+        "memoryjs/tests/unit/search/"
+      ],
+      "acceptanceCriteria": [
+        "All search tests migrated (~500 tests)",
+        "BasicSearch, RankedSearch, BooleanSearch, FuzzySearch tests",
+        "HybridSearchManager, QueryAnalyzer, QueryPlanCache tests",
+        "SemanticSearch, VectorStore, EmbeddingService, EmbeddingCache tests",
+        "BM25Search, OptimizedInvertedIndex, HybridScorer tests",
+        "ParallelSearchExecutor, IncrementalIndexer tests",
+        "QueryCostEstimator, EarlyTerminationManager, ReflectionManager tests",
+        "QuantizedVectorStore, TFIDFIndexManager, TFIDFEventSync tests",
+        "All search tests pass"
+      ],
+      "tests": [
+        "memoryjs/tests/unit/search/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.4",
+      "name": "Copy Unit Tests - Utils",
+      "description": "Copy tests/unit/utils/ tests and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/tests/unit/utils/"
+      ],
+      "acceptanceCriteria": [
+        "All utility tests migrated (~250 tests)",
+        "entityUtils, indexes, formatters, schemas tests",
+        "compressionUtil, compressedCache tests",
+        "searchAlgorithms, searchCache tests",
+        "operationUtils, parallelUtils, taskScheduler tests",
+        "BatchProcessor, MemoryMonitor, WorkerPoolManager tests",
+        "errors, logger tests"
+      ],
+      "tests": [
+        "memoryjs/tests/unit/utils/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.5",
+      "name": "Copy Unit Tests - Workers",
+      "description": "Copy tests/unit/workers/ tests and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/tests/unit/workers/"
+      ],
+      "acceptanceCriteria": [
+        "WorkerPool.test.ts migrated",
+        "levenshteinWorker.test.ts migrated",
+        "Worker integration works"
+      ],
+      "tests": [
+        "memoryjs/tests/unit/workers/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.6",
+      "name": "Copy Integration Tests",
+      "description": "Copy non-MCP integration tests (server.test.ts stays in memory-mcp)",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/tests/integration/"
+      ],
+      "acceptanceCriteria": [
+        "workflows.test.ts migrated (non-MCP parts)",
+        "hybrid-search.test.ts migrated",
+        "smart-search.test.ts migrated",
+        "streaming-export.test.ts migrated",
+        "backup-compression.test.ts migrated",
+        "compression-optimization.test.ts migrated",
+        "operation-progress.test.ts migrated",
+        "worker-pool-integration.test.ts migrated",
+        "NOTE: server.test.ts remains in memory-mcp"
+      ],
+      "tests": [
+        "memoryjs/tests/integration/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.7",
+      "name": "Copy Performance Tests",
+      "description": "Copy performance benchmark tests",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/tests/performance/"
+      ],
+      "acceptanceCriteria": [
+        "benchmarks.test.ts migrated",
+        "write-performance.test.ts migrated",
+        "compression-benchmarks.test.ts migrated",
+        "v10-benchmarks.test.ts migrated",
+        "parallel-benchmarks.test.ts migrated",
+        "query-execution-benchmarks.test.ts migrated",
+        "embedding-benchmarks.test.ts migrated",
+        "search-algorithm-benchmarks.test.ts migrated",
+        "All Phase 12 benchmark tests work in memoryjs context"
+      ],
+      "tests": [
+        "memoryjs/tests/performance/*.test.ts"
+      ]
+    },
+    {
+      "id": "13.20.8",
+      "name": "Copy Edge Case and Root Tests",
+      "description": "Copy edge-cases and root level tests",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/tests/edge-cases/",
+        "memoryjs/tests/"
+      ],
+      "acceptanceCriteria": [
+        "edge-cases.test.ts migrated",
+        "knowledge-graph.test.ts migrated",
+        "file-path.test.ts migrated"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.20.9",
+      "name": "Run Full Test Suite",
+      "description": "Run all tests and fix any failures",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm test passes with ~1000 tests",
+        "Coverage meets threshold",
+        "No flaky tests"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.20.10",
+      "name": "Commit Tests",
+      "description": "Commit comprehensive test suite",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'test: add comprehensive test suite'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.19"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "~200 core tests (13 test files)",
+    "~100 feature tests (6 test files)",
+    "~500 search tests (25 test files)",
+    "~150 utility tests (12 test files)",
+    "~50 worker tests (2 test files)",
+    "~100 integration tests (8 test files, excluding server.test.ts)",
+    "~100 performance tests (12 test files)",
+    "~50 edge case and root tests (3 test files)",
+    "All tests passing (~1000 total)",
+    "NOTE: E2E tests and server unit tests remain in memory-mcp"
+  ]
+}

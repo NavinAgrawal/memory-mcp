@@ -1,0 +1,100 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 8,
+    "name": "Storage Adapters",
+    "goal": "Implement JsonlStorageAdapter and SqliteStorageAdapter",
+    "effort": "6 hours",
+    "impact": "Pluggable storage backends",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.8.1",
+      "name": "Create JsonlStorageAdapter",
+      "description": "Implement IStorageAdapter for JSONL file storage, extracting logic from GraphStorage.ts",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "2 hours",
+      "files": [
+        "memoryjs/src/adapters/storage/JsonlStorageAdapter.ts"
+      ],
+      "acceptanceCriteria": [
+        "Implements IStorageAdapter interface",
+        "loadGraph reads JSONL file",
+        "saveGraph writes JSONL file",
+        "getMetadata returns file stats",
+        "Handles file not exists gracefully"
+      ],
+      "tests": [
+        "tests/unit/adapters/JsonlStorageAdapter.test.ts"
+      ]
+    },
+    {
+      "id": "13.8.2",
+      "name": "Create SqliteStorageAdapter",
+      "description": "Implement IStorageAdapter for SQLite storage, extracting logic from SQLiteStorage.ts",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "3 hours",
+      "files": [
+        "memoryjs/src/adapters/storage/SqliteStorageAdapter.ts"
+      ],
+      "acceptanceCriteria": [
+        "Implements IStorageAdapter interface",
+        "Uses better-sqlite3 for native performance",
+        "WAL mode enabled by default",
+        "FTS5 full-text search support",
+        "Proper connection close on terminate"
+      ],
+      "tests": [
+        "tests/unit/adapters/SqliteStorageAdapter.test.ts"
+      ]
+    },
+    {
+      "id": "13.8.3",
+      "name": "Create createStorageAdapter Factory",
+      "description": "Create factory function to instantiate storage adapters from config",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/adapters/storage/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "createStorageAdapter(config) returns correct adapter",
+        "Supports 'jsonl' and 'sqlite' types",
+        "Passes options to adapters"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.8.4",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit storage adapters",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Adapter tests pass",
+        "Commit message: 'feat: add storage adapters'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.7"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/adapters/storage/JsonlStorageAdapter.ts",
+    "memoryjs/src/adapters/storage/SqliteStorageAdapter.ts",
+    "memoryjs/src/adapters/storage/index.ts",
+    "createStorageAdapter factory function"
+  ]
+}

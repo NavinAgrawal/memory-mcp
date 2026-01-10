@@ -1,0 +1,130 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 13,
+    "name": "Basic Search Components",
+    "goal": "Extract BasicSearch, SearchFilterChain, SearchSuggestions, SavedSearchManager",
+    "effort": "4 hours",
+    "impact": "Foundation search functionality",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.13.1",
+      "name": "Create search directory",
+      "description": "Create memoryjs/src/search/ directory",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/src/search/"
+      ],
+      "acceptanceCriteria": [
+        "Directory memoryjs/src/search/ exists"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.13.2",
+      "name": "Extract BasicSearch.ts",
+      "description": "Copy BasicSearch for simple text search",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/search/BasicSearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "Text search on entity names and observations",
+        "Tag and importance filtering",
+        "Date range filtering",
+        "Imports updated"
+      ],
+      "tests": [
+        "tests/unit/search/BasicSearch.test.ts"
+      ]
+    },
+    {
+      "id": "13.13.3",
+      "name": "Extract SearchFilterChain.ts",
+      "description": "Copy SearchFilterChain for composable filters",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/SearchFilterChain.ts"
+      ],
+      "acceptanceCriteria": [
+        "Filter chain pattern works",
+        "All filter types preserved"
+      ],
+      "tests": [
+        "tests/unit/search/SearchFilterChain.test.ts"
+      ]
+    },
+    {
+      "id": "13.13.4",
+      "name": "Extract SearchSuggestions.ts",
+      "description": "Copy SearchSuggestions for 'did you mean?' functionality",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/SearchSuggestions.ts"
+      ],
+      "acceptanceCriteria": [
+        "Suggestion generation works",
+        "Levenshtein-based matching"
+      ],
+      "tests": [
+        "tests/unit/search/SearchSuggestions.test.ts"
+      ]
+    },
+    {
+      "id": "13.13.5",
+      "name": "Extract SavedSearchManager.ts",
+      "description": "Copy SavedSearchManager for saved search queries",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/SavedSearchManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Save, list, execute, delete searches work",
+        "JSONL persistence preserved"
+      ],
+      "tests": [
+        "tests/unit/search/SavedSearchManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.13.6",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit basic search components",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Search tests pass",
+        "Commit message: 'feat: add basic search components'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.12"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/search/BasicSearch.ts",
+    "memoryjs/src/search/SearchFilterChain.ts",
+    "memoryjs/src/search/SearchSuggestions.ts",
+    "memoryjs/src/search/SavedSearchManager.ts"
+  ]
+}

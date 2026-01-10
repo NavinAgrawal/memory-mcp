@@ -1,0 +1,117 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 12,
+    "name": "ManagerContext",
+    "goal": "Extract ManagerContext with adapter configuration support",
+    "effort": "4 hours",
+    "impact": "Central context for all manager access",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.12.1",
+      "name": "Create ManagerContextConfig Interface",
+      "description": "Define configuration interface for ManagerContext with storage and worker adapter options",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/core/ManagerContext.ts"
+      ],
+      "acceptanceCriteria": [
+        "ManagerContextConfig interface defined",
+        "Supports StorageConfig or IStorageAdapter",
+        "Supports WorkerConfig or IWorkerAdapter",
+        "Optional paths for saved searches and tag aliases"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.12.2",
+      "name": "Extract ManagerContext.ts",
+      "description": "Copy and refactor ManagerContext to use adapter configuration",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "2 hours",
+      "files": [
+        "memoryjs/src/core/ManagerContext.ts"
+      ],
+      "acceptanceCriteria": [
+        "Accepts ManagerContextConfig or legacy string path",
+        "Initializes storage adapter from config",
+        "Initializes worker adapter from config",
+        "Lazy initialization of all managers preserved",
+        "Type guards for adapter detection"
+      ],
+      "tests": [
+        "tests/unit/core/ManagerContext.test.ts"
+      ]
+    },
+    {
+      "id": "13.12.3",
+      "name": "Create core/index.ts",
+      "description": "Create barrel export for core module",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/core/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All core managers exported",
+        "ManagerContext as default export",
+        "ManagerContextConfig type exported"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.12.4",
+      "name": "Integration Test",
+      "description": "Create basic integration test for ManagerContext with both adapters",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "tests/integration/ManagerContext.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Test creates ManagerContext with JSONL adapter",
+        "Test creates ManagerContext with SQLite adapter",
+        "Entity CRUD works through context",
+        "Search works through context"
+      ],
+      "tests": [
+        "tests/integration/ManagerContext.test.ts"
+      ]
+    },
+    {
+      "id": "13.12.5",
+      "name": "Verify and Commit",
+      "description": "Run typecheck, tests, and commit ManagerContext",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Integration tests pass",
+        "Commit message: 'feat: add ManagerContext with adapter support'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.11"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/core/ManagerContext.ts",
+    "memoryjs/src/core/index.ts",
+    "ManagerContextConfig interface",
+    "Integration tests"
+  ]
+}

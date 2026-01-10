@@ -1,0 +1,132 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 1,
+    "name": "Repository Setup",
+    "goal": "Initialize memoryjs repository with package configuration and create feature branch in memory-mcp",
+    "effort": "4 hours",
+    "impact": "Foundation for extraction",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.1.1",
+      "name": "Create memoryjs Repository",
+      "description": "Create new repository at C:\\Users\\danie\\Dropbox\\github\\memoryjs with git init and directory structure",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Directory created at C:\\Users\\danie\\Dropbox\\github\\memoryjs",
+        "Git repository initialized",
+        "Directory structure created: src/{core,features,search,types,utils,workers,adapters/{storage,workers}}, tests/{unit,integration}, docs"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.1.2",
+      "name": "Initialize package.json",
+      "description": "Create package.json with @danielsimonjr/memoryjs configuration including exports, dependencies, and scripts",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/package.json"
+      ],
+      "acceptanceCriteria": [
+        "Package name set to @danielsimonjr/memoryjs",
+        "Version set to 1.0.0",
+        "Type set to module",
+        "Exports configured for . and ./adapters",
+        "Dependencies: zod, better-sqlite3, @danielsimonjr/workerpool",
+        "DevDependencies: TypeScript, Vitest, types"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.1.3",
+      "name": "Initialize tsconfig.json",
+      "description": "Create TypeScript configuration for ES2022 target with NodeNext module resolution",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/tsconfig.json"
+      ],
+      "acceptanceCriteria": [
+        "Target: ES2022",
+        "Module: NodeNext",
+        "Strict mode enabled",
+        "Declaration files enabled",
+        "Source maps enabled"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.1.4",
+      "name": "Create vitest.config.ts",
+      "description": "Configure Vitest for memoryjs testing with coverage",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/vitest.config.ts"
+      ],
+      "acceptanceCriteria": [
+        "Vitest configured for TypeScript",
+        "Coverage enabled with v8 provider",
+        "Test patterns set for tests/**/*.test.ts"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.1.5",
+      "name": "Create Feature Branch in memory-mcp",
+      "description": "Create feature/memoryjs-extraction branch in memory-mcp repository",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Branch feature/memoryjs-extraction created",
+        "All current tests pass on new branch",
+        "Tag created for pre-extraction state"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.1.6",
+      "name": "Create Initial Commit Structure",
+      "description": "Create README.md, LICENSE, .gitignore and make initial commit",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/README.md",
+        "memoryjs/LICENSE",
+        "memoryjs/.gitignore"
+      ],
+      "acceptanceCriteria": [
+        "README.md with project overview",
+        "MIT LICENSE file",
+        ".gitignore for node_modules, dist, coverage",
+        "Initial commit created"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [],
+  "blockedBy": [],
+  "deliverables": [
+    "Initialized memoryjs repository",
+    "package.json with full configuration",
+    "tsconfig.json for TypeScript compilation",
+    "vitest.config.ts for testing",
+    "Feature branch in memory-mcp",
+    "Initial project documentation"
+  ]
+}

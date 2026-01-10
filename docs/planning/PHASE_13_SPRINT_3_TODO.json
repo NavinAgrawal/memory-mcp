@@ -1,0 +1,71 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 3,
+    "name": "Errors Module",
+    "goal": "Extract error classes from memory-mcp to memoryjs",
+    "effort": "1 hour",
+    "impact": "Error handling foundation for all modules",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.3.1",
+      "name": "Create utils directory",
+      "description": "Create memoryjs/src/utils/ directory structure",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/src/utils/"
+      ],
+      "acceptanceCriteria": [
+        "Directory memoryjs/src/utils/ exists"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.3.2",
+      "name": "Extract errors.ts",
+      "description": "Copy src/utils/errors.ts with all 12 error classes",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memory-mcp/src/utils/errors.ts",
+        "memoryjs/src/utils/errors.ts"
+      ],
+      "acceptanceCriteria": [
+        "All error classes copied: KnowledgeGraphError, EntityNotFoundError, etc.",
+        "No external dependencies required",
+        "TypeScript compiles without errors"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.3.3",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit errors module",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Commit message: 'feat: add error classes'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.2"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/utils/errors.ts",
+    "All 12 error classes available"
+  ]
+}

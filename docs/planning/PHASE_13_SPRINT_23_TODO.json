@@ -1,0 +1,101 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 23,
+    "name": "Update memory-mcp Dependencies",
+    "goal": "Update memory-mcp to depend on memoryjs and remove extracted code",
+    "effort": "4 hours",
+    "impact": "memory-mcp uses memoryjs as dependency",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memory-mcp@11.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.23.1",
+      "name": "Switch to Feature Branch",
+      "description": "Ensure working on feature/memoryjs-extraction branch",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "On feature/memoryjs-extraction branch"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.23.2",
+      "name": "Update package.json",
+      "description": "Add memoryjs dependency and update version to 11.0.0",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memory-mcp/package.json"
+      ],
+      "acceptanceCriteria": [
+        "Version updated to 11.0.0",
+        "@danielsimonjr/memoryjs@^1.0.0 added to dependencies",
+        "Removed dependencies that moved to memoryjs (if any duplicates)"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.23.3",
+      "name": "Delete Extracted Directories",
+      "description": "Remove src/core/, src/features/, src/search/, src/types/, src/utils/, src/workers/",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "src/core/ deleted",
+        "src/features/ deleted",
+        "src/search/ deleted",
+        "src/types/ deleted",
+        "src/utils/ deleted",
+        "src/workers/ deleted",
+        "Only src/server/ and src/index.ts remain"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.23.4",
+      "name": "Install Dependencies",
+      "description": "Run npm install to get memoryjs",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm install succeeds",
+        "@danielsimonjr/memoryjs in node_modules"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.23.5",
+      "name": "Commit Dependency Changes",
+      "description": "Commit package.json update and deleted directories",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'refactor: remove extracted modules'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.22"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "Updated package.json with memoryjs dependency",
+    "Removed extracted source directories",
+    "Lean memory-mcp structure"
+  ]
+}

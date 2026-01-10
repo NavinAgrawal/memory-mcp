@@ -1,0 +1,240 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 5,
+    "name": "Advanced Utilities",
+    "goal": "Extract advanced utility modules with internal dependencies (including Phase 12 additions)",
+    "effort": "5 hours",
+    "impact": "Caching, compression, parallel processing, memory monitoring support",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.5.1",
+      "name": "Extract indexes.ts",
+      "description": "Copy src/utils/indexes.ts with type imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/utils/indexes.ts"
+      ],
+      "acceptanceCriteria": [
+        "NameIndex, TypeIndex, ObservationIndex copied",
+        "Imports updated to local types"
+      ],
+      "tests": [
+        "tests/unit/utils/indexes.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.2",
+      "name": "Extract searchCache.ts",
+      "description": "Copy src/utils/searchCache.ts with type imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/utils/searchCache.ts"
+      ],
+      "acceptanceCriteria": [
+        "Search cache implementation copied",
+        "LRU eviction logic included"
+      ],
+      "tests": [
+        "tests/unit/utils/searchCache.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.3",
+      "name": "Extract compressionUtil.ts",
+      "description": "Copy src/utils/compressionUtil.ts (no dependencies)",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/compressionUtil.ts"
+      ],
+      "acceptanceCriteria": [
+        "Brotli compression utilities copied",
+        "Node.js zlib integration works"
+      ],
+      "tests": [
+        "tests/unit/utils/compressionUtil.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.4",
+      "name": "Extract compressedCache.ts",
+      "description": "Copy src/utils/compressedCache.ts with compressionUtil import",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/utils/compressedCache.ts"
+      ],
+      "acceptanceCriteria": [
+        "Compressed LRU cache copied",
+        "Imports updated to ./compressionUtil.js"
+      ],
+      "tests": [
+        "tests/unit/utils/compressedCache.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.5",
+      "name": "Extract operationUtils.ts",
+      "description": "Copy src/utils/operationUtils.ts (no dependencies)",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/operationUtils.ts"
+      ],
+      "acceptanceCriteria": [
+        "Operation utilities copied"
+      ],
+      "tests": [
+        "tests/unit/utils/operationUtils.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.6",
+      "name": "Extract parallelUtils.ts",
+      "description": "Copy src/utils/parallelUtils.ts (no dependencies)",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/parallelUtils.ts"
+      ],
+      "acceptanceCriteria": [
+        "Parallel processing utilities copied"
+      ],
+      "tests": [
+        "tests/unit/utils/parallelUtils.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.7",
+      "name": "Extract taskScheduler.ts",
+      "description": "Copy src/utils/taskScheduler.ts (no dependencies)",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/taskScheduler.ts"
+      ],
+      "acceptanceCriteria": [
+        "Task scheduler implementation copied"
+      ],
+      "tests": [
+        "tests/unit/utils/taskScheduler.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.8",
+      "name": "Extract BatchProcessor.ts (Phase 12)",
+      "description": "Copy src/utils/BatchProcessor.ts for batch processing operations",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "20 minutes",
+      "files": [
+        "memoryjs/src/utils/BatchProcessor.ts"
+      ],
+      "acceptanceCriteria": [
+        "Generic batch processing class copied",
+        "All batch modes work"
+      ],
+      "tests": [
+        "tests/unit/utils/BatchProcessor.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.9",
+      "name": "Extract MemoryMonitor.ts (Phase 12)",
+      "description": "Copy src/utils/MemoryMonitor.ts for centralized memory tracking",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "20 minutes",
+      "files": [
+        "memoryjs/src/utils/MemoryMonitor.ts"
+      ],
+      "acceptanceCriteria": [
+        "Memory monitoring class copied",
+        "Heap usage tracking works"
+      ],
+      "tests": [
+        "tests/unit/utils/MemoryMonitor.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.10",
+      "name": "Extract WorkerPoolManager.ts (Phase 12)",
+      "description": "Copy src/utils/WorkerPoolManager.ts for unified worker pool management",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "20 minutes",
+      "files": [
+        "memoryjs/src/utils/WorkerPoolManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Worker pool manager copied",
+        "Integrates with @danielsimonjr/workerpool"
+      ],
+      "tests": [
+        "tests/unit/utils/WorkerPoolManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.5.11",
+      "name": "Create utils/index.ts",
+      "description": "Create barrel export for all utility modules including Phase 12 additions",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/utils/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All 18 utilities re-exported from index.ts",
+        "Import works: import { ... } from './utils/index.js'"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.5.12",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit advanced utilities",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Commit message: 'feat: add utility modules'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.4"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/utils/indexes.ts",
+    "memoryjs/src/utils/searchCache.ts",
+    "memoryjs/src/utils/compressionUtil.ts",
+    "memoryjs/src/utils/compressedCache.ts",
+    "memoryjs/src/utils/operationUtils.ts",
+    "memoryjs/src/utils/parallelUtils.ts",
+    "memoryjs/src/utils/taskScheduler.ts",
+    "memoryjs/src/utils/BatchProcessor.ts",
+    "memoryjs/src/utils/MemoryMonitor.ts",
+    "memoryjs/src/utils/WorkerPoolManager.ts",
+    "memoryjs/src/utils/index.ts"
+  ]
+}

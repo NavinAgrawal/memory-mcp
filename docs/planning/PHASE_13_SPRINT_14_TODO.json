@@ -1,0 +1,149 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 14,
+    "name": "Advanced Search Components",
+    "goal": "Extract RankedSearch, BooleanSearch, FuzzySearch, TF-IDF components",
+    "effort": "5 hours",
+    "impact": "Advanced search algorithms",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.14.1",
+      "name": "Extract RankedSearch.ts",
+      "description": "Copy RankedSearch for TF-IDF ranked results",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/RankedSearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "TF-IDF ranking works",
+        "Results sorted by relevance score"
+      ],
+      "tests": [
+        "tests/unit/search/RankedSearch.test.ts"
+      ]
+    },
+    {
+      "id": "13.14.2",
+      "name": "Extract BooleanSearch.ts",
+      "description": "Copy BooleanSearch for AND/OR/NOT queries",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/BooleanSearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "Boolean operators work",
+        "Query parsing correct"
+      ],
+      "tests": [
+        "tests/unit/search/BooleanSearch.test.ts"
+      ]
+    },
+    {
+      "id": "13.14.3",
+      "name": "Extract FuzzySearch.ts",
+      "description": "Copy FuzzySearch and update to use IWorkerAdapter",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1.5 hours",
+      "files": [
+        "memoryjs/src/search/FuzzySearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "Fuzzy matching with configurable threshold",
+        "Uses IWorkerAdapter when available",
+        "Falls back to sync when no workers",
+        "Levenshtein distance calculation"
+      ],
+      "tests": [
+        "tests/unit/search/FuzzySearch.test.ts"
+      ]
+    },
+    {
+      "id": "13.14.4",
+      "name": "Extract TFIDFIndexManager.ts",
+      "description": "Copy TFIDFIndexManager for index management",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/TFIDFIndexManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Index building works",
+        "Index updates on entity changes"
+      ],
+      "tests": [
+        "tests/unit/search/TFIDFIndexManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.14.5",
+      "name": "Extract TFIDFEventSync.ts",
+      "description": "Copy TFIDFEventSync for event-driven index updates",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/search/TFIDFEventSync.ts"
+      ],
+      "acceptanceCriteria": [
+        "Event listeners work",
+        "Index synced on entity changes"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.14.6",
+      "name": "Extract QueryCostEstimator.ts",
+      "description": "Copy QueryCostEstimator for query optimization",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/search/QueryCostEstimator.ts"
+      ],
+      "acceptanceCriteria": [
+        "Cost estimation works",
+        "Used by smart search"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.14.7",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit advanced search components",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Search tests pass",
+        "Commit message: 'feat: add advanced search components'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.13"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/search/RankedSearch.ts",
+    "memoryjs/src/search/BooleanSearch.ts",
+    "memoryjs/src/search/FuzzySearch.ts",
+    "memoryjs/src/search/TFIDFIndexManager.ts",
+    "memoryjs/src/search/TFIDFEventSync.ts",
+    "memoryjs/src/search/QueryCostEstimator.ts"
+  ]
+}

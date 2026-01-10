@@ -1,0 +1,118 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 24,
+    "name": "Update Imports",
+    "goal": "Update all imports in memory-mcp to use @danielsimonjr/memoryjs",
+    "effort": "4 hours",
+    "impact": "memory-mcp correctly imports from memoryjs",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memory-mcp@11.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.24.1",
+      "name": "Update src/index.ts",
+      "description": "Update main entry point to import ManagerContext from memoryjs",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memory-mcp/src/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "import { ManagerContext } from '@danielsimonjr/memoryjs'",
+        "Storage config uses memoryjs adapters",
+        "MCPServer receives ManagerContext"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.24.2",
+      "name": "Update server/toolHandlers.ts",
+      "description": "Update tool handlers to import from memoryjs",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "2 hours",
+      "files": [
+        "memory-mcp/src/server/toolHandlers.ts"
+      ],
+      "acceptanceCriteria": [
+        "All type imports from '@danielsimonjr/memoryjs'",
+        "Entity, Relation, KnowledgeGraph imported",
+        "All manager types imported",
+        "Tool handlers work with memoryjs"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.24.3",
+      "name": "Update server/MCPServer.ts",
+      "description": "Update MCPServer imports if needed",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memory-mcp/src/server/MCPServer.ts"
+      ],
+      "acceptanceCriteria": [
+        "ManagerContext type imported from memoryjs",
+        "No internal imports remain"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.24.4",
+      "name": "Update server/responseCompressor.ts",
+      "description": "Update responseCompressor imports if needed",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [
+        "memory-mcp/src/server/responseCompressor.ts"
+      ],
+      "acceptanceCriteria": [
+        "Compression utilities imported from memoryjs or Node.js zlib"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.24.5",
+      "name": "Run Typecheck",
+      "description": "Verify all imports resolve correctly",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes with 0 errors"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.24.6",
+      "name": "Commit Import Updates",
+      "description": "Commit all import updates",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'refactor: update imports to use memoryjs'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.23"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "Updated src/index.ts",
+    "Updated server/toolHandlers.ts",
+    "Updated server/MCPServer.ts",
+    "All imports using @danielsimonjr/memoryjs"
+  ]
+}

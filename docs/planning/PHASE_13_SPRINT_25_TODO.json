@@ -1,0 +1,151 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 25,
+    "name": "Verify MCP Functionality",
+    "goal": "Verify all 59 MCP tools work correctly with memoryjs",
+    "effort": "6 hours",
+    "impact": "Confirmed backward compatibility",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memory-mcp@11.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.25.1",
+      "name": "Build memory-mcp",
+      "description": "Run full build of memory-mcp",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run build succeeds",
+        "dist/index.js created",
+        "No build errors"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.25.2",
+      "name": "Run MCP Integration Tests",
+      "description": "Run remaining MCP-specific tests",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [],
+      "acceptanceCriteria": [
+        "All MCP tool tests pass",
+        "Protocol tests pass"
+      ],
+      "tests": [
+        "tests/integration/mcp-tools.test.ts"
+      ]
+    },
+    {
+      "id": "13.25.3",
+      "name": "Manual Test Entity Tools",
+      "description": "Test create_entities, delete_entities, read_graph, open_nodes with Claude Desktop",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "create_entities works",
+        "delete_entities works",
+        "read_graph works",
+        "open_nodes works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.25.4",
+      "name": "Manual Test Search Tools",
+      "description": "Test all search tools with Claude Desktop",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [],
+      "acceptanceCriteria": [
+        "search_nodes works",
+        "search_nodes_ranked works",
+        "boolean_search works",
+        "fuzzy_search works",
+        "hybrid_search works",
+        "smart_search works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.25.5",
+      "name": "Manual Test Feature Tools",
+      "description": "Test import/export, compression, hierarchy tools",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [],
+      "acceptanceCriteria": [
+        "export_graph works (all formats)",
+        "import_graph works",
+        "find_duplicates works",
+        "compress_graph works",
+        "Hierarchy operations work"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.25.6",
+      "name": "Performance Verification",
+      "description": "Verify performance is maintained or improved",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "1 hour",
+      "files": [],
+      "acceptanceCriteria": [
+        "No performance regression",
+        "Bulk operations still fast",
+        "Search performance maintained"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.25.7",
+      "name": "Document Any Issues",
+      "description": "Document and fix any issues found during testing",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [],
+      "acceptanceCriteria": [
+        "All issues documented",
+        "Critical issues fixed",
+        "Non-critical issues tracked"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.25.8",
+      "name": "Commit Verification",
+      "description": "Commit verification results",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'test: verify MCP functionality'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.24"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "All 59 tools verified working",
+    "Performance verified",
+    "Manual testing complete",
+    "Issues documented"
+  ]
+}

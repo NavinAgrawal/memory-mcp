@@ -1,0 +1,118 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 21,
+    "name": "Documentation",
+    "goal": "Create comprehensive documentation for memoryjs package",
+    "effort": "4 hours",
+    "impact": "Package ready for public use",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.21.1",
+      "name": "Create README.md",
+      "description": "Create comprehensive README with installation, usage, and API overview",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1.5 hours",
+      "files": [
+        "memoryjs/README.md"
+      ],
+      "acceptanceCriteria": [
+        "Package description",
+        "Installation instructions",
+        "Quick start examples",
+        "Configuration options",
+        "Storage adapter documentation",
+        "Worker adapter documentation",
+        "Custom adapter guide",
+        "API overview",
+        "Links to detailed docs"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.21.2",
+      "name": "Create CLAUDE.md",
+      "description": "Create development guidance for Claude Code",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/CLAUDE.md"
+      ],
+      "acceptanceCriteria": [
+        "Build commands",
+        "Architecture overview",
+        "Module structure",
+        "Development workflow",
+        "Test structure",
+        "Adapter extension guide"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.21.3",
+      "name": "Create docs/API.md",
+      "description": "Create detailed API reference documentation",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/docs/API.md"
+      ],
+      "acceptanceCriteria": [
+        "ManagerContext API",
+        "EntityManager API",
+        "RelationManager API",
+        "SearchManager API",
+        "IOManager API",
+        "Adapter interfaces",
+        "Type definitions"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.21.4",
+      "name": "Copy LICENSE",
+      "description": "Copy MIT license file",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/LICENSE"
+      ],
+      "acceptanceCriteria": [
+        "MIT license with correct copyright"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.21.5",
+      "name": "Commit Documentation",
+      "description": "Commit all documentation",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'docs: add documentation'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.20"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/README.md",
+    "memoryjs/CLAUDE.md",
+    "memoryjs/docs/API.md",
+    "memoryjs/LICENSE"
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 9,
+    "name": "Worker Adapters",
+    "goal": "Implement NodeWorkerAdapter and SyncWorkerAdapter",
+    "effort": "4 hours",
+    "impact": "Pluggable parallel processing",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.9.1",
+      "name": "Create NodeWorkerAdapter",
+      "description": "Implement IWorkerAdapter using workerpool for Node.js worker_threads",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "2 hours",
+      "files": [
+        "memoryjs/src/adapters/workers/NodeWorkerAdapter.ts"
+      ],
+      "acceptanceCriteria": [
+        "Implements IWorkerAdapter interface",
+        "Uses @danielsimonjr/workerpool",
+        "exec() runs function in worker",
+        "execDirect() runs function directly",
+        "getStats() returns pool statistics",
+        "terminate() cleans up workers"
+      ],
+      "tests": [
+        "tests/unit/adapters/NodeWorkerAdapter.test.ts"
+      ]
+    },
+    {
+      "id": "13.9.2",
+      "name": "Create SyncWorkerAdapter",
+      "description": "Implement IWorkerAdapter as synchronous fallback (no parallelism)",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/adapters/workers/SyncWorkerAdapter.ts"
+      ],
+      "acceptanceCriteria": [
+        "Implements IWorkerAdapter interface",
+        "Executes functions synchronously",
+        "No worker_threads dependency",
+        "Useful for testing and environments without workers"
+      ],
+      "tests": [
+        "tests/unit/adapters/SyncWorkerAdapter.test.ts"
+      ]
+    },
+    {
+      "id": "13.9.3",
+      "name": "Create createWorkerAdapter Factory",
+      "description": "Create factory function to instantiate worker adapters from config",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/adapters/workers/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "createWorkerAdapter(config) returns correct adapter",
+        "Detects environment for best adapter",
+        "Passes config options to adapters"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.9.4",
+      "name": "Update adapters/index.ts",
+      "description": "Update barrel export to include worker adapters",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/adapters/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All adapters exported from main index"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.9.5",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit worker adapters",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Adapter tests pass",
+        "Commit message: 'feat: add worker adapters'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.8"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/adapters/workers/NodeWorkerAdapter.ts",
+    "memoryjs/src/adapters/workers/SyncWorkerAdapter.ts",
+    "memoryjs/src/adapters/workers/index.ts",
+    "createWorkerAdapter factory function"
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 6,
+    "name": "Workers Module",
+    "goal": "Extract worker implementations for parallel processing",
+    "effort": "1 hour",
+    "impact": "Parallel fuzzy search support",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.6.1",
+      "name": "Create workers directory",
+      "description": "Create memoryjs/src/workers/ directory",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/src/workers/"
+      ],
+      "acceptanceCriteria": [
+        "Directory memoryjs/src/workers/ exists"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.6.2",
+      "name": "Extract levenshteinWorker.ts",
+      "description": "Copy src/workers/levenshteinWorker.ts for parallel fuzzy search",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/workers/levenshteinWorker.ts"
+      ],
+      "acceptanceCriteria": [
+        "Worker implementation copied",
+        "Workerpool integration preserved",
+        "TypeScript compiles"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.6.3",
+      "name": "Create workers/index.ts",
+      "description": "Create barrel export for workers module",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "10 minutes",
+      "files": [
+        "memoryjs/src/workers/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "Worker exports available from index"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.6.4",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit workers module",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Commit message: 'feat: add workers module'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.5"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/workers/levenshteinWorker.ts",
+    "memoryjs/src/workers/index.ts"
+  ]
+}

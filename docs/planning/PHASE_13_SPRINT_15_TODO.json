@@ -1,0 +1,135 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 15,
+    "name": "Semantic Search Components",
+    "goal": "Extract EmbeddingService, VectorStore, SemanticSearch",
+    "effort": "4 hours",
+    "impact": "Vector-based semantic search",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.15.1",
+      "name": "Extract EmbeddingService.ts",
+      "description": "Copy EmbeddingService for vector embeddings",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/search/EmbeddingService.ts"
+      ],
+      "acceptanceCriteria": [
+        "OpenAI embedding provider works",
+        "Local embedding provider works",
+        "Provider abstraction maintained"
+      ],
+      "tests": [
+        "tests/unit/search/EmbeddingService.test.ts"
+      ]
+    },
+    {
+      "id": "13.15.2",
+      "name": "Extract VectorStore.ts",
+      "description": "Copy VectorStore for vector similarity search",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/search/VectorStore.ts"
+      ],
+      "acceptanceCriteria": [
+        "Vector storage works",
+        "Cosine similarity search",
+        "Index persistence"
+      ],
+      "tests": [
+        "tests/unit/search/VectorStore.test.ts"
+      ]
+    },
+    {
+      "id": "13.15.3",
+      "name": "Extract EmbeddingCache.ts",
+      "description": "Copy EmbeddingCache for cached embeddings",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/search/EmbeddingCache.ts"
+      ],
+      "acceptanceCriteria": [
+        "LRU caching works",
+        "TTL expiration works"
+      ],
+      "tests": [
+        "tests/unit/search/EmbeddingCache.test.ts"
+      ]
+    },
+    {
+      "id": "13.15.4",
+      "name": "Extract QuantizedVectorStore.ts",
+      "description": "Copy QuantizedVectorStore for memory-efficient vectors",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/search/QuantizedVectorStore.ts"
+      ],
+      "acceptanceCriteria": [
+        "8-bit quantization works",
+        "Memory savings achieved"
+      ],
+      "tests": [
+        "tests/unit/search/QuantizedVectorStore.test.ts"
+      ]
+    },
+    {
+      "id": "13.15.5",
+      "name": "Extract SemanticSearch.ts",
+      "description": "Copy SemanticSearch manager",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/SemanticSearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "Semantic search queries work",
+        "find_similar_entities works",
+        "index_embeddings works"
+      ],
+      "tests": [
+        "tests/unit/search/SemanticSearch.test.ts"
+      ]
+    },
+    {
+      "id": "13.15.6",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit semantic search components",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Semantic search tests pass",
+        "Commit message: 'feat: add semantic search components'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.14"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/search/EmbeddingService.ts",
+    "memoryjs/src/search/VectorStore.ts",
+    "memoryjs/src/search/EmbeddingCache.ts",
+    "memoryjs/src/search/QuantizedVectorStore.ts",
+    "memoryjs/src/search/SemanticSearch.ts"
+  ]
+}

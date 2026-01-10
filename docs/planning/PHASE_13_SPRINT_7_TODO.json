@@ -1,0 +1,108 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 7,
+    "name": "Adapter Interfaces",
+    "goal": "Create IStorageAdapter and IWorkerAdapter interfaces for pluggable backends",
+    "effort": "3 hours",
+    "impact": "Enables runtime switching and Bun/Deno portability",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.7.1",
+      "name": "Create adapters directory",
+      "description": "Create memoryjs/src/adapters/ with storage and workers subdirectories",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/src/adapters/",
+        "memoryjs/src/adapters/storage/",
+        "memoryjs/src/adapters/workers/"
+      ],
+      "acceptanceCriteria": [
+        "Directory structure created"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.7.2",
+      "name": "Create IStorageAdapter Interface",
+      "description": "Define IStorageAdapter with loadGraph, saveGraph, initialize, close methods",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/adapters/interfaces.ts"
+      ],
+      "acceptanceCriteria": [
+        "IStorageAdapter interface defined",
+        "StorageConfig type defined",
+        "StorageMetadata type defined",
+        "StorageAdapterFactory type defined"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.7.3",
+      "name": "Create IWorkerAdapter Interface",
+      "description": "Define IWorkerAdapter with exec, execDirect, getPoolSize, terminate methods",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/adapters/interfaces.ts"
+      ],
+      "acceptanceCriteria": [
+        "IWorkerAdapter interface defined",
+        "WorkerConfig type defined",
+        "WorkerStats type defined",
+        "WorkerAdapterFactory type defined"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.7.4",
+      "name": "Create adapters/index.ts",
+      "description": "Create barrel export for adapter interfaces",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/adapters/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All interfaces and types exported"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.7.5",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit adapter interfaces",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Commit message: 'feat: add adapter interfaces'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.6"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/adapters/interfaces.ts",
+    "memoryjs/src/adapters/index.ts",
+    "IStorageAdapter interface",
+    "IWorkerAdapter interface"
+  ]
+}

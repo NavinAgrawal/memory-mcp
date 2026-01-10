@@ -1,0 +1,140 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 4,
+    "name": "Core Utilities",
+    "goal": "Extract core utility modules with minimal dependencies",
+    "effort": "4 hours",
+    "impact": "Utility functions for all modules",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.4.1",
+      "name": "Extract constants.ts",
+      "description": "Copy src/utils/constants.ts with no dependencies",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/constants.ts"
+      ],
+      "acceptanceCriteria": [
+        "All constants copied",
+        "No import changes needed"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.4.2",
+      "name": "Extract logger.ts",
+      "description": "Copy src/utils/logger.ts with no dependencies",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/logger.ts"
+      ],
+      "acceptanceCriteria": [
+        "Logger implementation copied",
+        "Console-based logging works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.4.3",
+      "name": "Extract entityUtils.ts",
+      "description": "Copy src/utils/entityUtils.ts and update imports to use local types",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/utils/entityUtils.ts"
+      ],
+      "acceptanceCriteria": [
+        "All entity utility functions copied",
+        "Imports updated to ../types/types.js",
+        "TypeScript compiles"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.4.4",
+      "name": "Extract searchAlgorithms.ts",
+      "description": "Copy src/utils/searchAlgorithms.ts with no dependencies",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/utils/searchAlgorithms.ts"
+      ],
+      "acceptanceCriteria": [
+        "Levenshtein distance and other algorithms copied",
+        "No external dependencies"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.4.5",
+      "name": "Extract formatters.ts",
+      "description": "Copy src/utils/formatters.ts and update type imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/utils/formatters.ts"
+      ],
+      "acceptanceCriteria": [
+        "All formatter functions copied",
+        "Imports updated to local types"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.4.6",
+      "name": "Extract schemas.ts",
+      "description": "Copy src/utils/schemas.ts with Zod validation schemas",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/utils/schemas.ts"
+      ],
+      "acceptanceCriteria": [
+        "All Zod schemas copied",
+        "Imports updated to local types",
+        "Zod dependency added to package.json"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.4.7",
+      "name": "Verify and Commit Core Utilities",
+      "description": "Run typecheck and commit all core utilities",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Commit message: 'feat: add core utilities'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.3"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/utils/constants.ts",
+    "memoryjs/src/utils/logger.ts",
+    "memoryjs/src/utils/entityUtils.ts",
+    "memoryjs/src/utils/searchAlgorithms.ts",
+    "memoryjs/src/utils/formatters.ts",
+    "memoryjs/src/utils/schemas.ts"
+  ]
+}

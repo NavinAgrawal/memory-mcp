@@ -1,0 +1,188 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 16,
+    "name": "Hybrid Search Components",
+    "goal": "Extract Phase 11 hybrid search: HybridSearchManager, QueryAnalyzer, QueryPlanner, etc.",
+    "effort": "5 hours",
+    "impact": "Three-layer intelligent search",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.16.1",
+      "name": "Extract HybridSearchManager.ts",
+      "description": "Copy HybridSearchManager for semantic+lexical+symbolic fusion",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/search/HybridSearchManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Three-layer fusion works",
+        "Configurable weights",
+        "Score normalization"
+      ],
+      "tests": [
+        "tests/unit/search/HybridSearchManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.16.2",
+      "name": "Extract QueryAnalyzer.ts",
+      "description": "Copy QueryAnalyzer for query understanding",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/search/QueryAnalyzer.ts"
+      ],
+      "acceptanceCriteria": [
+        "Entity extraction works",
+        "Temporal reference detection",
+        "Question type classification"
+      ],
+      "tests": [
+        "tests/unit/search/QueryAnalyzer.test.ts"
+      ]
+    },
+    {
+      "id": "13.16.3",
+      "name": "Extract QueryPlanner.ts",
+      "description": "Copy QueryPlanner for execution planning",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/QueryPlanner.ts"
+      ],
+      "acceptanceCriteria": [
+        "Query plan generation works",
+        "Cost-based optimization"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.16.4",
+      "name": "Extract SymbolicSearch.ts",
+      "description": "Copy SymbolicSearch for metadata-based filtering",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/search/SymbolicSearch.ts"
+      ],
+      "acceptanceCriteria": [
+        "Tag filtering works",
+        "Importance filtering works",
+        "Date range filtering works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.16.5",
+      "name": "Extract ReflectionManager.ts",
+      "description": "Copy ReflectionManager for iterative refinement",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/ReflectionManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Result adequacy checking works",
+        "Query refinement suggestions",
+        "Iterative search improvement"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.16.6",
+      "name": "Extract Phase 12 Search Performance Components",
+      "description": "Copy BM25Search, OptimizedInvertedIndex, HybridScorer, IncrementalIndexer, ParallelSearchExecutor",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/search/BM25Search.ts",
+        "memoryjs/src/search/OptimizedInvertedIndex.ts",
+        "memoryjs/src/search/HybridScorer.ts",
+        "memoryjs/src/search/IncrementalIndexer.ts",
+        "memoryjs/src/search/ParallelSearchExecutor.ts"
+      ],
+      "acceptanceCriteria": [
+        "BM25 ranking works",
+        "Optimized inverted index",
+        "Hybrid scoring",
+        "Parallel search execution"
+      ],
+      "tests": [
+        "tests/unit/search/BM25Search.test.ts",
+        "tests/unit/search/OptimizedInvertedIndex.test.ts",
+        "tests/unit/search/HybridScorer.test.ts",
+        "tests/unit/search/IncrementalIndexer.test.ts",
+        "tests/unit/search/ParallelSearchExecutor.test.ts"
+      ]
+    },
+    {
+      "id": "13.16.7",
+      "name": "Extract Phase 12 Query Optimization Components",
+      "description": "Copy QueryCostEstimator, QueryPlanCache, EarlyTerminationManager for query optimization",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/search/QueryCostEstimator.ts",
+        "memoryjs/src/search/QueryPlanCache.ts",
+        "memoryjs/src/search/EarlyTerminationManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Query cost estimation works",
+        "Query plan caching with LRU eviction",
+        "Early termination based on adequacy threshold"
+      ],
+      "tests": [
+        "tests/unit/search/QueryPlanCache.test.ts",
+        "tests/unit/search/EarlyTerminationManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.16.8",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit hybrid search components",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Hybrid search tests pass",
+        "Commit message: 'feat: add hybrid search components'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.15"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/search/HybridSearchManager.ts",
+    "memoryjs/src/search/QueryAnalyzer.ts",
+    "memoryjs/src/search/QueryPlanner.ts",
+    "memoryjs/src/search/SymbolicSearch.ts",
+    "memoryjs/src/search/ReflectionManager.ts",
+    "memoryjs/src/search/BM25Search.ts",
+    "memoryjs/src/search/OptimizedInvertedIndex.ts",
+    "memoryjs/src/search/HybridScorer.ts",
+    "memoryjs/src/search/IncrementalIndexer.ts",
+    "memoryjs/src/search/ParallelSearchExecutor.ts",
+    "memoryjs/src/search/QueryCostEstimator.ts",
+    "memoryjs/src/search/QueryPlanCache.ts",
+    "memoryjs/src/search/EarlyTerminationManager.ts"
+  ]
+}

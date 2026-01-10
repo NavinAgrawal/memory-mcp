@@ -1,0 +1,96 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 19,
+    "name": "Main Entry Point",
+    "goal": "Create memoryjs main entry point with all exports",
+    "effort": "2 hours",
+    "impact": "Package ready for import",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.19.1",
+      "name": "Create src/index.ts",
+      "description": "Create main entry point exporting ManagerContext and all public APIs",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "ManagerContext exported as main export",
+        "ManagerContextConfig type exported",
+        "All adapter interfaces exported",
+        "Built-in adapters exported",
+        "Factory functions exported",
+        "All types re-exported",
+        "Error classes exported",
+        "Individual managers exported for advanced usage"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.19.2",
+      "name": "Verify Package Exports",
+      "description": "Test that all exports are accessible from package",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "tests/exports.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "import { ManagerContext } from '@danielsimonjr/memoryjs' works",
+        "import { IStorageAdapter } from '@danielsimonjr/memoryjs' works",
+        "import { JsonlStorageAdapter } from '@danielsimonjr/memoryjs/adapters' works",
+        "All type exports verified"
+      ],
+      "tests": [
+        "tests/exports.test.ts"
+      ]
+    },
+    {
+      "id": "13.19.3",
+      "name": "Build and Verify",
+      "description": "Run full build and verify dist output",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run build succeeds",
+        "dist/index.js exists",
+        "dist/index.d.ts exists",
+        "All declaration files generated"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.19.4",
+      "name": "Commit Entry Point",
+      "description": "Commit main entry point",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Commit message: 'feat: add main entry point'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.18"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/index.ts",
+    "Verified package exports",
+    "Complete dist/ build"
+  ]
+}

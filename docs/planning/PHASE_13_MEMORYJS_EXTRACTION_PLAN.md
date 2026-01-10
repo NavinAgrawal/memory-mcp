@@ -29,29 +29,29 @@
 
 This plan details the extraction of the core knowledge graph functionality from `@danielsimonjr/memory-mcp` into a standalone library `@danielsimonjr/memoryjs`, leaving memory-mcp as a thin MCP protocol wrapper.
 
-**Current State:**
+**Current State (as of v10.1.0):**
 ```
-memory-mcp (monolithic, 65 files, ~24,800 LOC)
+memory-mcp (monolithic, 75 files, ~26,000 LOC)
 ├── server/       (MCP protocol - 4 files)
 ├── core/         (Managers, storage - 12 files)
 ├── features/     (Advanced features - 9 files)
-├── search/       (Search implementations - 20 files)
+├── search/       (Search implementations - 29 files)
 ├── types/        (Type definitions - 2 files)
-├── utils/        (Utilities - 15 files)
+├── utils/        (Utilities - 18 files)
 └── workers/      (Worker pool - 2 files)
 ```
 
 **Target State:**
 ```
-memoryjs (core library, ~58 files)          memory-mcp (MCP wrapper, ~7 files)
+memoryjs (core library, ~68 files)          memory-mcp (MCP wrapper, ~7 files)
 ├── core/                                    ├── server/
 ├── features/                                │   ├── MCPServer.ts
 ├── search/                                  │   ├── toolDefinitions.ts
-├── types/                                   │   └── toolHandlers.ts
-├── utils/                                   ├── index.ts
-├── workers/                                 └── package.json
-├── adapters/                                    (depends on @danielsimonjr/memoryjs)
-│   ├── storage/
+├── types/                                   │   ├── toolHandlers.ts
+├── utils/                                   │   └── responseCompressor.ts
+├── workers/                                 ├── index.ts
+├── adapters/                                └── package.json
+│   ├── storage/                                 (depends on @danielsimonjr/memoryjs)
 │   │   ├── JsonlStorageAdapter.ts
 │   │   └── SqliteStorageAdapter.ts
 │   └── workers/
@@ -61,7 +61,7 @@ memoryjs (core library, ~58 files)          memory-mcp (MCP wrapper, ~7 files)
 
 **Versioning:**
 - `@danielsimonjr/memoryjs`: 1.0.0 (new package)
-- `@danielsimonjr/memory-mcp`: 10.0.0 (major version bump due to internal restructure)
+- `@danielsimonjr/memory-mcp`: 11.0.0 (major version bump due to internal restructure)
 
 ---
 
@@ -216,9 +216,10 @@ mkdir -p docs
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "zod": "^4.1.13",
+    "@danielsimonjr/workerpool": "^10.0.1",
+    "async-mutex": "^0.5.0",
     "better-sqlite3": "^11.7.0",
-    "@danielsimonjr/workerpool": "^9.2.0"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

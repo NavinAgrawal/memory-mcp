@@ -1,0 +1,222 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 18,
+    "name": "Feature Managers",
+    "goal": "Extract all feature managers: TagManager, IOManager, ArchiveManager, etc.",
+    "effort": "5 hours",
+    "impact": "Complete features module",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.18.1",
+      "name": "Create features directory",
+      "description": "Create memoryjs/src/features/ directory",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "5 minutes",
+      "files": [
+        "memoryjs/src/features/"
+      ],
+      "acceptanceCriteria": [
+        "Directory memoryjs/src/features/ exists"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.18.2",
+      "name": "Extract TagManager.ts",
+      "description": "Copy TagManager with tag alias support",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/features/TagManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Tag operations work",
+        "Tag alias CRUD works",
+        "Batch tag operations"
+      ],
+      "tests": [
+        "tests/unit/features/TagManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.3",
+      "name": "Extract IOManager.ts",
+      "description": "Copy IOManager for import/export/backup operations",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/features/IOManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Import from JSON, CSV, GraphML",
+        "Export to 7 formats + compression",
+        "Backup and restore operations"
+      ],
+      "tests": [
+        "tests/unit/features/IOManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.4",
+      "name": "Extract StreamingExporter.ts",
+      "description": "Copy StreamingExporter for large graph exports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/features/StreamingExporter.ts"
+      ],
+      "acceptanceCriteria": [
+        "Streaming export works for large graphs",
+        "Memory-efficient processing"
+      ],
+      "tests": [
+        "tests/unit/features/StreamingExporter.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.5",
+      "name": "Extract AnalyticsManager.ts",
+      "description": "Copy AnalyticsManager for graph statistics and validation",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/features/AnalyticsManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "get_graph_stats works",
+        "validate_graph works"
+      ],
+      "tests": [
+        "tests/unit/features/AnalyticsManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.6",
+      "name": "Extract ArchiveManager.ts",
+      "description": "Copy ArchiveManager for entity archival",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/features/ArchiveManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "archive_entities works",
+        "Date and importance filtering"
+      ],
+      "tests": [
+        "tests/unit/features/ArchiveManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.7",
+      "name": "Extract CompressionManager.ts",
+      "description": "Copy CompressionManager for duplicate detection and merging",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/features/CompressionManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "find_duplicates works",
+        "merge_entities works",
+        "compress_graph works"
+      ],
+      "tests": [
+        "tests/unit/features/CompressionManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.8",
+      "name": "Extract ObservationNormalizer.ts",
+      "description": "Copy ObservationNormalizer for coreference resolution",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/features/ObservationNormalizer.ts"
+      ],
+      "acceptanceCriteria": [
+        "Pronoun resolution works",
+        "Temporal anchoring works",
+        "Keyword extraction works"
+      ],
+      "tests": [
+        "tests/unit/features/ObservationNormalizer.test.ts"
+      ]
+    },
+    {
+      "id": "13.18.9",
+      "name": "Extract KeywordExtractor.ts",
+      "description": "Copy KeywordExtractor for keyword extraction",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/features/KeywordExtractor.ts"
+      ],
+      "acceptanceCriteria": [
+        "Keyword extraction works",
+        "Scored keywords"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.18.10",
+      "name": "Create features/index.ts",
+      "description": "Create barrel export for features module",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memoryjs/src/features/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All features exported"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.18.11",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit features module",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Feature tests pass",
+        "Commit message: 'feat: add features module'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.17"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/features/TagManager.ts",
+    "memoryjs/src/features/IOManager.ts",
+    "memoryjs/src/features/StreamingExporter.ts",
+    "memoryjs/src/features/AnalyticsManager.ts",
+    "memoryjs/src/features/ArchiveManager.ts",
+    "memoryjs/src/features/CompressionManager.ts",
+    "memoryjs/src/features/ObservationNormalizer.ts",
+    "memoryjs/src/features/KeywordExtractor.ts",
+    "memoryjs/src/features/index.ts"
+  ]
+}

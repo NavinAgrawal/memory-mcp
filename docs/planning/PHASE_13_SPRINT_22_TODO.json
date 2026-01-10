@@ -1,0 +1,126 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 22,
+    "name": "Publish memoryjs",
+    "goal": "Publish @danielsimonjr/memoryjs@1.0.0 to npm",
+    "effort": "2 hours",
+    "impact": "Package available for public use",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.22.1",
+      "name": "Final Typecheck",
+      "description": "Run final typecheck to ensure no errors",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes with 0 errors"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.22.2",
+      "name": "Final Build",
+      "description": "Run production build",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run build succeeds",
+        "dist/ contains all files",
+        "Declaration files generated"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.22.3",
+      "name": "Run Full Test Suite",
+      "description": "Run all tests with coverage",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "All ~1200 tests pass",
+        "Coverage meets thresholds"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.22.4",
+      "name": "Verify Package Contents",
+      "description": "Check package.json files array and run npm pack to verify",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm pack creates correct tarball",
+        "Only dist/, LICENSE, README.md included",
+        "No test or source files in package"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.22.5",
+      "name": "Create Git Tag",
+      "description": "Create v1.0.0 git tag",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "git tag v1.0.0 created",
+        "Tag pushed to origin"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.22.6",
+      "name": "Publish to npm",
+      "description": "Publish package to npm registry",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm publish --access public succeeds",
+        "Package visible on npmjs.com",
+        "npm install @danielsimonjr/memoryjs works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.22.7",
+      "name": "Verify Installation",
+      "description": "Test fresh install in separate project",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "20 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Create test project",
+        "npm install @danielsimonjr/memoryjs",
+        "Import and basic usage works"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.21"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "@danielsimonjr/memoryjs@1.0.0 on npm",
+    "Git tag v1.0.0",
+    "Verified installation"
+  ]
+}

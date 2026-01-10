@@ -1,0 +1,165 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 26,
+    "name": "Merge and Release",
+    "goal": "Merge feature branch and release memory-mcp@11.0.0",
+    "effort": "3 hours",
+    "impact": "Complete extraction and public release",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memory-mcp@11.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.26.1",
+      "name": "Create Pull Request",
+      "description": "Create PR for feature/memoryjs-extraction branch",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "PR created with comprehensive description",
+        "Links to memoryjs package",
+        "Lists breaking changes (internal only)",
+        "Documents migration for any consumers"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.2",
+      "name": "Review Changes",
+      "description": "Final review of all changes",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "All code reviewed",
+        "No sensitive data exposed",
+        "Documentation accurate"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.3",
+      "name": "Merge to Main",
+      "description": "Merge feature branch to main",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "PR merged to main",
+        "No merge conflicts"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.4",
+      "name": "Update Version",
+      "description": "Bump version to 11.0.0",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [
+        "memory-mcp/package.json"
+      ],
+      "acceptanceCriteria": [
+        "Version updated to 11.0.0",
+        "npm version major executed"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.5",
+      "name": "Update CHANGELOG.md",
+      "description": "Document v11.0.0 changes",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memory-mcp/CHANGELOG.md"
+      ],
+      "acceptanceCriteria": [
+        "v11.0.0 entry added",
+        "Documents extraction to memoryjs",
+        "Lists dependency change",
+        "Notes backward compatibility"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.6",
+      "name": "Final Build and Test",
+      "description": "Run final build and tests on main",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run build succeeds",
+        "npm test passes",
+        "npm run typecheck passes"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.7",
+      "name": "Publish to npm",
+      "description": "Publish memory-mcp@11.0.0 to npm",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm publish succeeds",
+        "Package visible on npmjs.com",
+        "npm install @danielsimonjr/memory-mcp@11.0.0 works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.8",
+      "name": "Create Git Tag",
+      "description": "Create v11.0.0 git tag",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "10 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "git tag v11.0.0 created",
+        "Tag pushed to origin"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.26.9",
+      "name": "Update Knowledge Graph",
+      "description": "Update memory-mcp knowledge graph with extraction completion",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "Phase 13 completion recorded",
+        "memoryjs package noted",
+        "Version 11.0.0 documented"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.25"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "@danielsimonjr/memory-mcp@11.0.0 on npm",
+    "Git tag v11.0.0",
+    "Updated CHANGELOG.md",
+    "Merged feature branch",
+    "Complete extraction project"
+  ]
+}

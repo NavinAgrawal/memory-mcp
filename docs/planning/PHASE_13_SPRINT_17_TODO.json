@@ -1,0 +1,96 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 17,
+    "name": "SearchManager and Index",
+    "goal": "Extract SearchManager and create search module barrel export",
+    "effort": "3 hours",
+    "impact": "Complete search module",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.17.1",
+      "name": "Extract SearchManager.ts",
+      "description": "Copy SearchManager as the main search facade",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1.5 hours",
+      "files": [
+        "memoryjs/src/search/SearchManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "All search methods available",
+        "search_nodes, search_nodes_ranked, boolean_search, fuzzy_search",
+        "hybrid_search, analyze_query, smart_search",
+        "Saved search operations",
+        "Search suggestions"
+      ],
+      "tests": [
+        "tests/unit/search/SearchManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.17.2",
+      "name": "Create search/index.ts",
+      "description": "Create barrel export for complete search module",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/search/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "All search components exported",
+        "SearchManager as primary export"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.17.3",
+      "name": "Search Integration Test",
+      "description": "Create integration test for complete search functionality",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "tests/integration/search.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "All search types work end-to-end",
+        "Hybrid search integration verified",
+        "Smart search with reflection works"
+      ],
+      "tests": [
+        "tests/integration/search.test.ts"
+      ]
+    },
+    {
+      "id": "13.17.4",
+      "name": "Verify and Commit",
+      "description": "Run typecheck, tests, and commit SearchManager",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "15 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "All search tests pass",
+        "Commit message: 'feat: add SearchManager'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.16"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/search/SearchManager.ts",
+    "memoryjs/src/search/index.ts",
+    "Complete search integration tests"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "sprint": {
+    "phase": 13,
+    "sprint": 11,
+    "name": "Core Managers Part 2",
+    "goal": "Extract ObservationManager, HierarchyManager, TransactionManager, GraphTraversal",
+    "effort": "4 hours",
+    "impact": "Complete core module functionality",
+    "status": "pending",
+    "created": "2026-01-09",
+    "completed": null,
+    "targetVersion": "memoryjs@1.0.0"
+  },
+  "tasks": [
+    {
+      "id": "13.11.1",
+      "name": "Extract ObservationManager.ts",
+      "description": "Copy ObservationManager and update imports",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/core/ObservationManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Add/delete observations work",
+        "ObservationIndex updated on changes",
+        "Imports updated to local modules"
+      ],
+      "tests": [
+        "tests/unit/core/ObservationManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.11.2",
+      "name": "Extract HierarchyManager.ts",
+      "description": "Copy HierarchyManager for parent/child operations",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "45 minutes",
+      "files": [
+        "memoryjs/src/core/HierarchyManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "setParent, getChildren, getAncestors, getDescendants work",
+        "Cycle detection works",
+        "Imports updated"
+      ],
+      "tests": [
+        "tests/unit/core/HierarchyManager.test.ts"
+      ]
+    },
+    {
+      "id": "13.11.3",
+      "name": "Extract TransactionManager.ts",
+      "description": "Copy TransactionManager for batch operations",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "30 minutes",
+      "files": [
+        "memoryjs/src/core/TransactionManager.ts"
+      ],
+      "acceptanceCriteria": [
+        "Batch operations work",
+        "Rollback on failure works"
+      ],
+      "tests": []
+    },
+    {
+      "id": "13.11.4",
+      "name": "Extract GraphTraversal.ts",
+      "description": "Copy GraphTraversal for BFS, DFS, shortest path, centrality",
+      "status": "pending",
+      "priority": "P0",
+      "effort": "1 hour",
+      "files": [
+        "memoryjs/src/core/GraphTraversal.ts"
+      ],
+      "acceptanceCriteria": [
+        "BFS/DFS traversal works",
+        "findShortestPath works",
+        "findAllPaths works",
+        "getCentrality (degree, betweenness, pagerank) works",
+        "getConnectedComponents works"
+      ],
+      "tests": [
+        "tests/unit/core/GraphTraversal.test.ts"
+      ]
+    },
+    {
+      "id": "13.11.5",
+      "name": "Verify and Commit",
+      "description": "Run typecheck and commit core managers part 2",
+      "status": "pending",
+      "priority": "P1",
+      "effort": "30 minutes",
+      "files": [],
+      "acceptanceCriteria": [
+        "npm run typecheck passes",
+        "Core tests pass",
+        "Commit message: 'feat: add core managers (part 2)'"
+      ],
+      "tests": []
+    }
+  ],
+  "dependencies": [
+    "13.10"
+  ],
+  "blockedBy": [],
+  "deliverables": [
+    "memoryjs/src/core/ObservationManager.ts",
+    "memoryjs/src/core/HierarchyManager.ts",
+    "memoryjs/src/core/TransactionManager.ts",
+    "memoryjs/src/core/GraphTraversal.ts"
+  ]
+}
