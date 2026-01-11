@@ -20,7 +20,7 @@ Refactored memory-mcp to use `@danielsimonjr/memoryjs` as the core knowledge gra
 #### What's New
 
 **Architectural Separation**:
-- memory-mcp is now a thin MCP protocol layer (~4 source files)
+- memory-mcp is now a thin MCP protocol layer (5 source files)
 - All 59 MCP tools remain available with identical functionality
 - Core knowledge graph functionality provided by memoryjs library
 
@@ -68,7 +68,7 @@ import { ManagerContext } from '@danielsimonjr/memoryjs';
 | 26 | Version bump and release | ✅ Complete |
 
 **memoryjs Library**: `@danielsimonjr/memoryjs` v1.0.0 on npm
-- 74 TypeScript source files
+- 73 TypeScript source files
 - 2882 tests across 90 test files
 - Full documentation
 

@@ -40,6 +40,7 @@ build/Release
 
 # Dependency directories
 node_modules/
+tools/*/node_modules/
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)
@@ -307,12 +308,12 @@ cython_debug/
 # Memory data files
 *.jsonl
 memory.db
+*.db-shm
+*.db-wal
 
-#Tools Executables
-tools/migrate-from-jsonl-to-sqlite/migrate-from-jsonl-to-sqlite.exe
-tools\chunking-for-files\chunking-for-files.exe
-tools\compress-for-context\compress-for-context.exe
-tools\chunking-for-files\chunking-for-files.exe
+# Tools build artifacts
+tools/*/dist/
+tools/*/*.exe
 
 # Windows null device artifact
 nul

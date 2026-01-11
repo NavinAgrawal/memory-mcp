@@ -6,9 +6,9 @@
     "goal": "Migrate all non-MCP tests from memory-mcp to memoryjs (e2e and server tests remain)",
     "effort": "8 hours",
     "impact": "~1000 tests covering core functionality",
-    "status": "pending",
+    "status": "completed",
     "created": "2026-01-09",
-    "completed": null,
+    "completed": "2026-01-10",
     "targetVersion": "memoryjs@1.0.0",
     "notes": "E2E tests (tests/e2e/*) and server tests (tests/unit/server/*, tests/integration/server.test.ts) remain in memory-mcp as they test MCP-specific functionality"
   },

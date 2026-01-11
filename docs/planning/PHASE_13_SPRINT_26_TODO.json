@@ -6,9 +6,9 @@
     "goal": "Merge feature branch and release memory-mcp@11.0.0",
     "effort": "3 hours",
     "impact": "Complete extraction and public release",
-    "status": "pending",
+    "status": "completed",
     "created": "2026-01-09",
-    "completed": null,
+    "completed": "2026-01-10",
     "targetVersion": "memory-mcp@11.0.0"
   },
   "tasks": [

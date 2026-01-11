@@ -14,7 +14,7 @@ npm run clean         # Remove dist/ directory
 npm run docs:deps     # Generate dependency graph
 
 # Run a single test file
-npx vitest run tests/unit/core/EntityManager.test.ts
+npx vitest run tests/e2e/tools/entity-tools.test.ts
 
 # Run tests matching a pattern
 npx vitest run -t "should create entities"
@@ -26,61 +26,58 @@ This is an enhanced MCP memory server with **59 tools** (vs 11 in official versi
 
 **npm:** @danielsimonjr/memory-mcp
 
-### Phase 13: MemoryJS Extraction (In Progress)
+### Phase 13: MemoryJS Extraction (Complete)
 
-The core knowledge graph functionality is being extracted into a standalone library:
+Core knowledge graph functionality has been extracted into a standalone library:
 
 **[@danielsimonjr/memoryjs](https://www.npmjs.com/package/@danielsimonjr/memoryjs)** v1.0.0 (published)
 
 | Component | memoryjs | memory-mcp |
 |-----------|----------|------------|
 | **Purpose** | Core knowledge graph library | MCP server wrapping memoryjs |
+| **Files** | 73 TypeScript source files | 5 TypeScript source files |
+| **Tests** | 2,882 tests (90 test files) | 194 tests |
 | **Exports** | Managers, storage, search, types | MCP tools (59 tools) |
 | **Dependencies** | zod, better-sqlite3, async-mutex | memoryjs + @modelcontextprotocol/sdk |
 | **Use Case** | Standalone graph operations | AI assistant integration |
 
-**Status:** Sprints 1-22 complete (memoryjs published). Sprints 23-26 pending (refactor memory-mcp to use memoryjs as dependency → v11.0.0).
+**Status:** All 26 sprints complete. memory-mcp v11.0.0 released.
 
-After Phase 13 completion, memory-mcp will import all core functionality from memoryjs rather than containing it directly.
+memory-mcp now imports all core functionality from memoryjs rather than containing it directly.
 
 ### Layered Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│  Layer 1: MCP Protocol Layer            │
+│  memory-mcp: MCP Protocol Layer         │
 │  server/MCPServer.ts + toolDefinitions  │
 │  + toolHandlers (59 tools)              │
 └──────────────────┬──────────────────────┘
-                   │ (direct manager access)
+                   │ (imports from memoryjs)
 ┌──────────────────┴──────────────────────┐
-│  Layer 2: Managers + Context            │
-│  core/ManagerContext.ts (lazy init)     │
-│  → EntityManager, RelationManager       │
-│  → SearchManager, IOManager, TagManager │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────┴──────────────────────┐
-│  Layer 3: Storage Layer                 │
-│  core/GraphStorage.ts (JSONL + cache)   │
-│  core/SQLiteStorage.ts (better-sqlite3) │
-│  core/StorageFactory.ts (backend select)│
+│  @danielsimonjr/memoryjs                │
+│  ├── ManagerContext (lazy init)         │
+│  ├── EntityManager, RelationManager     │
+│  ├── SearchManager, IOManager, TagManager│
+│  ├── GraphStorage (JSONL + cache)       │
+│  ├── SQLiteStorage (better-sqlite3)     │
+│  └── StorageFactory (backend select)    │
 └─────────────────────────────────────────┘
 ```
 
-### Source Structure (src/) - 77 TypeScript files
+### Source Structure (src/) - 5 TypeScript files
 
-| Module | Files | Purpose |
-|--------|-------|---------|
-| **core/** | 12 | ManagerContext (context holder), EntityManager (CRUD + hierarchy + archive), RelationManager, ObservationManager, HierarchyManager, GraphStorage, SQLiteStorage, TransactionManager, StorageFactory, GraphTraversal (graph algorithms), GraphEventEmitter, index |
-| **features/** | 9 | TagManager (tag aliases), IOManager (import/export/backup), StreamingExporter (memory-efficient large exports), AnalyticsManager, ArchiveManager, CompressionManager, ObservationNormalizer (coreference resolution + temporal anchoring), KeywordExtractor (scored keyword extraction), index |
-| **search/** | 29 | SearchManager, BasicSearch, RankedSearch, BooleanSearch, FuzzySearch, BM25Search, OptimizedInvertedIndex, HybridScorer, SavedSearchManager, TFIDFIndexManager, TFIDFEventSync, SearchFilterChain, SearchSuggestions, EmbeddingService, EmbeddingCache, VectorStore, QuantizedVectorStore, SemanticSearch, SymbolicSearch, HybridSearchManager, QueryAnalyzer, QueryPlanner, QueryCostEstimator, QueryPlanCache, EarlyTerminationManager, ReflectionManager, ParallelSearchExecutor, IncrementalIndexer, index |
-| **server/** | 4 | MCPServer.ts, toolDefinitions.ts, toolHandlers.ts, responseCompressor.ts (auto-compress large responses) |
-| **types/** | 2 | Consolidated type definitions (types.ts + index.ts barrel) |
-| **utils/** | 18 | schemas.ts (Zod + validation), entityUtils.ts, formatters.ts, compressionUtil.ts, compressedCache.ts, constants, errors, searchAlgorithms, logger, indexes, searchCache, operationUtils, parallelUtils, taskScheduler, BatchProcessor, WorkerPoolManager, MemoryMonitor, index |
-| **workers/** | 2 | levenshteinWorker (workerpool-based fuzzy search worker), index |
-| **root** | 1 | index.ts (entry point) |
+After Phase 13 extraction, memory-mcp contains only the MCP server layer:
 
-> **Note**: Phase 12 added 12 new files for performance optimization (BM25Search, HybridScorer, EmbeddingCache, QuantizedVectorStore, etc.)
+| File | Purpose |
+|------|---------|
+| **index.ts** | Entry point, re-exports from memoryjs for backward compatibility |
+| **server/MCPServer.ts** | MCP server initialization and request handling |
+| **server/toolDefinitions.ts** | 59 MCP tool schemas organized by category |
+| **server/toolHandlers.ts** | Handler registry and dispatch logic |
+| **server/responseCompressor.ts** | Auto-compress large responses (>256KB) with brotli |
+
+> **Note**: All core/, features/, search/, types/, utils/, and workers/ directories have been moved to [@danielsimonjr/memoryjs](https://www.npmjs.com/package/@danielsimonjr/memoryjs)
 
 ### Key Design Patterns
 
@@ -177,131 +174,40 @@ Three-layer hybrid search architecture combining semantic, lexical, and symbolic
 
 ## Test Structure
 
-Tests are in `tests/`:
+After Phase 13 extraction, memory-mcp retains only MCP server and integration tests (6 files, 194 tests). Core knowledge graph tests are now in memoryjs.
 
-| Test File | Tests | Coverage |
-|-----------|-------|----------|
-| edge-cases.test.ts | 35 | Boundary conditions |
-| file-path.test.ts | 9 | Path handling |
-| integration/workflows.test.ts | 12 | End-to-end workflows |
-| knowledge-graph.test.ts | 30 | Core graph operations |
-| performance/benchmarks.test.ts | 18 | Performance validation |
-| performance/write-performance.test.ts | 17 | Write optimization tests |
-| unit/core/EntityManager.test.ts | 31 | Entity CRUD |
-| unit/core/GraphStorage.test.ts | 10 | JSONL storage layer |
-| unit/core/SQLiteStorage.test.ts | 31 | SQLite storage layer |
-| unit/core/RelationManager.test.ts | 24 | Relation operations |
-| unit/core/GraphTraversal.test.ts | 41 | Graph traversal algorithms (BFS, DFS, centrality) |
-| unit/features/AnalyticsManager.test.ts | 27 | Graph validation & stats (via SearchManager) |
-| unit/features/ArchiveManager.test.ts | 42 | Entity archival + compression (via EntityManager) |
-| unit/features/BackupManager.test.ts | 31 | Backup/restore (via IOManager) |
-| integration/backup-compression.test.ts | 16 | Backup compression integration |
-| unit/features/CompressionManager.test.ts | 32 | Duplicate detection (via SearchManager) |
-| unit/features/ExportManager.test.ts | 95 | Export formats + compression (via IOManager) |
-| unit/features/ImportManager.test.ts | 26 | Import formats (via IOManager) |
-| unit/features/TagManager.test.ts | 35 | Tag aliases |
-| unit/search/BasicSearch.test.ts | 37 | Basic search |
-| unit/search/BooleanSearch.test.ts | 52 | AND/OR/NOT queries |
-| unit/search/FuzzySearch.test.ts | 53 | Levenshtein matching |
-| unit/search/RankedSearch.test.ts | 35 | TF-IDF ranking |
-| unit/search/SavedSearchManager.test.ts | 29 | Saved searches |
-| unit/search/SearchFilterChain.test.ts | 48 | Filter logic |
-| unit/search/SearchSuggestions.test.ts | 24 | "Did you mean?" |
-| unit/search/TFIDFIndexManager.test.ts | 38 | TF-IDF indexing |
-| unit/search/EmbeddingService.test.ts | 31 | Embedding service abstraction |
-| unit/search/VectorStore.test.ts | 32 | Vector storage & similarity search |
-| unit/search/SemanticSearch.test.ts | 27 | Semantic search manager |
-| unit/search/HybridSearchManager.test.ts | 33 | Hybrid search with three-layer fusion |
-| unit/search/QueryAnalyzer.test.ts | 56 | Query analysis and planning |
-| integration/hybrid-search.test.ts | 18 | Hybrid search integration |
-| integration/smart-search.test.ts | 15 | Smart search with reflection |
-| unit/features/ObservationNormalizer.test.ts | 35 | Coreference resolution + keyword extraction |
-| unit/utils/entityUtils.test.ts | 32 | Entity utilities |
-| unit/utils/indexes.test.ts | 24 | Search indexes |
-| unit/utils/levenshtein.test.ts | 12 | String distance |
-| unit/utils/responseFormatter.test.ts | 36 | Response formatting |
-| unit/utils/tagUtils.test.ts | 48 | Tag utilities |
-| unit/utils/validationHelper.test.ts | 26 | Zod validation |
-| unit/utils/compressionUtil.test.ts | 41 | Brotli compression utilities |
-| unit/utils/compressedCache.test.ts | 42 | LRU cache with compression |
-| unit/server/responseCompressor.test.ts | 25 | MCP response compression |
-| performance/compression-benchmarks.test.ts | 9 | Compression performance benchmarks |
-| unit/features/StreamingExporter.test.ts | 9 | Streaming export |
-| integration/streaming-export.test.ts | 6 | Streaming export integration |
-| unit/workers/WorkerPool.test.ts | 8 | Worker pool for parallel processing |
-| unit/search/BM25Search.test.ts | 23 | BM25 tokenization, indexing, and search |
-| unit/search/OptimizedInvertedIndex.test.ts | 26 | Memory-efficient inverted index |
-| unit/search/HybridScorer.test.ts | 21 | Score normalization and weighting |
-| unit/search/EmbeddingCache.test.ts | 30 | LRU caching with TTL for embeddings |
-| unit/search/IncrementalIndexer.test.ts | 25 | Batch embedding index updates |
-| unit/search/QuantizedVectorStore.test.ts | 24 | 8-bit scalar quantization for vectors |
-| unit/utils/MemoryMonitor.test.ts | 25 | Centralized memory tracking |
-| unit/utils/BatchProcessor.test.ts | varies | Generic batch processing |
-| unit/utils/WorkerPoolManager.test.ts | varies | Unified worker pool management |
-| unit/search/ParallelSearchExecutor.test.ts | varies | Concurrent multi-layer search |
-| unit/search/QueryPlanCache.test.ts | varies | LRU cache for query plans |
-| unit/search/EarlyTerminationManager.test.ts | varies | Result adequacy checking |
-| performance/v10-benchmarks.test.ts | varies | Phase 12 verification suite |
+| Test File | Purpose |
+|-----------|---------|
+| `file-path.test.ts` | Storage path handling |
+| `knowledge-graph.test.ts` | Core graph operations via memoryjs |
+| `integration/server.test.ts` | MCP server integration |
+| `e2e/tools/entity-tools.test.ts` | Entity tool end-to-end tests |
+| `e2e/tools/observation-tools.test.ts` | Observation tool end-to-end tests |
+| `e2e/tools/relation-tools.test.ts` | Relation tool end-to-end tests |
 
-**Note:** Performance benchmarks use relative testing (baseline + multipliers) to avoid flaky failures on different machines.
-
-### Test Reporting
-
-Custom Vitest reporter generates HTML and JSON reports:
-
-```bash
-# Run tests with reports (default mode: all)
-npm test
-
-# Report modes via environment variable
-VITEST_REPORT_MODE=summary npm test   # Only summary reports
-VITEST_REPORT_MODE=debug npm test     # Only failed test reports
-VITEST_REPORT_MODE=all npm test       # All test reports (default)
-
-# Skip benchmark tests
-SKIP_BENCHMARKS=true npm test
-```
-
-**Report Output Structure:**
-```
-tests/test-results/
-├── json/           # Per-file JSON reports
-├── html/           # Per-file HTML reports
-└── summary/        # Summary JSON + HTML with coverage data
-```
+> **Note**: For comprehensive unit tests covering search, storage, managers, and utilities, see [@danielsimonjr/memoryjs](https://www.npmjs.com/package/@danielsimonjr/memoryjs) (2,882 tests across 90 test files)
 
 ## Performance & Optimizations
 
+Performance is provided by the memoryjs library:
 - **O(1) read operations** via direct cache access
 - **O(1) single-entity writes** via append-only file operations
-- **O(1) observation lookups** via ObservationIndex (inverted index mapping words to entities)
 - In-memory caching with write-through invalidation
 - Lazy manager initialization (managers load on-demand)
-- Batch operations support via TransactionManager
-- Search caching with TTL and LRU eviction
 - Streaming exports for large graphs (>= 5000 entities)
 - Parallel fuzzy search via worker pool
-- Pre-computed similarity data for 1.5-2x faster duplicate detection
-- Optimized compressGraph with single load/save (10x I/O reduction)
 
-## Server Architecture
-
-- **MCPServer.ts**: Main server entry point
-- **toolDefinitions.ts**: All 59 tool schemas organized by category
-- **toolHandlers.ts**: Handler registry and dispatch logic
-- **responseCompressor.ts**: Automatic brotli compression for large responses (>256KB)
-- **GraphTraversal.ts**: Graph algorithms (BFS, DFS, shortest path, centrality)
+memory-mcp adds:
+- **Response compression**: Automatic brotli compression for large responses (>256KB)
 
 ## Dependencies
 
 **Production:**
-- @modelcontextprotocol/sdk: ^1.21.1
-- @danielsimonjr/workerpool: Worker pool management
-- better-sqlite3: ^11.7.0
-- zod: ^4.1.13
+- @danielsimonjr/memoryjs: ^1.0.0 (core knowledge graph)
+- @modelcontextprotocol/sdk: ^1.21.1 (MCP protocol)
+- zod: ^3.24.1 (validation)
 
 **Development:**
-- @types/better-sqlite3: ^7.6.12
 - TypeScript: ^5.6.2
 - Vitest: ^4.0.13
 - @vitest/coverage-v8: ^4.0.13

@@ -6,9 +6,9 @@
     "goal": "Extract EmbeddingService, VectorStore, SemanticSearch",
     "effort": "4 hours",
     "impact": "Vector-based semantic search",
-    "status": "pending",
+    "status": "completed",
     "created": "2026-01-09",
-    "completed": null,
+    "completed": "2026-01-10",
     "targetVersion": "memoryjs@1.0.0"
   },
   "tasks": [

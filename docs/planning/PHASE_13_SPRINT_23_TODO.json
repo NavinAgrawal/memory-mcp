@@ -6,9 +6,9 @@
     "goal": "Update memory-mcp to depend on memoryjs and remove extracted code",
     "effort": "4 hours",
     "impact": "memory-mcp uses memoryjs as dependency",
-    "status": "pending",
+    "status": "completed",
     "created": "2026-01-09",
-    "completed": null,
+    "completed": "2026-01-10",
     "targetVersion": "memory-mcp@11.0.0"
   },
   "tasks": [

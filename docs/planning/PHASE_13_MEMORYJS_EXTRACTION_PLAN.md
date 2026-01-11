@@ -4,7 +4,8 @@
 
 **Version**: 1.0.0
 **Created**: 2026-01-09
-**Status**: Planning
+**Status**: Completed
+**Completed**: 2026-01-10
 
 ---
 
@@ -1666,6 +1667,57 @@ import {
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2026-01-09
+## Appendix C: Implementation Notes
+
+> **Note**: The actual implementation deviated from this original plan in several ways to simplify the extraction process.
+
+### Implementation Deviations
+
+1. **Adapter Interfaces Not Implemented**
+   - **Planned**: Create `IStorageAdapter` and `IWorkerAdapter` interfaces with adapter implementations
+   - **Actual**: Direct copy of existing `GraphStorage`, `SQLiteStorage`, `StorageFactory` classes
+   - **Reason**: Simplified extraction without breaking changes
+   - **Impact**: Future Bun/Deno support will require refactoring
+
+2. **No `adapters/` Directory**
+   - **Planned**: `adapters/storage/` and `adapters/workers/` subdirectories with adapter implementations
+   - **Actual**: Existing code structure preserved in `core/` directory
+   - **Reason**: Minimized code changes during extraction
+   - **Impact**: None for current Node.js usage
+
+3. **Test Count**
+   - **Planned**: ~1,200 tests in memoryjs
+   - **Actual**: 2,882 tests in memoryjs (90 test files)
+   - **Reason**: All tests from memory-mcp were copied, not just estimated subset
+   - **Impact**: Better test coverage than planned
+
+4. **Documentation**
+   - **Planned**: `CLAUDE.md` and `docs/API.md` for memoryjs
+   - **Actual**: `README.md`, `CHANGELOG.md`, `LICENSE` created
+   - **Reason**: Prioritized essential documentation
+   - **Impact**: API docs can be added later
+
+5. **Zod Version**
+   - **Planned**: zod ^4.1.13
+   - **Actual**: zod ^3.24.1
+   - **Reason**: Maintained compatibility with existing code
+   - **Impact**: None
+
+6. **File Counts**
+   - **Planned**: ~68 files for memoryjs, ~7 files for memory-mcp
+   - **Actual**: 73 TypeScript files for memoryjs, 5 files for memory-mcp
+   - **Reason**: Actual extraction resulted in slightly different structure
+
+### Final Deliverables
+
+- `@danielsimonjr/memoryjs@1.0.0` published to npm
+- `@danielsimonjr/memory-mcp@11.0.0` published to npm
+- All 59 MCP tools verified working
+- 2,882 tests passing in memoryjs
+- 194 tests passing in memory-mcp
+
+---
+
+**Document Version**: 1.1.0
+**Last Updated**: 2026-01-10
 **Author**: Claude (with Daniel Simon Jr.)

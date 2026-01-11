@@ -6,9 +6,9 @@
     "goal": "Extract BasicSearch, SearchFilterChain, SearchSuggestions, SavedSearchManager",
     "effort": "4 hours",
     "impact": "Foundation search functionality",
-    "status": "pending",
+    "status": "completed",
     "created": "2026-01-09",
-    "completed": null,
+    "completed": "2026-01-10",
     "targetVersion": "memoryjs@1.0.0"
   },
   "tasks": [
