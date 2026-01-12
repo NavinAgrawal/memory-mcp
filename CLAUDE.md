@@ -12,6 +12,8 @@ npm run typecheck     # Strict type checking
 npm run watch         # Watch mode for development
 npm run clean         # Remove dist/ directory
 npm run docs:deps     # Generate dependency graph
+npm run tools:install # Install dependencies for all standalone tools
+npm run tools:build   # Build all standalone tools
 
 # Run a single test file
 npx vitest run tests/e2e/tools/entity-tools.test.ts
