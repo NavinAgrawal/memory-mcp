@@ -32,7 +32,7 @@ This is an enhanced MCP memory server with **59 tools** (vs 11 in official versi
 
 Core knowledge graph functionality has been extracted into a standalone library:
 
-**[@danielsimonjr/memoryjs](https://www.npmjs.com/package/@danielsimonjr/memoryjs)** v1.0.0 (published)
+**[@danielsimonjr/memoryjs](https://www.npmjs.com/package/@danielsimonjr/memoryjs)** v1.2.2 (published)
 
 | Component | memoryjs | memory-mcp |
 |-----------|----------|------------|
@@ -205,7 +205,7 @@ memory-mcp adds:
 ## Dependencies
 
 **Production:**
-- @danielsimonjr/memoryjs: ^1.0.0 (core knowledge graph)
+- @danielsimonjr/memoryjs: ^1.2.2 (core knowledge graph)
 - @modelcontextprotocol/sdk: ^1.21.1 (MCP protocol)
 - zod: ^3.24.1 (validation)
 
