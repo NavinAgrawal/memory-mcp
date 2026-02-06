@@ -5,6 +5,13 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.1.1] - 2026-02-05
+
+### Fixed
+
+- **npm tarball**: Excluded `dist/memory.jsonl` and `dist/memory.db` data files via `.npmignore` (package size reduced from 220.3kB to 207.5kB)
+- **CLAUDE.md**: Updated test counts, added npm publishing workflow, added tarball gotcha
+
 ## [11.1.0] - 2026-02-05
 
 ### Added
