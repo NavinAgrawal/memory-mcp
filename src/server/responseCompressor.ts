@@ -165,8 +165,8 @@ export function estimateCompressionRatio(content: string): number {
   const jsonRatio = jsonIndicators / size;
 
   if (jsonRatio > 0.1) {
-    // Highly JSON-like, expect 60-75% compression
-    return 0.25 + (0.1 * Math.random());
+    // Highly JSON-like, expect ~70% compression
+    return 0.3;
   }
 
   // Check for repetitive content
@@ -174,10 +174,10 @@ export function estimateCompressionRatio(content: string): number {
   const repetitionRatio = uniqueChars / Math.min(size, 256);
 
   if (repetitionRatio < 0.3) {
-    // Very repetitive, expect 50-70% compression
-    return 0.3 + (0.15 * Math.random());
+    // Very repetitive, expect ~60% compression
+    return 0.4;
   }
 
   // Default estimate for mixed content
-  return 0.5 + (0.2 * Math.random());
+  return 0.6;
 }

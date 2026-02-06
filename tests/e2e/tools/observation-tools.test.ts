@@ -85,20 +85,22 @@ describe('Observation Tools E2E', () => {
       });
 
       it('should require observations array parameter', async () => {
-        await expect(handleToolCall('add_observations', {}, manager))
-          .rejects.toThrow();
+        const result = await handleToolCall('add_observations', {}, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require entityName field', async () => {
-        await expect(handleToolCall('add_observations', {
+        const result = await handleToolCall('add_observations', {
           observations: [{ contents: ['test'] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require contents field', async () => {
-        await expect(handleToolCall('add_observations', {
+        const result = await handleToolCall('add_observations', {
           observations: [{ entityName: 'TestEntity' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -188,9 +190,10 @@ describe('Observation Tools E2E', () => {
 
     describe('Error Handling', () => {
       it('should reject non-existent entity', async () => {
-        await expect(handleToolCall('add_observations', {
+        const result = await handleToolCall('add_observations', {
           observations: [{ entityName: 'NonExistent', contents: ['test'] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should handle empty observations array gracefully', async () => {
@@ -212,9 +215,10 @@ describe('Observation Tools E2E', () => {
       });
 
       it('should reject non-string observation content', async () => {
-        await expect(handleToolCall('add_observations', {
+        const result = await handleToolCall('add_observations', {
           observations: [{ entityName: 'TestEntity', contents: [123, true] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -319,21 +323,23 @@ describe('Observation Tools E2E', () => {
       });
 
       it('should require deletions array parameter', async () => {
-        await expect(handleToolCall('delete_observations', {}, manager))
-          .rejects.toThrow();
+        const result = await handleToolCall('delete_observations', {}, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require entityName field', async () => {
         // entityName is required per tool definition
-        await expect(handleToolCall('delete_observations', {
+        const result = await handleToolCall('delete_observations', {
           deletions: [{ observations: ['obs1'] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require observations field', async () => {
-        await expect(handleToolCall('delete_observations', {
+        const result = await handleToolCall('delete_observations', {
           deletions: [{ entityName: 'MultiObsEntity' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 

@@ -65,26 +65,29 @@ describe('Entity Tools E2E', () => {
       });
 
       it('should require entities array parameter', async () => {
-        await expect(handleToolCall('create_entities', {}, manager))
-          .rejects.toThrow();
+        const result = await handleToolCall('create_entities', {}, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require name field in each entity', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{ entityType: 'test', observations: [] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require entityType field in each entity', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{ name: 'Test', observations: [] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require observations array in each entity', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{ name: 'Test', entityType: 'test' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -195,15 +198,17 @@ describe('Entity Tools E2E', () => {
       });
 
       it('should reject entity without name', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{ entityType: 'test', observations: [] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should reject entity without entityType', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{ name: 'NoType', observations: [] }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should handle duplicate entity names in same batch', async () => {
@@ -233,35 +238,38 @@ describe('Entity Tools E2E', () => {
       });
 
       it('should reject importance outside 0-10 range', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{
             name: 'BadImportance',
             entityType: 'test',
             observations: [],
             importance: 15
           }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should reject negative importance', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{
             name: 'NegativeImportance',
             entityType: 'test',
             observations: [],
             importance: -1
           }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should reject non-array observations', async () => {
-        await expect(handleToolCall('create_entities', {
+        const result = await handleToolCall('create_entities', {
           entities: [{
             name: 'BadObs',
             entityType: 'test',
             observations: 'not-an-array'
           }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -376,8 +384,8 @@ describe('Entity Tools E2E', () => {
       });
 
       it('should require entityNames array parameter', async () => {
-        await expect(handleToolCall('delete_entities', {}, manager))
-          .rejects.toThrow();
+        const result = await handleToolCall('delete_entities', {}, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -462,16 +470,18 @@ describe('Entity Tools E2E', () => {
 
       it('should reject empty entityNames array', async () => {
         // System validates non-empty array requirement
-        await expect(handleToolCall('delete_entities', {
+        const result = await handleToolCall('delete_entities', {
           entityNames: []
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should reject non-array entityNames', async () => {
         // entityNames must be an array, not a string or other type
-        await expect(handleToolCall('delete_entities', {
+        const result = await handleToolCall('delete_entities', {
           entityNames: 'NotAnArray'
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 

@@ -74,26 +74,29 @@ describe('Relation Tools E2E', () => {
       });
 
       it('should require relations array parameter', async () => {
-        await expect(handleToolCall('create_relations', {}, manager))
-          .rejects.toThrow();
+        const result = await handleToolCall('create_relations', {}, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require from field in each relation', async () => {
-        await expect(handleToolCall('create_relations', {
+        const result = await handleToolCall('create_relations', {
           relations: [{ to: 'EntityB', relationType: 'connects' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require to field in each relation', async () => {
-        await expect(handleToolCall('create_relations', {
+        const result = await handleToolCall('create_relations', {
           relations: [{ from: 'EntityA', relationType: 'connects' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require relationType field in each relation', async () => {
-        await expect(handleToolCall('create_relations', {
+        const result = await handleToolCall('create_relations', {
           relations: [{ from: 'EntityA', to: 'EntityB' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -181,23 +184,28 @@ describe('Relation Tools E2E', () => {
 
       it('should reject empty relationType', async () => {
         // Empty string relationType should be rejected
-        await expect(handleToolCall('create_relations', {
+        const result = await handleToolCall('create_relations', {
           relations: [{ from: 'EntityA', to: 'EntityB', relationType: '' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should reject relation with non-existent from entity', async () => {
         // System validates that referenced entities exist (prevents dangling relations)
-        await expect(handleToolCall('create_relations', {
+        const result = await handleToolCall('create_relations', {
           relations: [{ from: 'NonExistent', to: 'EntityB', relationType: 'test' }]
-        }, manager)).rejects.toThrow('Relations reference non-existent entities');
+        }, manager);
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain('Relations reference non-existent entities');
       });
 
       it('should reject relation with non-existent to entity', async () => {
         // System validates that referenced entities exist (prevents dangling relations)
-        await expect(handleToolCall('create_relations', {
+        const result = await handleToolCall('create_relations', {
           relations: [{ from: 'EntityA', to: 'NonExistent', relationType: 'test' }]
-        }, manager)).rejects.toThrow('Relations reference non-existent entities');
+        }, manager);
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain('Relations reference non-existent entities');
       });
 
       it('should handle duplicate relations gracefully', async () => {
@@ -339,15 +347,16 @@ describe('Relation Tools E2E', () => {
       });
 
       it('should require relations array parameter', async () => {
-        await expect(handleToolCall('delete_relations', {}, manager))
-          .rejects.toThrow();
+        const result = await handleToolCall('delete_relations', {}, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should require all three fields to identify relation', async () => {
         // Missing relationType
-        await expect(handleToolCall('delete_relations', {
+        const result = await handleToolCall('delete_relations', {
           relations: [{ from: 'EntityA', to: 'EntityB' }]
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
     });
 
@@ -418,9 +427,10 @@ describe('Relation Tools E2E', () => {
 
       it('should reject empty relations array', async () => {
         // System validates non-empty array for delete
-        await expect(handleToolCall('delete_relations', {
+        const result = await handleToolCall('delete_relations', {
           relations: []
-        }, manager)).rejects.toThrow();
+        }, manager);
+        expect(result.isError).toBe(true);
       });
 
       it('should handle mixed existing and non-existing relations', async () => {

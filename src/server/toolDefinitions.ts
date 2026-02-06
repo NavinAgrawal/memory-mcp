@@ -222,6 +222,7 @@ export const toolDefinitions: ToolDefinition[] = [
             anchorTimestamps: { type: 'boolean', default: true },
             extractKeywords: { type: 'boolean', default: false },
           },
+          additionalProperties: false,
         },
         persist: {
           type: 'boolean',
@@ -256,7 +257,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: 'search_by_date_range',
-    description: 'Search entities within a date range, with optional filtering by entity type and tags',
+    description: 'Search entities within a date range, with optional filtering by entity type and tags. At least one of startDate or endDate should be provided.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -375,6 +376,7 @@ export const toolDefinitions: ToolDefinition[] = [
               description: 'Weight for metadata filtering (default: 0.2)',
             },
           },
+          additionalProperties: false,
         },
         filters: {
           type: 'object',
@@ -396,10 +398,12 @@ export const toolDefinitions: ToolDefinition[] = [
                 start: { type: 'string', description: 'Start date (ISO 8601)' },
                 end: { type: 'string', description: 'End date (ISO 8601)' },
               },
+              additionalProperties: false,
             },
             minImportance: { type: 'number', description: 'Minimum importance score (0-10)' },
             maxImportance: { type: 'number', description: 'Maximum importance score (0-10)' },
           },
+          additionalProperties: false,
         },
         limit: { type: 'number', description: 'Maximum results to return (default: 10)' },
       },

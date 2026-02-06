@@ -40,8 +40,9 @@ import { maybeCompressResponse } from './responseCompressor.js';
 
 /**
  * Tool response type for MCP SDK compatibility.
+ * Extends base response with optional isError flag for error framing.
  */
-export type ToolResponse = ReturnType<typeof formatToolResponse>;
+export type ToolResponse = ReturnType<typeof formatToolResponse> & { isError?: boolean };
 
 /**
  * Tool handler function signature.
@@ -94,8 +95,10 @@ async function withCompression(
  * Registry of all tool handlers keyed by tool name.
  * Handlers call managers directly for reduced abstraction layers.
  *
- * Note: Large-response tools (read_graph, search_nodes, get_subtree, open_nodes)
- * are wrapped with automatic response compression for payloads >256KB.
+ * Note: Tools that can return unbounded result sets (read_graph, search_nodes,
+ * get_subtree, open_nodes) are wrapped with withCompression() for payloads >256KB.
+ * Filtered/limited search tools (search_nodes_ranked, fuzzy_search, etc.) are not
+ * wrapped because their results are bounded by query specificity or limit params.
  */
 export const toolHandlers: Record<string, ToolHandler> = {
   // ==================== ENTITY HANDLERS ====================
@@ -179,7 +182,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
     });
 
     if (persist) {
-      // Update entities with normalized observations
+      // TODO: This bypasses the manager layer and writes directly to storage.
+      // May leave in-memory cache stale. Ideally, normalization logic should
+      // be moved into a memoryjs manager method. See code review issue #3.
       const updatedEntities = graph.entities.map(entity => {
         const result = results.find(r => r.entityName === entity.name);
         if (result && result.changes.length > 0) {
@@ -193,7 +198,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       });
       await ctx.storage.saveGraph({
         entities: updatedEntities,
-        relations: [...graph.relations],
+        relations: [...graph.relations], // spread needed: graph.relations is readonly
       });
     }
 
@@ -835,8 +840,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
  * @param name - Tool name to call
  * @param args - Tool arguments
  * @param ctx - Manager context with all manager instances
- * @returns Tool response
- * @throws Error if tool name is unknown
+ * @returns Tool response (includes isError: true on failure)
  */
 export async function handleToolCall(
   name: string,
@@ -845,7 +849,18 @@ export async function handleToolCall(
 ): Promise<ToolResponse> {
   const handler = toolHandlers[name];
   if (!handler) {
-    throw new Error(`Unknown tool: ${name}`);
+    return {
+      content: [{ type: 'text' as const, text: `Error: Unknown tool: ${name}` }],
+      isError: true,
+    };
   }
-  return handler(ctx, args);
+  try {
+    return await handler(ctx, args);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: 'text' as const, text: `Error: ${message}` }],
+      isError: true,
+    };
+  }
 }

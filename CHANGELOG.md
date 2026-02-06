@@ -5,6 +5,36 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.1.0] - 2026-02-05
+
+### Added
+
+- **MCP error framing**: `handleToolCall` now catches all handler errors and returns structured MCP error responses (`isError: true`) instead of throwing raw exceptions
+- **Dynamic server version**: MCPServer reads version from package.json at runtime instead of a hardcoded string
+- **Input validation**: Added `additionalProperties: false` to nested schemas in `normalize_observations`, `hybrid_search` (weights, filters, dateRange)
+- **Handler smoke tests**: 36 new tests covering tag, tag alias, hierarchy, graph algorithm, compression, saved search, and analytics handlers
+- **Response compressor tests**: 19 new unit tests achieving 100% coverage on `responseCompressor.ts` (up from 20.68%)
+
+### Changed
+
+- **Deterministic compression estimation**: `estimateCompressionRatio` no longer uses `Math.random()`, returns fixed values based on content characteristics
+- **Error handling tests**: Updated 31 tests across 4 test files to assert MCP error responses instead of thrown exceptions
+- **Tool compression documentation**: Added comment explaining selection criteria for which tools use `withCompression()` wrapper
+- **search_by_date_range description**: Clarified that at least one date parameter should be provided
+
+### Fixed
+
+- **Version mismatch**: MCPServer.ts reported "11.0.0" while package.json was "11.0.1"
+- **ToolResponse type**: Extended with optional `isError` field for MCP-compliant error responses
+
+### Removed
+
+- **Stale devDependencies**: Removed `@types/better-sqlite3`, `@types/js-yaml`, and `js-yaml` (no longer used after Phase 13 extraction)
+
+### Technical Debt Documented
+
+- `normalize_observations` handler bypasses manager layer with direct `saveGraph()` call (marked with TODO for future memoryjs migration)
+
 ## [11.0.1] - 2026-01-18
 
 ### Fixed

@@ -7,6 +7,7 @@
  * @module server/MCPServer
  */
 
+import { createRequire } from 'node:module';
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -16,6 +17,9 @@ import {
 import { logger, type ManagerContext } from '@danielsimonjr/memoryjs';
 import { toolDefinitions } from './toolDefinitions.js';
 import { handleToolCall } from './toolHandlers.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../../package.json') as { version: string };
 
 /**
  * MCP Server for Knowledge Graph operations.
@@ -30,7 +34,7 @@ export class MCPServer {
     this.server = new Server(
       {
         name: "memory-server",
-        version: "11.0.0",
+        version,
       },
       {
         capabilities: {

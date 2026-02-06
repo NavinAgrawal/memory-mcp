@@ -136,8 +136,9 @@ describe('MCPServer Integration', () => {
     });
 
     it('should return proper error for unknown tool', async () => {
-      await expect(handleToolCall('nonexistent_tool', {}, manager))
-        .rejects.toThrow('Unknown tool');
+      const result = await handleToolCall('nonexistent_tool', {}, manager);
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Unknown tool');
     });
   });
 
