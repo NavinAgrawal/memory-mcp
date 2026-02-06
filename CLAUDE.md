@@ -137,6 +137,9 @@ The `tools/` directory has standalone utilities (each with own `package.json`, b
 npm config set //registry.npmjs.org/:_authToken=$(cat c:\mcp-servers\npm_key.txt)
 npm publish --access public
 # `prepare` script auto-builds, so separate `npm run build` is not needed before publish
+# Verify tarball contents before publishing:
+# npm pack --dry-run 2>&1 | grep -E "jsonl|\.db|total files|package size"
+# Always bump version in package.json before publishing (npm won't re-publish an existing version)
 ```
 
 ## Gotchas
