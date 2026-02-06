@@ -92,7 +92,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 
 ## Test Structure
 
-6 test files, ~194 tests. Core graph tests are in the memoryjs package (2,882 tests).
+8 test files, ~251 tests. Core graph tests are in the memoryjs package (2,882 tests).
 
 | Test File | What It Tests |
 |-----------|---------------|
@@ -102,6 +102,8 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 | `tests/e2e/tools/entity-tools.test.ts` | Entity tool end-to-end |
 | `tests/e2e/tools/observation-tools.test.ts` | Observation tool end-to-end |
 | `tests/e2e/tools/relation-tools.test.ts` | Relation tool end-to-end |
+| `tests/unit/response-compressor.test.ts` | Response compressor unit tests |
+| `tests/e2e/tools/handler-smoke.test.ts` | Smoke tests for 36 tool handlers |
 
 Vitest config: `vitest.config.ts`. Coverage targets `src/**/*.ts` (excludes index barrel files). Custom reporter at `tests/test-results/per-file-reporter.js`.
 
@@ -128,8 +130,18 @@ The `tools/` directory has standalone utilities (each with own `package.json`, b
 | `create-dependency-graph` | Generate TypeScript project dependency graphs |
 | `migrate-from-jsonl-to-sqlite` | Convert between JSONL and SQLite formats |
 
+## Publishing to npm
+
+```bash
+# Token with "bypass 2FA" required — classic tokens are revoked
+npm config set //registry.npmjs.org/:_authToken=$(cat c:\mcp-servers\npm_key.txt)
+npm publish --access public
+# `prepare` script auto-builds, so separate `npm run build` is not needed before publish
+```
+
 ## Gotchas
 
 - **Data files are gitignored**: `*.jsonl` and `memory.db` are in `.gitignore` — test runs create/modify these in the project root but they won't appear in `git status`.
 - **Error handling in dispatch**: `handleToolCall` catches exceptions from handlers and returns them as MCP-formatted error responses (not thrown). Check MCP response `isError` field when debugging.
 - **TypeScript target**: ES2022 with Node16 module resolution. The `prepare` script runs `npm run build` on install, so `dist/` is rebuilt automatically.
+- **Tarball includes `dist/memory.jsonl`**: The `files` field is `["dist"]`, so any `.jsonl` copied into `dist/` gets published. Consider adding `dist/*.jsonl` to `.npmignore` if this is unintentional.

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CLAUDE.md**: Updated test counts (8 files, ~251 tests), added npm publishing workflow, added tarball gotcha for `dist/memory.jsonl`
 - **Deterministic compression estimation**: `estimateCompressionRatio` no longer uses `Math.random()`, returns fixed values based on content characteristics
 - **Error handling tests**: Updated 31 tests across 4 test files to assert MCP error responses instead of thrown exceptions
 - **Tool compression documentation**: Added comment explaining selection criteria for which tools use `withCompression()` wrapper
