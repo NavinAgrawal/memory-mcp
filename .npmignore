@@ -1,0 +1,3 @@
+# Data files that may end up in dist/ from local runs
+dist/*.jsonl
+dist/*.db
