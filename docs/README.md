@@ -17,11 +17,11 @@ High-level introduction to Memory MCP covering:
 - Quick architecture diagram
 - Data model (Entity, Relation)
 - Directory structure
-- Tool categories (45 total)
+- Tool categories (91 total)
 - Performance characteristics
 
 ### [API Reference](./API.md)
-Complete API documentation for all 45+ tools provided by the Enhanced Memory MCP server, including:
+Complete API documentation for all 91 tools provided by the Enhanced Memory MCP server, including:
 - Entity and relation operations
 - Search operations (basic, ranked, boolean, fuzzy)
 - Hierarchy management

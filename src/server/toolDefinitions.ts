@@ -2,7 +2,7 @@
  * MCP Tool Definitions
  *
  * Extracted from MCPServer.ts to reduce file size and improve maintainability.
- * Contains all 59 tool schemas for the Knowledge Graph MCP Server.
+ * Contains all 91 tool schemas for the Knowledge Graph MCP Server.
  *
  * @module server/toolDefinitions
  */
@@ -1059,6 +1059,529 @@ export const toolDefinitions: ToolDefinition[] = [
           description: 'Force re-indexing of all entities even if already indexed (default: false)',
         },
       },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== REF INDEX ====================
+  {
+    name: 'register_ref',
+    description: 'Register a stable alias (ref) pointing to an entity name in the RefIndex for O(1) lookups',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'Stable alias string to register' },
+        entityName: { type: 'string', description: 'Entity name this ref resolves to' },
+        description: { type: 'string', description: 'Optional human-readable description of this ref' },
+      },
+      required: ['ref', 'entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'resolve_ref',
+    description: 'Resolve a stable alias (ref) to its entity name via the RefIndex',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'Alias string to resolve' },
+      },
+      required: ['ref'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'deregister_ref',
+    description: 'Remove a stable alias (ref) from the RefIndex',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'Alias string to deregister' },
+      },
+      required: ['ref'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_refs',
+    description: 'List all registered refs in the RefIndex, optionally filtered by entity name',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Optional: filter refs by entity name' },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== ARTIFACT ====================
+  {
+    name: 'create_artifact',
+    description: 'Create an artifact entity (tool output, code snippet, API response, etc.) with a stable auto-generated ref',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Artifact content stored as an entity observation' },
+        toolName: { type: 'string', description: 'Name of the tool or source that produced this artifact' },
+        artifactType: {
+          type: 'string',
+          enum: ['tool_output', 'code_snippet', 'api_response', 'search_result', 'file_content', 'user_input'],
+          description: 'Category of artifact for structured filtering',
+        },
+        description: { type: 'string', description: 'Optional human-readable description' },
+        sessionId: { type: 'string', description: 'Optional session context for grouping related artifacts' },
+      },
+      required: ['content', 'toolName', 'artifactType'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_artifact',
+    description: 'Retrieve an artifact entity by its stable ref or entity name',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'Stable ref or entity name (e.g. "bash-2026-03-24-a3f2")' },
+      },
+      required: ['ref'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_artifacts',
+    description: 'List all artifact entities, with optional filtering by tool name, type, or date',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        toolName: { type: 'string', description: 'Filter by originating tool name' },
+        artifactType: {
+          type: 'string',
+          enum: ['tool_output', 'code_snippet', 'api_response', 'search_result', 'file_content', 'user_input'],
+          description: 'Filter by artifact category',
+        },
+        since: { type: 'string', description: 'Only return artifacts created at or after this ISO 8601 date' },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== TEMPORAL SEARCH ====================
+  {
+    name: 'search_by_time',
+    description: 'Search entities using a natural language time expression (e.g. "last week", "yesterday", "in January")',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Natural language time expression to parse and search' },
+        field: {
+          type: 'string',
+          enum: ['createdAt', 'lastModified', 'any'],
+          description: 'Which timestamp field to filter on (default: any)',
+        },
+        includeUndated: {
+          type: 'boolean',
+          description: 'If true, treat entities with no timestamps as matching (default: false)',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== DISTILLATION ====================
+  {
+    name: 'configure_distillation',
+    description: 'Configure the distillation pipeline policy (default, noop, or none) that filters memories before context formatting',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        policy: {
+          type: 'string',
+          enum: ['default', 'noop', 'none'],
+          description: 'Policy to apply: default (relevance+freshness+dedup), noop (pass-through), none (clear pipeline)',
+        },
+      },
+      required: ['policy'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== FRESHNESS ====================
+  {
+    name: 'check_freshness',
+    description: 'Calculate the freshness score (0–1) for a specific entity based on its TTL and confidence',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Name of the entity to check freshness for' },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_stale_entities',
+    description: 'Return all entities whose freshness score is below a threshold',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        threshold: {
+          type: 'number',
+          description: 'Freshness threshold (0–1). Entities below this score are considered stale (default: 0.5)',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_expired_entities',
+    description: 'Return all entities that have passed their TTL expiry',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'refresh_entity',
+    description: 'Reset freshness for an entity by updating its creation timestamp to now and resetting confidence to 1.0',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Name of the entity to refresh' },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'freshness_report',
+    description: 'Generate a freshness report across all entities showing fresh, stale, and expired counts',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        threshold: {
+          type: 'number',
+          description: 'Freshness threshold for fresh/stale categorisation (default: 0.5)',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== LLM QUERY PLANNER ====================
+  {
+    name: 'query_natural_language',
+    description: 'Decompose a natural language query into a structured search plan and return matching entities',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Natural language query to plan and execute' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== GOVERNANCE ====================
+  {
+    name: 'governance_transaction',
+    description: 'Set the active governance policy (canCreate, canUpdate, canDelete) for future operations',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        canCreate: { type: 'boolean', description: 'Whether entity creation is allowed (default: true)' },
+        canUpdate: { type: 'boolean', description: 'Whether entity updates are allowed (default: true)' },
+        canDelete: { type: 'boolean', description: 'Whether entity deletion is allowed (default: true)' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'audit_query',
+    description: 'Query the audit log for operations matching filter criteria (operation type, agent ID, entity name, date range)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        operation: {
+          type: 'string',
+          enum: ['create', 'update', 'delete', 'merge', 'archive', 'rolled_back'],
+          description: 'Filter by operation type',
+        },
+        agentId: { type: 'string', description: 'Filter by agent identifier' },
+        entityName: { type: 'string', description: 'Filter by entity name' },
+        since: { type: 'string', description: 'Only entries at or after this ISO 8601 timestamp' },
+        until: { type: 'string', description: 'Only entries at or before this ISO 8601 timestamp' },
+        limit: { type: 'number', description: 'Maximum number of results to return (default: 50)' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'audit_history',
+    description: 'Get the full audit history for a specific entity in chronological order',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Name of the entity to retrieve audit history for' },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'rollback_operation',
+    description: 'Reverse a specific committed operation using its audit entry ID (restores entity to before-snapshot)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        auditEntryId: { type: 'string', description: 'ID of the audit entry to reverse' },
+      },
+      required: ['auditEntryId'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== ROLE PROFILES ====================
+  {
+    name: 'set_agent_role',
+    description: 'Apply a built-in role profile (researcher, planner, executor, reviewer, coordinator) to adjust salience weights and context budgets',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        role: {
+          type: 'string',
+          enum: ['researcher', 'planner', 'executor', 'reviewer', 'default'],
+          description: 'Role to apply to the agent memory system',
+        },
+      },
+      required: ['role'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_role_profiles',
+    description: 'List all built-in role profiles with their salience weight and context budget configurations',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== ENTROPY FILTER ====================
+  {
+    name: 'enable_entropy_filter',
+    description: 'Enable or disable the Shannon entropy gate that drops low-information memories during consolidation',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        enabled: { type: 'boolean', description: 'Whether to enable the entropy filter' },
+        minEntropy: {
+          type: 'number',
+          description: 'Minimum entropy threshold in bits (default: 1.5). Higher = stricter filtering.',
+        },
+        minLength: {
+          type: 'number',
+          description: 'Minimum text length before entropy is evaluated (default: 10)',
+        },
+      },
+      required: ['enabled'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'compute_entropy',
+    description: 'Compute the Shannon entropy of a text string (in bits per character)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text to compute entropy for' },
+        minEntropy: {
+          type: 'number',
+          description: 'Optional: check if text passes this minimum entropy threshold',
+        },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== CONSOLIDATION ====================
+  {
+    name: 'start_consolidation',
+    description: 'Start the background consolidation scheduler that periodically deduplicates and merges memories',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        intervalMs: {
+          type: 'number',
+          description: 'Interval between consolidation runs in milliseconds (default: 3600000 = 1 hour)',
+        },
+        autoMergeDuplicates: {
+          type: 'boolean',
+          description: 'Enable duplicate detection and merge after each consolidation (default: false)',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'stop_consolidation',
+    description: 'Stop the background consolidation scheduler',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'run_consolidation_now',
+    description: 'Run a consolidation cycle on demand, independently of the scheduled interval',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== MEMORY FORMATTER ====================
+  {
+    name: 'format_with_salience_budget',
+    description: 'Format memories for LLM prompt consumption with proportional token allocation based on salience scores',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Names of entities (memories) to format',
+        },
+        salienceScores: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Map of entityName → salience score (0–1) for proportional allocation',
+        },
+        totalTokenBudget: {
+          type: 'number',
+          description: 'Maximum total token budget for the formatted output',
+        },
+        header: { type: 'string', description: 'Optional header text to prepend' },
+        separator: { type: 'string', description: 'Optional separator between memories (default: newline)' },
+      },
+      required: ['entityNames', 'salienceScores', 'totalTokenBudget'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== COLLABORATIVE SYNTHESIS ====================
+  {
+    name: 'synthesize_collaborative_context',
+    description: 'Synthesize context by traversing the graph neighbourhood from a seed entity and merging high-salience neighbors across agents',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        seedEntityName: { type: 'string', description: 'Name of the entity to start traversal from' },
+        maxDepth: { type: 'number', description: 'Maximum BFS depth to traverse from seed (default: 2)' },
+        minNeighborSalience: {
+          type: 'number',
+          description: 'Minimum salience score for a neighbor to be included (default: 0.3)',
+        },
+        maxNeighbors: { type: 'number', description: 'Maximum number of neighbor entities to include (default: 20)' },
+        queryText: { type: 'string', description: 'Optional query text for salience context scoring' },
+        currentTask: { type: 'string', description: 'Optional current task identifier for salience context' },
+      },
+      required: ['seedEntityName'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== FAILURE DISTILLATION ====================
+  {
+    name: 'distill_failure',
+    description: 'Distill lessons from a failed session by tracing the causal chain and extracting actionable insights',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'ID of the failed session to analyze' },
+        minLessonConfidence: {
+          type: 'number',
+          description: 'Minimum confidence required for a lesson to be persisted (default: 0.6)',
+        },
+        maxCauseChainLength: {
+          type: 'number',
+          description: 'Maximum depth to follow causal chains (default: 5)',
+        },
+      },
+      required: ['sessionId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'end_session',
+    description: 'End a session and trigger failure distillation if the session outcome was a failure',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'ID of the session to end' },
+        outcome: {
+          type: 'string',
+          enum: ['success', 'failure', 'partial'],
+          description: 'Outcome of the session',
+        },
+        distillFailures: {
+          type: 'boolean',
+          description: 'Whether to automatically distill lessons on failure outcome (default: true)',
+        },
+      },
+      required: ['sessionId', 'outcome'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== COGNITIVE LOAD ====================
+  {
+    name: 'analyze_cognitive_load',
+    description: 'Analyze the cognitive load of a set of entities: token density, redundancy ratio, diversity score, and composite load score',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Names of entities to analyze',
+        },
+        loadThreshold: {
+          type: 'number',
+          description: 'Load score threshold above which context is considered overloaded (default: 0.7)',
+        },
+      },
+      required: ['entityNames'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'adaptive_reduce_memories',
+    description: 'Adaptively reduce a set of memories until their cognitive load falls below the configured threshold by removing low-salience redundant memories',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Names of entities to reduce',
+        },
+        salienceScores: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Map of entityName → salience score (0–1) for prioritizing removal',
+        },
+        loadThreshold: {
+          type: 'number',
+          description: 'Target load threshold to reduce below (default: 0.7)',
+        },
+      },
+      required: ['entityNames', 'salienceScores'],
       additionalProperties: false,
     },
   },

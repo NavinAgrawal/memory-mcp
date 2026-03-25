@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 10.0.0
-**Last Updated**: 2026-01-09
+**Version**: 12.0.0
+**Last Updated**: 2026-03-24
 
 ## What Is This?
 
@@ -13,7 +13,7 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 |---------|-------------|
 | **Knowledge Graph** | Store entities and relations in a flexible graph structure |
 | **Persistent Memory** | Data persists across sessions in JSONL files |
-| **59 Tools** | Comprehensive API for graph operations |
+| **91 Tools** | Comprehensive API for graph operations |
 | **Hierarchical Nesting** | Parent-child relationships for tree organization |
 | **Advanced Search** | Basic, TF-IDF ranked, boolean, fuzzy, and intelligent hybrid search |
 | **Duplicate Detection** | Intelligent compression with similarity scoring |
@@ -97,7 +97,7 @@ src/ (77 TypeScript files, ~31,000 lines of code)
 │
 ├── server/ (4 files)     # MCP protocol layer
 │   ├── MCPServer.ts              # Server initialization
-│   ├── toolDefinitions.ts        # 59 tool schemas
+│   ├── toolDefinitions.ts        # 91 tool schemas
 │   ├── toolHandlers.ts           # Tool implementation registry
 │   └── responseCompressor.ts     # Brotli compression for large responses
 │
@@ -159,7 +159,7 @@ src/ (77 TypeScript files, ~31,000 lines of code)
     └── index.ts
 ```
 
-## Tool Categories (59 Total)
+## Tool Categories (91 Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
@@ -177,6 +177,20 @@ src/ (77 TypeScript files, ~31,000 lines of code)
 | **Analytics** | 2 | get_graph_stats, validate_graph |
 | **Compression** | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | **Import/Export** | 2 | export_graph (7 formats), import_graph (3 formats) |
+| **Ref Index** | 4 | register_ref, resolve_ref, deregister_ref, list_refs |
+| **Artifacts** | 3 | create_artifact, get_artifact, list_artifacts |
+| **Temporal Search** | 1 | search_by_time |
+| **Distillation** | 1 | configure_distillation |
+| **Freshness** | 5 | check_freshness, get_stale_entities, get_expired_entities, refresh_entity, freshness_report |
+| **LLM Query** | 1 | query_natural_language |
+| **Governance** | 4 | governance_transaction, audit_query, audit_history, rollback_operation |
+| **Role Profiles** | 2 | set_agent_role, list_role_profiles |
+| **Entropy** | 2 | enable_entropy_filter, compute_entropy |
+| **Consolidation** | 3 | start_consolidation, stop_consolidation, run_consolidation_now |
+| **Formatter** | 1 | format_with_salience_budget |
+| **Collaborative** | 1 | synthesize_collaborative_context |
+| **Failure Handling** | 2 | distill_failure, end_session |
+| **Cognitive Load** | 2 | analyze_cognitive_load, adaptive_reduce_memories |
 
 ## Key Design Principles
 

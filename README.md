@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-10.1.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-12.0.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 59 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
+> **Enterprise-grade knowledge graph** with 91 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
 
 ## Table of Contents
 
@@ -50,6 +50,20 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Saved Searches** | 5 | Store and execute frequent queries |
 | **Import/Export** | 2 | 7 export formats with brotli compression, 3 import formats |
 | **Graph Analytics** | 2 | Statistics, validation, integrity checks |
+| **Ref Index** | 4 | Cross-session symbolic reference registration and resolution |
+| **Artifacts** | 3 | Named versioned content blobs attached to entities |
+| **Temporal Search** | 1 | Time-window filtered search across the knowledge graph |
+| **Distillation** | 1 | Configure automated observation distillation pipelines |
+| **Freshness** | 5 | Staleness tracking, expiry detection, and freshness reporting |
+| **LLM Query** | 1 | Natural-language question answering over the graph |
+| **Governance** | 4 | Transactional audit trail, history, and rollback |
+| **Role Profiles** | 2 | Per-agent role assignment and profile listing |
+| **Entropy** | 2 | Entropy-based noise filtering and information density scoring |
+| **Consolidation** | 3 | Background memory consolidation scheduling and control |
+| **Formatter** | 1 | Salience-budget-aware context formatting |
+| **Collaborative** | 1 | Multi-agent context synthesis |
+| **Failure Handling** | 2 | Session failure distillation and graceful session end |
+| **Cognitive Load** | 2 | Working-memory load analysis and adaptive reduction |
 
 ### Comparison with Official Memory Server
 
@@ -72,7 +86,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Backup & Restore** | ❌ | ✅ Compressed snapshots |
 | **Intelligent Search** | ❌ | ✅ Hybrid + Query Analysis + Reflection |
 | **Observation Normalization** | ❌ | ✅ Coreference resolution + temporal anchoring |
-| **Total Tools** | 11 | **59** |
+| **Total Tools** | 11 | **91** |
 | **Code Structure** | Monolithic | **Modular** (77 files) |
 
 ## Quick Start
@@ -221,7 +235,7 @@ Discrete facts about entities. Each observation should be atomic and independent
 
 ## API Reference
 
-### Complete Tool List (59 Tools)
+### Complete Tool List (91 Tools)
 
 #### Entity Operations (4 tools)
 | Tool | Description |
@@ -338,6 +352,94 @@ Discrete facts about entities. Each observation should be atomic and independent
 | `export_graph` | Export in 7 formats (JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid) with compression |
 | `import_graph` | Import from JSON/CSV/GraphML with merge strategies |
 
+#### Ref Index (4 tools)
+| Tool | Description |
+|------|-------------|
+| `register_ref` | Register a symbolic reference pointing to an entity |
+| `resolve_ref` | Resolve a symbolic reference to its target entity |
+| `deregister_ref` | Remove a registered symbolic reference |
+| `list_refs` | List all registered symbolic references |
+
+#### Artifacts (3 tools)
+| Tool | Description |
+|------|-------------|
+| `create_artifact` | Create a named versioned content blob attached to an entity |
+| `get_artifact` | Retrieve an artifact by name and optional version |
+| `list_artifacts` | List all artifacts, optionally filtered by entity |
+
+#### Temporal Search (1 tool)
+| Tool | Description |
+|------|-------------|
+| `search_by_time` | Search entities and observations within a time window |
+
+#### Distillation (1 tool)
+| Tool | Description |
+|------|-------------|
+| `configure_distillation` | Configure automated observation distillation pipelines |
+
+#### Freshness (5 tools)
+| Tool | Description |
+|------|-------------|
+| `check_freshness` | Check freshness status of a specific entity |
+| `get_stale_entities` | List entities that have exceeded their staleness threshold |
+| `get_expired_entities` | List entities past their explicit expiry date |
+| `refresh_entity` | Reset the freshness timestamp on an entity |
+| `freshness_report` | Generate a full freshness report across the graph |
+
+#### LLM Query (1 tool)
+| Tool | Description |
+|------|-------------|
+| `query_natural_language` | Answer natural-language questions over the knowledge graph |
+
+#### Governance (4 tools)
+| Tool | Description |
+|------|-------------|
+| `governance_transaction` | Execute a governed, audited graph transaction |
+| `audit_query` | Query the audit log with filters |
+| `audit_history` | Retrieve full audit history for an entity |
+| `rollback_operation` | Roll back a previously recorded operation |
+
+#### Role Profiles (2 tools)
+| Tool | Description |
+|------|-------------|
+| `set_agent_role` | Assign a role profile to the current agent context |
+| `list_role_profiles` | List all available agent role profiles |
+
+#### Entropy (2 tools)
+| Tool | Description |
+|------|-------------|
+| `enable_entropy_filter` | Enable entropy-based noise filtering for search results |
+| `compute_entropy` | Compute information-density entropy score for an entity |
+
+#### Consolidation (3 tools)
+| Tool | Description |
+|------|-------------|
+| `start_consolidation` | Start the background memory consolidation service |
+| `stop_consolidation` | Stop the background memory consolidation service |
+| `run_consolidation_now` | Trigger an immediate consolidation pass |
+
+#### Formatter (1 tool)
+| Tool | Description |
+|------|-------------|
+| `format_with_salience_budget` | Format context output respecting a token salience budget |
+
+#### Collaborative (1 tool)
+| Tool | Description |
+|------|-------------|
+| `synthesize_collaborative_context` | Synthesize a unified context view from multiple agent memory spaces |
+
+#### Failure Handling (2 tools)
+| Tool | Description |
+|------|-------------|
+| `distill_failure` | Distill and store key observations from a failed session |
+| `end_session` | Gracefully end a session and persist in-flight state |
+
+#### Cognitive Load (2 tools)
+| Tool | Description |
+|------|-------------|
+| `analyze_cognitive_load` | Analyze working-memory load in the current context |
+| `adaptive_reduce_memories` | Adaptively reduce memory set to fit cognitive load target |
+
 ## Configuration
 
 ### Environment Variables
@@ -433,7 +535,7 @@ npm run docs:deps     # Generate dependency graph
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
-│  server/MCPServer.ts + toolDefinitions (59 tools)   │
+│  server/MCPServer.ts + toolDefinitions (91 tools)   │
 │  + toolHandlers + responseCompressor                │
 └──────────────────────┬──────────────────────────────┘
                        │
@@ -478,7 +580,7 @@ memory-mcp/
 │   │   └── index.ts
 │   ├── server/                     # MCP protocol (4 files)
 │   │   ├── MCPServer.ts                # Server setup
-│   │   ├── toolDefinitions.ts          # 59 tool schemas
+│   │   ├── toolDefinitions.ts          # 91 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
 │   │   └── responseCompressor.ts       # Brotli compression
 │   ├── search/                     # Search implementations (29 files)
@@ -543,7 +645,7 @@ memory-mcp/
 Comprehensive documentation in `docs/`:
 
 **Architecture**
-- [API.md](docs/architecture/API.md) - Complete API documentation for all 59 tools
+- [API.md](docs/architecture/API.md) - Complete API documentation for all 91 tools
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture and system design
 - [COMPONENTS.md](docs/architecture/COMPONENTS.md) - Component breakdown and responsibilities
 - [OVERVIEW.md](docs/architecture/OVERVIEW.md) - High-level project overview
@@ -578,12 +680,12 @@ We welcome contributions!
 
 All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-**Current version**: v10.1.0 - [View full changelog](CHANGELOG.md)
+**Current version**: v12.0.0 - [View full changelog](CHANGELOG.md)
 
 Recent highlights:
-- **v10.1.0**: Documentation updates, 5 missing Phase 12 test files, architecture docs refresh
-- **v10.0.0**: Phase 12 Performance Optimization - BM25 search, parallel execution, query plan caching, embedding cache, incremental indexing
-- **v9.8.3**: SQLite storage support fix, JSON-RPC communication fix
+- **v12.0.0**: 32 new tools (91 total) — Ref Index, Artifacts, Temporal Search, Distillation, Freshness, LLM Query, Governance, Role Profiles, Entropy, Consolidation, Formatter, Collaborative, Failure Handling, Cognitive Load
+- **v11.1.1**: npm tarball cleanup, excluded data files from published package
+- **v11.1.0**: MCP error framing, dynamic server version, handler smoke tests, response compressor tests
 
 ## License
 

@@ -34,7 +34,7 @@ npm run tools:build   # Build all standalone tools
 
 ## Architecture Overview
 
-This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 59 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
+This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 91 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
 
 **npm:** `@danielsimonjr/memory-mcp` | **Core lib:** `@danielsimonjr/memoryjs` (versions in package.json)
 
@@ -57,7 +57,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 |------|------|
 | `index.ts` | Entry point. Creates `ManagerContext`, starts `MCPServer`. Re-exports types from memoryjs for backward compatibility. |
 | `server/MCPServer.ts` | Creates MCP `Server`, registers `ListToolsRequest` and `CallToolRequest` handlers. Uses stdio transport. |
-| `server/toolDefinitions.ts` | Array of 59 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
+| `server/toolDefinitions.ts` | Array of 91 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
 | `server/toolHandlers.ts` | Handler registry (`Record<string, ToolHandler>`). Each handler validates args with Zod schemas from memoryjs, calls the appropriate manager method, and returns formatted responses. Large-response tools are wrapped with `withCompression()`. |
 | `server/responseCompressor.ts` | Auto-compresses responses >256KB with brotli + base64 encoding. Uses `compress`/`decompress` from memoryjs. |
 
@@ -70,6 +70,41 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 - **Compression wrapper**: `withCompression(async () => handler())` wraps tools that return large payloads (read_graph, search_nodes, get_subtree, open_nodes). Responses >256KB get brotli-compressed.
 - **Lazy managers**: `ManagerContext` instantiates managers on first access. Available accessors: `ctx.entityManager`, `ctx.relationManager`, `ctx.observationManager`, `ctx.searchManager`, `ctx.tagManager`, `ctx.hierarchyManager`, `ctx.analyticsManager`, `ctx.compressionManager`, `ctx.archiveManager`, `ctx.ioManager`, `ctx.graphTraversal`, `ctx.semanticSearch`, `ctx.rankedSearch`, `ctx.storage` (direct GraphStorage).
 - **Backward compat**: `index.ts` re-exports `ManagerContext` as `KnowledgeGraphManager` alias, plus core types.
+
+### Tool Categories (91 tools across 28 categories)
+
+| Category | Count | Key Purpose |
+|----------|-------|-------------|
+| Entity | 4 | Core CRUD for graph nodes |
+| Relation | 2 | Directed edges between entities |
+| Observation | 3 | Facts attached to entities, with normalization |
+| Search | 7 | Basic, ranked (TF-IDF), boolean, fuzzy, auto-select |
+| Intelligent Search | 3 | Hybrid multi-layer, query analysis, reflection-based |
+| Semantic Search | 3 | Embedding similarity via OpenAI or local models |
+| Saved Searches | 5 | Store and re-execute frequent queries |
+| Tag Management | 6 | Tags, bulk ops, importance scores |
+| Tag Aliases | 5 | Tag synonym/alias management |
+| Hierarchy | 9 | Parent-child trees, subtree traversal |
+| Graph Algorithms | 4 | BFS/DFS path finding, centrality, connected components |
+| Analytics | 2 | Graph stats and integrity validation |
+| Compression | 4 | Duplicate detection, merge, auto-compress, archive |
+| Import/Export | 2 | 7 export formats + 3 import formats with merge strategies |
+| **Ref Index** | **4** | Cross-session symbolic reference registration/resolution |
+| **Artifacts** | **3** | Named versioned content blobs attached to entities |
+| **Temporal Search** | **1** | Time-window filtered search across the graph |
+| **Distillation** | **1** | Configure automated observation distillation pipelines |
+| **Freshness** | **5** | Staleness tracking, expiry detection, freshness reporting |
+| **LLM Query** | **1** | Natural-language Q&A over the knowledge graph |
+| **Governance** | **4** | Audited transactions, audit log query/history, rollback |
+| **Role Profiles** | **2** | Per-agent role assignment and profile listing |
+| **Entropy** | **2** | Entropy-based noise filtering and information density scoring |
+| **Consolidation** | **3** | Background memory consolidation scheduling and control |
+| **Formatter** | **1** | Salience-budget-aware context formatting |
+| **Collaborative** | **1** | Multi-agent context synthesis |
+| **Failure Handling** | **2** | Session failure distillation and graceful session end |
+| **Cognitive Load** | **2** | Working-memory load analysis and adaptive reduction |
+
+New categories (v12.0.0, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories.
 
 ### Adding a New Tool
 

@@ -5,6 +5,74 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [12.0.0] - 2026-03-24
+
+### Added
+
+32 new tools across 14 categories, bringing the total to **91 tools**.
+
+#### Ref Index (4 tools)
+- **`register_ref`** — Register a symbolic reference pointing to an entity for cross-session reuse
+- **`resolve_ref`** — Resolve a symbolic reference to its target entity
+- **`deregister_ref`** — Remove a registered symbolic reference
+- **`list_refs`** — List all registered symbolic references
+
+#### Artifacts (3 tools)
+- **`create_artifact`** — Create a named versioned content blob attached to an entity
+- **`get_artifact`** — Retrieve an artifact by name and optional version
+- **`list_artifacts`** — List all artifacts, optionally filtered by entity
+
+#### Temporal Search (1 tool)
+- **`search_by_time`** — Search entities and observations within a time window
+
+#### Distillation (1 tool)
+- **`configure_distillation`** — Configure automated observation distillation pipelines
+
+#### Freshness (5 tools)
+- **`check_freshness`** — Check freshness status of a specific entity
+- **`get_stale_entities`** — List entities that have exceeded their staleness threshold
+- **`get_expired_entities`** — List entities past their explicit expiry date
+- **`refresh_entity`** — Reset the freshness timestamp on an entity
+- **`freshness_report`** — Generate a full freshness report across the graph
+
+#### LLM Query (1 tool)
+- **`query_natural_language`** — Answer natural-language questions over the knowledge graph
+
+#### Governance (4 tools)
+- **`governance_transaction`** — Execute a governed, audited graph transaction
+- **`audit_query`** — Query the audit log with filters
+- **`audit_history`** — Retrieve full audit history for an entity
+- **`rollback_operation`** — Roll back a previously recorded operation
+
+#### Role Profiles (2 tools)
+- **`set_agent_role`** — Assign a role profile to the current agent context
+- **`list_role_profiles`** — List all available agent role profiles
+
+#### Entropy (2 tools)
+- **`enable_entropy_filter`** — Enable entropy-based noise filtering for search results
+- **`compute_entropy`** — Compute information-density entropy score for an entity
+
+#### Consolidation (3 tools)
+- **`start_consolidation`** — Start the background memory consolidation service
+- **`stop_consolidation`** — Stop the background memory consolidation service
+- **`run_consolidation_now`** — Trigger an immediate consolidation pass
+
+#### Formatter (1 tool)
+- **`format_with_salience_budget`** — Format context output respecting a token salience budget
+
+#### Collaborative (1 tool)
+- **`synthesize_collaborative_context`** — Synthesize a unified context view from multiple agent memory spaces
+
+#### Failure Handling (2 tools)
+- **`distill_failure`** — Distill and store key observations from a failed session
+- **`end_session`** — Gracefully end a session and persist in-flight state
+
+#### Cognitive Load (2 tools)
+- **`analyze_cognitive_load`** — Analyze working-memory load in the current context
+- **`adaptive_reduce_memories`** — Adaptively reduce memory set to fit a cognitive load target
+
+---
+
 ## [11.1.1] - 2026-02-05
 
 ### Fixed

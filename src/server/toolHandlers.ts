@@ -1,13 +1,14 @@
 /**
  * MCP Tool Handlers
  *
- * Contains handler functions for all 59 Knowledge Graph tools.
+ * Contains handler functions for all 91 Knowledge Graph tools.
  * Handlers call managers directly via ManagerContext.
  * All core functionality is imported from @danielsimonjr/memoryjs.
  *
  * @module server/toolHandlers
  */
 
+import path from 'node:path';
 import {
   formatToolResponse,
   formatTextResponse,
@@ -33,10 +34,115 @@ import {
   QueryPlanner,
   ReflectionManager,
   ObservationNormalizer,
+  RefIndex,
+  AuditLog,
+  GovernanceManager,
+  FreshnessManager,
+  ArtifactManager,
+  CollaborativeSynthesis,
+  FailureDistillation,
+  CognitiveLoadAnalyzer,
+  ConsolidationScheduler,
+  DistillationPipeline,
+  DefaultDistillationPolicy,
+  NoOpDistillationPolicy,
+  computeEntropy,
+  passesEntropyFilter,
+  EntropyFilterStage,
+  getRoleProfile,
+  listRoleProfiles,
   type ManagerContext,
+  type AgentRole,
+  type ArtifactFilter,
+  type CollaborativeSynthesisConfig,
+  type FailureDistillationConfig,
+  type AuditFilter,
+  type SalienceContext,
+  type AgentEntity,
 } from '@danielsimonjr/memoryjs';
 import { z } from 'zod';
 import { maybeCompressResponse } from './responseCompressor.js';
+
+// ==================== SINGLETON INFRASTRUCTURE ====================
+// WeakMap-based singletons keyed on ManagerContext to avoid re-instantiation per request.
+// These managers are not on ManagerContext directly, so we wire them up once per ctx.
+
+const refIndexMap = new WeakMap<ManagerContext, RefIndex>();
+const auditLogMap = new WeakMap<ManagerContext, AuditLog>();
+const governanceMap = new WeakMap<ManagerContext, GovernanceManager>();
+const freshnessMap = new WeakMap<ManagerContext, FreshnessManager>();
+const artifactManagerMap = new WeakMap<ManagerContext, ArtifactManager>();
+const distillationPipelineMap = new WeakMap<ManagerContext, DistillationPipeline>();
+const failureDistillationMap = new WeakMap<ManagerContext, FailureDistillation>();
+
+function getStorageFilePath(ctx: ManagerContext): string {
+  // GraphStorage exposes filePath publicly; fall back to cwd-relative default
+  return (ctx.storage as unknown as { filePath?: string }).filePath ?? 'memory.jsonl';
+}
+
+function getRefIndex(ctx: ManagerContext): RefIndex {
+  if (!refIndexMap.has(ctx)) {
+    const storagePath = getStorageFilePath(ctx);
+    const dir = path.dirname(storagePath);
+    refIndexMap.set(ctx, new RefIndex(path.join(dir, 'memory-ref-index.jsonl')));
+  }
+  return refIndexMap.get(ctx)!;
+}
+
+function getAuditLog(ctx: ManagerContext): AuditLog {
+  if (!auditLogMap.has(ctx)) {
+    const storagePath = getStorageFilePath(ctx);
+    const dir = path.dirname(storagePath);
+    auditLogMap.set(ctx, new AuditLog(path.join(dir, 'memory-audit.jsonl')));
+  }
+  return auditLogMap.get(ctx)!;
+}
+
+function getGovernanceManager(ctx: ManagerContext): GovernanceManager {
+  if (!governanceMap.has(ctx)) {
+    // GovernanceManager constructor accepts GraphStorage; ctx.storage is GraphStorage
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    governanceMap.set(ctx, new GovernanceManager(ctx.storage as any, getAuditLog(ctx)));
+  }
+  return governanceMap.get(ctx)!;
+}
+
+function getFreshnessManager(ctx: ManagerContext): FreshnessManager {
+  if (!freshnessMap.has(ctx)) {
+    freshnessMap.set(ctx, new FreshnessManager(ctx.storage));
+  }
+  return freshnessMap.get(ctx)!;
+}
+
+function getArtifactManager(ctx: ManagerContext): ArtifactManager {
+  if (!artifactManagerMap.has(ctx)) {
+    const refIndex = getRefIndex(ctx);
+    // EntityManager.registerRef() requires setRefIndex to be called first.
+    ctx.entityManager.setRefIndex(refIndex);
+    artifactManagerMap.set(ctx, new ArtifactManager(ctx.storage, ctx.entityManager, refIndex));
+  }
+  return artifactManagerMap.get(ctx)!;
+}
+
+function getDistillationPipeline(ctx: ManagerContext): DistillationPipeline {
+  if (!distillationPipelineMap.has(ctx)) {
+    distillationPipelineMap.set(ctx, new DistillationPipeline());
+  }
+  return distillationPipelineMap.get(ctx)!;
+}
+
+function getFailureDistillation(ctx: ManagerContext): FailureDistillation {
+  if (!failureDistillationMap.has(ctx)) {
+    failureDistillationMap.set(ctx, new FailureDistillation(ctx.storage));
+  }
+  return failureDistillationMap.get(ctx)!;
+}
+
+/** Simple token estimator: ~4 chars per token */
+function estimateTokens(entity: AgentEntity): number {
+  const text = [entity.name, entity.entityType, ...entity.observations].join(' ');
+  return Math.ceil(text.length / 4);
+}
 
 /**
  * Tool response type for MCP SDK compatibility.
@@ -830,6 +936,525 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ...result,
       totalEntities: graph.entities.length,
       stats: semanticSearch.getStats(),
+    });
+  },
+
+  // ==================== REF INDEX HANDLERS ====================
+  register_ref: async (ctx, args) => {
+    const ref = validateWithSchema(args.ref, z.string().min(1), 'Invalid ref');
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const description = args.description !== undefined
+      ? validateWithSchema(args.description, z.string(), 'Invalid description')
+      : undefined;
+    const entry = await getRefIndex(ctx).register(ref, entityName, description);
+    return formatToolResponse(entry);
+  },
+
+  resolve_ref: async (ctx, args) => {
+    const ref = validateWithSchema(args.ref, z.string().min(1), 'Invalid ref');
+    const entityName = await getRefIndex(ctx).resolve(ref);
+    if (entityName === null) {
+      return formatTextResponse(`Ref "${ref}" is not registered`);
+    }
+    return formatToolResponse({ ref, entityName });
+  },
+
+  deregister_ref: async (ctx, args) => {
+    const ref = validateWithSchema(args.ref, z.string().min(1), 'Invalid ref');
+    await getRefIndex(ctx).deregister(ref);
+    return formatTextResponse(`Ref "${ref}" deregistered`);
+  },
+
+  list_refs: async (ctx, args) => {
+    const entityName = args.entityName !== undefined
+      ? validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName')
+      : undefined;
+    const refs = await getRefIndex(ctx).listRefs(entityName ? { entityName } : undefined);
+    return formatToolResponse({ refs, count: refs.length });
+  },
+
+  // ==================== ARTIFACT HANDLERS ====================
+  create_artifact: async (ctx, args) => {
+    const content = validateWithSchema(args.content, z.string().min(1), 'Invalid content');
+    const toolName = validateWithSchema(args.toolName, z.string().min(1), 'Invalid toolName');
+    const artifactType = validateWithSchema(
+      args.artifactType,
+      z.enum(['tool_output', 'code_snippet', 'api_response', 'search_result', 'file_content', 'user_input']),
+      'Invalid artifactType'
+    );
+    const description = args.description !== undefined
+      ? validateWithSchema(args.description, z.string(), 'Invalid description')
+      : undefined;
+    const sessionId = args.sessionId !== undefined
+      ? validateWithSchema(args.sessionId, z.string(), 'Invalid sessionId')
+      : undefined;
+    const artifact = await getArtifactManager(ctx).createArtifact({
+      content,
+      toolName,
+      artifactType,
+      description,
+      sessionId,
+    });
+    return formatToolResponse(artifact);
+  },
+
+  get_artifact: async (ctx, args) => {
+    const ref = validateWithSchema(args.ref, z.string().min(1), 'Invalid ref');
+    const artifact = await getArtifactManager(ctx).getArtifact(ref);
+    if (!artifact) {
+      return formatTextResponse(`Artifact "${ref}" not found`);
+    }
+    return formatToolResponse(artifact);
+  },
+
+  list_artifacts: async (ctx, args) => {
+    const filter: ArtifactFilter = {};
+    if (args.toolName !== undefined) {
+      filter.toolName = validateWithSchema(args.toolName, z.string(), 'Invalid toolName');
+    }
+    if (args.artifactType !== undefined) {
+      filter.artifactType = validateWithSchema(
+        args.artifactType,
+        z.enum(['tool_output', 'code_snippet', 'api_response', 'search_result', 'file_content', 'user_input']),
+        'Invalid artifactType'
+      );
+    }
+    if (args.since !== undefined) {
+      const sinceStr = validateWithSchema(args.since, z.string(), 'Invalid since');
+      filter.since = new Date(sinceStr);
+    }
+    const artifacts = await getArtifactManager(ctx).listArtifacts(Object.keys(filter).length > 0 ? filter : undefined);
+    return formatToolResponse({ artifacts, count: artifacts.length });
+  },
+
+  // ==================== TEMPORAL SEARCH HANDLER ====================
+  search_by_time: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const options: { field?: 'createdAt' | 'lastModified' | 'any'; includeUndated?: boolean } = {};
+    if (args.field !== undefined) {
+      options.field = validateWithSchema(
+        args.field,
+        z.enum(['createdAt', 'lastModified', 'any']),
+        'Invalid field'
+      );
+    }
+    if (args.includeUndated !== undefined) {
+      options.includeUndated = validateWithSchema(args.includeUndated, z.boolean(), 'Invalid includeUndated');
+    }
+    const entities = await ctx.searchManager.searchByTime(query, options);
+    return formatToolResponse({ query, entities, count: entities.length });
+  },
+
+  // ==================== DISTILLATION HANDLER ====================
+  configure_distillation: async (ctx, args) => {
+    const policy = validateWithSchema(
+      args.policy,
+      z.enum(['default', 'noop', 'none']),
+      'Invalid policy'
+    );
+    const pipeline = getDistillationPipeline(ctx);
+    pipeline.clearPolicies();
+    if (policy === 'default') {
+      pipeline.addPolicy(new DefaultDistillationPolicy(), 'default');
+    } else if (policy === 'noop') {
+      pipeline.addPolicy(new NoOpDistillationPolicy(), 'noop');
+    }
+    // 'none' clears all policies — passthrough behavior
+    return formatTextResponse(`Distillation pipeline configured with policy: "${policy}" (${pipeline.policyCount} policies active)`);
+  },
+
+  // ==================== FRESHNESS HANDLERS ====================
+  check_freshness: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const graph = await ctx.storage.loadGraph();
+    const entity = graph.entities.find(e => e.name === entityName);
+    if (!entity) {
+      return formatTextResponse(`Entity "${entityName}" not found`);
+    }
+    const fm = getFreshnessManager(ctx);
+    const annotated = fm.annotateEntity(entity);
+    return formatToolResponse({
+      entityName,
+      freshnessScore: fm.calculateFreshness(entity),
+      expiresAt: fm.computeExpiresAt(entity),
+      isExpired: fm.isExpired(entity),
+      annotated,
+    });
+  },
+
+  get_stale_entities: async (ctx, args) => {
+    const threshold = args.threshold !== undefined
+      ? validateWithSchema(args.threshold, z.number().min(0).max(1), 'Invalid threshold (0-1)')
+      : undefined;
+    const fm = getFreshnessManager(ctx);
+    const stale = await fm.getStaleEntities(ctx.storage, threshold);
+    return formatToolResponse({ entities: stale, count: stale.length });
+  },
+
+  get_expired_entities: async (ctx) => {
+    const fm = getFreshnessManager(ctx);
+    const expired = await fm.getExpiredEntities(ctx.storage);
+    return formatToolResponse({ entities: expired, count: expired.length });
+  },
+
+  refresh_entity: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const fm = getFreshnessManager(ctx);
+    const updated = await fm.refreshEntity(entityName, ctx.storage);
+    return formatToolResponse({ updated, freshnessScore: fm.calculateFreshness(updated) });
+  },
+
+  freshness_report: async (ctx, args) => {
+    const threshold = args.threshold !== undefined
+      ? validateWithSchema(args.threshold, z.number().min(0).max(1), 'Invalid threshold (0-1)')
+      : undefined;
+    const fm = getFreshnessManager(ctx);
+    const report = await fm.generateReport(ctx.storage, threshold);
+    return formatToolResponse(report);
+  },
+
+  // ==================== LLM QUERY PLANNER HANDLER ====================
+  query_natural_language: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const entities = await ctx.queryNaturalLanguage(query);
+    return formatToolResponse({ query, entities, count: entities.length });
+  },
+
+  // ==================== GOVERNANCE HANDLERS ====================
+  governance_transaction: async (ctx, args) => {
+    const gm = getGovernanceManager(ctx);
+    // GovernancePolicy uses function callbacks; we translate boolean args into allow/deny functions
+    const allowCreate = args.canCreate !== undefined
+      ? validateWithSchema(args.canCreate, z.boolean(), 'Invalid canCreate')
+      : true;
+    const allowUpdate = args.canUpdate !== undefined
+      ? validateWithSchema(args.canUpdate, z.boolean(), 'Invalid canUpdate')
+      : true;
+    const allowDelete = args.canDelete !== undefined
+      ? validateWithSchema(args.canDelete, z.boolean(), 'Invalid canDelete')
+      : true;
+    gm.setPolicy({
+      canCreate: allowCreate ? undefined : () => false,
+      canUpdate: allowUpdate ? undefined : () => false,
+      canDelete: allowDelete ? undefined : () => false,
+    });
+    return formatTextResponse(`Governance policy set: canCreate=${allowCreate}, canUpdate=${allowUpdate}, canDelete=${allowDelete}`);
+  },
+
+  audit_query: async (ctx, args) => {
+    const filter: AuditFilter = {};
+    if (args.operation !== undefined) {
+      filter.operation = validateWithSchema(
+        args.operation,
+        z.enum(['create', 'update', 'delete', 'merge', 'archive']),
+        'Invalid operation'
+      ) as AuditFilter['operation'];
+    }
+    if (args.agentId !== undefined) {
+      filter.agentId = validateWithSchema(args.agentId, z.string(), 'Invalid agentId');
+    }
+    if (args.entityName !== undefined) {
+      filter.entityName = validateWithSchema(args.entityName, z.string(), 'Invalid entityName');
+    }
+    // AuditFilter uses fromTime/toTime (not since/until)
+    if (args.since !== undefined) {
+      filter.fromTime = validateWithSchema(args.since, z.string(), 'Invalid since');
+    }
+    if (args.until !== undefined) {
+      filter.toTime = validateWithSchema(args.until, z.string(), 'Invalid until');
+    }
+    const limit = args.limit !== undefined
+      ? validateWithSchema(args.limit, z.number().int().min(1).max(1000), 'Invalid limit')
+      : 50;
+    const al = getAuditLog(ctx);
+    let entries = await al.query(filter);
+    entries = entries.slice(0, limit);
+    return formatToolResponse({ entries, count: entries.length });
+  },
+
+  audit_history: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const al = getAuditLog(ctx);
+    const entries = await al.getHistory(entityName);
+    return formatToolResponse({ entityName, entries, count: entries.length });
+  },
+
+  rollback_operation: async (ctx, args) => {
+    const auditEntryId = validateWithSchema(args.auditEntryId, z.string().min(1), 'Invalid auditEntryId');
+    const gm = getGovernanceManager(ctx);
+    await gm.rollback(auditEntryId);
+    return formatTextResponse(`Operation "${auditEntryId}" rolled back successfully`);
+  },
+
+  // ==================== ROLE PROFILE HANDLERS ====================
+  set_agent_role: async (_ctx, args) => {
+    const role = validateWithSchema(
+      args.role,
+      z.enum(['researcher', 'planner', 'executor', 'reviewer', 'default']),
+      'Invalid role'
+    ) as AgentRole;
+    const profile = getRoleProfile(role);
+    return formatToolResponse({
+      role,
+      label: profile.label,
+      salienceConfig: profile.salienceConfig,
+      contextConfig: profile.contextConfig,
+      message: `Role profile "${role}" retrieved. Apply salienceConfig and contextConfig to your agent memory system.`,
+    });
+  },
+
+  list_role_profiles: async (_ctx) => {
+    const profiles = listRoleProfiles();
+    return formatToolResponse({ profiles, count: profiles.length });
+  },
+
+  // ==================== ENTROPY FILTER HANDLERS ====================
+  enable_entropy_filter: async (ctx, args) => {
+    const enabled = validateWithSchema(args.enabled, z.boolean(), 'Invalid enabled');
+    const minEntropy = args.minEntropy !== undefined
+      ? validateWithSchema(args.minEntropy, z.number().min(0), 'Invalid minEntropy')
+      : 1.5;
+    const minLength = args.minLength !== undefined
+      ? validateWithSchema(args.minLength, z.number().int().min(0), 'Invalid minLength')
+      : 10;
+    // Register (or clear) the entropy filter stage on the agent memory facade's pipeline
+    const agentMem = ctx.agentMemory();
+    const pipeline = agentMem.consolidationPipeline;
+    if (enabled) {
+      const stage = new EntropyFilterStage({ minEntropy, minLength });
+      pipeline.registerStage(stage);
+      return formatTextResponse(`Entropy filter enabled (minEntropy=${minEntropy}, minLength=${minLength}). Stage registered on consolidation pipeline.`);
+    } else {
+      pipeline.clearStages();
+      return formatTextResponse('Entropy filter disabled. All consolidation pipeline stages cleared.');
+    }
+  },
+
+  compute_entropy: async (_ctx, args) => {
+    const text = validateWithSchema(args.text, z.string(), 'Invalid text');
+    const entropy = computeEntropy(text);
+    const result: Record<string, unknown> = { text: text.length > 100 ? text.slice(0, 100) + '...' : text, entropy };
+    if (args.minEntropy !== undefined) {
+      const minEntropy = validateWithSchema(args.minEntropy, z.number().min(0), 'Invalid minEntropy');
+      result.minEntropy = minEntropy;
+      result.passes = passesEntropyFilter(text, minEntropy);
+    }
+    return formatToolResponse(result);
+  },
+
+  // ==================== CONSOLIDATION HANDLERS ====================
+  start_consolidation: async (ctx, args) => {
+    const intervalMs = args.intervalMs !== undefined
+      ? validateWithSchema(args.intervalMs, z.number().int().min(1000), 'Invalid intervalMs')
+      : undefined;
+    const autoMergeDuplicates = args.autoMergeDuplicates !== undefined
+      ? validateWithSchema(args.autoMergeDuplicates, z.boolean(), 'Invalid autoMergeDuplicates')
+      : undefined;
+    // Use ctx.consolidationScheduler if available (set via MEMORY_AUTO_CONSOLIDATION env var),
+    // otherwise create one using the agentMemory facade's consolidation pipeline
+    let scheduler = ctx.consolidationScheduler;
+    if (!scheduler) {
+      const agentMem = ctx.agentMemory();
+      scheduler = new ConsolidationScheduler(
+        agentMem.consolidationPipeline,
+        ctx.compressionManager,
+        {
+          consolidationIntervalMs: intervalMs,
+          autoMergeDuplicates: autoMergeDuplicates,
+        }
+      );
+    }
+    scheduler.start();
+    return formatTextResponse(`Consolidation scheduler started (interval: ${scheduler.getInterval()}ms, autoMerge: ${scheduler.getConfig().autoMergeDuplicates})`);
+  },
+
+  stop_consolidation: async (ctx) => {
+    const scheduler = ctx.consolidationScheduler;
+    if (!scheduler) {
+      return formatTextResponse('No active consolidation scheduler found. Start one first with start_consolidation.');
+    }
+    scheduler.stop();
+    return formatTextResponse('Consolidation scheduler stopped');
+  },
+
+  run_consolidation_now: async (ctx) => {
+    // Use ctx.consolidationScheduler if available, otherwise create temporary scheduler
+    let scheduler = ctx.consolidationScheduler;
+    if (!scheduler) {
+      const agentMem = ctx.agentMemory();
+      scheduler = new ConsolidationScheduler(agentMem.consolidationPipeline, ctx.compressionManager);
+    }
+    const result = await scheduler.runNow();
+    return formatToolResponse(result);
+  },
+
+  // ==================== MEMORY FORMATTER HANDLER ====================
+  format_with_salience_budget: async (ctx, args) => {
+    const entityNames = validateWithSchema(args.entityNames, z.array(z.string().min(1)), 'Invalid entityNames');
+    const salienceScoresRaw = validateWithSchema(
+      args.salienceScores,
+      z.record(z.string(), z.number()),
+      'Invalid salienceScores'
+    );
+    const totalTokenBudget = validateWithSchema(args.totalTokenBudget, z.number().int().min(1), 'Invalid totalTokenBudget');
+    const header = args.header !== undefined
+      ? validateWithSchema(args.header, z.string(), 'Invalid header')
+      : undefined;
+    const separator = args.separator !== undefined
+      ? validateWithSchema(args.separator, z.string(), 'Invalid separator')
+      : undefined;
+
+    const graph = await ctx.storage.loadGraph();
+    const memories = graph.entities.filter(e => entityNames.includes(e.name)) as AgentEntity[];
+    const salienceScores = new Map<string, number>(Object.entries(salienceScoresRaw));
+
+    const formatted = ctx.memoryFormatter.formatWithSalienceBudget(
+      memories,
+      salienceScores,
+      totalTokenBudget,
+      { header, separator }
+    );
+    return formatTextResponse(formatted);
+  },
+
+  // ==================== COLLABORATIVE SYNTHESIS HANDLER ====================
+  synthesize_collaborative_context: async (ctx, args) => {
+    const seedEntityName = validateWithSchema(args.seedEntityName, z.string().min(1), 'Invalid seedEntityName');
+    const config: CollaborativeSynthesisConfig = {};
+    if (args.maxDepth !== undefined) {
+      config.maxDepth = validateWithSchema(args.maxDepth, z.number().int().min(1).max(10), 'Invalid maxDepth');
+    }
+    if (args.minNeighborSalience !== undefined) {
+      config.minNeighborSalience = validateWithSchema(args.minNeighborSalience, z.number().min(0).max(1), 'Invalid minNeighborSalience');
+    }
+    if (args.maxNeighbors !== undefined) {
+      config.maxNeighbors = validateWithSchema(args.maxNeighbors, z.number().int().min(1).max(100), 'Invalid maxNeighbors');
+    }
+
+    const salienceContext: SalienceContext = {};
+    if (args.queryText !== undefined) {
+      salienceContext.queryText = validateWithSchema(args.queryText, z.string(), 'Invalid queryText');
+    }
+    if (args.currentTask !== undefined) {
+      salienceContext.currentTask = validateWithSchema(args.currentTask, z.string(), 'Invalid currentTask');
+    }
+
+    const synthesis = new CollaborativeSynthesis(
+      ctx.storage,
+      ctx.graphTraversal,
+      ctx.salienceEngine,
+      config
+    );
+    const result = await synthesis.synthesize(
+      seedEntityName,
+      Object.keys(salienceContext).length > 0 ? salienceContext : undefined
+    );
+    return formatToolResponse(result);
+  },
+
+  // ==================== FAILURE DISTILLATION HANDLERS ====================
+  distill_failure: async (ctx, args) => {
+    const sessionId = validateWithSchema(args.sessionId, z.string().min(1), 'Invalid sessionId');
+    const config: FailureDistillationConfig = {};
+    if (args.minLessonConfidence !== undefined) {
+      config.minLessonConfidence = validateWithSchema(args.minLessonConfidence, z.number().min(0).max(1), 'Invalid minLessonConfidence');
+    }
+    if (args.maxCauseChainLength !== undefined) {
+      config.maxCauseChainLength = validateWithSchema(args.maxCauseChainLength, z.number().int().min(1).max(20), 'Invalid maxCauseChainLength');
+    }
+    const fd = Object.keys(config).length > 0
+      ? new FailureDistillation(ctx.storage, config)
+      : getFailureDistillation(ctx);
+    const result = await fd.distillFromSession(sessionId);
+    return formatToolResponse(result);
+  },
+
+  end_session: async (ctx, args) => {
+    const sessionId = validateWithSchema(args.sessionId, z.string().min(1), 'Invalid sessionId');
+    const outcome = validateWithSchema(
+      args.outcome,
+      z.enum(['success', 'failure', 'partial']),
+      'Invalid outcome'
+    );
+    const distillFailures = args.distillFailures !== undefined
+      ? validateWithSchema(args.distillFailures, z.boolean(), 'Invalid distillFailures')
+      : true;
+
+    const graph = await ctx.storage.loadGraph();
+    const sessionEntity = graph.entities.find(e => e.name === sessionId);
+    if (!sessionEntity) {
+      return formatTextResponse(`Session "${sessionId}" not found`);
+    }
+
+    // Update session outcome
+    const updatedEntities = graph.entities.map(e =>
+      e.name === sessionId
+        ? { ...e, observations: [...e.observations, `outcome: ${outcome}`], lastModified: new Date().toISOString() }
+        : e
+    );
+    await ctx.storage.saveGraph({ entities: updatedEntities, relations: [...graph.relations] });
+
+    let distillationResult = null;
+    if (outcome === 'failure' && distillFailures) {
+      const fd = getFailureDistillation(ctx);
+      distillationResult = await fd.distillFromSession(sessionId);
+    }
+
+    return formatToolResponse({
+      sessionId,
+      outcome,
+      distillationResult,
+      message: `Session "${sessionId}" ended with outcome: ${outcome}`,
+    });
+  },
+
+  // ==================== COGNITIVE LOAD HANDLERS ====================
+  analyze_cognitive_load: async (ctx, args) => {
+    const entityNames = validateWithSchema(args.entityNames, z.array(z.string().min(1)), 'Invalid entityNames');
+    const loadThreshold = args.loadThreshold !== undefined
+      ? validateWithSchema(args.loadThreshold, z.number().min(0).max(1), 'Invalid loadThreshold')
+      : undefined;
+
+    const graph = await ctx.storage.loadGraph();
+    const memories = graph.entities.filter((e): e is AgentEntity => entityNames.includes(e.name));
+
+    if (memories.length === 0) {
+      return formatTextResponse('No entities found matching the provided names');
+    }
+
+    const analyzer = new CognitiveLoadAnalyzer(loadThreshold ? { loadThreshold } : undefined);
+    const metrics = analyzer.computeMetrics(memories, estimateTokens);
+    return formatToolResponse({ entityCount: memories.length, metrics });
+  },
+
+  adaptive_reduce_memories: async (ctx, args) => {
+    const entityNames = validateWithSchema(args.entityNames, z.array(z.string().min(1)), 'Invalid entityNames');
+    const salienceScoresRaw = validateWithSchema(
+      args.salienceScores,
+      z.record(z.string(), z.number()),
+      'Invalid salienceScores'
+    );
+    const loadThreshold = args.loadThreshold !== undefined
+      ? validateWithSchema(args.loadThreshold, z.number().min(0).max(1), 'Invalid loadThreshold')
+      : undefined;
+
+    const graph = await ctx.storage.loadGraph();
+    const memories = graph.entities.filter((e): e is AgentEntity => entityNames.includes(e.name)) as AgentEntity[];
+
+    if (memories.length === 0) {
+      return formatTextResponse('No entities found matching the provided names');
+    }
+
+    const salienceScores = new Map<string, number>(Object.entries(salienceScoresRaw));
+    const analyzer = new CognitiveLoadAnalyzer(loadThreshold ? { loadThreshold } : undefined);
+    const result = analyzer.adaptiveReduce(memories, salienceScores, estimateTokens);
+    return formatToolResponse({
+      retained: result.retained.map(e => e.name),
+      removed: result.removed.map(e => e.name),
+      retainedCount: result.retained.length,
+      removedCount: result.removed.length,
+      beforeMetrics: result.beforeMetrics,
+      afterMetrics: result.afterMetrics,
     });
   },
 };

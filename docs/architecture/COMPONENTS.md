@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 10.0.0
-**Last Updated**: 2026-01-09
+**Version**: 12.0.0
+**Last Updated**: 2026-03-24
 
 ---
 
@@ -83,7 +83,7 @@ export class MCPServer {
 
 ### toolDefinitions (`server/toolDefinitions.ts`)
 
-**Purpose**: Schema definitions for all 59 MCP tools
+**Purpose**: Schema definitions for all 91 MCP tools
 
 **Lines**: ~400
 
@@ -119,12 +119,26 @@ export const toolDefinitions: ToolDefinition[]
 | Analytics | 2 | get_graph_stats, validate_graph |
 | Compression | 4 | find_duplicates, merge_entities, compress_graph, archive_entities |
 | Import/Export | 2 | export_graph, import_graph |
+| Ref Index | 4 | register_ref, resolve_ref, deregister_ref, list_refs |
+| Artifacts | 3 | create_artifact, get_artifact, list_artifacts |
+| Temporal Search | 1 | search_by_time |
+| Distillation | 1 | configure_distillation |
+| Freshness | 5 | check_freshness, get_stale_entities, get_expired_entities, refresh_entity, freshness_report |
+| LLM Query | 1 | query_natural_language |
+| Governance | 4 | governance_transaction, audit_query, audit_history, rollback_operation |
+| Role Profiles | 2 | set_agent_role, list_role_profiles |
+| Entropy | 2 | enable_entropy_filter, compute_entropy |
+| Consolidation | 3 | start_consolidation, stop_consolidation, run_consolidation_now |
+| Formatter | 1 | format_with_salience_budget |
+| Collaborative | 1 | synthesize_collaborative_context |
+| Failure Handling | 2 | distill_failure, end_session |
+| Cognitive Load | 2 | analyze_cognitive_load, adaptive_reduce_memories |
 
 ---
 
 ### toolHandlers (`server/toolHandlers.ts`)
 
-**Purpose**: Handler implementations for all 59 tools
+**Purpose**: Handler implementations for all 91 tools
 
 **Lines**: ~301
 

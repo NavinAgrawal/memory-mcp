@@ -28,6 +28,22 @@ import {
   type BooleanQueryNode,
   type ImportResult,
   type CompressionResult,
+  // v1.7.0 new types
+  type ArtifactEntity,
+  type ArtifactType,
+  type ArtifactFilter,
+  type FreshnessReport,
+  type AuditEntry,
+  type AuditOperation,
+  type RefEntry,
+  type RefIndexStats,
+  type AgentRole,
+  type RoleProfile,
+  type CognitiveLoadMetrics,
+  type AdaptiveReductionResult,
+  type SynthesisResult,
+  type FailureDistillationResult,
+  type DistilledLesson,
 } from '@danielsimonjr/memoryjs';
 import { MCPServer } from './server/MCPServer.js';
 
@@ -49,6 +65,22 @@ export type {
   BooleanQueryNode,
   ImportResult,
   CompressionResult,
+  // v1.7.0 new types
+  ArtifactEntity,
+  ArtifactType,
+  ArtifactFilter,
+  FreshnessReport,
+  AuditEntry,
+  AuditOperation,
+  RefEntry,
+  RefIndexStats,
+  AgentRole,
+  RoleProfile,
+  CognitiveLoadMetrics,
+  AdaptiveReductionResult,
+  SynthesisResult,
+  FailureDistillationResult,
+  DistilledLesson,
 };
 
 // Re-export ManagerContext (replaces KnowledgeGraphManager)
