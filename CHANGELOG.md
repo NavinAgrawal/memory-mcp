@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-32 new tools across 14 categories, bringing the total to **91 tools**.
+35 new tools across 15 categories, bringing the total to **94 tools**.
 
 #### Ref Index (4 tools)
 - **`register_ref`** — Register a symbolic reference pointing to an entity for cross-session reuse
@@ -70,6 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Cognitive Load (2 tools)
 - **`analyze_cognitive_load`** — Analyze working-memory load in the current context
 - **`adaptive_reduce_memories`** — Adaptively reduce memory set to fit a cognitive load target
+
+#### Dream Engine (3 tools)
+- **`dream_start`** — Start the DreamEngine background memory maintenance (8-phase sleep-cycle: temporal anchoring, freshness sweep, entropy pruning, consolidation, compression, entity enrichment, pattern promotion, graph hygiene)
+- **`dream_stop`** — Stop the DreamEngine background process
+- **`dream_run_now`** — Run a single dream cycle immediately, returning detailed per-phase results
+
+Total tools: **91 → 94** (+3 Dream Engine tools)
 
 ---
 

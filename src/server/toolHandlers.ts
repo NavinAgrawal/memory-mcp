@@ -1,7 +1,7 @@
 /**
  * MCP Tool Handlers
  *
- * Contains handler functions for all 91 Knowledge Graph tools.
+ * Contains handler functions for all 94 Knowledge Graph tools.
  * Handlers call managers directly via ManagerContext.
  * All core functionality is imported from @danielsimonjr/memoryjs.
  *
@@ -43,6 +43,7 @@ import {
   FailureDistillation,
   CognitiveLoadAnalyzer,
   ConsolidationScheduler,
+  DreamEngine,
   DistillationPipeline,
   DefaultDistillationPolicy,
   NoOpDistillationPolicy,
@@ -59,6 +60,8 @@ import {
   type AuditFilter,
   type SalienceContext,
   type AgentEntity,
+  type DreamEngineConfig,
+  type DreamPhaseConfig,
 } from '@danielsimonjr/memoryjs';
 import { z } from 'zod';
 import { maybeCompressResponse } from './responseCompressor.js';
@@ -75,6 +78,7 @@ const artifactManagerMap = new WeakMap<ManagerContext, ArtifactManager>();
 const distillationPipelineMap = new WeakMap<ManagerContext, DistillationPipeline>();
 const failureDistillationMap = new WeakMap<ManagerContext, FailureDistillation>();
 const consolidationSchedulerMap = new WeakMap<ManagerContext, ConsolidationScheduler>();
+const dreamEngineMap = new WeakMap<ManagerContext, DreamEngine>();
 
 function getStorageFilePath(ctx: ManagerContext): string {
   // GraphStorage exposes filePath publicly; fall back to cwd-relative default
@@ -1291,6 +1295,91 @@ export const toolHandlers: Record<string, ToolHandler> = {
       scheduler = new ConsolidationScheduler(agentMem.consolidationPipeline, ctx.compressionManager);
     }
     const result = await scheduler.runNow();
+    return formatToolResponse(result);
+  },
+
+  // ==================== DREAM ENGINE HANDLERS ====================
+
+  dream_start: async (ctx, args) => {
+    const intervalMs = args.intervalMs !== undefined
+      ? validateWithSchema(args.intervalMs, z.number().int().min(1000), 'Invalid intervalMs')
+      : undefined;
+    const runOnSessionEnd = args.runOnSessionEnd !== undefined
+      ? validateWithSchema(args.runOnSessionEnd, z.boolean(), 'Invalid runOnSessionEnd')
+      : undefined;
+    const maxDurationMs = args.maxDurationMs !== undefined
+      ? validateWithSchema(args.maxDurationMs, z.number().int().min(1000), 'Invalid maxDurationMs')
+      : undefined;
+    const phases = args.phases !== undefined
+      ? validateWithSchema(
+          args.phases,
+          z.object({
+            temporalAnchoring: z.boolean().optional(),
+            freshnessSweep: z.boolean().optional(),
+            entropyPruning: z.boolean().optional(),
+            consolidation: z.boolean().optional(),
+            compression: z.boolean().optional(),
+            entityEnrichment: z.boolean().optional(),
+            patternPromotion: z.boolean().optional(),
+            graphHygiene: z.boolean().optional(),
+          }),
+          'Invalid phases'
+        ) as DreamPhaseConfig
+      : undefined;
+
+    let engine = dreamEngineMap.get(ctx);
+    if (!engine) {
+      const agentMem = ctx.agentMemory();
+      const config: DreamEngineConfig = {
+        ...(intervalMs !== undefined && { intervalMs }),
+        ...(runOnSessionEnd !== undefined && { runOnSessionEnd }),
+        ...(maxDurationMs !== undefined && { maxDurationMs }),
+        ...(phases !== undefined && { phases }),
+      };
+      engine = new DreamEngine(ctx.storage, agentMem.consolidationPipeline, config);
+      dreamEngineMap.set(ctx, engine);
+    }
+    engine.start();
+    return formatTextResponse('DreamEngine started — background memory maintenance active');
+  },
+
+  dream_stop: async (ctx) => {
+    const engine = dreamEngineMap.get(ctx);
+    if (!engine) {
+      return formatTextResponse('No active DreamEngine found. Start one first with dream_start.');
+    }
+    engine.stop();
+    return formatTextResponse('DreamEngine stopped');
+  },
+
+  dream_run_now: async (ctx, args) => {
+    const phases = args.phases !== undefined
+      ? validateWithSchema(
+          args.phases,
+          z.object({
+            temporalAnchoring: z.boolean().optional(),
+            freshnessSweep: z.boolean().optional(),
+            entropyPruning: z.boolean().optional(),
+            consolidation: z.boolean().optional(),
+            compression: z.boolean().optional(),
+            entityEnrichment: z.boolean().optional(),
+            patternPromotion: z.boolean().optional(),
+            graphHygiene: z.boolean().optional(),
+          }),
+          'Invalid phases'
+        ) as DreamPhaseConfig
+      : undefined;
+
+    // Use the per-ctx singleton if available, otherwise create a one-off engine.
+    let engine = dreamEngineMap.get(ctx);
+    if (!engine) {
+      const agentMem = ctx.agentMemory();
+      const config: DreamEngineConfig = {
+        ...(phases !== undefined && { phases }),
+      };
+      engine = new DreamEngine(ctx.storage, agentMem.consolidationPipeline, config);
+    }
+    const result = await engine.runDreamCycle();
     return formatToolResponse(result);
   },
 

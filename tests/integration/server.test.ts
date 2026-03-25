@@ -56,13 +56,14 @@ describe('MCPServer Integration', () => {
   });
 
   describe('Tool Registration', () => {
-    it('should have 91 tool definitions available', () => {
+    it('should have 94 tool definitions available', () => {
       // Phase 4 Sprint 9: Added 4 graph algorithm tools (find_shortest_path, find_all_paths, get_connected_components, get_centrality)
       // Phase 4 Sprint 12: Added 3 semantic search tools (semantic_search, find_similar_entities, index_embeddings)
       // Phase 10 Sprint 4: Added search_auto tool
       // Phase 11: Added 4 intelligent search tools (hybrid_search, analyze_query, smart_search, normalize_observations)
       // Phase 12: Added 32 tools from memoryjs v1.7.0 paper-driven features
-      expect(toolDefinitions).toHaveLength(91);
+      // v12.0.0 feature/v12-memoryjs-tools: Added 3 DreamEngine tools (dream_start, dream_stop, dream_run_now)
+      expect(toolDefinitions).toHaveLength(94);
     });
 
     it('should have matching handlers for all definitions', async () => {

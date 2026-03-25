@@ -1585,6 +1585,79 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+
+  // ==================== DREAM ENGINE TOOLS ====================
+  {
+    name: 'dream_start',
+    description: 'Start the DreamEngine background memory maintenance. Runs 8 phases (temporal anchoring, freshness sweep, entropy pruning, consolidation, compression, entity enrichment, pattern promotion, graph hygiene) on a configurable interval.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        intervalMs: {
+          type: 'number',
+          description: 'Interval between dream cycles in milliseconds (default: 14400000 = 4 hours)',
+        },
+        runOnSessionEnd: {
+          type: 'boolean',
+          description: 'Run a dream cycle automatically when endSession() is called (default: true)',
+        },
+        maxDurationMs: {
+          type: 'number',
+          description: 'Hard limit on total cycle wall-clock time in milliseconds (default: 60000 = 60s)',
+        },
+        phases: {
+          type: 'object',
+          description: 'Per-phase enable/disable flags',
+          properties: {
+            temporalAnchoring: { type: 'boolean', description: 'Phase 1: Resolve relative date references to absolute ISO timestamps' },
+            freshnessSweep: { type: 'boolean', description: 'Phase 2: Flag stale entities, decay confidence, expire TTL records' },
+            entropyPruning: { type: 'boolean', description: 'Phase 3: Remove observations whose Shannon entropy is below threshold' },
+            consolidation: { type: 'boolean', description: 'Phase 4: Merge working-memory items into long-term storage' },
+            compression: { type: 'boolean', description: 'Phase 5: Deduplicate near-identical entities above similarity threshold' },
+            entityEnrichment: { type: 'boolean', description: 'Phase 6: Auto-generate summary observations for entity enrichment' },
+            patternPromotion: { type: 'boolean', description: 'Phase 7: Detect recurring observation themes and promote to semantic memory' },
+            graphHygiene: { type: 'boolean', description: 'Phase 8: Orphan detection and dangling-relation cleanup' },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'dream_stop',
+    description: 'Stop the DreamEngine background process.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'dream_run_now',
+    description: 'Run a single dream cycle immediately. Returns detailed per-phase results.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        phases: {
+          type: 'object',
+          description: 'Per-phase enable/disable flags for this cycle',
+          properties: {
+            temporalAnchoring: { type: 'boolean', description: 'Phase 1: Resolve relative date references to absolute ISO timestamps' },
+            freshnessSweep: { type: 'boolean', description: 'Phase 2: Flag stale entities, decay confidence, expire TTL records' },
+            entropyPruning: { type: 'boolean', description: 'Phase 3: Remove observations whose Shannon entropy is below threshold' },
+            consolidation: { type: 'boolean', description: 'Phase 4: Merge working-memory items into long-term storage' },
+            compression: { type: 'boolean', description: 'Phase 5: Deduplicate near-identical entities above similarity threshold' },
+            entityEnrichment: { type: 'boolean', description: 'Phase 6: Auto-generate summary observations for entity enrichment' },
+            patternPromotion: { type: 'boolean', description: 'Phase 7: Detect recurring observation themes and promote to semantic memory' },
+            graphHygiene: { type: 'boolean', description: 'Phase 8: Orphan detection and dangling-relation cleanup' },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 // Tool categories are documented in CLAUDE.md for reference:
