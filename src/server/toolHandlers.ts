@@ -74,6 +74,7 @@ const freshnessMap = new WeakMap<ManagerContext, FreshnessManager>();
 const artifactManagerMap = new WeakMap<ManagerContext, ArtifactManager>();
 const distillationPipelineMap = new WeakMap<ManagerContext, DistillationPipeline>();
 const failureDistillationMap = new WeakMap<ManagerContext, FailureDistillation>();
+const consolidationSchedulerMap = new WeakMap<ManagerContext, ConsolidationScheduler>();
 
 function getStorageFilePath(ctx: ManagerContext): string {
   // GraphStorage exposes filePath publicly; fall back to cwd-relative default
@@ -1020,8 +1021,12 @@ export const toolHandlers: Record<string, ToolHandler> = {
       );
     }
     if (args.since !== undefined) {
-      const sinceStr = validateWithSchema(args.since, z.string(), 'Invalid since');
-      filter.since = new Date(sinceStr);
+      const sinceStr = validateWithSchema(args.since, z.string().regex(/^\d{4}-\d{2}-\d{2}(T[\d:.Z+-]+)?$/, 'since must be an ISO 8601 date string'), 'Invalid since');
+      const sinceDate = new Date(sinceStr);
+      if (isNaN(sinceDate.getTime())) {
+        throw new Error(`Invalid since date: "${sinceStr}" is not a valid date`);
+      }
+      filter.since = sinceDate;
     }
     const artifacts = await getArtifactManager(ctx).listArtifacts(Object.keys(filter).length > 0 ? filter : undefined);
     return formatToolResponse({ artifacts, count: artifacts.length });
@@ -1121,7 +1126,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   },
 
   // ==================== GOVERNANCE HANDLERS ====================
-  governance_transaction: async (ctx, args) => {
+  set_governance_policy: async (ctx, args) => {
     const gm = getGovernanceManager(ctx);
     // GovernancePolicy uses function callbacks; we translate boolean args into allow/deny functions
     const allowCreate = args.canCreate !== undefined
@@ -1225,8 +1230,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       pipeline.registerStage(stage);
       return formatTextResponse(`Entropy filter enabled (minEntropy=${minEntropy}, minLength=${minLength}). Stage registered on consolidation pipeline.`);
     } else {
-      pipeline.clearStages();
-      return formatTextResponse('Entropy filter disabled. All consolidation pipeline stages cleared.');
+      return formatTextResponse('Entropy filter disabled. No new entropy-filter stage will be registered on the consolidation pipeline.');
     }
   },
 
@@ -1250,9 +1254,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const autoMergeDuplicates = args.autoMergeDuplicates !== undefined
       ? validateWithSchema(args.autoMergeDuplicates, z.boolean(), 'Invalid autoMergeDuplicates')
       : undefined;
-    // Use ctx.consolidationScheduler if available (set via MEMORY_AUTO_CONSOLIDATION env var),
-    // otherwise create one using the agentMemory facade's consolidation pipeline
-    let scheduler = ctx.consolidationScheduler;
+    // Prefer ctx.consolidationScheduler (set via MEMORY_AUTO_CONSOLIDATION env var).
+    // Otherwise use the per-ctx singleton so stop/run_now can retrieve the same instance.
+    let scheduler = ctx.consolidationScheduler ?? consolidationSchedulerMap.get(ctx);
     if (!scheduler) {
       const agentMem = ctx.agentMemory();
       scheduler = new ConsolidationScheduler(
@@ -1263,13 +1267,14 @@ export const toolHandlers: Record<string, ToolHandler> = {
           autoMergeDuplicates: autoMergeDuplicates,
         }
       );
+      consolidationSchedulerMap.set(ctx, scheduler);
     }
     scheduler.start();
     return formatTextResponse(`Consolidation scheduler started (interval: ${scheduler.getInterval()}ms, autoMerge: ${scheduler.getConfig().autoMergeDuplicates})`);
   },
 
   stop_consolidation: async (ctx) => {
-    const scheduler = ctx.consolidationScheduler;
+    const scheduler = ctx.consolidationScheduler ?? consolidationSchedulerMap.get(ctx);
     if (!scheduler) {
       return formatTextResponse('No active consolidation scheduler found. Start one first with start_consolidation.');
     }
@@ -1278,8 +1283,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
   },
 
   run_consolidation_now: async (ctx) => {
-    // Use ctx.consolidationScheduler if available, otherwise create temporary scheduler
-    let scheduler = ctx.consolidationScheduler;
+    // Use ctx.consolidationScheduler or the per-ctx singleton if available,
+    // otherwise create a temporary scheduler just for this one run.
+    let scheduler = ctx.consolidationScheduler ?? consolidationSchedulerMap.get(ctx);
     if (!scheduler) {
       const agentMem = ctx.agentMemory();
       scheduler = new ConsolidationScheduler(agentMem.consolidationPipeline, ctx.compressionManager);
@@ -1345,11 +1351,13 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ctx.salienceEngine,
       config
     );
-    const result = await synthesis.synthesize(
-      seedEntityName,
-      Object.keys(salienceContext).length > 0 ? salienceContext : undefined
-    );
-    return formatToolResponse(result);
+    return withCompression(async () => {
+      const result = await synthesis.synthesize(
+        seedEntityName,
+        Object.keys(salienceContext).length > 0 ? salienceContext : undefined
+      );
+      return formatToolResponse(result);
+    });
   },
 
   // ==================== FAILURE DISTILLATION HANDLERS ====================

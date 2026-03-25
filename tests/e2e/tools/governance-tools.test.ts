@@ -1,7 +1,7 @@
 /**
  * Governance Tools E2E Tests
  *
- * Tests for governance_transaction, audit_query, audit_history, and rollback_operation tools.
+ * Tests for set_governance_policy, audit_query, audit_history, and rollback_operation tools.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -36,10 +36,10 @@ async function seedGraph() {
 }
 
 describe('Governance Tools E2E', () => {
-  // ==================== governance_transaction ====================
-  describe('governance_transaction tool', () => {
+  // ==================== set_governance_policy ====================
+  describe('set_governance_policy tool', () => {
     it('should set governance policy with all permissions allowed', async () => {
-      const result = await handleToolCall('governance_transaction', {
+      const result = await handleToolCall('set_governance_policy', {
         canCreate: true,
         canUpdate: true,
         canDelete: true,
@@ -51,7 +51,7 @@ describe('Governance Tools E2E', () => {
     });
 
     it('should set governance policy with restricted delete', async () => {
-      const result = await handleToolCall('governance_transaction', {
+      const result = await handleToolCall('set_governance_policy', {
         canCreate: true,
         canUpdate: true,
         canDelete: false,
@@ -61,7 +61,7 @@ describe('Governance Tools E2E', () => {
     });
 
     it('should set governance policy with all permissions denied', async () => {
-      const result = await handleToolCall('governance_transaction', {
+      const result = await handleToolCall('set_governance_policy', {
         canCreate: false,
         canUpdate: false,
         canDelete: false,
@@ -71,19 +71,19 @@ describe('Governance Tools E2E', () => {
 
     it('should use defaults when no parameters provided', async () => {
       // All default to true when not specified
-      const result = await handleToolCall('governance_transaction', {}, manager);
+      const result = await handleToolCall('set_governance_policy', {}, manager);
       expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain('canCreate=true');
     });
 
     it('should return text response', async () => {
-      const result = await handleToolCall('governance_transaction', { canCreate: true }, manager);
+      const result = await handleToolCall('set_governance_policy', { canCreate: true }, manager);
       expect(result.content[0].type).toBe('text');
       expect(result.content[0].text.length).toBeGreaterThan(0);
     });
 
     it('should reject non-boolean canCreate', async () => {
-      const result = await handleToolCall('governance_transaction', { canCreate: 'yes' }, manager);
+      const result = await handleToolCall('set_governance_policy', { canCreate: 'yes' }, manager);
       expect(result.isError).toBe(true);
     });
   });

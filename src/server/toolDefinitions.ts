@@ -1285,8 +1285,8 @@ export const toolDefinitions: ToolDefinition[] = [
 
   // ==================== GOVERNANCE ====================
   {
-    name: 'governance_transaction',
-    description: 'Set the active governance policy (canCreate, canUpdate, canDelete) for future operations',
+    name: 'set_governance_policy',
+    description: 'Set the active governance policy controlling which write operations (create, update, delete) are permitted for future requests',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1305,7 +1305,7 @@ export const toolDefinitions: ToolDefinition[] = [
       properties: {
         operation: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'merge', 'archive', 'rolled_back'],
+          enum: ['create', 'update', 'delete', 'merge', 'archive'],
           description: 'Filter by operation type',
         },
         agentId: { type: 'string', description: 'Filter by agent identifier' },
