@@ -1,7 +1,7 @@
 /**
  * MCP Tool Handlers
  *
- * Contains handler functions for all 94 Knowledge Graph tools.
+ * Contains handler functions for all 106 Knowledge Graph tools.
  * Handlers call managers directly via ManagerContext.
  * All core functionality is imported from @danielsimonjr/memoryjs.
  *
@@ -236,6 +236,37 @@ export const toolHandlers: Record<string, ToolHandler> = {
     );
   },
 
+  // Phase 13: Project scoping + memory versioning
+  list_projects: async (ctx, _args) => {
+    const projects = await ctx.entityManager.listProjects();
+    return formatToolResponse({ projects, count: projects.length });
+  },
+
+  get_entity_versions: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const chain = await ctx.entityManager.getVersionChain(entityName);
+    return formatToolResponse({
+      rootEntity: chain[0]?.name ?? null,
+      latestEntity: chain.find(e => e.isLatest !== false)?.name ?? null,
+      versions: chain.map(e => ({
+        name: e.name,
+        version: e.version ?? 1,
+        isLatest: e.isLatest !== false,
+        observations: e.observations,
+      })),
+      count: chain.length,
+    });
+  },
+
+  get_version_chain: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const latest = await ctx.entityManager.getLatestVersion(entityName);
+    if (!latest) {
+      return formatTextResponse(`Entity '${entityName}' not found`);
+    }
+    return formatToolResponse(latest);
+  },
+
   // ==================== RELATION HANDLERS ====================
   create_relations: async (ctx, args) => {
     const relations = validateWithSchema(args.relations, BatchCreateRelationsSchema, 'Invalid relations data');
@@ -246,6 +277,48 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const relations = validateWithSchema(args.relations, DeleteRelationsSchema, 'Invalid relations data');
     await ctx.relationManager.deleteRelations(relations);
     return formatTextResponse(`Deleted ${relations.length} relations`);
+  },
+
+  // Phase 13: Temporal knowledge graph
+  invalidate_relation: async (ctx, args) => {
+    const from = validateWithSchema(args.from, z.string().min(1), 'Invalid from');
+    const relationType = validateWithSchema(args.relationType, z.string().min(1), 'Invalid relationType');
+    const to = validateWithSchema(args.to, z.string().min(1), 'Invalid to');
+    const ended = args.ended !== undefined ? validateWithSchema(args.ended, z.string(), 'Invalid ended') : undefined;
+    await ctx.relationManager.invalidateRelation(from, relationType, to, ended);
+    return formatTextResponse(
+      `Invalidated: ${from} -[${relationType}]-> ${to} (ended: ${ended ?? 'now'})`
+    );
+  },
+
+  query_as_of: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const asOf = validateWithSchema(args.asOf, z.string().min(1), 'Invalid asOf');
+    const direction = args.direction !== undefined
+      ? validateWithSchema(args.direction, z.enum(['outgoing', 'incoming', 'both']), 'Invalid direction')
+      : undefined;
+    const relations = await ctx.relationManager.queryAsOf(entityName, asOf, { direction });
+    return formatToolResponse({ entity: entityName, asOf, relations, count: relations.length });
+  },
+
+  timeline: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const direction = args.direction !== undefined
+      ? validateWithSchema(args.direction, z.enum(['outgoing', 'incoming', 'both']), 'Invalid direction')
+      : undefined;
+    const relations = await ctx.relationManager.timeline(entityName, { direction });
+    return formatToolResponse({
+      entity: entityName,
+      timeline: relations.map(r => ({
+        from: r.from,
+        relationType: r.relationType,
+        to: r.to,
+        validFrom: r.properties?.validFrom ?? null,
+        validUntil: r.properties?.validUntil ?? null,
+        current: r.properties?.validUntil === undefined,
+      })),
+      count: relations.length,
+    });
   },
 
   // ==================== OBSERVATION HANDLERS ====================
@@ -376,6 +449,16 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
     const limit = args.limit !== undefined ? validateWithSchema(args.limit, z.number().int().positive().max(200), 'Invalid limit') : undefined;
     return formatToolResponse(await ctx.searchManager.autoSearch(query, limit));
+  },
+
+  // Phase 13: Semantic forget
+  forget_memory: async (ctx, args) => {
+    const content = validateWithSchema(args.content, z.string().min(1), 'Invalid content');
+    const threshold = args.threshold !== undefined ? validateWithSchema(args.threshold, z.number().min(0).max(1), 'Invalid threshold') : undefined;
+    const projectId = args.projectId !== undefined ? validateWithSchema(args.projectId, z.string(), 'Invalid projectId') : undefined;
+    const dryRun = args.dryRun === true;
+    const result = await ctx.semanticForget.forgetByContent(content, { threshold, projectId, dryRun });
+    return formatToolResponse(result);
   },
 
   // Phase 11 Sprint 2: Hybrid search
@@ -791,6 +874,27 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const mergeStrategy = args.mergeStrategy !== undefined ? validateWithSchema(args.mergeStrategy, MergeStrategySchema, 'Invalid merge strategy') : undefined;
     const dryRun = args.dryRun !== undefined ? validateWithSchema(args.dryRun, z.boolean(), 'Invalid dryRun value') : undefined;
     return formatToolResponse(await ctx.ioManager.importGraph(format, data, mergeStrategy, dryRun));
+  },
+
+  // Phase 13: Conversation ingestion
+  ingest: async (ctx, args) => {
+    const messages = validateWithSchema(
+      args.messages,
+      z.array(z.object({ role: z.enum(['user', 'assistant', 'system']), content: z.string(), timestamp: z.string().optional() })),
+      'Invalid messages'
+    );
+    const source = args.source !== undefined ? validateWithSchema(args.source, z.string(), 'Invalid source') : undefined;
+    const projectId = args.projectId !== undefined ? validateWithSchema(args.projectId, z.string(), 'Invalid projectId') : undefined;
+    const tags = args.tags !== undefined ? validateWithSchema(args.tags, z.array(z.string()), 'Invalid tags') : undefined;
+    const chunkBy = args.chunkBy !== undefined
+      ? validateWithSchema(args.chunkBy, z.enum(['exchange', 'paragraph', 'fixed']), 'Invalid chunkBy')
+      : undefined;
+    const dryRun = args.dryRun === true;
+    const result = await ctx.ioManager.ingest(
+      { messages, source },
+      { projectId, tags, chunkBy, dryRun }
+    );
+    return formatToolResponse(result);
   },
 
   export_graph: async (ctx, args) => {
@@ -1553,6 +1657,41 @@ export const toolHandlers: Record<string, ToolHandler> = {
       beforeMetrics: result.beforeMetrics,
       afterMetrics: result.afterMetrics,
     });
+  },
+
+  // Phase 13: User profile + agent diary
+  get_profile: async (ctx, args) => {
+    const projectId = args.projectId !== undefined ? validateWithSchema(args.projectId, z.string(), 'Invalid projectId') : undefined;
+    const amm = ctx.agentMemory();
+    const profile = await amm.profileManager.getProfile({ projectId });
+    return formatToolResponse(profile);
+  },
+
+  update_profile: async (ctx, args) => {
+    const content = validateWithSchema(args.content, z.string().min(1), 'Invalid content');
+    const type = validateWithSchema(args.type, z.enum(['static', 'dynamic']), 'Invalid type');
+    const projectId = args.projectId !== undefined ? validateWithSchema(args.projectId, z.string(), 'Invalid projectId') : undefined;
+    const amm = ctx.agentMemory();
+    await amm.profileManager.addFact(content, type, { projectId });
+    return formatTextResponse(`Added ${type} profile fact: "${content}"`);
+  },
+
+  diary_write: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const entry = validateWithSchema(args.entry, z.string().min(1), 'Invalid entry');
+    const topic = args.topic !== undefined ? validateWithSchema(args.topic, z.string(), 'Invalid topic') : undefined;
+    const amm = ctx.agentMemory();
+    await amm.writeDiary(agentId, entry, { topic });
+    return formatTextResponse(`Diary entry written for agent '${agentId}'`);
+  },
+
+  diary_read: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const lastN = args.lastN !== undefined ? validateWithSchema(args.lastN, z.number().int().positive(), 'Invalid lastN') : undefined;
+    const topic = args.topic !== undefined ? validateWithSchema(args.topic, z.string(), 'Invalid topic') : undefined;
+    const amm = ctx.agentMemory();
+    const entries = await amm.readDiary(agentId, { lastN, topic });
+    return formatToolResponse({ agentId, entries, count: entries.length });
   },
 };
 

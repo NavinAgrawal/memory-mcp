@@ -63,7 +63,10 @@ describe('MCPServer Integration', () => {
       // Phase 11: Added 4 intelligent search tools (hybrid_search, analyze_query, smart_search, normalize_observations)
       // Phase 12: Added 32 tools from memoryjs v1.7.0 paper-driven features
       // v12.0.0 feature/v12-memoryjs-tools: Added 3 DreamEngine tools (dream_start, dream_stop, dream_run_now)
-      expect(toolDefinitions).toHaveLength(94);
+      // Phase 13: Added 12 tools for memoryjs v1.8.0/v1.9.0 (list_projects, get_entity_versions, get_version_chain,
+      //   forget_memory, get_profile, update_profile, invalidate_relation, query_as_of, timeline,
+      //   ingest, diary_write, diary_read)
+      expect(toolDefinitions).toHaveLength(106);
     });
 
     it('should have matching handlers for all definitions', async () => {

@@ -2,7 +2,7 @@
  * MCP Tool Definitions
  *
  * Extracted from MCPServer.ts to reduce file size and improve maintainability.
- * Contains all 91 tool schemas for the Knowledge Graph MCP Server.
+ * Contains all 106 tool schemas for the Knowledge Graph MCP Server.
  *
  * @module server/toolDefinitions
  */
@@ -97,6 +97,42 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // Phase 13: Project scoping + memory versioning tools
+  {
+    name: 'list_projects',
+    description: 'List all distinct project IDs in the knowledge graph. Returns sorted array of projectId values, excluding global/unscoped entities.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_entity_versions',
+    description: 'Get all versions of an entity in its version chain. Returns versions sorted by version number ascending. Works from any entity in the chain (resolves to root automatically).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Name of any entity in the version chain' },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_version_chain',
+    description: 'Get the latest version of an entity. If the entity has been superseded by newer versions (via contradiction detection), returns the most recent one.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Name of any entity in the version chain' },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+
   // ==================== RELATION TOOLS ====================
   {
     name: 'create_relations',
@@ -147,6 +183,50 @@ export const toolDefinitions: ToolDefinition[] = [
         },
       },
       required: ['relations'],
+      additionalProperties: false,
+    },
+  },
+
+  // Phase 13: Temporal knowledge graph tools
+  {
+    name: 'invalidate_relation',
+    description: 'Mark a relation as no longer valid. Sets the validUntil timestamp on the matching active relation. Use for temporal facts that have ended (e.g., "Kai no longer works on Orion").',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: { type: 'string', description: 'Source entity name' },
+        relationType: { type: 'string', description: 'Relation type (e.g., works_on, assigned_to)' },
+        to: { type: 'string', description: 'Target entity name' },
+        ended: { type: 'string', description: 'ISO 8601 date when the relation ended. Defaults to now.' },
+      },
+      required: ['from', 'relationType', 'to'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'query_as_of',
+    description: 'Query relations valid at a specific point in time. Returns only relations where validFrom <= date AND (validUntil is undefined OR validUntil >= date). Time-travel query for temporal knowledge graphs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity to query relations for' },
+        asOf: { type: 'string', description: 'ISO 8601 date to query at (e.g., "2026-01-15")' },
+        direction: { type: 'string', enum: ['outgoing', 'incoming', 'both'], description: 'Relation direction filter. Default: both.' },
+      },
+      required: ['entityName', 'asOf'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'timeline',
+    description: 'Get chronological relation history for an entity. Returns ALL relations (current and expired) sorted by validFrom ascending. Shows the full story of an entity over time.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity to get timeline for' },
+        direction: { type: 'string', enum: ['outgoing', 'incoming', 'both'], description: 'Relation direction filter. Default: both.' },
+      },
+      required: ['entityName'],
       additionalProperties: false,
     },
   },
@@ -344,6 +424,22 @@ export const toolDefinitions: ToolDefinition[] = [
         limit: { type: 'number', description: 'Maximum results to return (default: 10)' },
       },
       required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  // Phase 13: Semantic forget
+  {
+    name: 'forget_memory',
+    description: 'Forget (delete) observations matching the given content. Tries exact match first; falls back to semantic search at 0.85 similarity threshold if available. Supports dryRun to preview what would be deleted.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'The content to forget (observation text)' },
+        threshold: { type: 'number', description: 'Semantic similarity threshold for fallback (default: 0.85)' },
+        projectId: { type: 'string', description: 'Optional project scope filter' },
+        dryRun: { type: 'boolean', description: 'If true, return what would be deleted without actually deleting' },
+      },
+      required: ['content'],
       additionalProperties: false,
     },
   },
@@ -1013,6 +1109,37 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // Phase 13: Conversation ingestion tool
+  {
+    name: 'ingest',
+    description: 'Ingest pre-normalized conversation data into the knowledge graph. Chunks messages by exchange pairs (user+assistant), creates entities with verbatim observations. Format-agnostic: normalize chat exports before calling.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        messages: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string', enum: ['user', 'assistant', 'system'] },
+              content: { type: 'string' },
+              timestamp: { type: 'string', description: 'Optional ISO 8601 timestamp' },
+            },
+            required: ['role', 'content'],
+          },
+          description: 'Array of conversation messages to ingest',
+        },
+        source: { type: 'string', description: 'Source identifier (e.g., filename, session ID)' },
+        projectId: { type: 'string', description: 'Project to scope ingested entities to' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Tags to apply to all created entities' },
+        chunkBy: { type: 'string', enum: ['exchange', 'paragraph', 'fixed'], description: 'Chunking strategy. Default: exchange (user+assistant pairs).' },
+        dryRun: { type: 'boolean', description: 'Preview without creating entities' },
+      },
+      required: ['messages'],
+      additionalProperties: false,
+    },
+  },
+
   // ==================== SEMANTIC SEARCH TOOLS (Phase 4 Sprint 12) ====================
   {
     name: 'semantic_search',
@@ -1539,6 +1666,62 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // Phase 13: User profile + agent diary tools
+  {
+    name: 'get_profile',
+    description: 'Get the user profile. Returns static facts (long-lived preferences) and dynamic facts (recent session context). Profiles are scoped by projectId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'Optional project scope. Omit for global profile.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_profile',
+    description: 'Add a fact to the user profile. Static facts are long-lived (preferences, role, tools). Dynamic facts are recent (current project, active work).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'The fact to add' },
+        type: { type: 'string', enum: ['static', 'dynamic'], description: 'Fact type: static (long-lived) or dynamic (recent)' },
+        projectId: { type: 'string', description: 'Optional project scope' },
+      },
+      required: ['content', 'type'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'diary_write',
+    description: 'Write a timestamped diary entry for a specialist agent. Each agent gets its own persistent diary (entity: diary-{agentId}). Use for code review findings, architecture decisions, ops incidents, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Agent identifier (e.g., reviewer, architect, ops). Alphanumeric + hyphens/underscores only.' },
+        entry: { type: 'string', description: 'The diary entry content' },
+        topic: { type: 'string', description: 'Optional topic tag for filtering (e.g., security, performance)' },
+      },
+      required: ['agentId', 'entry'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'diary_read',
+    description: 'Read recent diary entries for a specialist agent. Returns entries in reverse chronological order. Optionally filter by topic.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Agent identifier' },
+        lastN: { type: 'number', description: 'Number of recent entries to return. Default: 10.' },
+        topic: { type: 'string', description: 'Optional topic filter' },
+      },
+      required: ['agentId'],
+      additionalProperties: false,
+    },
+  },
+
   // ==================== COGNITIVE LOAD ====================
   {
     name: 'analyze_cognitive_load',
@@ -1658,6 +1841,10 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+
+  // Phase 13: Config tool
+  // TODO: set_project_scope requires server state management (activeProjectId on MCPServer)
+  // Skipped in this pass — implement when MCPServer exposes mutable server state to handlers.
 ];
 
 // Tool categories are documented in CLAUDE.md for reference:
