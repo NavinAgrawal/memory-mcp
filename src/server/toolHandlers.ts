@@ -244,7 +244,19 @@ export const toolHandlers: Record<string, ToolHandler> = {
 
   get_entity_versions: async (ctx, args) => {
     const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const latest = await ctx.entityManager.getLatestVersion(entityName);
+    if (!latest) {
+      return { content: [{ type: 'text', text: `Entity '${entityName}' not found` }], isError: true };
+    }
+    return formatToolResponse(latest);
+  },
+
+  get_version_chain: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
     const chain = await ctx.entityManager.getVersionChain(entityName);
+    if (chain.length === 0) {
+      return { content: [{ type: 'text', text: `Entity '${entityName}' not found` }], isError: true };
+    }
     return formatToolResponse({
       rootEntity: chain[0]?.name ?? null,
       latestEntity: chain.find(e => e.isLatest !== false)?.name ?? null,
@@ -256,15 +268,6 @@ export const toolHandlers: Record<string, ToolHandler> = {
       })),
       count: chain.length,
     });
-  },
-
-  get_version_chain: async (ctx, args) => {
-    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
-    const latest = await ctx.entityManager.getLatestVersion(entityName);
-    if (!latest) {
-      return formatTextResponse(`Entity '${entityName}' not found`);
-    }
-    return formatToolResponse(latest);
   },
 
   // ==================== RELATION HANDLERS ====================
@@ -281,14 +284,19 @@ export const toolHandlers: Record<string, ToolHandler> = {
 
   // Phase 13: Temporal knowledge graph
   invalidate_relation: async (ctx, args) => {
-    const from = validateWithSchema(args.from, z.string().min(1), 'Invalid from');
-    const relationType = validateWithSchema(args.relationType, z.string().min(1), 'Invalid relationType');
-    const to = validateWithSchema(args.to, z.string().min(1), 'Invalid to');
-    const ended = args.ended !== undefined ? validateWithSchema(args.ended, z.string(), 'Invalid ended') : undefined;
-    await ctx.relationManager.invalidateRelation(from, relationType, to, ended);
-    return formatTextResponse(
-      `Invalidated: ${from} -[${relationType}]-> ${to} (ended: ${ended ?? 'now'})`
-    );
+    try {
+      const from = validateWithSchema(args.from, z.string().min(1), 'Invalid from');
+      const relationType = validateWithSchema(args.relationType, z.string().min(1), 'Invalid relationType');
+      const to = validateWithSchema(args.to, z.string().min(1), 'Invalid to');
+      const ended = args.ended !== undefined ? validateWithSchema(args.ended, z.string(), 'Invalid ended') : undefined;
+      await ctx.relationManager.invalidateRelation(from, relationType, to, ended);
+      return formatTextResponse(
+        `Invalidated: ${from} -[${relationType}]-> ${to} (ended: ${ended ?? 'now'})`
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text', text: msg }], isError: true };
+    }
   },
 
   query_as_of: async (ctx, args) => {
@@ -458,6 +466,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const projectId = args.projectId !== undefined ? validateWithSchema(args.projectId, z.string(), 'Invalid projectId') : undefined;
     const dryRun = args.dryRun === true;
     const result = await ctx.semanticForget.forgetByContent(content, { threshold, projectId, dryRun });
+    if (result.method === 'not_found') {
+      return formatTextResponse(`No matching memory found for: "${content}". Try a different search term.`);
+    }
     return formatToolResponse(result);
   },
 
@@ -878,6 +889,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
 
   // Phase 13: Conversation ingestion
   ingest: async (ctx, args) => {
+    if (!args.messages || (args.messages as unknown[]).length === 0) {
+      return formatTextResponse('No messages provided. At least one message is required.');
+    }
     const messages = validateWithSchema(
       args.messages,
       z.array(z.object({ role: z.enum(['user', 'assistant', 'system']), content: z.string(), timestamp: z.string().optional() })),

@@ -110,7 +110,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: 'get_entity_versions',
-    description: 'Get all versions of an entity in its version chain. Returns versions sorted by version number ascending. Works from any entity in the chain (resolves to root automatically).',
+    description: 'Get the latest version of an entity. If the entity has been superseded by newer versions (via contradiction detection), returns the most recent one.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -122,7 +122,7 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: 'get_version_chain',
-    description: 'Get the latest version of an entity. If the entity has been superseded by newer versions (via contradiction detection), returns the most recent one.',
+    description: 'Get all versions of an entity in its version chain. Returns versions sorted by version number ascending. Works from any entity in the chain (resolves to root automatically).',
     inputSchema: {
       type: 'object',
       properties: {
