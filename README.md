@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 91 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, and sophisticated search capabilities for long-term memory management.
+> **Enterprise-grade knowledge graph** with 106 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, sophisticated search capabilities, project scoping, temporal knowledge graph, semantic forget, and agent diary for long-term memory management.
 
 ## Table of Contents
 
@@ -64,6 +64,13 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Collaborative** | 1 | Multi-agent context synthesis |
 | **Failure Handling** | 2 | Session failure distillation and graceful session end |
 | **Cognitive Load** | 2 | Working-memory load analysis and adaptive reduction |
+| **Project Scoping** | 1 | List and filter entities by project |
+| **Memory Versioning** | 2 | Entity version chains and per-entity version history |
+| **Semantic Forget** | 1 | Two-tier deletion: exact match → semantic similarity fallback |
+| **Profiles** | 2 | User/agent profile get and update |
+| **Temporal KG** | 3 | Temporal relation invalidation, time-travel queries, relation timeline |
+| **Ingestion** | 1 | Format-agnostic conversation/document ingestion pipeline |
+| **Agent Diary** | 2 | Per-agent persistent journal write and read |
 
 ### Comparison with Official Memory Server
 
@@ -86,7 +93,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Backup & Restore** | ❌ | ✅ Compressed snapshots |
 | **Intelligent Search** | ❌ | ✅ Hybrid + Query Analysis + Reflection |
 | **Observation Normalization** | ❌ | ✅ Coreference resolution + temporal anchoring |
-| **Total Tools** | 11 | **91** |
+| **Total Tools** | 11 | **106** |
 | **Code Structure** | Monolithic | **Modular** (77 files) |
 
 ## Quick Start
@@ -235,7 +242,7 @@ Discrete facts about entities. Each observation should be atomic and independent
 
 ## API Reference
 
-### Complete Tool List (91 Tools)
+### Complete Tool List (106 Tools)
 
 #### Entity Operations (4 tools)
 | Tool | Description |
@@ -440,6 +447,46 @@ Discrete facts about entities. Each observation should be atomic and independent
 | `analyze_cognitive_load` | Analyze working-memory load in the current context |
 | `adaptive_reduce_memories` | Adaptively reduce memory set to fit cognitive load target |
 
+#### Project Scoping (1 tool)
+| Tool | Description |
+|------|-------------|
+| `list_projects` | List all project IDs present in the graph and filter entities by project |
+
+#### Memory Versioning (2 tools)
+| Tool | Description |
+|------|-------------|
+| `get_entity_versions` | Retrieve all versions of a versioned entity by name |
+| `get_version_chain` | Get the full version chain from root to latest for an entity |
+
+#### Semantic Forget (1 tool)
+| Tool | Description |
+|------|-------------|
+| `forget_memory` | Delete an entity by exact name, falling back to semantic similarity if no exact match found |
+
+#### Profiles (2 tools)
+| Tool | Description |
+|------|-------------|
+| `get_profile` | Retrieve a user or agent profile entity |
+| `update_profile` | Update observations and metadata on a profile entity |
+
+#### Temporal KG (3 tools)
+| Tool | Description |
+|------|-------------|
+| `invalidate_relation` | Mark a relation as ended by setting its temporal validity end date |
+| `query_as_of` | Retrieve all relations for an entity that were valid at a given point in time |
+| `timeline` | Return a chronological list of relation events for an entity |
+
+#### Ingestion (1 tool)
+| Tool | Description |
+|------|-------------|
+| `ingest` | Ingest a conversation, document, or free-form text into the knowledge graph |
+
+#### Agent Diary (2 tools)
+| Tool | Description |
+|------|-------------|
+| `diary_write` | Append an entry to the agent's persistent diary |
+| `diary_read` | Read diary entries for an agent, optionally filtered by date range |
+
 ## Configuration
 
 ### Environment Variables
@@ -535,7 +582,7 @@ npm run docs:deps     # Generate dependency graph
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
-│  server/MCPServer.ts + toolDefinitions (91 tools)   │
+│  server/MCPServer.ts + toolDefinitions (106 tools)  │
 │  + toolHandlers + responseCompressor                │
 └──────────────────────┬──────────────────────────────┘
                        │
@@ -580,7 +627,7 @@ memory-mcp/
 │   │   └── index.ts
 │   ├── server/                     # MCP protocol (4 files)
 │   │   ├── MCPServer.ts                # Server setup
-│   │   ├── toolDefinitions.ts          # 91 tool schemas
+│   │   ├── toolDefinitions.ts          # 106 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
 │   │   └── responseCompressor.ts       # Brotli compression
 │   ├── search/                     # Search implementations (29 files)
@@ -645,7 +692,7 @@ memory-mcp/
 Comprehensive documentation in `docs/`:
 
 **Architecture**
-- [API.md](docs/architecture/API.md) - Complete API documentation for all 91 tools
+- [API.md](docs/architecture/API.md) - Complete API documentation for all 106 tools
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture and system design
 - [COMPONENTS.md](docs/architecture/COMPONENTS.md) - Component breakdown and responsibilities
 - [OVERVIEW.md](docs/architecture/OVERVIEW.md) - High-level project overview
@@ -683,7 +730,8 @@ All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 **Current version**: v12.0.0 - [View full changelog](CHANGELOG.md)
 
 Recent highlights:
-- **v12.0.0**: 32 new tools (91 total) — Ref Index, Artifacts, Temporal Search, Distillation, Freshness, LLM Query, Governance, Role Profiles, Entropy, Consolidation, Formatter, Collaborative, Failure Handling, Cognitive Load
+- **v12.0.0** (106 tools): 12 new tools — Project Scoping, Memory Versioning, Semantic Forget, Profiles, Temporal KG, Ingestion, Agent Diary (memoryjs v1.8.0/v1.9.0)
+- **v12.0.0** (94 tools): 32 new tools — Ref Index, Artifacts, Temporal Search, Distillation, Freshness, LLM Query, Governance, Role Profiles, Entropy, Consolidation, Formatter, Collaborative, Failure Handling, Cognitive Load
 - **v11.1.1**: npm tarball cleanup, excluded data files from published package
 - **v11.1.0**: MCP error framing, dynamic server version, handler smoke tests, response compressor tests
 

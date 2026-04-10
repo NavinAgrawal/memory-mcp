@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 12.0.0
-**Last Updated**: 2026-03-24
+**Version**: 12.1.0
+**Last Updated**: 2026-04-10
 
 ## What Is This?
 
@@ -13,7 +13,7 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 |---------|-------------|
 | **Knowledge Graph** | Store entities and relations in a flexible graph structure |
 | **Persistent Memory** | Data persists across sessions in JSONL files |
-| **91 Tools** | Comprehensive API for graph operations |
+| **106 Tools** | Comprehensive API for graph operations |
 | **Hierarchical Nesting** | Parent-child relationships for tree organization |
 | **Advanced Search** | Basic, TF-IDF ranked, boolean, fuzzy, and intelligent hybrid search |
 | **Duplicate Detection** | Intelligent compression with similarity scoring |
@@ -97,7 +97,7 @@ src/ (77 TypeScript files, ~31,000 lines of code)
 │
 ├── server/ (4 files)     # MCP protocol layer
 │   ├── MCPServer.ts              # Server initialization
-│   ├── toolDefinitions.ts        # 91 tool schemas
+│   ├── toolDefinitions.ts        # 106 tool schemas
 │   ├── toolHandlers.ts           # Tool implementation registry
 │   └── responseCompressor.ts     # Brotli compression for large responses
 │
@@ -159,7 +159,7 @@ src/ (77 TypeScript files, ~31,000 lines of code)
     └── index.ts
 ```
 
-## Tool Categories (91 Total)
+## Tool Categories (106 Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
@@ -191,6 +191,13 @@ src/ (77 TypeScript files, ~31,000 lines of code)
 | **Collaborative** | 1 | synthesize_collaborative_context |
 | **Failure Handling** | 2 | distill_failure, end_session |
 | **Cognitive Load** | 2 | analyze_cognitive_load, adaptive_reduce_memories |
+| **Project Scoping** | 1 | list_projects |
+| **Memory Versioning** | 2 | get_entity_versions, get_version_chain |
+| **Semantic Forget** | 1 | forget_memory |
+| **Profiles** | 2 | get_profile, update_profile |
+| **Temporal KG** | 3 | invalidate_relation, query_as_of, timeline |
+| **Ingestion** | 1 | ingest |
+| **Agent Diary** | 2 | diary_write, diary_read |
 
 ## Key Design Principles
 

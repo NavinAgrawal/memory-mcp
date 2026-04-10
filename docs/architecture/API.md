@@ -1,9 +1,9 @@
 # Memory MCP - API Reference
 
-**Version**: 12.0.0
-**Last Updated**: 2026-03-24
+**Version**: 12.1.0
+**Last Updated**: 2026-04-10
 
-Complete reference for all 91 MCP tools provided by the Memory MCP server.
+Complete reference for all 106 MCP tools provided by the Memory MCP server.
 
 ---
 
@@ -23,6 +23,13 @@ Complete reference for all 91 MCP tools provided by the Memory MCP server.
 12. [Analytics](#analytics) (2 tools)
 13. [Compression & Deduplication](#compression--deduplication) (4 tools)
 14. [Import/Export Operations](#importexport-operations) (2 tools)
+15. [Project Scoping](#project-scoping) (1 tool) — v1.8.0
+16. [Memory Versioning](#memory-versioning) (2 tools) — v1.8.0
+17. [Semantic Forget](#semantic-forget) (1 tool) — v1.8.0
+18. [Profiles](#profiles) (2 tools) — v1.8.0
+19. [Temporal KG](#temporal-kg) (3 tools) — v1.9.0
+20. [Ingestion](#ingestion) (1 tool) — v1.9.0
+21. [Agent Diary](#agent-diary) (2 tools) — v1.9.0
 
 ---
 
@@ -2027,6 +2034,292 @@ Import entities and relations from external data.
 
 ---
 
+## Project Scoping
+
+### list_projects
+
+List all project IDs present in the graph, or filter entities by a specific project.
+
+**Parameters:**
+```typescript
+{
+  projectId?: string;  // Optional: filter entities belonging to this project
+}
+```
+
+**Returns:**
+```typescript
+{
+  projects: string[];      // All distinct projectId values (when no filter)
+  entities?: Entity[];     // Entities matching projectId (when filter provided)
+}
+```
+
+---
+
+## Memory Versioning
+
+### get_entity_versions
+
+Retrieve all versions of a versioned entity by its root name.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;  // Name of the entity (any version)
+}
+```
+
+**Returns:**
+```typescript
+{
+  versions: Entity[];  // All versions ordered by version number
+}
+```
+
+---
+
+### get_version_chain
+
+Get the full version chain from root to latest for an entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;  // Name of the entity (any version in chain)
+}
+```
+
+**Returns:**
+```typescript
+{
+  chain: Entity[];   // Version chain from root to latest
+  latest: Entity;    // The current latest version
+}
+```
+
+---
+
+## Semantic Forget
+
+### forget_memory
+
+Delete an entity by exact name. If no exact match is found, falls back to semantic similarity search (0.85 threshold) to locate and delete the closest matching entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;      // Name or description of entity to forget
+  auditReason?: string;    // Optional reason for audit log
+}
+```
+
+**Returns:**
+```typescript
+{
+  deleted: boolean;
+  method: 'exact' | 'semantic';
+  entityName: string;      // Actual name of deleted entity
+}
+```
+
+---
+
+## Profiles
+
+### get_profile
+
+Retrieve a user or agent profile entity.
+
+**Parameters:**
+```typescript
+{
+  profileName: string;  // Name of the profile entity
+}
+```
+
+**Returns:**
+```typescript
+{
+  profile: Entity;  // Profile entity with observations and metadata
+}
+```
+
+---
+
+### update_profile
+
+Update observations and metadata on a profile entity.
+
+**Parameters:**
+```typescript
+{
+  profileName: string;
+  observations?: string[];    // New observations to add
+  importance?: number;        // Update importance (0-10)
+  tags?: string[];            // Update tags
+}
+```
+
+**Returns:**
+```typescript
+{
+  profile: Entity;  // Updated profile entity
+}
+```
+
+---
+
+## Temporal KG
+
+### invalidate_relation
+
+Mark a relation as ended by setting its temporal validity end date.
+
+**Parameters:**
+```typescript
+{
+  from: string;
+  to: string;
+  relationType: string;
+  endDate?: string;  // ISO 8601 date; defaults to now
+}
+```
+
+**Returns:**
+```typescript
+{
+  relation: Relation;  // Updated relation with validity end date
+}
+```
+
+---
+
+### query_as_of
+
+Retrieve all relations for an entity that were valid at a given point in time.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+  asOf: string;  // ISO 8601 date for the time-travel query
+}
+```
+
+**Returns:**
+```typescript
+{
+  relations: Relation[];  // Relations valid at the specified date
+}
+```
+
+---
+
+### timeline
+
+Return a chronological list of relation events (created/invalidated) for an entity.
+
+**Parameters:**
+```typescript
+{
+  entityName: string;
+}
+```
+
+**Returns:**
+```typescript
+{
+  events: Array<{
+    date: string;
+    event: 'created' | 'invalidated';
+    relation: Relation;
+  }>;
+}
+```
+
+---
+
+## Ingestion
+
+### ingest
+
+Ingest a conversation, document, or free-form text into the knowledge graph using the format-agnostic `IOManager.ingest()` pipeline.
+
+**Parameters:**
+```typescript
+{
+  input: string;           // Raw text, conversation, or document content
+  format?: string;         // Hint: 'conversation' | 'document' | 'auto'
+  projectId?: string;      // Assign ingested entities to a project
+  tags?: string[];         // Tags to apply to ingested entities
+}
+```
+
+**Returns:**
+```typescript
+{
+  entitiesCreated: number;
+  relationsCreated: number;
+  observationsAdded: number;
+}
+```
+
+---
+
+## Agent Diary
+
+### diary_write
+
+Append an entry to the agent's persistent diary.
+
+**Parameters:**
+```typescript
+{
+  agentId: string;     // Agent identifier
+  entry: string;       // Diary entry text
+  tags?: string[];     // Optional tags for the entry
+}
+```
+
+**Returns:**
+```typescript
+{
+  entryId: string;
+  timestamp: string;
+}
+```
+
+---
+
+### diary_read
+
+Read diary entries for an agent, optionally filtered by date range.
+
+**Parameters:**
+```typescript
+{
+  agentId: string;
+  startDate?: string;   // ISO 8601 date (inclusive)
+  endDate?: string;     // ISO 8601 date (inclusive)
+  limit?: number;       // Max entries to return (default: 50)
+}
+```
+
+**Returns:**
+```typescript
+{
+  entries: Array<{
+    entryId: string;
+    timestamp: string;
+    entry: string;
+    tags?: string[];
+  }>;
+}
+```
+
+---
+
 ## Common Patterns
 
 ### Pattern 1: Create and Connect
@@ -2151,7 +2444,7 @@ All tools return errors in this format:
 
 ---
 
-**Document Version**: 5.0
-**Last Updated**: 2026-03-24
-**Total Tools**: 91
+**Document Version**: 5.1
+**Last Updated**: 2026-04-10
+**Total Tools**: 106
 **Maintained By**: Daniel Simon Jr.

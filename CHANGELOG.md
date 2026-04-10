@@ -5,6 +5,42 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [12.1.0] - 2026-04-10
+
+### Added
+
+12 new MCP tools exposing memoryjs v1.8.0/v1.9.0 features, bringing the total to **106 tools**.
+
+#### Project Scoping (1 tool) — memoryjs v1.8.0
+- **`list_projects`** — List all project IDs present in the graph and filter entities by project
+
+#### Memory Versioning (2 tools) — memoryjs v1.8.0
+- **`get_entity_versions`** — Retrieve all versions of a versioned entity by name
+- **`get_version_chain`** — Get the full version chain from root to latest for an entity
+
+#### Semantic Forget (1 tool) — memoryjs v1.8.0
+- **`forget_memory`** — Delete an entity by exact name, falling back to semantic similarity (0.85 threshold) if no exact match is found; supports audit logging
+
+#### Profiles (2 tools) — memoryjs v1.8.0
+- **`get_profile`** — Retrieve a user or agent profile entity
+- **`update_profile`** — Update observations and metadata on a profile entity
+
+#### Temporal KG (3 tools) — memoryjs v1.9.0
+- **`invalidate_relation`** — Mark a relation as ended by setting its temporal validity end date
+- **`query_as_of`** — Retrieve all relations for an entity that were valid at a given point in time
+- **`timeline`** — Return a chronological list of relation events for an entity
+
+#### Ingestion (1 tool) — memoryjs v1.9.0
+- **`ingest`** — Ingest a conversation, document, or free-form text into the knowledge graph using the format-agnostic IOManager pipeline
+
+#### Agent Diary (2 tools) — memoryjs v1.9.0
+- **`diary_write`** — Append an entry to the agent's persistent diary
+- **`diary_read`** — Read diary entries for an agent, optionally filtered by date range
+
+Total tools: **94 → 106** (+12 new tools)
+
+---
+
 ## [12.0.0] - 2026-03-24
 
 ### Added

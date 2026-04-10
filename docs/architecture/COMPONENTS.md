@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 12.0.0
-**Last Updated**: 2026-03-24
+**Version**: 12.1.0
+**Last Updated**: 2026-04-10
 
 ---
 
@@ -83,7 +83,7 @@ export class MCPServer {
 
 ### toolDefinitions (`server/toolDefinitions.ts`)
 
-**Purpose**: Schema definitions for all 91 MCP tools
+**Purpose**: Schema definitions for all 106 MCP tools
 
 **Lines**: ~400
 
@@ -133,12 +133,19 @@ export const toolDefinitions: ToolDefinition[]
 | Collaborative | 1 | synthesize_collaborative_context |
 | Failure Handling | 2 | distill_failure, end_session |
 | Cognitive Load | 2 | analyze_cognitive_load, adaptive_reduce_memories |
+| Project Scoping | 1 | list_projects |
+| Memory Versioning | 2 | get_entity_versions, get_version_chain |
+| Semantic Forget | 1 | forget_memory |
+| Profiles | 2 | get_profile, update_profile |
+| Temporal KG | 3 | invalidate_relation, query_as_of, timeline |
+| Ingestion | 1 | ingest |
+| Agent Diary | 2 | diary_write, diary_read |
 
 ---
 
 ### toolHandlers (`server/toolHandlers.ts`)
 
-**Purpose**: Handler implementations for all 91 tools
+**Purpose**: Handler implementations for all 106 tools
 
 **Lines**: ~301
 

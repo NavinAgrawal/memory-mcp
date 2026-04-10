@@ -34,7 +34,7 @@ npm run tools:build   # Build all standalone tools
 
 ## Architecture Overview
 
-This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 94 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
+This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 106 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
 
 **npm:** `@danielsimonjr/memory-mcp` | **Core lib:** `@danielsimonjr/memoryjs` (versions in package.json)
 
@@ -57,7 +57,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 |------|------|
 | `index.ts` | Entry point. Creates `ManagerContext`, starts `MCPServer`. Re-exports types from memoryjs for backward compatibility. |
 | `server/MCPServer.ts` | Creates MCP `Server`, registers `ListToolsRequest` and `CallToolRequest` handlers. Uses stdio transport. |
-| `server/toolDefinitions.ts` | Array of 94 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
+| `server/toolDefinitions.ts` | Array of 106 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
 | `server/toolHandlers.ts` | Handler registry (`Record<string, ToolHandler>`). Each handler validates args with Zod schemas from memoryjs, calls the appropriate manager method, and returns formatted responses. Large-response tools are wrapped with `withCompression()`. |
 | `server/responseCompressor.ts` | Auto-compresses responses >256KB with brotli + base64 encoding. Uses `compress`/`decompress` from memoryjs. |
 
@@ -71,7 +71,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 - **Lazy managers**: `ManagerContext` instantiates managers on first access. Available accessors: `ctx.entityManager`, `ctx.relationManager`, `ctx.observationManager`, `ctx.searchManager`, `ctx.tagManager`, `ctx.hierarchyManager`, `ctx.analyticsManager`, `ctx.compressionManager`, `ctx.archiveManager`, `ctx.ioManager`, `ctx.graphTraversal`, `ctx.semanticSearch`, `ctx.rankedSearch`, `ctx.storage` (direct GraphStorage).
 - **Backward compat**: `index.ts` re-exports `ManagerContext` as `KnowledgeGraphManager` alias, plus core types.
 
-### Tool Categories (94 tools across 29 categories)
+### Tool Categories (106 tools across 38 categories)
 
 | Category | Count | Key Purpose |
 |----------|-------|-------------|
@@ -89,23 +89,30 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 | Analytics | 2 | Graph stats and integrity validation |
 | Compression | 4 | Duplicate detection, merge, auto-compress, archive |
 | Import/Export | 2 | 7 export formats + 3 import formats with merge strategies |
-| **Ref Index** | **4** | Cross-session symbolic reference registration/resolution |
-| **Artifacts** | **3** | Named versioned content blobs attached to entities |
-| **Temporal Search** | **1** | Time-window filtered search across the graph |
-| **Distillation** | **1** | Configure automated observation distillation pipelines |
-| **Freshness** | **5** | Staleness tracking, expiry detection, freshness reporting |
-| **LLM Query** | **1** | Natural-language Q&A over the knowledge graph |
-| **Governance** | **4** | Audited transactions, audit log query/history, rollback |
-| **Role Profiles** | **2** | Per-agent role assignment and profile listing |
-| **Entropy** | **2** | Entropy-based noise filtering and information density scoring |
-| **Consolidation** | **3** | Background memory consolidation scheduling and control |
-| **Formatter** | **1** | Salience-budget-aware context formatting |
-| **Collaborative** | **1** | Multi-agent context synthesis |
-| **Failure Handling** | **2** | Session failure distillation and graceful session end |
-| **Cognitive Load** | **2** | Working-memory load analysis and adaptive reduction |
-| **Dream Engine** | **3** | Background memory maintenance: 8-phase sleep-cycle consolidation |
+| Ref Index | 4 | Cross-session symbolic reference registration/resolution |
+| Artifacts | 3 | Named versioned content blobs attached to entities |
+| Temporal Search | 1 | Time-window filtered search across the graph |
+| Distillation | 1 | Configure automated observation distillation pipelines |
+| Freshness | 5 | Staleness tracking, expiry detection, freshness reporting |
+| LLM Query | 1 | Natural-language Q&A over the knowledge graph |
+| Governance | 4 | Audited transactions, audit log query/history, rollback |
+| Role Profiles | 2 | Per-agent role assignment and profile listing |
+| Entropy | 2 | Entropy-based noise filtering and information density scoring |
+| Consolidation | 3 | Background memory consolidation scheduling and control |
+| Formatter | 1 | Salience-budget-aware context formatting |
+| Collaborative | 1 | Multi-agent context synthesis |
+| Failure Handling | 2 | Session failure distillation and graceful session end |
+| Cognitive Load | 2 | Working-memory load analysis and adaptive reduction |
+| Dream Engine | 3 | Background memory maintenance: 8-phase sleep-cycle consolidation |
+| **Project Scoping** | **1** | List and filter entities by project (v1.8.0) |
+| **Memory Versioning** | **2** | Entity version chains and per-entity version history (v1.8.0) |
+| **Semantic Forget** | **1** | Two-tier deletion: exact match → semantic similarity fallback (v1.8.0) |
+| **Profiles** | **2** | User/agent profile get and update (v1.8.0) |
+| **Temporal KG** | **3** | Temporal relation invalidation, time-travel queries, relation timeline (v1.9.0) |
+| **Ingestion** | **1** | Format-agnostic conversation/document ingestion pipeline (v1.9.0) |
+| **Agent Diary** | **2** | Per-agent persistent journal write and read (v1.9.0) |
 
-New categories (v12.0.0, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories.
+New categories (v1.8.0/v1.9.0, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories.
 
 ### Adding a New Tool
 
