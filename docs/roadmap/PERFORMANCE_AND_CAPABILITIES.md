@@ -1304,5 +1304,557 @@ MEMORY_TUNE_INTERVAL_MS=300000
 
 ---
 
-*Document Version: 3.0.0 | Last Updated: 2026-01-08*
+## Phase 13: New MCP Tools for memoryjs v1.8.0 + v1.9.0
+
+**Goal**: Expose 13 new library methods as MCP tools to close the gap between memoryjs capabilities and memory-mcp's tool surface.
+**Effort**: 2-3 days | **Impact**: Unlocks project scoping, memory versioning, semantic forget, user profiles, temporal KG, conversation ingestion, agent diary for all MCP clients.
+**Requires**: `@danielsimonjr/memoryjs@1.9.1` (published to npm)
+
+### Overview
+
+memoryjs v1.8.0-v1.9.1 added 13 new library methods that have no corresponding MCP tools. Each tool below includes the exact definition for `toolDefinitions.ts` and handler for `toolHandlers.ts`.
+
+---
+
+### 13.1 Project Scoping Tools (v1.8.0)
+
+#### Tool: `list_projects`
+
+**Purpose**: Scan all entities and return distinct projectId values. Enables MCP clients to discover which projects exist in the graph.
+
+**Library method**: `ctx.entityManager.listProjects(): Promise<string[]>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'list_projects',
+  description: 'List all distinct project IDs in the knowledge graph. Returns sorted array of projectId values, excluding global/unscoped entities.',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    required: [],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+list_projects: async (ctx, _args) => {
+  const projects = await ctx.entityManager.listProjects();
+  return formatToolResponse({ projects, count: projects.length });
+},
+```
+
+#### Tool: `set_project_scope`
+
+**Purpose**: Set the default projectId on the ManagerContext. New entities will be auto-stamped with this projectId.
+
+**Note**: ManagerContext stores `defaultProjectId` as a readonly property set at construction. Since the MCP server creates the context once at startup, this tool needs to be implemented differently — either by recreating the context or by setting a mutable override. Recommended approach: add a mutable `activeProjectId` property to the MCP server state that tools check before calling library methods.
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'set_project_scope',
+  description: 'Set the active project scope. New entities will be auto-stamped with this projectId, and search operations will filter by it. Pass empty string to clear the scope.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      projectId: { type: 'string', description: 'Project ID to scope to. Empty string clears the scope.' },
+    },
+    required: ['projectId'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+set_project_scope: async (_ctx, args, serverState) => {
+  // serverState.activeProjectId is a mutable field on the MCP server
+  serverState.activeProjectId = args.projectId || undefined;
+  return formatTextResponse(
+    args.projectId
+      ? `Project scope set to: ${args.projectId}`
+      : 'Project scope cleared (global)'
+  );
+},
+```
+
+**Implementation note**: The `serverState` object needs to be passed through the handler registry. Add `activeProjectId?: string` to the server's state and inject it into search/create calls via the `projectId` filter option.
+
+---
+
+### 13.2 Memory Versioning Tools (v1.8.0)
+
+#### Tool: `get_entity_versions`
+
+**Purpose**: Return all versions in an entity's version chain, sorted by version number ascending.
+
+**Library method**: `ctx.entityManager.getVersionChain(entityName): Promise<Entity[]>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'get_entity_versions',
+  description: 'Get all versions of an entity in its version chain. Returns versions sorted by version number ascending. Works from any entity in the chain (resolves to root automatically).',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      entityName: { type: 'string', description: 'Name of any entity in the version chain' },
+    },
+    required: ['entityName'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+get_entity_versions: async (ctx, args) => {
+  const chain = await ctx.entityManager.getVersionChain(args.entityName);
+  return formatToolResponse({
+    rootEntity: chain[0]?.name ?? null,
+    latestEntity: chain.find(e => e.isLatest !== false)?.name ?? null,
+    versions: chain.map(e => ({
+      name: e.name,
+      version: e.version ?? 1,
+      isLatest: e.isLatest !== false,
+      observations: e.observations,
+    })),
+    count: chain.length,
+  });
+},
+```
+
+#### Tool: `get_version_chain`
+
+**Purpose**: Get the latest version of an entity, following the version chain.
+
+**Library method**: `ctx.entityManager.getLatestVersion(entityName): Promise<Entity | null>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'get_version_chain',
+  description: 'Get the latest version of an entity. If the entity has been superseded by newer versions (via contradiction detection), returns the most recent one.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      entityName: { type: 'string', description: 'Name of any entity in the version chain' },
+    },
+    required: ['entityName'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+get_version_chain: async (ctx, args) => {
+  const latest = await ctx.entityManager.getLatestVersion(args.entityName);
+  if (!latest) {
+    return formatTextResponse(`Entity '${args.entityName}' not found`);
+  }
+  return formatToolResponse(latest);
+},
+```
+
+---
+
+### 13.3 Semantic Forget Tool (v1.8.0)
+
+#### Tool: `forget_memory`
+
+**Purpose**: Two-tier deletion — exact match first, then semantic search fallback at 0.85 threshold. Supports dryRun and project scoping.
+
+**Library method**: `ctx.semanticForget.forgetByContent(content, options): Promise<SemanticForgetResult>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'forget_memory',
+  description: 'Forget (delete) observations matching the given content. Tries exact match first; falls back to semantic search at 0.85 similarity threshold if available. Supports dryRun to preview what would be deleted.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      content: { type: 'string', description: 'The content to forget (observation text)' },
+      threshold: { type: 'number', description: 'Semantic similarity threshold for fallback (default: 0.85)' },
+      projectId: { type: 'string', description: 'Optional project scope filter' },
+      dryRun: { type: 'boolean', description: 'If true, return what would be deleted without actually deleting' },
+    },
+    required: ['content'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+forget_memory: async (ctx, args) => {
+  const result = await ctx.semanticForget.forgetByContent(args.content, {
+    threshold: args.threshold,
+    projectId: args.projectId,
+    dryRun: args.dryRun,
+  });
+  return formatToolResponse(result);
+},
+```
+
+---
+
+### 13.4 User Profile Tools (v1.8.0)
+
+#### Tool: `get_profile`
+
+**Purpose**: Get the user profile (static + dynamic facts) for a given scope.
+
+**Library method**: `ctx.agentMemory().profileManager.getProfile(options): Promise<ProfileResponse>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'get_profile',
+  description: 'Get the user profile. Returns static facts (long-lived preferences) and dynamic facts (recent session context). Profiles are scoped by projectId.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      projectId: { type: 'string', description: 'Optional project scope. Omit for global profile.' },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+get_profile: async (ctx, args) => {
+  const amm = ctx.agentMemory();
+  const profile = await amm.profileManager.getProfile({ projectId: args.projectId });
+  return formatToolResponse(profile);
+},
+```
+
+#### Tool: `update_profile`
+
+**Purpose**: Add a static or dynamic fact to the user profile.
+
+**Library method**: `ctx.agentMemory().profileManager.addFact(content, type, options): Promise<void>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'update_profile',
+  description: 'Add a fact to the user profile. Static facts are long-lived (preferences, role, tools). Dynamic facts are recent (current project, active work).',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      content: { type: 'string', description: 'The fact to add' },
+      type: { type: 'string', enum: ['static', 'dynamic'], description: 'Fact type: static (long-lived) or dynamic (recent)' },
+      projectId: { type: 'string', description: 'Optional project scope' },
+    },
+    required: ['content', 'type'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+update_profile: async (ctx, args) => {
+  const amm = ctx.agentMemory();
+  await amm.profileManager.addFact(args.content, args.type, { projectId: args.projectId });
+  return formatTextResponse(`Added ${args.type} profile fact: "${args.content}"`);
+},
+```
+
+---
+
+### 13.5 Temporal Knowledge Graph Tools (v1.9.0)
+
+#### Tool: `invalidate_relation`
+
+**Purpose**: Mark a relation as no longer valid by setting its validUntil timestamp.
+
+**Library method**: `ctx.relationManager.invalidateRelation(from, type, to, ended?): Promise<void>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'invalidate_relation',
+  description: 'Mark a relation as no longer valid. Sets the validUntil timestamp on the matching active relation. Use for temporal facts that have ended (e.g., "Kai no longer works on Orion").',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      from: { type: 'string', description: 'Source entity name' },
+      relationType: { type: 'string', description: 'Relation type (e.g., works_on, assigned_to)' },
+      to: { type: 'string', description: 'Target entity name' },
+      ended: { type: 'string', description: 'ISO 8601 date when the relation ended. Defaults to now.' },
+    },
+    required: ['from', 'relationType', 'to'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+invalidate_relation: async (ctx, args) => {
+  await ctx.relationManager.invalidateRelation(args.from, args.relationType, args.to, args.ended);
+  return formatTextResponse(
+    `Invalidated: ${args.from} -[${args.relationType}]-> ${args.to} (ended: ${args.ended ?? 'now'})`
+  );
+},
+```
+
+#### Tool: `query_as_of`
+
+**Purpose**: Query relations valid at a specific point in time (time-travel query).
+
+**Library method**: `ctx.relationManager.queryAsOf(entityName, asOf, options?): Promise<Relation[]>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'query_as_of',
+  description: 'Query relations valid at a specific point in time. Returns only relations where validFrom <= date AND (validUntil is undefined OR validUntil >= date). Time-travel query for temporal knowledge graphs.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      entityName: { type: 'string', description: 'Entity to query relations for' },
+      asOf: { type: 'string', description: 'ISO 8601 date to query at (e.g., "2026-01-15")' },
+      direction: { type: 'string', enum: ['outgoing', 'incoming', 'both'], description: 'Relation direction filter. Default: both.' },
+    },
+    required: ['entityName', 'asOf'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+query_as_of: async (ctx, args) => {
+  const relations = await ctx.relationManager.queryAsOf(args.entityName, args.asOf, {
+    direction: args.direction,
+  });
+  return formatToolResponse({ entity: args.entityName, asOf: args.asOf, relations, count: relations.length });
+},
+```
+
+#### Tool: `timeline`
+
+**Purpose**: Get chronological relation history for an entity (all relations, current + expired).
+
+**Library method**: `ctx.relationManager.timeline(entityName, options?): Promise<Relation[]>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'timeline',
+  description: 'Get chronological relation history for an entity. Returns ALL relations (current and expired) sorted by validFrom ascending. Shows the full story of an entity over time.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      entityName: { type: 'string', description: 'Entity to get timeline for' },
+      direction: { type: 'string', enum: ['outgoing', 'incoming', 'both'], description: 'Relation direction filter. Default: both.' },
+    },
+    required: ['entityName'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+timeline: async (ctx, args) => {
+  const relations = await ctx.relationManager.timeline(args.entityName, {
+    direction: args.direction,
+  });
+  return formatToolResponse({
+    entity: args.entityName,
+    timeline: relations.map(r => ({
+      from: r.from,
+      relationType: r.relationType,
+      to: r.to,
+      validFrom: r.properties?.validFrom ?? null,
+      validUntil: r.properties?.validUntil ?? null,
+      current: !r.properties?.validUntil,
+    })),
+    count: relations.length,
+  });
+},
+```
+
+---
+
+### 13.6 Conversation Ingestion Tool (v1.9.0)
+
+#### Tool: `ingest`
+
+**Purpose**: Ingest pre-normalized conversation data into the knowledge graph.
+
+**Library method**: `ctx.ioManager.ingest(input, options): Promise<IngestResult>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'ingest',
+  description: 'Ingest pre-normalized conversation data into the knowledge graph. Chunks messages by exchange pairs (user+assistant), creates entities with verbatim observations. Format-agnostic: normalize chat exports before calling.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      messages: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            role: { type: 'string', enum: ['user', 'assistant', 'system'] },
+            content: { type: 'string' },
+            timestamp: { type: 'string', description: 'Optional ISO 8601 timestamp' },
+          },
+          required: ['role', 'content'],
+        },
+        description: 'Array of conversation messages to ingest',
+      },
+      source: { type: 'string', description: 'Source identifier (e.g., filename, session ID)' },
+      projectId: { type: 'string', description: 'Project to scope ingested entities to' },
+      tags: { type: 'array', items: { type: 'string' }, description: 'Tags to apply to all created entities' },
+      chunkBy: { type: 'string', enum: ['exchange', 'paragraph', 'fixed'], description: 'Chunking strategy. Default: exchange (user+assistant pairs).' },
+      dryRun: { type: 'boolean', description: 'Preview without creating entities' },
+    },
+    required: ['messages'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+ingest: async (ctx, args) => {
+  const result = await ctx.ioManager.ingest(
+    { messages: args.messages, source: args.source },
+    {
+      projectId: args.projectId,
+      tags: args.tags,
+      chunkBy: args.chunkBy,
+      dryRun: args.dryRun,
+    }
+  );
+  return formatToolResponse(result);
+},
+```
+
+---
+
+### 13.7 Agent Diary Tools (v1.9.0)
+
+#### Tool: `diary_write`
+
+**Purpose**: Write a timestamped diary entry for a specialist agent.
+
+**Library method**: `ctx.agentMemory().writeDiary(agentId, entry, options): Promise<void>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'diary_write',
+  description: 'Write a timestamped diary entry for a specialist agent. Each agent gets its own persistent diary (entity: diary-{agentId}). Use for code review findings, architecture decisions, ops incidents, etc.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      agentId: { type: 'string', description: 'Agent identifier (e.g., reviewer, architect, ops). Alphanumeric + hyphens/underscores only.' },
+      entry: { type: 'string', description: 'The diary entry content' },
+      topic: { type: 'string', description: 'Optional topic tag for filtering (e.g., security, performance)' },
+    },
+    required: ['agentId', 'entry'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+diary_write: async (ctx, args) => {
+  const amm = ctx.agentMemory();
+  await amm.writeDiary(args.agentId, args.entry, { topic: args.topic });
+  return formatTextResponse(`Diary entry written for agent '${args.agentId}'`);
+},
+```
+
+#### Tool: `diary_read`
+
+**Purpose**: Read recent diary entries for a specialist agent.
+
+**Library method**: `ctx.agentMemory().readDiary(agentId, options): Promise<string[]>`
+
+**toolDefinitions.ts**:
+```typescript
+{
+  name: 'diary_read',
+  description: 'Read recent diary entries for a specialist agent. Returns entries in reverse chronological order. Optionally filter by topic.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      agentId: { type: 'string', description: 'Agent identifier' },
+      lastN: { type: 'number', description: 'Number of recent entries to return. Default: 10.' },
+      topic: { type: 'string', description: 'Optional topic filter' },
+    },
+    required: ['agentId'],
+    additionalProperties: false,
+  },
+},
+```
+
+**toolHandlers.ts**:
+```typescript
+diary_read: async (ctx, args) => {
+  const amm = ctx.agentMemory();
+  const entries = await amm.readDiary(args.agentId, {
+    lastN: args.lastN,
+    topic: args.topic,
+  });
+  return formatToolResponse({ agentId: args.agentId, entries, count: entries.length });
+},
+```
+
+---
+
+### 13.8 Implementation Checklist
+
+**Pre-requisites:**
+- [ ] Update `package.json` dependency: `"@danielsimonjr/memoryjs": "^1.9.1"`
+- [ ] Run `npm install` to pull the new version
+
+**For each tool (13 total):**
+- [ ] Add tool definition to `src/server/toolDefinitions.ts`
+- [ ] Add handler to `src/server/toolHandlers.ts`
+- [ ] Update tool count in file header comments (94 → 107)
+- [ ] Write integration test in `tests/`
+
+**Tools by file location in toolDefinitions.ts:**
+| Category | Tools | Insert after |
+|----------|-------|-------------|
+| Entity | `list_projects`, `get_entity_versions`, `get_version_chain` | `open_nodes` |
+| Relation | `invalidate_relation`, `query_as_of`, `timeline` | `delete_relations` |
+| Search | `forget_memory` | `search_auto` |
+| Agent | `get_profile`, `update_profile`, `diary_write`, `diary_read` | end of agent section |
+| IO | `ingest` | `import_graph` |
+| Config | `set_project_scope` | end of file |
+
+**Verification:**
+- [ ] `npm run typecheck` passes
+- [ ] `npm test` passes
+- [ ] All 13 new tools appear in `mempalace_status` / tool listing
+- [ ] Test each tool via Claude Code MCP: `mcp__memory-mcp__list_projects`, etc.
+
+**Version bump:**
+- [ ] Bump `memory-mcp` version to next minor (reflects new tool surface)
+- [ ] Update CHANGELOG.md with the 13 new tools
+- [ ] `npm publish`
+
+---
+
+*Document Version: 4.0.0 | Last Updated: 2026-04-10*
 *Performance insights from: SimpleMem three-stage semantic lossless compression architecture*
+*New tools from: memoryjs v1.8.0 (supermemory gap-closing) + v1.9.0/v1.9.1 (mempalace gap-closing)*
