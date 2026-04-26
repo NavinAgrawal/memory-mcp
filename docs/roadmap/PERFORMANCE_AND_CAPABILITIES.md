@@ -1,9 +1,9 @@
 # Performance & Optimization Roadmap
 
-**Version:** 3.0.0
-**Last Updated:** 2026-01-08
-**Current Version:** 9.8.3
-**Target Version:** 12.0.0
+**Version:** 3.1.0
+**Last Updated:** 2026-04-26
+**Current Version:** 12.2.0
+**Target Version:** 13.0.0
 
 ---
 
@@ -42,8 +42,11 @@ This document defines the performance optimization roadmap for memory-mcp. All c
 6. [Phase 10: Embedding Performance](#phase-10-embedding-performance)
 7. [Phase 11: Memory Efficiency](#phase-11-memory-efficiency)
 8. [Phase 12: Adaptive Performance](#phase-12-adaptive-performance)
-9. [Implementation Priority Matrix](#implementation-priority-matrix)
-10. [Benchmark Suite](#benchmark-suite)
+9. [Phase 13: New MCP Tools for memoryjs v1.8.0 + v1.9.0](#phase-13-new-mcp-tools-for-memoryjs-v180--v190)
+10. [Phase 14: Cognitive Core, Maintenance Intelligence, Multi-Agent (memoryjs v1.7.0)](#phase-14-cognitive-core-maintenance-intelligence-multi-agent-memoryjs-v170)
+11. [Phase 15: memoryjs v1.14+ — Bitemporal, OCC, RBAC, Procedural, Causal, World Model](#phase-15-memoryjs-v114--bitemporal-occ-rbac-procedural-causal-world-model)
+12. [Implementation Priority Matrix](#implementation-priority-matrix)
+13. [Benchmark Suite](#benchmark-suite)
 
 ---
 
@@ -1858,3 +1861,44 @@ diary_read: async (ctx, args) => {
 *Document Version: 4.0.0 | Last Updated: 2026-04-10*
 *Performance insights from: SimpleMem three-stage semantic lossless compression architecture*
 *New tools from: memoryjs v1.8.0 (supermemory gap-closing) + v1.9.0/v1.9.1 (mempalace gap-closing)*
+
+---
+
+## Phase 14: Cognitive Core, Maintenance Intelligence, Multi-Agent (memoryjs v1.7.0)
+
+**Status:** ✅ Shipped (no separate CHANGELOG entry — landed in commit `bbe40ae6` between v11.x and v12.1.0; first explicitly retroactively summarised in v12.2.0).
+
+31 new MCP tools across cognitive core (sessions / working memory / wake-up), maintenance intelligence (auto-link / contradictions / consolidation / dedup / compression), decay & salience, multi-agent (registration / cross-agent search / visibility / conflict resolution), and observability (D3.js viz / transcript splitting / query cost estimation).
+
+See `tests/integration/server.test.ts` Phase 14 comment block for the full per-tool list. Pre-existing — this section documents what shipped, it does not propose new work.
+
+---
+
+## Phase 15: memoryjs v1.14+ — Bitemporal, OCC, RBAC, Procedural, Causal, World Model
+
+**Status:** ✅ Shipped in **v12.2.0** (2026-04-26)
+
+23 new MCP tools spanning seven feature areas, plus extensions to three existing tools.
+
+| Area | Tools | Origin |
+|---|---|---|
+| Entity Bitemporal Validity | `invalidate_entity`, `entity_as_of`, `entity_timeline`, `invalidate_observation`, `observations_as_of` (5) | memoryjs η.4.4 |
+| Optimistic Concurrency Control | `update_entity` with `expectedVersion` (1) | memoryjs η.5.5.c |
+| RBAC | `rbac_assign_role`, `rbac_revoke_role`, `rbac_check_permission`, `rbac_list_assignments` (4) | memoryjs η.6.1 |
+| Procedural Memory | `add_procedure`, `get_procedure`, `match_procedure`, `refine_procedure`, `get_procedure_step` (5) | memoryjs 3B.4 |
+| Active Retrieval | `adaptive_retrieve` (1) | memoryjs 3B.5 |
+| Causal Reasoning | `find_causes`, `find_effects`, `counterfactual_query`, `detect_causal_cycles` (4) | memoryjs 3B.6 |
+| World Model | `get_world_state`, `validate_fact_against_world`, `predict_outcome` (3) | memoryjs 3B.7 |
+
+**Existing tools extended:**
+- **`export_graph`** — Three new W3C Linked Data formats (`turtle`, `rdf-xml`, `json-ld` — memoryjs η.5.4); on-export PII redaction via `redactPii: true` (memoryjs η.6.3 / `PiiRedactor`).
+- **`create_entities`** — Per-entity `ttl` / `confidence` (v1.6 freshness), `projectId` (v1.8), `validFrom` / `validUntil` / `observationMeta` (η.4.4 bitemporal).
+- **`set_memory_visibility`** — Auto-promotes plain entities to `AgentEntity` (was previously a silent `null` failure); supports η.5.5.b time-window and role gates (`allowedRoles`, `visibleFrom`, `visibleUntil`).
+
+**Pre-publish smoke test (2026-04-25/26):** end-to-end MCP transport verification of all 23 new tools against a fresh server build, plus contract-shape regression tests for `save_search` and graceful-error handling for `validate_fact_against_world`. Total tool count: 137 → **160**.
+
+See [`CHANGELOG.md`](../../CHANGELOG.md) [12.2.0] for the full Verified section.
+
+---
+
+*Document Version: 4.1.0 | Last Updated: 2026-04-26*

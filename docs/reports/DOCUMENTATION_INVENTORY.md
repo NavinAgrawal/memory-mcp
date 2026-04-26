@@ -1,8 +1,14 @@
 # Documentation Inventory & Organization
 
+> **⚠️ Historical structure.** The `docs/` tree shown below pre-dates the Phase 13 extraction and the addition of `docs/architecture/`, `docs/analysis/`, `docs/planning/`, and `docs/roadmap/` subdirectories.
+>
+> **For the current canonical doc layout (v12.2.0):** see [`docs/README.md`](../README.md) which serves as the live documentation index.
+>
+> **Last full inventory (2026-04-26):** 68 markdown documents across `.github/`, `.claude/commands/`, `docs/architecture/`, `docs/analysis/`, `docs/development/`, `docs/guides/`, `docs/planning/` (frozen Phase plans), `docs/reports/`, `docs/roadmap/`, plus root `README.md` / `CLAUDE.md` / `CHANGELOG.md` / `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` / `SECURITY.md`, and `tools/*/README.md`.
+
 This document provides a complete inventory of the codebase documentation structure following GitHub best practices.
 
-## Repository Structure
+## Repository Structure (historical, pre-Phase 13)
 
 ```
 memory-mcp/

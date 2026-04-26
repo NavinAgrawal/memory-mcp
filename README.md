@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-12.0.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-12.2.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with 106 tools, hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, sophisticated search capabilities, project scoping, temporal knowledge graph, semantic forget, and agent diary for long-term memory management.
+> **Enterprise-grade knowledge graph** with **160 tools** including hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, project scoping, temporal knowledge graph, semantic forget, agent diary, **entity bitemporal validity (η.4.4)**, **optimistic concurrency control (η.5.5.c)**, **role-based access control (η.6.1)**, **W3C Linked Data exports** (Turtle / JSON-LD / RDF/XML — η.5.4), **PII redaction on export** (η.6.3), **procedural memory (3B.4)**, **active retrieval (3B.5)**, **causal reasoning (3B.6)**, and **world model (3B.7)** for long-term memory management.
 
 ## Table of Contents
 
@@ -242,7 +242,9 @@ Discrete facts about entities. Each observation should be atomic and independent
 
 ## API Reference
 
-### Complete Tool List (106 Tools)
+### Complete Tool List (160 Tools)
+
+> Tool count: 160 tools across 51 categories. The 23 newest tools (Phase 15 / memoryjs v1.14+) are documented at the end under **Phase 15** sections. For full per-tool schemas see [docs/architecture/API.md](docs/architecture/API.md).
 
 #### Entity Operations (4 tools)
 | Tool | Description |
@@ -487,6 +489,62 @@ Discrete facts about entities. Each observation should be atomic and independent
 | `diary_write` | Append an entry to the agent's persistent diary |
 | `diary_read` | Read diary entries for an agent, optionally filtered by date range |
 
+#### Entity Bitemporal Validity (5 tools) — Phase 15 / memoryjs η.4.4
+| Tool | Description |
+|------|-------------|
+| `invalidate_entity` | Stamp `validUntil` on an entity (idempotent; entity remains queryable for past timestamps via `entity_as_of`) |
+| `entity_as_of` | Time-travel query: returns entity state at a given ISO 8601 timestamp, or `null` if invalidated then |
+| `entity_timeline` | All temporal versions of an entity in chronological order; integrates the v1.8 supersession chain |
+| `invalidate_observation` | Per-observation invalidation via parallel `observationMeta[]` entry on the entity |
+| `observations_as_of` | Filter observations valid at a given timestamp; observations without meta are treated as unbounded |
+
+#### Optimistic Concurrency Control (1 tool) — Phase 15 / memoryjs η.5.5.c
+| Tool | Description |
+|------|-------------|
+| `update_entity` | Update an entity with optional `expectedVersion`; throws `VersionConflictError` on stale version. OCC-guarded writes auto-increment `version`. Omit `expectedVersion` for legacy last-write-wins. |
+
+#### RBAC (4 tools) — Phase 15 / memoryjs η.6.1
+| Tool | Description |
+|------|-------------|
+| `rbac_assign_role` | Grant `reader` / `writer` / `admin` / `owner` (or custom) role to an agent; optional `resourceType`, `scope` prefix, `validFrom` / `validUntil` window |
+| `rbac_revoke_role` | Remove a specific role assignment matched by `agentId + role + resourceType` |
+| `rbac_check_permission` | Check whether an agent can perform `read` / `write` / `delete` / `manage` on a resource type; falls back to `defaultRole=reader` for unassigned agents |
+| `rbac_list_assignments` | List all role assignments for an agent; optional `activeOnly` filter |
+
+#### Procedural Memory (5 tools) — Phase 15 / memoryjs 3B.4
+| Tool | Description |
+|------|-------------|
+| `add_procedure` | Persist an executable how-to sequence: 1-indexed steps with optional fallback chains and free-form trigger phrases |
+| `get_procedure` | Load a procedure by id |
+| `match_procedure` | Token-overlap match a context description against stored procedures; returns ranked Jaccard-like scores |
+| `refine_procedure` | Apply caller feedback after execution; updates `successRate` via EWMA (α=0.2) |
+| `get_procedure_step` | Load step by 1-indexed `order`, or get the next step relative to `currentOrder` |
+
+#### Active Retrieval (1 tool) — Phase 15 / memoryjs 3B.5
+| Tool | Description |
+|------|-------------|
+| `adaptive_retrieve` | Iterative query-rewriting retrieval (search → score coverage → rewrite); stops early when `coverage ≥ minCoverage`. Pure symbolic — no LLM provider required. |
+
+#### Causal Reasoning (4 tools) — Phase 15 / memoryjs 3B.6
+| Tool | Description |
+|------|-------------|
+| `find_causes` | Causal chains ending at the named effect; sorted by product-of-edge causalStrength |
+| `find_effects` | Symmetric counterpart starting at the named cause |
+| `counterfactual_query` | "If we remove edge (removeFrom → removeTo), is `predict` still reachable from `seed`?" Returns surviving chains. Pure: does not mutate the graph. |
+| `detect_causal_cycles` | Detect cycles in the causal subgraph rooted at `seed` |
+
+#### World Model (3 tools) — Phase 15 / memoryjs 3B.7
+| Tool | Description |
+|------|-------------|
+| `get_world_state` | Capture a fresh snapshot of the live graph (capped at 1000 entities; over-cap prefers high-importance) |
+| `validate_fact_against_world` | Validate a candidate observation against a target entity via `MemoryValidator.validateConsistency`. Returns `{result: null, reason: 'embedding_provider_unavailable'}` when the local embedding provider is selected without `@xenova/transformers` installed. |
+| `predict_outcome` | Predict downstream effects of an action by walking the causal subgraph (delegates to `find_effects`) |
+
+#### Phase 15 enhancements to existing tools
+- **`export_graph`** — Now accepts `format: 'turtle' | 'rdf-xml' | 'json-ld'` for W3C Linked Data exports (memoryjs η.5.4) and `redactPii: true` to scrub PII (email / SSN / credit-card / phone / IPv4) from observations using the η.6.3 `PiiRedactor`.
+- **`create_entities`** — Now accepts v1.6 freshness fields (`ttl`, `confidence`), v1.8 project scope (`projectId`), and η.4.4 bitemporal fields (`validFrom`, `validUntil`, `observationMeta`) per entity.
+- **`set_memory_visibility`** — Auto-promotes plain entities to `AgentEntity` (stamps `agentId` / `memoryType` / `confidence`) instead of silently returning `null`. Supports η.5.5.b extensions (`allowedRoles`, `visibleFrom`, `visibleUntil`).
+
 ## Configuration
 
 ### Environment Variables
@@ -582,7 +640,7 @@ npm run docs:deps     # Generate dependency graph
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: MCP Protocol Layer                        │
-│  server/MCPServer.ts + toolDefinitions (106 tools)  │
+│  server/MCPServer.ts + toolDefinitions (160 tools)  │
 │  + toolHandlers + responseCompressor                │
 └──────────────────────┬──────────────────────────────┘
                        │
@@ -627,7 +685,7 @@ memory-mcp/
 │   │   └── index.ts
 │   ├── server/                     # MCP protocol (4 files)
 │   │   ├── MCPServer.ts                # Server setup
-│   │   ├── toolDefinitions.ts          # 106 tool schemas
+│   │   ├── toolDefinitions.ts          # 160 tool schemas
 │   │   ├── toolHandlers.ts             # Handler registry
 │   │   └── responseCompressor.ts       # Brotli compression
 │   ├── search/                     # Search implementations (29 files)
@@ -692,7 +750,7 @@ memory-mcp/
 Comprehensive documentation in `docs/`:
 
 **Architecture**
-- [API.md](docs/architecture/API.md) - Complete API documentation for all 106 tools
+- [API.md](docs/architecture/API.md) - Complete API documentation for all 160 tools
 - [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture and system design
 - [COMPONENTS.md](docs/architecture/COMPONENTS.md) - Component breakdown and responsibilities
 - [OVERVIEW.md](docs/architecture/OVERVIEW.md) - High-level project overview
@@ -727,10 +785,11 @@ We welcome contributions!
 
 All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-**Current version**: v12.0.0 - [View full changelog](CHANGELOG.md)
+**Current version**: v12.2.0 - [View full changelog](CHANGELOG.md)
 
 Recent highlights:
-- **v12.0.0** (106 tools): 12 new tools — Project Scoping, Memory Versioning, Semantic Forget, Profiles, Temporal KG, Ingestion, Agent Diary (memoryjs v1.8.0/v1.9.0)
+- **v12.2.0** (160 tools): 23 new tools — entity bitemporal validity (η.4.4), OCC update (η.5.5.c), RBAC (η.6.1), procedural memory (3B.4), active retrieval (3B.5), causal reasoning (3B.6), world model (3B.7), plus W3C Linked Data exports (η.5.4) and PII redaction (η.6.3) wired into existing `export_graph`. Plus four pre-publish fixes from end-to-end MCP smoke testing (memoryjs v1.14+).
+- **v12.1.0** (106 tools): 12 new tools — Project Scoping, Memory Versioning, Semantic Forget, Profiles, Temporal KG, Ingestion, Agent Diary (memoryjs v1.8.0/v1.9.0)
 - **v12.0.0** (94 tools): 32 new tools — Ref Index, Artifacts, Temporal Search, Distillation, Freshness, LLM Query, Governance, Role Profiles, Entropy, Consolidation, Formatter, Collaborative, Failure Handling, Cognitive Load
 - **v11.1.1**: npm tarball cleanup, excluded data files from published package
 - **v11.1.0**: MCP error framing, dynamic server version, handler smoke tests, response compressor tests

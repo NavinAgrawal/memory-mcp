@@ -1,9 +1,9 @@
 # Future Features Roadmap
 
-**Version:** 3.0.0
-**Last Updated:** 2026-01-08
-**Current Version:** 9.8.3
-**Target Version:** 12.0.0
+**Version:** 3.1.0
+**Last Updated:** 2026-04-26
+**Current Version:** 12.2.0
+**Target Version:** 13.0.0 (post-v12.2.0)
 
 ---
 

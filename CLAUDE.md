@@ -34,7 +34,7 @@ npm run tools:build   # Build all standalone tools
 
 ## Architecture Overview
 
-This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 137 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
+This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing **160 knowledge graph tools** via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs. Phase 15 (v12.2.0) added 23 tools surfacing memoryjs v1.14+ features: entity bitemporal validity (η.4.4), optimistic concurrency control (η.5.5.c), RBAC (η.6.1), procedural memory (3B.4), active retrieval (3B.5), causal reasoning (3B.6), and world model (3B.7).
 
 **npm:** `@danielsimonjr/memory-mcp` | **Core lib:** `@danielsimonjr/memoryjs` (versions in package.json)
 
@@ -57,7 +57,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 |------|------|
 | `index.ts` | Entry point. Creates `ManagerContext`, starts `MCPServer`. Re-exports types from memoryjs for backward compatibility. |
 | `server/MCPServer.ts` | Creates MCP `Server`, registers `ListToolsRequest` and `CallToolRequest` handlers. Uses stdio transport. |
-| `server/toolDefinitions.ts` | Array of 137 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
+| `server/toolDefinitions.ts` | Array of 160 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
 | `server/toolHandlers.ts` | Handler registry (`Record<string, ToolHandler>`). Each handler validates args with Zod schemas from memoryjs, calls the appropriate manager method, and returns formatted responses. Large-response tools are wrapped with `withCompression()`. |
 | `server/responseCompressor.ts` | Auto-compresses responses >256KB with brotli + base64 encoding. Uses `compress`/`decompress` from memoryjs. |
 
@@ -71,7 +71,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 - **Lazy managers**: `ManagerContext` instantiates managers on first access. Available accessors: `ctx.entityManager`, `ctx.relationManager`, `ctx.observationManager`, `ctx.searchManager`, `ctx.tagManager`, `ctx.hierarchyManager`, `ctx.analyticsManager`, `ctx.compressionManager`, `ctx.archiveManager`, `ctx.ioManager`, `ctx.graphTraversal`, `ctx.semanticSearch`, `ctx.rankedSearch`, `ctx.storage` (direct GraphStorage).
 - **Backward compat**: `index.ts` re-exports `ManagerContext` as `KnowledgeGraphManager` alias, plus core types.
 
-### Tool Categories (137 tools across 44 categories)
+### Tool Categories (160 tools across 51 categories)
 
 | Category | Count | Key Purpose |
 |----------|-------|-------------|
@@ -119,8 +119,15 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 | **Multi-Agent** | **5** | Agent registration, cross-agent search, visibility, conflict resolution (Phase 14) |
 | **Observability** | **4** | D3.js graph visualization, transcript splitting, query cost estimation (Phase 14) |
 | **Dedup** | **1** | Priority-based smart deduplication (Phase 14) |
+| **Entity Bitemporal** | **5** | Time-travel queries: invalidate entities/observations, entity_as_of, observations_as_of, entity_timeline (Phase 15 / memoryjs η.4.4) |
+| **Optimistic Concurrency** | **1** | `update_entity` with `expectedVersion` → `VersionConflictError` on stale (Phase 15 / memoryjs η.5.5.c) |
+| **RBAC** | **4** | Role-based access control: assign/revoke/check/list reader/writer/admin/owner permissions (Phase 15 / memoryjs η.6.1) |
+| **Procedural Memory** | **5** | Executable how-to sequences with EWMA-refined success rate (Phase 15 / memoryjs 3B.4) |
+| **Active Retrieval** | **1** | Iterative query rewriting until coverage threshold met (Phase 15 / memoryjs 3B.5) |
+| **Causal Reasoning** | **4** | Chain discovery, counterfactual queries, cycle detection (Phase 15 / memoryjs 3B.6) |
+| **World Model** | **3** | Graph snapshots, fact validation, outcome prediction (Phase 15 / memoryjs 3B.7) |
 
-New categories (v1.8.0/v1.9.0/Phase 14, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories.
+New categories (v1.8.0/v1.9.0/Phase 14/Phase 15, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories. Phase 15 surfaces also include W3C Linked Data export formats (`turtle`, `rdf-xml`, `json-ld` — memoryjs η.5.4) and PII redaction on export (`redactPii: true` — memoryjs η.6.3) wired into the existing `export_graph` tool rather than as new tools.
 
 ### Adding a New Tool
 
@@ -143,7 +150,7 @@ New categories (v1.8.0/v1.9.0/Phase 14, bold above) are implemented in `toolDefi
 
 ## Test Structure
 
-24 test files, ~657 tests, >92% statement coverage. Core graph tests are in the memoryjs package.
+26 test files, 665 tests, >92% statement coverage. Core graph tests are in the memoryjs package.
 
 Tests are organized in three tiers:
 - **Unit** (`tests/unit/`): Isolated module tests (e.g., response compressor)

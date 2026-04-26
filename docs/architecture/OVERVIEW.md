@@ -1,7 +1,7 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 12.1.0
-**Last Updated**: 2026-04-10
+**Version**: 12.2.0
+**Last Updated**: 2026-04-26
 
 ## What Is This?
 
@@ -13,12 +13,19 @@ Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides 
 |---------|-------------|
 | **Knowledge Graph** | Store entities and relations in a flexible graph structure |
 | **Persistent Memory** | Data persists across sessions in JSONL files |
-| **106 Tools** | Comprehensive API for graph operations |
+| **160 Tools** | Comprehensive API for graph operations |
 | **Hierarchical Nesting** | Parent-child relationships for tree organization |
-| **Advanced Search** | Basic, TF-IDF ranked, boolean, fuzzy, and intelligent hybrid search |
+| **Advanced Search** | Basic, TF-IDF ranked, boolean, fuzzy, intelligent hybrid, semantic, active retrieval (3B.5) |
 | **Duplicate Detection** | Intelligent compression with similarity scoring |
-| **Multi-format Export** | JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid |
+| **Multi-format Export** | JSON, CSV, GraphML, GEXF, DOT, Markdown, Mermaid + W3C Linked Data (Turtle / RDF/XML / JSON-LD) |
+| **PII Redaction** | On-export scrubbing of email / SSN / credit-card / phone / IPv4 (η.6.3) |
 | **Tag Management** | Aliases, bulk operations, and validation |
+| **Bitemporal Validity** | Time-travel queries: invalidate entities/observations, query as of past timestamps (η.4.4) |
+| **Optimistic Concurrency** | `expectedVersion` parameter on `update_entity` → `VersionConflictError` on stale (η.5.5.c) |
+| **RBAC** | Role-based access control: reader / writer / admin / owner with optional resource-type and scope-prefix narrows (η.6.1) |
+| **Procedural Memory** | Executable how-to sequences with EWMA-refined success rate (3B.4) |
+| **Causal Reasoning** | Chain discovery, counterfactual queries, cycle detection (3B.6) |
+| **World Model** | Graph snapshots, fact validation, outcome prediction (3B.7) |
 
 ## Quick Architecture Overview
 
@@ -97,7 +104,7 @@ src/ (77 TypeScript files, ~31,000 lines of code)
 │
 ├── server/ (4 files)     # MCP protocol layer
 │   ├── MCPServer.ts              # Server initialization
-│   ├── toolDefinitions.ts        # 106 tool schemas
+│   ├── toolDefinitions.ts        # 160 tool schemas
 │   ├── toolHandlers.ts           # Tool implementation registry
 │   └── responseCompressor.ts     # Brotli compression for large responses
 │

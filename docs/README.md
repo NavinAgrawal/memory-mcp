@@ -11,25 +11,30 @@ Welcome to the Enhanced Memory MCP documentation! This directory contains compre
 
 ## Core Documentation
 
-### [Project Overview](./OVERVIEW.md)
+### [Project Overview](./architecture/OVERVIEW.md)
 High-level introduction to Memory MCP covering:
 - Key capabilities and features
 - Quick architecture diagram
 - Data model (Entity, Relation)
 - Directory structure
-- Tool categories (91 total)
+- Tool categories (160 total across 51 categories)
 - Performance characteristics
 
-### [API Reference](./API.md)
-Complete API documentation for all 91 tools provided by the Enhanced Memory MCP server, including:
-- Entity and relation operations
-- Search operations (basic, ranked, boolean, fuzzy)
+### [API Reference](./architecture/API.md)
+Complete API documentation for all 160 tools provided by the Enhanced Memory MCP server, including:
+- Entity, relation, observation operations
+- Search variants (basic, ranked, boolean, fuzzy, hybrid, semantic, smart, active retrieval)
 - Hierarchy management
 - Compression and archiving
-- Import/export capabilities
+- Import/export (JSON / CSV / GraphML / GEXF / DOT / Markdown / Mermaid + W3C Turtle / RDF/XML / JSON-LD; PII redaction)
+- Bitemporal validity and time-travel queries (η.4.4)
+- Optimistic concurrency control (η.5.5.c)
+- RBAC (η.6.1)
+- Procedural memory (3B.4)
+- Causal reasoning and world model (3B.6 / 3B.7)
 - Analytics and validation
 
-### [Architecture Details](./ARCHITECTURE.md)
+### [Architecture Details](./architecture/ARCHITECTURE.md)
 In-depth technical architecture documentation covering:
 - System design and component structure
 - Modular server design (MCPServer, toolDefinitions, toolHandlers)
@@ -37,7 +42,7 @@ In-depth technical architecture documentation covering:
 - Performance optimization strategies
 - Context optimization improvements (v0.47.0)
 
-### [Component Reference](./COMPONENTS.md)
+### [Component Reference](./architecture/COMPONENTS.md)
 Detailed documentation for all system components:
 - Server components (MCPServer, toolDefinitions, toolHandlers)
 - Core components (KnowledgeGraphManager, EntityManager, GraphStorage)
@@ -46,7 +51,7 @@ Detailed documentation for all system components:
 - Utility components and type definitions
 - Component dependencies diagram
 
-### [Data Flow](./DATAFLOW.md)
+### [Data Flow](./architecture/DATAFLOW.md)
 Comprehensive data flow documentation covering:
 - Request processing pipeline
 - Entity and relation operation flows
@@ -55,7 +60,7 @@ Comprehensive data flow documentation covering:
 - Import/export operation flows
 - Caching strategy and error handling
 
-### [Workflow](./WORKFLOW.md)
+### [Workflow](./development/WORKFLOW.md)
 Development workflow and operational procedures for working with the memory server.
 
 ## User Guides

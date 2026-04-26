@@ -1,7 +1,7 @@
 # Memory MCP - System Architecture
 
-**Version**: 12.0.0
-**Last Updated**: 2026-03-24
+**Version**: 12.2.0
+**Last Updated**: 2026-04-26
 
 ---
 
@@ -32,15 +32,14 @@ Memory MCP is an enhanced Model Context Protocol (MCP) server that provides pers
 - **Timestamps**: Automatic tracking of creation and modification times
 - **Batch Operations**: Efficient bulk updates
 
-### Key Statistics (v12.0.0)
+### Key Statistics (v12.2.0)
 
-- **2800+ Tests**: 100% passing (unit, integration, edge cases, performance, e2e, server layer)
-- **Test Coverage**: 97 test files testing 77 source files
-- **Performance**: Handles 2000+ entities, 5000+ total elements efficiently
-- **TypeScript**: Strict mode, full type safety (77 source files, ~31K lines)
-- **91 Tools**: Organized across 28 categories (entity, search, semantic, graph algorithms, governance, freshness, etc.)
-- **Lazy Initialization**: 7 managers instantiated on-demand
-- **Phase 12 Performance**: BM25 search, parallel execution, query plan caching, embedding cache, incremental indexing
+- **665 Tests**: 100% passing (unit, integration, e2e, server layer). Performance benchmarks gated behind `SKIP_BENCHMARKS=true` for default runs. Core graph tests live in `@danielsimonjr/memoryjs`.
+- **Source Files**: 5 TypeScript files in `src/` after the Phase 13 extraction; all core graph logic lives in the `@danielsimonjr/memoryjs` library.
+- **160 Tools**: Organized across 51 categories (entity, search variants, semantic, graph algorithms, governance, freshness, sessions, decay/salience, multi-agent, dream engine, project scoping, memory versioning, temporal KG, ingestion, agent diary, **bitemporal validity** η.4.4, **OCC** η.5.5.c, **RBAC** η.6.1, **procedural memory** 3B.4, **active retrieval** 3B.5, **causal reasoning** 3B.6, **world model** 3B.7).
+- **Lazy Initialization**: Managers in `ManagerContext` instantiated on first access.
+- **Phase 12 Performance** (in memoryjs): BM25 search, parallel execution, query plan caching, embedding cache, incremental indexing.
+- **Phase 15 (memoryjs v1.14+)**: 23 new tools surfacing entity bitemporal validity, optimistic concurrency control, role-based access control, procedural memory, active retrieval, causal reasoning, and world model. Plus W3C Linked Data export formats (Turtle / RDF/XML / JSON-LD — η.5.4) and PII redaction on export (η.6.3) wired into existing `export_graph`.
 
 ---
 

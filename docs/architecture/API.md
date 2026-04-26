@@ -1,9 +1,9 @@
 # Memory MCP - API Reference
 
-**Version**: 12.1.0
-**Last Updated**: 2026-04-10
+**Version**: 12.2.0
+**Last Updated**: 2026-04-26
 
-Complete reference for all 106 MCP tools provided by the Memory MCP server.
+Complete reference for all 160 MCP tools provided by the Memory MCP server. The 23 newest tools (Phase 15 / memoryjs v1.14+) are documented in their own sections at the end: **Entity Bitemporal Validity**, **OCC Update**, **RBAC**, **Procedural Memory**, **Active Retrieval**, **Causal Reasoning**, and **World Model**. Phase 15 also extends three existing tools (`export_graph`, `create_entities`, `set_memory_visibility`) — those updates are noted inline in their respective sections.
 
 ---
 
@@ -30,6 +30,14 @@ Complete reference for all 106 MCP tools provided by the Memory MCP server.
 19. [Temporal KG](#temporal-kg) (3 tools) — v1.9.0
 20. [Ingestion](#ingestion) (1 tool) — v1.9.0
 21. [Agent Diary](#agent-diary) (2 tools) — v1.9.0
+22. [Entity Bitemporal Validity](#entity-bitemporal-validity-phase-15--memoryjs-η44) (5 tools) — Phase 15 / memoryjs η.4.4
+23. [Optimistic Concurrency Control](#optimistic-concurrency-control-phase-15--memoryjs-η55c) (1 tool) — Phase 15 / memoryjs η.5.5.c
+24. [RBAC](#rbac-phase-15--memoryjs-η61) (4 tools) — Phase 15 / memoryjs η.6.1
+25. [Procedural Memory](#procedural-memory-phase-15--memoryjs-3b4) (5 tools) — Phase 15 / memoryjs 3B.4
+26. [Active Retrieval](#active-retrieval-phase-15--memoryjs-3b5) (1 tool) — Phase 15 / memoryjs 3B.5
+27. [Causal Reasoning](#causal-reasoning-phase-15--memoryjs-3b6) (4 tools) — Phase 15 / memoryjs 3B.6
+28. [World Model](#world-model-phase-15--memoryjs-3b7) (3 tools) — Phase 15 / memoryjs 3B.7
+29. [Phase 15 enhancements to existing tools](#phase-15-enhancements-to-existing-tools) — `export_graph`, `create_entities`, `set_memory_visibility`
 
 ---
 
@@ -2317,6 +2325,450 @@ Read diary entries for an agent, optionally filtered by date range.
   }>;
 }
 ```
+
+---
+
+## Entity Bitemporal Validity (Phase 15 / memoryjs η.4.4)
+
+5 tools for time-travel queries over entities and observations. Distinct from v1.8 supersession (which models content edits over time): bitemporal validity models when a fact was true in the world. Entities and observations remain queryable for past timestamps after invalidation; only future-asOf queries return null.
+
+### invalidate_entity
+
+Mark an entity as no longer valid by setting `validUntil`. Idempotent. Does not delete — `entity_as_of` still returns it for past `asOf` timestamps.
+
+```typescript
+{
+  name: 'invalidate_entity',
+  arguments: {
+    name: string;
+    ended?: string;  // ISO 8601; defaults to current time
+  }
+}
+```
+
+### entity_as_of
+
+Time-travel query: returns the entity at a given point in time. An entity is valid at `asOf` when `validFrom <= asOf AND (validUntil is undefined OR validUntil >= asOf)`.
+
+```typescript
+{
+  name: 'entity_as_of',
+  arguments: {
+    name: string;
+    asOf: string;  // ISO 8601
+  }
+}
+
+// Returns: { entity: Entity | null, valid: boolean, asOf: string }
+```
+
+### entity_timeline
+
+All temporal versions of an entity in chronological order (by `validFrom` ascending; unbounded entities last). Integrates the v1.8 supersession chain when one exists.
+
+```typescript
+{
+  name: 'entity_timeline',
+  arguments: { name: string }
+}
+
+// Returns: { name: string, versions: Entity[], count: number }
+```
+
+### invalidate_observation
+
+Mark a specific observation on an entity as no longer valid. Creates a parallel `observationMeta[]` entry if absent. Throws if observation not found on entity.
+
+```typescript
+{
+  name: 'invalidate_observation',
+  arguments: {
+    entityName: string;
+    content: string;  // exact observation text to invalidate
+    ended?: string;   // ISO 8601
+  }
+}
+```
+
+### observations_as_of
+
+Get observations valid at a given point in time. Observations with no `observationMeta` entry are treated as unbounded.
+
+```typescript
+{
+  name: 'observations_as_of',
+  arguments: {
+    entityName: string;
+    asOf: string;
+  }
+}
+
+// Returns: { entityName: string, asOf: string, observations: string[], count: number }
+```
+
+---
+
+## Optimistic Concurrency Control (Phase 15 / memoryjs η.5.5.c)
+
+### update_entity
+
+Update an entity with optional optimistic concurrency control. Pass `expectedVersion` to assert the live entity is at that version; throws `VersionConflictError` on mismatch. Omit for legacy last-write-wins semantics. OCC-guarded writes auto-increment `version`.
+
+```typescript
+{
+  name: 'update_entity',
+  arguments: {
+    name: string;
+    updates: Partial<Entity>;
+    expectedVersion?: number;
+  }
+}
+
+// On success: returns updated Entity with bumped version
+// On stale expectedVersion: error "Version conflict on entity 'X': expected vN, found vM"
+```
+
+---
+
+## RBAC (Phase 15 / memoryjs η.6.1)
+
+4 tools for role-based access control. Roles: `reader` (read-only), `writer` (read+write), `admin` (read+write+delete), `owner` (all four). Optional `resourceType` narrows to one type; optional `scope` narrows to a name prefix; optional `validUntil` expires the grant.
+
+### rbac_assign_role
+
+```typescript
+{
+  name: 'rbac_assign_role',
+  arguments: {
+    agentId: string;
+    role: string;  // 'reader' | 'writer' | 'admin' | 'owner' | custom
+    resourceType?: 'entity' | 'relation' | 'observation' | 'session' | 'artifact';
+    scope?: string;       // e.g. 'project-x:'
+    validFrom?: string;   // ISO 8601
+    validUntil?: string;
+    notes?: string;
+  }
+}
+```
+
+### rbac_revoke_role
+
+Match by `agentId + role + resourceType` (exact, including `undefined`).
+
+```typescript
+{
+  name: 'rbac_revoke_role',
+  arguments: {
+    agentId: string;
+    role: string;
+    resourceType?: 'entity' | 'relation' | 'observation' | 'session' | 'artifact';
+  }
+}
+```
+
+### rbac_check_permission
+
+Falls back to `defaultRole=reader` for agents with no assignments.
+
+```typescript
+{
+  name: 'rbac_check_permission',
+  arguments: {
+    agentId: string;
+    action: 'read' | 'write' | 'delete' | 'manage';
+    resourceType: 'entity' | 'relation' | 'observation' | 'session' | 'artifact';
+    resourceName?: string;  // for scope-prefix matching
+    now?: string;           // hypothetical-time queries
+  }
+}
+
+// Returns: { agentId, action, resourceType, allowed: boolean }
+```
+
+### rbac_list_assignments
+
+```typescript
+{
+  name: 'rbac_list_assignments',
+  arguments: {
+    agentId: string;
+    activeOnly?: boolean;  // default false
+    now?: string;
+  }
+}
+```
+
+---
+
+## Procedural Memory (Phase 15 / memoryjs 3B.4)
+
+5 tools for executable how-to sequences distinct from semantic facts and episodic events. Steps are 1-indexed with optional fallback chains. Auto-generates id when omitted.
+
+### add_procedure
+
+```typescript
+{
+  name: 'add_procedure',
+  arguments: {
+    id?: string;            // auto-generated if omitted
+    name?: string;
+    description?: string;
+    steps: Array<{
+      order: number;        // 1-indexed
+      action: string;
+      parameters: Record<string, string>;
+      timeout?: number;     // ms
+      fallback?: object;
+    }>;
+    triggers?: string[];    // free-form match phrases
+  }
+}
+```
+
+### get_procedure
+
+```typescript
+{ name: 'get_procedure', arguments: { id: string } }
+```
+
+### match_procedure
+
+Token-overlap match a context description against stored procedures. Returns ranked Jaccard-like scores.
+
+```typescript
+{
+  name: 'match_procedure',
+  arguments: {
+    context: string;
+    candidateIds?: string[];  // default: all procedures
+    threshold?: number;       // default 0
+  }
+}
+
+// Returns: { context, threshold, matches: [{procedure, score}], count }
+```
+
+### refine_procedure
+
+Apply caller feedback after execution. Increments `executionCount` and updates `successRate` via EWMA (α=0.2).
+
+```typescript
+{
+  name: 'refine_procedure',
+  arguments: {
+    id: string;
+    succeeded: boolean;
+    notes?: string;
+    recordedAt?: string;
+  }
+}
+```
+
+### get_procedure_step
+
+Load by 1-indexed `order`, OR get the step after `order` when `next: true`.
+
+```typescript
+{
+  name: 'get_procedure_step',
+  arguments: {
+    id: string;
+    order: number;
+    next?: boolean;
+  }
+}
+```
+
+---
+
+## Active Retrieval (Phase 15 / memoryjs 3B.5)
+
+### adaptive_retrieve
+
+Iterative query rewriting: up to `maxRounds` of (search → score coverage → rewrite). Stops early when `coverage ≥ minCoverage` or no expansion tokens remain. Pure symbolic — no LLM provider required.
+
+```typescript
+{
+  name: 'adaptive_retrieve',
+  arguments: {
+    query: string;
+    maxRounds?: number;       // default 3
+    minCoverage?: number;     // default 0.6
+    resultsPerRound?: number; // default 10
+    budgetTokens?: number;    // optional cost cap
+  }
+}
+
+// Returns: {
+//   bestResults: SearchResult[],
+//   bestCoverage: number,
+//   rounds: [{query, results, coverage, expansionTokens}]
+// }
+```
+
+---
+
+## Causal Reasoning (Phase 15 / memoryjs 3B.6)
+
+4 tools that walk causal relation types: `causes`, `enables`, `prevents`, `precedes`, `correlates`. Chains are scored by product of per-edge `causalStrength`.
+
+> **CAVEAT**: `detect_causal_cycles` treats `prevents` as a directed edge, not as logical negation — `prevents` + `enables` triangles ARE flagged as cycles.
+
+### find_causes
+
+Causal chains ending at the named effect.
+
+```typescript
+{
+  name: 'find_causes',
+  arguments: {
+    effect: string;
+    candidates: string[];
+    maxDepth?: number;  // default 6
+  }
+}
+
+// Returns: { effect, candidates, chains: Chain[], count }
+```
+
+### find_effects
+
+Symmetric counterpart starting at the named cause.
+
+```typescript
+{
+  name: 'find_effects',
+  arguments: {
+    cause: string;
+    candidates: string[];
+    maxDepth?: number;
+  }
+}
+```
+
+### counterfactual_query
+
+"What if we remove edge (`removeFrom` → `removeTo`)? Is `predict` still reachable from `seed`?" Returns chains from seed to predict that DO NOT use the removed edge. Pure: does not mutate the graph.
+
+```typescript
+{
+  name: 'counterfactual_query',
+  arguments: {
+    seed: string;
+    removeFrom: string;
+    removeTo: string;
+    predict: string;
+    maxDepth?: number;
+  }
+}
+```
+
+### detect_causal_cycles
+
+```typescript
+{
+  name: 'detect_causal_cycles',
+  arguments: {
+    seed: string;
+    maxDepth?: number;
+  }
+}
+```
+
+---
+
+## World Model (Phase 15 / memoryjs 3B.7)
+
+3 tools: snapshot the live graph, validate proposed observations against it, predict downstream effects of actions.
+
+### get_world_state
+
+Capture a fresh snapshot: `entitiesByName + takenAt timestamp + size`. Capped at `maxSnapshotSize` (default 1000); over-cap prefers high-importance entities.
+
+```typescript
+{ name: 'get_world_state', arguments: {} }
+
+// Returns: { takenAt: string, entities: Array<{name, entityType, observationCount, ...}> }
+```
+
+### validate_fact_against_world
+
+Validate a candidate observation against a target entity. Delegates to `MemoryValidator.validateConsistency`.
+
+When the local embedding provider is selected but `@xenova/transformers` isn't installed, the handler returns a structured graceful response instead of leaking the raw Node module-resolution error:
+```json
+{
+  "observation": "...",
+  "entityName": "...",
+  "result": null,
+  "reason": "embedding_provider_unavailable",
+  "detail": "Failed to initialize local embedding service: ..."
+}
+```
+
+```typescript
+{
+  name: 'validate_fact_against_world',
+  arguments: {
+    observation: string;
+    entityName: string;
+  }
+}
+```
+
+### predict_outcome
+
+Predict downstream effects of an action by walking the causal subgraph. Delegates to `CausalReasoner.findEffects`.
+
+```typescript
+{
+  name: 'predict_outcome',
+  arguments: {
+    action: string;
+    candidates: string[];
+  }
+}
+```
+
+---
+
+## Phase 15 enhancements to existing tools
+
+### export_graph (extended)
+
+Phase 15 (memoryjs η.5.4 / η.6.3) added three W3C Linked Data export formats and PII redaction:
+
+| Field | Type | Notes |
+|---|---|---|
+| `format: 'turtle'` | RDF 1.1 Turtle | `@prefix rdf:`, `@prefix rdfs:`, `@prefix dcterms:` headers |
+| `format: 'rdf-xml'` | RDF 1.1 XML | Statement reification for non-NCName predicates |
+| `format: 'json-ld'` | JSON-LD 1.1 | `@context` mapping to RDFS + DCTerms |
+| `redactPii?: boolean` | Default `false` | Scrubs email / SSN / credit-card / phone / IPv4 from observations using the η.6.3 `PiiRedactor` default pattern bank |
+
+### create_entities (extended)
+
+Phase 15 (memoryjs v1.6 freshness, v1.8 project scoping, η.4.4 bitemporal) added per-entity fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `ttl?: number` | seconds | v1.6 freshness — seconds until entity is considered stale |
+| `confidence?: number` | 0–1 | v1.6 freshness — belief strength |
+| `projectId?: string` | string | v1.8 project scope identifier |
+| `validFrom?: string` | ISO 8601 | η.4.4 — entity is valid from this instant |
+| `validUntil?: string` | ISO 8601 | η.4.4 — entity is valid until this instant |
+| `observationMeta?: Array<{...}>` | array | η.4.4 — per-observation temporal metadata indexed by content match |
+
+### set_memory_visibility (extended)
+
+Phase 15 (memoryjs η.5.5.b) added time-window and role gates, plus auto-promotion of plain entities to `AgentEntity` (was previously a silent `null` failure):
+
+| Field | Type | Notes |
+|---|---|---|
+| `allowedRoles?: string[]` | array | Role gate AND-combined with the visibility level check |
+| `visibleFrom?: string` | ISO 8601 | Memory becomes visible at this instant |
+| `visibleUntil?: string` | ISO 8601 | Memory stops being visible at this instant |
+
+When called on a plain `Entity` (not yet an `AgentEntity`), the handler now stamps `agentId`, `memoryType: 'semantic'`, `confidence: 0.8`, `confirmationCount: 0`, and `accessCount: 0` before applying visibility — and returns `{promoted: true, memoryName, agentId, visibility, ...}` so callers can detect the promotion.
 
 ---
 

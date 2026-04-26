@@ -1,7 +1,7 @@
 # Memory MCP - Component Reference
 
-**Version**: 12.1.0
-**Last Updated**: 2026-04-10
+**Version**: 12.2.0
+**Last Updated**: 2026-04-26
 
 ---
 
@@ -83,9 +83,9 @@ export class MCPServer {
 
 ### toolDefinitions (`server/toolDefinitions.ts`)
 
-**Purpose**: Schema definitions for all 106 MCP tools
+**Purpose**: Schema definitions for all 160 MCP tools
 
-**Lines**: ~400
+**Lines**: ~2350
 
 ```typescript
 export interface ToolDefinition {
@@ -145,9 +145,9 @@ export const toolDefinitions: ToolDefinition[]
 
 ### toolHandlers (`server/toolHandlers.ts`)
 
-**Purpose**: Handler implementations for all 106 tools
+**Purpose**: Handler implementations for all 160 tools
 
-**Lines**: ~301
+**Lines**: ~2330
 
 ```typescript
 export type ToolHandler = (

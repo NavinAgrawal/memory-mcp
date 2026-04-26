@@ -5,6 +5,35 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [12.2.1] - 2026-04-26
+
+Doc-only patch release. Comprehensive consistency pass across 68 markdown documents in the repo to align with v12.2.0's actual surface (160 tools, Phase 15 features). Used RLM methodology to enumerate all docs and the honest-claude grounding rule to verify every factual claim before edit.
+
+### Changed
+
+- **`README.md`** — Version badge bumped to v12.2.0; tagline updated from "106 tools" to "160 tools" with the seven new Phase 15 capability areas listed (bitemporal validity, OCC, RBAC, procedural memory, active retrieval, causal reasoning, world model). Tool list section header bumped to "(160 Tools)" and seven new "#### Phase 15 / memoryjs ..." subsections added with per-tool descriptions. "Phase 15 enhancements to existing tools" subsection added documenting `export_graph` / `create_entities` / `set_memory_visibility` extensions. Version history block updated to lead with v12.2.0 entry.
+- **`CLAUDE.md`** — Tool count bumped 137 → 160 in three places (architecture overview, source files table, tool categories header). Tool category table extended with 7 new rows for Phase 15. Test count refreshed (24 files, ~657 tests → 26 files, 665 tests).
+- **`docs/README.md`** — Tool count refreshed (91 → 160) in two link descriptions. Cross-doc paths corrected from `./OVERVIEW.md` etc. to `./architecture/OVERVIEW.md` (the actual layout post-Phase 13). API summary expanded with the new feature areas.
+- **`docs/architecture/API.md`** — Header version 12.1.0 → 12.2.0 + tool count 106 → 160. Table of contents extended with 8 new sections. Seven full feature-section blocks appended (Entity Bitemporal Validity, OCC, RBAC, Procedural Memory, Active Retrieval, Causal Reasoning, World Model) with per-tool TypeScript signatures and behavior notes. "Phase 15 enhancements to existing tools" section added.
+- **`docs/architecture/ARCHITECTURE.md`** — Version bumped + Key Statistics rewritten to reflect post-Phase 13 reality (5 src files, 26 test files, 665 tests, 160 tools / 51 categories). Phase 15 surface listed.
+- **`docs/architecture/COMPONENTS.md`** — Header version + tool counts refreshed in toolDefinitions and toolHandlers entries. Line counts updated to actual.
+- **`docs/architecture/OVERVIEW.md`** — Header version + capability table extended with Phase 15 entries. Source-tree comment updated to "160 tool schemas".
+- **`docs/architecture/TEST_COVERAGE.md`** — Marked as historical (pre-Phase 13) with a clear preamble pointing readers to current `npm test` output for the live count. Pre-extraction figures preserved for historical reference.
+- **`docs/architecture/DEPENDENCY_GRAPH.md`** — Auto-regenerated via `npm run docs:deps`.
+- **`docs/architecture/unused-analysis.md`** — Auto-regenerated as a side-effect of the dependency-graph script.
+- **`docs/development/WORKFLOW.md`** — Rewritten end-to-end. Replaced the obsolete `c:/mcp-servers/memory-mcp/` paths and "15 tools total" claim with the current repo layout (`C:/Users/danie/Dropbox/Github/memory-mcp`, 5 src files, 160 tools), added the project's TDD-strict 9-step development workflow (plan → review-plan → write-code → review-code → fix → simplify → tracking → CHANGELOG → commit → push), and added a Release Workflow section.
+- **`docs/reports/DOCUMENTATION_INVENTORY.md`** — Marked as historical (pre-Phase 13 layout); added a current-layout summary in the preamble pointing readers to `docs/README.md` as the live index.
+- **`docs/roadmap/FUTURE_FEATURES.md`** — Header bumped (Current Version: 12.2.0 / Target: 13.0.0).
+- **`docs/roadmap/PERFORMANCE_AND_CAPABILITIES.md`** — Header bumped. Table of Contents extended with Phase 13 / 14 / 15 entries. Two new sections appended: Phase 14 (memoryjs v1.7.0 cognitive core) and Phase 15 (memoryjs v1.14+ — bitemporal / OCC / RBAC / procedural / causal / world model) with the full tool inventory and provenance.
+- **`.github/CODE_REVIEW.md`** — Marked as historical (v0.9.0 pre-extraction review). Preamble notes which of its recommendations have since been implemented (RBAC, audit logging) or rendered moot by the Phase 13 extraction.
+
+### Verified
+
+- 30 historical/frozen documents (`docs/planning/PHASE_*`, `docs/reports/SPRINT_*`, `docs/analysis/*`, etc.) intentionally **not** modified. They are preserved as immutable historical records.
+- 9 Claude slash-command docs (`.claude/commands/*.md`), 2 GitHub templates (`pull_request_template.md`, `FILE_SIZE_POLICY.md`), and 2 tool-subdirectory READMEs (`tools/*/README.md`) reviewed and confirmed unaffected by v12.2.0 changes.
+- 6 user guides (`docs/guides/ARCHIVING.md` / `COMPRESSION.md` / `HIERARCHY.md` / `MIGRATION.md` / `QUERY_LANGUAGE.md` / `TASKSCHEDULER_INTEGRATION.md`) reviewed: each documents stable feature behavior unchanged by Phase 15. Their authored timestamps are accurate metadata, not stale claims about current state.
+- `npm run typecheck --strict` clean; 49/49 unit + integration tests pass.
+
 ## [12.2.0] - 2026-04-26
 
 23 new MCP tools surfacing memoryjs v1.14+ (η.4.4 / η.5.5.c / η.6.1 / 3B.4 / 3B.5 / 3B.6 / 3B.7) brought into a documented release, plus four pre-publish fixes from end-to-end MCP smoke testing on 2026-04-25. Total tool count: **137 → 160**.

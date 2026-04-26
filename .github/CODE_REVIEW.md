@@ -1,10 +1,19 @@
 # Comprehensive Code Review - Memory MCP Server
 
+> **⚠️ Historical document (2025-11-24).** This review covers v0.9.0 — a pre-Phase 13 monolithic codebase that no longer exists. Many of its recommendations have since been implemented or rendered moot:
+>
+> - **Phase 13 extraction (commit `0269e609`+)**: 13K+ LOC moved into the `@danielsimonjr/memoryjs` library; memory-mcp is now a thin 5-file MCP wrapper.
+> - **RBAC (η.6.1)**: Recommended at L340 and L1765 — **shipped in v12.2.0** as 4 MCP tools (`rbac_assign_role` / `rbac_revoke_role` / `rbac_check_permission` / `rbac_list_assignments`).
+> - **Audit logging**: Recommended at L341 / L1766 — shipped earlier as `audit_query` / `audit_history` / `rollback_operation` tools (Phase 12).
+> - **Authentication and authorization**: Partially addressed via the η.6.1 RBAC layer in memoryjs; transport-layer auth remains an MCP-protocol concern outside this server.
+>
+> This file is preserved as a historical snapshot of the pre-extraction codebase review. For current architecture, see [`docs/architecture/ARCHITECTURE.md`](../docs/architecture/ARCHITECTURE.md).
+
 **Project:** @danielsimonjr/memory-mcp
-**Version:** 0.9.0
+**Version:** 0.9.0 (pre-extraction)
 **Review Date:** 2025-11-24
-**Lines of Code:** ~9,295 (modular) + 4,188 (index.ts) = ~13,483 total
-**Architecture:** Modular TypeScript with MCP Server Implementation
+**Lines of Code:** ~9,295 (modular) + 4,188 (index.ts) = ~13,483 total — **historical; current memory-mcp is ~600 LOC across 5 src files**
+**Architecture:** Modular TypeScript with MCP Server Implementation (pre-extraction)
 
 ---
 
