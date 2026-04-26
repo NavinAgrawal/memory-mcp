@@ -1,9 +1,25 @@
 # Future Features Roadmap
 
-**Version:** 3.1.0
+**Version:** 3.2.0
 **Last Updated:** 2026-04-26
 **Current Version:** 12.2.0
 **Target Version:** 13.0.0 (post-v12.2.0)
+
+---
+
+## Phase Status Summary (audited 2026-04-26 against current code)
+
+| Phase | Title | Status | Verification |
+|---|---|---|---|
+| 6 | Three-Layer Hybrid Search | ✅ **SHIPPED** | `src/search/HybridSearchManager.ts` + `HybridScorer.ts` + tool `hybrid_search` |
+| 7 | Intelligent Retrieval | ✅ **SHIPPED** | `src/search/QueryAnalyzer.ts` + `QueryPlanner.ts` + `ReflectionManager.ts` + tools `smart_search` / `analyze_query` |
+| 8 | Semantic Compression | ✅ **SHIPPED** | `src/features/ObservationNormalizer.ts` + `KeywordExtractor.ts` + tool `normalize_observations` |
+| 9 | Adaptive Query Intelligence | ✅ **SHIPPED** | `src/search/QueryCostEstimator.ts` + tool `search_auto` |
+| 10 | Persistent Vector Storage | ⚠️ **PARTIAL** | `src/search/QuantizedVectorStore.ts` shipped (vector quantization); HNSW indexing NOT implemented |
+
+**All 5 originally-proposed new MCP tools have shipped** through v12.2.0. The version-roadmap table at the bottom of this document (showing v10.0–v12.0 staging) is **historical** — actual delivery happened across v9.8.3 → v12.2.0 in different phases than originally planned.
+
+This document is preserved as a historical reference for the original proposal. **For current and forward-looking work**, see [`PERFORMANCE_AND_CAPABILITIES.md`](./PERFORMANCE_AND_CAPABILITIES.md) which is the active roadmap.
 
 ---
 
@@ -60,7 +76,9 @@ Transform memory-mcp from a knowledge graph storage system into an **intelligent
 
 ## Existing Capabilities
 
-### Already Implemented (v9.8.3)
+> **Historical baseline below** — this table describes what was shipped at v9.8.3 (the writing baseline of this proposal). The current v12.2.0 surface has grown significantly: 160 tools and the search infrastructure listed below now includes BM25, hybrid search, query planning, vector quantization, embedding cache, parallel search execution, etc. See [`PERFORMANCE_AND_CAPABILITIES.md`](./PERFORMANCE_AND_CAPABILITIES.md) for the full Phase 1-15 status.
+
+### Already Implemented (v9.8.3 — historical baseline)
 
 | Component | Status | Location |
 |-----------|--------|----------|
@@ -79,7 +97,9 @@ Transform memory-mcp from a knowledge graph storage system into an **intelligent
 
 ---
 
-## Phase 6: Three-Layer Hybrid Search
+## Phase 6: Three-Layer Hybrid Search ✅ SHIPPED
+
+**Status**: Shipped. `HybridSearchManager` lives in `src/search/HybridSearchManager.ts`; `hybrid_search` tool in v12.2.0 surface.
 
 **Goal**: Implement SimpleMem's three-layer indexing architecture as a new search feature.
 **Effort**: 30 hours | **New Tools**: 1 (hybrid_search)
@@ -224,7 +244,9 @@ class SymbolicSearch {
 
 ---
 
-## Phase 7: Intelligent Retrieval
+## Phase 7: Intelligent Retrieval ✅ SHIPPED
+
+**Status**: Shipped. `QueryAnalyzer` / `QueryPlanner` / `ReflectionManager` in `src/search/`; tools `smart_search` and `analyze_query` in v12.2.0 surface.
 
 **Goal**: Implement query understanding and planning-based retrieval.
 **Effort**: 40 hours | **New Tools**: 2 (smart_search, analyze_query)
@@ -407,7 +429,9 @@ class ReflectionManager {
 
 ---
 
-## Phase 8: Semantic Compression
+## Phase 8: Semantic Compression ✅ SHIPPED
+
+**Status**: Shipped. `ObservationNormalizer` and `KeywordExtractor` in `src/features/`; tool `normalize_observations` in v12.2.0 surface.
 
 **Goal**: Store self-contained, disambiguated facts for efficient retrieval.
 **Effort**: 35 hours | **New Tools**: 1 (normalize_observations)
@@ -568,7 +592,9 @@ interface EnhancedEntity extends Entity {
 
 ---
 
-## Phase 9: Adaptive Query Intelligence
+## Phase 9: Adaptive Query Intelligence ✅ SHIPPED
+
+**Status**: Shipped. `QueryCostEstimator` in `src/search/`; tool `search_auto` in v12.2.0 surface.
 
 **Goal**: Dynamic retrieval depth based on query complexity.
 **Effort**: 20 hours | **New Tools**: 1 (search_auto)
@@ -685,7 +711,9 @@ Automatic search with optimal parameters:
 
 ---
 
-## Phase 10: Persistent Vector Storage
+## Phase 10: Persistent Vector Storage ⚠️ PARTIAL
+
+**Status**: Partial. `QuantizedVectorStore` shipped in `src/search/QuantizedVectorStore.ts` (memory-efficient vector quantization). **HNSW indexing was NOT implemented** — graph-based ANN remains future work; current implementation uses linear scan over the quantized store. Persistent backend wiring lives in `EmbeddingService.ts`.
 
 **Goal**: Enable vector persistence and advanced ANN algorithms.
 **Effort**: 25 hours | **New Capabilities**: Persistent embeddings
@@ -823,13 +851,17 @@ interface VectorStorageConfig {
 
 ## Version Roadmap
 
-| Version | Phase | Key Features | Tools Added |
-|---------|-------|--------------|-------------|
-| **v10.0** | 6 | Three-layer hybrid search, HybridSearchManager | hybrid_search |
-| **v10.5** | 7 | Intelligent retrieval, query planning | smart_search, analyze_query |
-| **v11.0** | 8 | Semantic compression, observation normalization | normalize_observations |
-| **v11.5** | 9 | Adaptive query intelligence | search_auto |
-| **v12.0** | 10 | Persistent vector storage, HNSW indexing | - |
+> **Original proposal (historical) vs. actual delivery:**
+
+| Version (proposed) | Phase | Key Features | Tools Added | Actual delivery |
+|---------|-------|--------------|-------------|-----------------|
+| **v10.0** | 6 | Three-layer hybrid search, HybridSearchManager | `hybrid_search` | ✅ Delivered (date pre-CHANGELOG-tracking) |
+| **v10.5** | 7 | Intelligent retrieval, query planning | `smart_search`, `analyze_query` | ✅ Delivered |
+| **v11.0** | 8 | Semantic compression, observation normalization | `normalize_observations` | ✅ Delivered |
+| **v11.5** | 9 | Adaptive query intelligence | `search_auto` | ✅ Delivered |
+| **v12.0** | 10 | Persistent vector storage, HNSW indexing | — | ⚠️ Partial: `QuantizedVectorStore` shipped; HNSW indexing **NOT** implemented |
+
+All five proposed MCP tools shipped on or before v12.2.0. The version assignments above are historical proposals — actual versions where each tool first appeared differ. See [`CHANGELOG.md`](../../CHANGELOG.md) for the canonical record.
 
 ---
 

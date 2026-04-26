@@ -1,6 +1,6 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "12.2.1",
+  "version": "12.2.2",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, graph algorithms, semantic search, temporal KG, RBAC, bitemporal validity, OCC, procedural memory, causal reasoning, world model, and 160 advanced tools",
   "license": "MIT",
   "engines": {

@@ -5,6 +5,40 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [12.2.2] - 2026-04-26
+
+Doc-only patch release. Roadmap completion audit — followup to v12.2.1's doc consistency pass after a user catch that I had not actually graded existing roadmap items as shipped, only added new Phase 14/15 sections.
+
+### Changed
+
+- **`docs/roadmap/FUTURE_FEATURES.md`** — Audited all five proposed MCP tools against the current code:
+  - `hybrid_search` (Phase 6) ✅ shipped (`src/search/HybridSearchManager.ts`)
+  - `smart_search` / `analyze_query` (Phase 7) ✅ shipped (`src/search/{QueryAnalyzer,QueryPlanner,ReflectionManager}.ts`)
+  - `normalize_observations` (Phase 8) ✅ shipped (`src/features/ObservationNormalizer.ts`)
+  - `search_auto` (Phase 9) ✅ shipped (`src/search/QueryCostEstimator.ts`)
+  - Persistent vector storage (Phase 10) ⚠️ partial — `QuantizedVectorStore` shipped, but HNSW indexing was NOT implemented
+  - Added top-level "Phase Status Summary (audited 2026-04-26)" table.
+  - Marked each Phase 6-10 section header inline with status.
+  - Annotated the Version Roadmap table with actual delivery status.
+  - Added historical-baseline notice on the "Existing Capabilities (v9.8.3)" section.
+
+- **`docs/roadmap/PERFORMANCE_AND_CAPABILITIES.md`** — Audited all Phase 6-12 deliverables against current memoryjs source:
+  - Phase 6 (Foundation): ✅ shipped (set-based bulk ops in `EntityManager` / `RelationManager`)
+  - Phase 7 (Parallel Processing): ✅ shipped (`src/utils/WorkerPoolManager.ts` + `src/search/ParallelSearchExecutor.ts`)
+  - Phase 8 (Search Algorithms): ✅ shipped (`BM25Search`, `OptimizedInvertedIndex`, `HybridScorer`)
+  - Phase 9 (Query Execution): ✅ shipped (`QueryCostEstimator`, `EarlyTerminationManager`, `ReflectionManager`)
+  - Phase 10 (Embedding Performance): ✅ shipped (`EmbeddingCache`, `IncrementalIndexer`)
+  - Phase 11 (Memory Efficiency): ✅ shipped (`QuantizedVectorStore`); HNSW remains future work
+  - Phase 12 (Adaptive Performance): ✅ shipped (`QueryPlanCache`)
+  - Phase 13 (memoryjs v1.8.0/v1.9.0 tools): ✅ shipped in v12.1.0
+  - Renamed "Phases 1-5 Status: COMPLETE" header to "Phases 1-15 Status (audited 2026-04-26 against current code)" with cross-referenced verification for every phase.
+  - Marked each Phase 6-13 section header inline with status.
+
+### Verified
+
+- Class-existence audit via `grep -rl "class <Symbol>" src/` against current memoryjs for: `BM25Search`, `OptimizedInvertedIndex`, `HybridScorer`, `EarlyTerminationManager`, `ParallelSearchExecutor`, `EmbeddingCache`, `IncrementalIndexer`, `QuantizedVectorStore`, `QueryPlanCache`, `WorkerPool`, `ReflectionManager`. All present.
+- HNSW absence verified — `grep -ri "HNSW" src/` returned nothing in memoryjs. Honest-grounded as "future work" in both roadmap files.
+
 ## [12.2.1] - 2026-04-26
 
 Doc-only patch release. Comprehensive consistency pass across 68 markdown documents in the repo to align with v12.2.0's actual surface (160 tools, Phase 15 features). Used RLM methodology to enumerate all docs and the honest-claude grounding rule to verify every factual claim before edit.

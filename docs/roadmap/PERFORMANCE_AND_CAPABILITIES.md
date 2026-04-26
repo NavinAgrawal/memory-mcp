@@ -52,15 +52,27 @@ This document defines the performance optimization roadmap for memory-mcp. All c
 
 ## Completed Optimizations
 
-### Phases 1-5 Status: COMPLETE
+### Phases 1-15 Status (audited 2026-04-26 against current code)
 
-| Phase | Optimization | Status | Impact Achieved |
+All Phase 6-15 deliverables verified present in `@danielsimonjr/memoryjs` and surfaced through the v12.2.0 MCP tool inventory. **Phases 1-15 are all complete or partial as noted.**
+
+| Phase | Optimization | Status | Verification |
 |-------|--------------|--------|-----------------|
-| **Phase 1** | SQLite indexes, bidirectional cache, lazy loading | ✅ | O(log n) range queries |
-| **Phase 2** | Search caching (Fuzzy, Boolean, Ranked, Pagination) | ✅ | 60-90% faster repeated queries |
-| **Phase 3** | Graph algorithms (BFS, DFS, shortest path, centrality) | ✅ | New capabilities |
-| **Phase 4** | Brotli compression (backup, export, response) | ✅ | 70% storage reduction |
-| **Phase 5** | Semantic search (OpenAI + Local embeddings) | ✅ | AI-powered similarity |
+| **Phase 1** | SQLite indexes, bidirectional cache, lazy loading | ✅ SHIPPED | O(log n) range queries |
+| **Phase 2** | Search caching (Fuzzy, Boolean, Ranked, Pagination) | ✅ SHIPPED | 60-90% faster repeated queries |
+| **Phase 3** | Graph algorithms (BFS, DFS, shortest path, centrality) | ✅ SHIPPED | `src/core/GraphTraversal.ts` |
+| **Phase 4** | Brotli compression (backup, export, response) | ✅ SHIPPED | 70% storage reduction |
+| **Phase 5** | Semantic search (OpenAI + Local embeddings) | ✅ SHIPPED | AI-powered similarity |
+| **Phase 6** | Foundation: bulk ops, pre-computed similarity, single-load compression | ✅ SHIPPED | Set-based bulk in `EntityManager` / `RelationManager` |
+| **Phase 7** | Parallel processing: worker pool + parallel search + parallel batch | ✅ SHIPPED | `src/utils/WorkerPoolManager.ts` + `src/search/ParallelSearchExecutor.ts` |
+| **Phase 8** | Search algorithm: BM25, OptimizedInvertedIndex, HybridScorer | ✅ SHIPPED | `src/search/{BM25Search, OptimizedInvertedIndex, HybridScorer}.ts` |
+| **Phase 9** | Query execution: cost estimator, early termination, reflection optimization | ✅ SHIPPED | `src/search/{QueryCostEstimator, EarlyTerminationManager, ReflectionManager}.ts` |
+| **Phase 10** | Embedding performance: query-optimized encoding + LRU cache + incremental re-indexing | ✅ SHIPPED | `src/search/{EmbeddingCache, IncrementalIndexer}.ts` |
+| **Phase 11** | Memory efficiency: vector quantization + compressed LRU | ✅ SHIPPED | `src/search/QuantizedVectorStore.ts` (HNSW indexing remains future work — see FUTURE_FEATURES.md Phase 10) |
+| **Phase 12** | Adaptive performance: auto-tuning + graph-aware optimization | ✅ SHIPPED | `src/search/QueryPlanCache.ts` + plan reuse |
+| **Phase 13** | New MCP tools for memoryjs v1.8.0 + v1.9.0 (project scoping, versioning, forget, profiles, temporal KG, ingestion, diary) | ✅ SHIPPED in **v12.1.0** | 12 tools — see [`CHANGELOG.md`](../../CHANGELOG.md) [12.1.0] |
+| **Phase 14** | Cognitive core, maintenance intelligence, decay/salience, multi-agent, observability (memoryjs v1.7.0) | ✅ SHIPPED (commit `bbe40ae6`; retroactively summarised in v12.2.0 CHANGELOG) | 31 tools — see Phase 14 section below |
+| **Phase 15** | memoryjs v1.14+ — bitemporal validity, OCC, RBAC, procedural memory, active retrieval, causal reasoning, world model | ✅ SHIPPED in **v12.2.0** (2026-04-26) | 23 tools + extensions to `export_graph` / `create_entities` / `set_memory_visibility` |
 
 ### Current Performance Baseline (v9.8.3)
 
@@ -77,7 +89,7 @@ This document defines the performance optimization roadmap for memory-mcp. All c
 
 ---
 
-## Phase 6: Foundation Performance
+## Phase 6: Foundation Performance ✅ SHIPPED
 
 **Goal**: Optimize core data structure operations.
 **Effort**: 10 hours | **Impact**: 10-50x speedup for specific operations
@@ -180,7 +192,9 @@ Replace `graph.entities.find()` with O(1) `getEntityByName()` throughout codebas
 
 ---
 
-## Phase 7: Parallel Processing
+## Phase 7: Parallel Processing ✅ SHIPPED
+
+`src/utils/WorkerPoolManager.ts` + `src/search/ParallelSearchExecutor.ts`.
 
 **Goal**: Maximize throughput via parallel execution.
 **Effort**: 20 hours | **Impact**: 2-4x throughput improvement
@@ -374,7 +388,9 @@ class BatchProcessor {
 
 ---
 
-## Phase 8: Search Algorithm Optimization
+## Phase 8: Search Algorithm Optimization ✅ SHIPPED
+
+`src/search/{BM25Search, OptimizedInvertedIndex, HybridScorer}.ts`.
 
 **Goal**: Optimize search algorithms for speed and accuracy.
 **Effort**: 15 hours | **Impact**: 2x faster lexical search
@@ -597,7 +613,9 @@ class HybridScorer {
 
 ---
 
-## Phase 9: Query Execution Optimization
+## Phase 9: Query Execution Optimization ✅ SHIPPED
+
+`src/search/{QueryCostEstimator, EarlyTerminationManager, ReflectionManager}.ts`.
 
 **Goal**: Minimize unnecessary computation through smart query planning.
 **Effort**: 20 hours | **Impact**: 30x token efficiency
@@ -803,7 +821,9 @@ class ReflectionOptimizer {
 
 ---
 
-## Phase 10: Embedding Performance
+## Phase 10: Embedding Performance ✅ SHIPPED
+
+`src/search/{EmbeddingCache, IncrementalIndexer}.ts`.
 
 **Goal**: Maximize embedding operation speed.
 **Effort**: 15 hours | **Impact**: 2-3x faster embedding operations
@@ -988,7 +1008,9 @@ class IncrementalIndexer {
 
 ---
 
-## Phase 11: Memory Efficiency
+## Phase 11: Memory Efficiency ✅ SHIPPED (vector quantization); ⚠️ HNSW indexing remains future work
+
+`src/search/QuantizedVectorStore.ts` ships memory-efficient vector quantization. HNSW graph-based ANN indexing was originally proposed in `FUTURE_FEATURES.md` Phase 10 but has not been implemented; current vector lookup is linear scan over the quantized store.
 
 **Goal**: Reduce memory footprint for large knowledge graphs.
 **Effort**: 20 hours | **Impact**: 50% memory reduction
@@ -1126,7 +1148,9 @@ class CompressedLRUCache<K, V> {
 
 ---
 
-## Phase 12: Adaptive Performance
+## Phase 12: Adaptive Performance ✅ SHIPPED
+
+`src/search/QueryPlanCache.ts` + plan reuse logic in `QueryPlanner.ts`.
 
 **Goal**: Automatically optimize based on workload characteristics.
 **Effort**: 15 hours | **Impact**: Consistent high performance
@@ -1307,7 +1331,9 @@ MEMORY_TUNE_INTERVAL_MS=300000
 
 ---
 
-## Phase 13: New MCP Tools for memoryjs v1.8.0 + v1.9.0
+## Phase 13: New MCP Tools for memoryjs v1.8.0 + v1.9.0 ✅ SHIPPED in v12.1.0
+
+12 tools shipped in v12.1.0 (2026-04-10). See [`CHANGELOG.md`](../../CHANGELOG.md) [12.1.0] for the full per-tool list.
 
 **Goal**: Expose 13 new library methods as MCP tools to close the gap between memoryjs capabilities and memory-mcp's tool surface.
 **Effort**: 2-3 days | **Impact**: Unlocks project scoping, memory versioning, semantic forget, user profiles, temporal KG, conversation ingestion, agent diary for all MCP clients.
