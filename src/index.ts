@@ -91,6 +91,13 @@ export { ManagerContext as KnowledgeGraphManager };
 
 let managerContext: ManagerContext;
 
+// Exit cleanly when our stdio pipe closes (e.g., Claude Code's /reload-plugins
+// tearing down the connection). Without this, other event-loop refs — file
+// watchers, the embeddings pool, the consolidation timer — can keep the
+// process alive as an orphan until manually killed.
+process.stdin.on("end", () => process.exit(0));
+process.stdin.on("close", () => process.exit(0));
+
 async function main() {
   // Initialize memory file path with backward compatibility
   const memoryFilePath = await ensureMemoryFilePath();
