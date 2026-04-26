@@ -29,7 +29,7 @@ export const toolDefinitions: ToolDefinition[] = [
   // ==================== ENTITY TOOLS ====================
   {
     name: 'create_entities',
-    description: 'Create multiple new entities in the knowledge graph',
+    description: 'Create multiple new entities in the knowledge graph. Supports v1.6 freshness (ttl/confidence), v1.8 project scoping, and η.4.4 bitemporal validity (validFrom/validUntil/observationMeta).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -44,6 +44,58 @@ export const toolDefinitions: ToolDefinition[] = [
                 type: 'array',
                 items: { type: 'string' },
                 description: 'An array of observation contents associated with the entity',
+              },
+              tags: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Optional lowercase tags for categorization',
+              },
+              importance: {
+                type: 'number',
+                minimum: 0,
+                maximum: 10,
+                description: 'Optional importance score (0-10) for prioritization',
+              },
+              parentId: {
+                type: 'string',
+                description: 'Optional parent entity name for hierarchical nesting',
+              },
+              ttl: {
+                type: 'number',
+                description: 'v1.6 freshness — seconds until entity is considered stale',
+              },
+              confidence: {
+                type: 'number',
+                minimum: 0,
+                maximum: 1,
+                description: 'v1.6 freshness — belief strength [0, 1]',
+              },
+              projectId: {
+                type: 'string',
+                description: 'v1.8 project scope identifier',
+              },
+              validFrom: {
+                type: 'string',
+                description: 'η.4.4 ISO 8601 — entity is valid from this instant. Absent ⇒ always valid since creation.',
+              },
+              validUntil: {
+                type: 'string',
+                description: 'η.4.4 ISO 8601 — entity is valid until this instant. Absent ⇒ still valid.',
+              },
+              observationMeta: {
+                type: 'array',
+                description: 'η.4.4 per-observation temporal metadata; indexed parallel to observations[] by content match',
+                items: {
+                  type: 'object',
+                  properties: {
+                    content: { type: 'string', description: 'Matches an entry in observations[] by exact content' },
+                    validFrom: { type: 'string' },
+                    validUntil: { type: 'string' },
+                    recordedAt: { type: 'string', description: 'Bitemporal axis — when the fact was recorded' },
+                  },
+                  required: ['content'],
+                  additionalProperties: false,
+                },
               },
             },
             required: ['name', 'entityType', 'observations'],
@@ -1063,14 +1115,19 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: 'export_graph',
-    description: 'Export knowledge graph in various formats with optional brotli compression and streaming for large graphs',
+    description: 'Export knowledge graph in various formats with optional brotli compression and streaming for large graphs. Supports W3C Linked Data formats (turtle, rdf-xml, json-ld) added in η.5.4.',
     inputSchema: {
       type: 'object',
       properties: {
         format: {
           type: 'string',
-          enum: ['json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid'],
-          description: 'Export format',
+          enum: ['json', 'csv', 'graphml', 'gexf', 'dot', 'markdown', 'mermaid', 'turtle', 'rdf-xml', 'json-ld'],
+          description: 'Export format. W3C Linked Data: turtle (RDF 1.1 Turtle), rdf-xml (RDF 1.1 XML with Statement reification for non-NCName predicates), json-ld (JSON-LD 1.1 with @context mapping to RDFS + DCTerms).',
+        },
+        redactPii: {
+          type: 'boolean',
+          default: false,
+          description: 'When true, scrub PII (email/SSN/credit-card/phone/IPv4) from observations before export. Uses η.6.3 PiiRedactor with default pattern bank.',
         },
         filter: {
           type: 'object',
@@ -1845,6 +1902,775 @@ export const toolDefinitions: ToolDefinition[] = [
   // Phase 13: Config tool
   // TODO: set_project_scope requires server state management (activeProjectId on MCPServer)
   // Skipped in this pass — implement when MCPServer exposes mutable server state to handlers.
+
+  // ==================== SESSION & WORKING MEMORY TOOLS ====================
+  {
+    name: 'session_start',
+    description: 'Start a new agent session via AgentMemoryManager. Tracks session lifecycle, enables working memory, and supports session chaining. Returns a SessionEntity with id and timestamps.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskDescription: { type: 'string', description: 'Description of the task for this session' },
+        parentSessionId: { type: 'string', description: 'ID of a parent session to chain from' },
+        metadata: { type: 'object', description: 'Arbitrary metadata to attach to the session' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'session_end',
+    description: 'End an agent session via AgentMemoryManager with summary generation and working memory promotion. Unlike end_session (which handles failure distillation on graph entities), this manages the full agent session lifecycle.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'The session ID to end' },
+        status: { type: 'string', enum: ['completed', 'abandoned'], description: 'Session completion status (default: completed)' },
+      },
+      required: ['sessionId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'session_checkpoint',
+    description: 'Create a checkpoint snapshot of the current session state for later restore',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'The session ID to checkpoint' },
+        name: { type: 'string', description: 'Optional human-readable name for the checkpoint' },
+      },
+      required: ['sessionId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'session_restore',
+    description: 'Restore a session from a previously created checkpoint',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        checkpointId: { type: 'string', description: 'The checkpoint ID to restore from' },
+      },
+      required: ['checkpointId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'add_working_memory',
+    description: 'Create a TTL-based short-term working memory entry scoped to a session. Working memories auto-expire and can be promoted to long-term storage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'Session ID this memory belongs to' },
+        content: { type: 'string', description: 'The memory content' },
+        taskId: { type: 'string', description: 'Optional task ID for task-scoped memory' },
+        importance: { type: 'number', description: 'Importance score (0-10)' },
+        ttlHours: { type: 'number', description: 'Time-to-live in hours (default: 24)' },
+      },
+      required: ['sessionId', 'content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'promote_working_memory',
+    description: 'Promote a working memory entry to long-term episodic or semantic storage',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        memoryName: { type: 'string', description: 'Name of the working memory entity to promote' },
+        targetType: { type: 'string', enum: ['episodic', 'semantic'], description: 'Target memory type (default: episodic)' },
+      },
+      required: ['memoryName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'confirm_memory',
+    description: 'Boost a memory\'s confidence score without resetting its timestamp. Unlike refresh_entity (which resets to 1.0), this incrementally increases confidence.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        memoryName: { type: 'string', description: 'Name of the memory entity to confirm' },
+        confidenceBoost: { type: 'number', description: 'Amount to boost confidence by (default: 0.1)' },
+      },
+      required: ['memoryName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'clear_expired_memories',
+    description: 'Remove all working memories that have exceeded their TTL. Complements get_expired_entities (which lists but does not delete).',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'wake_up',
+    description: 'Initialize a 4-layer memory stack context (~600 tokens). L0 loads profile identity, L1 loads top entities by importance. Returns a compact boot context for LLM consumption.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        compress: { type: 'boolean', description: 'Apply n-gram compression to reduce token count (default: false)' },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== AUTO-ENHANCEMENT TOOLS ====================
+  {
+    name: 'auto_link_observations',
+    description: 'Detect entity mentions in observation text and suggest cross-reference relations. Unlike normalize_observations (which resolves pronouns/dates), this finds entity name mentions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Observation text to scan for entity mentions' },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'extract_facts',
+    description: 'Extract structured facts from observation text using rule-based extraction',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text to extract facts from' },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'detect_contradictions',
+    description: 'Find conflicting observations within an entity using semantic similarity',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity to check for contradictions' },
+        threshold: { type: 'number', description: 'Similarity threshold for contradiction detection (0-1, default: 0.85)', minimum: 0, maximum: 1 },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'consolidate_session',
+    description: 'Run the full ConsolidationPipeline on a session: promote working memory, merge duplicates, summarize, and extract patterns. Unlike run_consolidation_now (which runs the dedup scheduler), this is a comprehensive session-scoped pipeline.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'Session ID to consolidate' },
+      },
+      required: ['sessionId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'detect_patterns',
+    description: 'Detect recurring token-based patterns across observations of a given entity type',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', description: 'Entity type to analyze for patterns' },
+        minOccurrences: { type: 'number', description: 'Minimum occurrences to qualify as a pattern (default: 3)' },
+      },
+      required: ['entityType'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'summarize_entity',
+    description: 'Auto-summarize redundant observations within a single entity. Unlike compress_graph (which merges similar entities), this condenses observations within one entity.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity whose observations to summarize' },
+        threshold: { type: 'number', description: 'Similarity threshold for merging observations (0-1)', minimum: 0, maximum: 1 },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'priority_dedup',
+    description: 'Smart priority-based deduplication that keeps the highest-scored entity per duplicate group (importance > recency > observation count > tags)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dryRun: { type: 'boolean', description: 'If true, report what would be deduplicated without making changes' },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== CONTEXT COMPRESSION TOOLS ====================
+  {
+    name: 'compress_context',
+    description: 'Compress text using n-gram abbreviation with a legend for token-efficient context loading. Unlike format_with_salience_budget (which allocates token budget), this does text-level compression.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text to compress' },
+        level: { type: 'string', enum: ['light', 'medium', 'aggressive'], description: 'Compression level (default: medium)' },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== DECAY & SALIENCE TOOLS ====================
+  {
+    name: 'run_decay_cycle',
+    description: 'Run a single pass of time-based importance decay across all agent memories. Returns count of decayed and forgotten memories.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_decayed_memories',
+    description: 'List memories whose importance has fallen below a threshold due to time-based decay. Unlike get_stale_entities (which uses freshness timestamps), this uses decay engine importance calculations.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        threshold: { type: 'number', description: 'Importance threshold (default: 0.1)' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'forget_weak_memories',
+    description: 'Bulk-delete memories that fell below a decay threshold. Unlike forget_memory (content match) or archive_entities (criteria-based move), this uses decay-based importance scoring.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        threshold: { type: 'number', description: 'Importance threshold below which to forget' },
+        maxCount: { type: 'number', description: 'Maximum number of memories to forget' },
+        dryRun: { type: 'boolean', description: 'If true, report what would be forgotten without deleting' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'reinforce_memory',
+    description: 'Boost a memory\'s decay resistance by increasing confirmation count and/or confidence. Unlike refresh_entity (timestamp reset) or set_importance (static score), this modulates the decay model.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        memoryName: { type: 'string', description: 'Name of the memory to reinforce' },
+        confirmationBoost: { type: 'number', description: 'Amount to boost confirmation count' },
+        confidenceBoost: { type: 'number', description: 'Amount to boost confidence score' },
+      },
+      required: ['memoryName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'score_salience',
+    description: 'Calculate 5-component relevance score for an entity: baseImportance, recencyBoost, frequencyBoost, contextRelevance, noveltyBoost. Use with format_with_salience_budget to score then format.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity to score' },
+        queryText: { type: 'string', description: 'Optional query text for context relevance' },
+        taskDescription: { type: 'string', description: 'Optional task description for task relevance' },
+        sessionId: { type: 'string', description: 'Optional session ID for session relevance' },
+      },
+      required: ['entityName'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== MULTI-AGENT TOOLS ====================
+  {
+    name: 'register_agent',
+    description: 'Register an agent for multi-agent operations with identity metadata. Unlike set_agent_role (which applies a role profile), this registers agent identity with type, trust level, and capabilities.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Unique agent identifier' },
+        type: { type: 'string', description: 'Agent type (e.g., assistant, specialist, coordinator)' },
+        trustLevel: { type: 'number', description: 'Trust level (0-1)', minimum: 0, maximum: 1 },
+        capabilities: { type: 'array', items: { type: 'string' }, description: 'List of agent capabilities' },
+      },
+      required: ['agentId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'search_cross_agent',
+    description: 'Search across agent memories with trust-weighted scoring and visibility filtering',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        requestingAgentId: { type: 'string', description: 'Agent ID making the request' },
+        query: { type: 'string', description: 'Search query' },
+        agentIds: { type: 'array', items: { type: 'string' }, description: 'Optional list of agent IDs to search across' },
+      },
+      required: ['requestingAgentId', 'query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_memory_visibility',
+    description: 'Set the visibility of a memory entity for multi-agent access control. Auto-promotes plain entities to AgentEntity (stamps agentId/memoryType/etc.) instead of failing silently. Supports η.5.5.b extensions: allowedRoles (role gate), visibleFrom/visibleUntil (time-window gate).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        memoryName: { type: 'string', description: 'Name of the memory entity' },
+        agentId: { type: 'string', description: 'Agent ID that owns the memory' },
+        visibility: { type: 'string', enum: ['private', 'team', 'org', 'shared', 'public'], description: 'Visibility level' },
+        allowedRoles: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'η.5.5.b — Optional role gate. When set, requesting agents whose AgentMetadata.role is NOT in this list are denied even if the visibility level would grant. AND-combined with the level check.',
+        },
+        visibleFrom: {
+          type: 'string',
+          description: 'η.5.5.b — ISO 8601. Memory becomes visible at this instant. Absent ⇒ visible since creation. Denies even the owner before this time.',
+        },
+        visibleUntil: {
+          type: 'string',
+          description: 'η.5.5.b — ISO 8601. Memory stops being visible at this instant. Useful for shared drafts that expire on a known handoff date.',
+        },
+      },
+      required: ['memoryName', 'agentId', 'visibility'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_visible_memories',
+    description: 'Get all memories visible to a specific agent based on visibility rules and trust levels',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Agent ID to check visibility for' },
+      },
+      required: ['agentId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'resolve_agent_conflict',
+    description: 'Resolve a conflict between two agent memories using a specified strategy',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        primaryMemory: { type: 'string', description: 'Name of the first conflicting memory' },
+        conflictingMemory: { type: 'string', description: 'Name of the second conflicting memory' },
+        strategy: { type: 'string', enum: ['most_recent', 'highest_confidence', 'most_confirmations', 'trusted_agent'], description: 'Conflict resolution strategy (default: most_recent)' },
+      },
+      required: ['primaryMemory', 'conflictingMemory'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== OBSERVABILITY TOOLS ====================
+  {
+    name: 'visualize_graph',
+    description: 'Generate a self-contained interactive HTML page with a D3.js force-directed graph visualization. Nodes are colored by type and sized by importance.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        maxEntities: { type: 'number', description: 'Maximum entities to include (default: 100)' },
+        title: { type: 'string', description: 'Title for the graph visualization' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'split_transcript',
+    description: 'Split concatenated multi-session transcripts into per-session chunks via delimiter detection. Preprocessing step before ingest.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Raw transcript text to split' },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'estimate_query_cost',
+    description: 'Estimate execution cost (time, tokens) for all available search methods on a given query. Unlike analyze_query (which extracts entities/complexity), this predicts per-method performance.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query to estimate cost for' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_context_profile',
+    description: 'Get a ContextWindowManager profile configuration (salience weights, retrieval strategy). Unlike get_profile (user profile facts), this returns context-aware retrieval settings.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Profile name to retrieve' },
+      },
+      required: ['name'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== η.4.4 BITEMPORAL ENTITY TOOLS ====================
+  {
+    name: 'invalidate_entity',
+    description: 'η.4.4 — Mark an entity as no longer valid by setting validUntil. Idempotent. Does not delete the entity — entity_as_of still returns it for past asOf timestamps. Orthogonal to v1.8 supersession.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Entity name' },
+        ended: { type: 'string', description: 'ISO 8601 timestamp; defaults to current time' },
+      },
+      required: ['name'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'entity_as_of',
+    description: 'η.4.4 — Time-travel query for an entity. Returns the entity at a given point in time, or null if it was already invalidated then. An entity is valid at asOf when validFrom <= asOf AND (validUntil is undefined OR validUntil >= asOf).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Entity name' },
+        asOf: { type: 'string', description: 'ISO 8601 date string to query at' },
+      },
+      required: ['name', 'asOf'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'entity_timeline',
+    description: 'η.4.4 — Get all temporal versions of an entity in chronological order (by validFrom asc, with unbounded entities last). Returns the v1.8 supersession chain when one exists.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Entity name (any version in the chain)' },
+      },
+      required: ['name'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'invalidate_observation',
+    description: 'η.4.4 — Mark a specific observation on an entity as no longer valid. Creates a parallel observationMeta[] entry if absent. Throws if observation not found on entity.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity name' },
+        content: { type: 'string', description: 'Exact observation content to invalidate' },
+        ended: { type: 'string', description: 'ISO 8601 timestamp; defaults to current time' },
+      },
+      required: ['entityName', 'content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'observations_as_of',
+    description: 'η.4.4 — Get observations valid at a given point in time. Observations with no observationMeta entry are treated as unbounded (always-valid).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityName: { type: 'string', description: 'Entity name' },
+        asOf: { type: 'string', description: 'ISO 8601 date string' },
+      },
+      required: ['entityName', 'asOf'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== η.5.5 OCC + ATTRIBUTION TOOLS ====================
+  {
+    name: 'update_entity',
+    description: 'η.5.5.c — Update an entity with optional optimistic concurrency control. Pass expectedVersion to assert the live entity is at that version; throws VersionConflictError on mismatch. Omit for legacy last-write-wins. OCC-guarded writes auto-increment version.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Entity name to update' },
+        updates: {
+          type: 'object',
+          description: 'Partial entity object — fields to change',
+          additionalProperties: true,
+        },
+        expectedVersion: {
+          type: 'number',
+          description: 'OCC: assert the live entity is at this version. Throws VersionConflictError on mismatch.',
+        },
+      },
+      required: ['name', 'updates'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== η.6.1 RBAC TOOLS ====================
+  {
+    name: 'rbac_assign_role',
+    description: 'η.6.1 — Grant a role to an agent. Roles: reader (read), writer (read+write), admin (read+write+delete), owner (all four). Optional resourceType narrows to one type; optional scope narrows to a name prefix; optional validUntil expires the grant.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'Agent identifier' },
+        role: { type: 'string', description: 'Role name (reader, writer, admin, owner, or custom)' },
+        resourceType: { type: 'string', enum: ['entity', 'relation', 'observation', 'session', 'artifact'], description: 'Optional resource-type narrow' },
+        scope: { type: 'string', description: 'Optional name prefix (e.g. "project-x:")' },
+        validFrom: { type: 'string', description: 'ISO 8601 — assignment becomes active' },
+        validUntil: { type: 'string', description: 'ISO 8601 — assignment expires' },
+        notes: { type: 'string', description: 'Free-form notes (e.g. ticket reference)' },
+      },
+      required: ['agentId', 'role'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'rbac_revoke_role',
+    description: 'η.6.1 — Remove a specific role assignment. Matching is by agentId + role + resourceType (exact, including undefined).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string' },
+        role: { type: 'string' },
+        resourceType: { type: 'string', enum: ['entity', 'relation', 'observation', 'session', 'artifact'] },
+      },
+      required: ['agentId', 'role'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'rbac_check_permission',
+    description: 'η.6.1 — Check whether an agent can perform an action on a resource type. Falls back to defaultRole=reader for agents with no assignments.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string' },
+        action: { type: 'string', enum: ['read', 'write', 'delete', 'manage'] },
+        resourceType: { type: 'string', enum: ['entity', 'relation', 'observation', 'session', 'artifact'] },
+        resourceName: { type: 'string', description: 'Optional resource name for scope-prefix matching' },
+        now: { type: 'string', description: 'Optional time override for hypothetical-time queries' },
+      },
+      required: ['agentId', 'action', 'resourceType'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'rbac_list_assignments',
+    description: 'η.6.1 — List role assignments for an agent (active or all).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string' },
+        activeOnly: { type: 'boolean', default: false, description: 'If true, filter by current time' },
+        now: { type: 'string', description: 'Optional time override (only meaningful when activeOnly=true)' },
+      },
+      required: ['agentId'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== 3B.4 PROCEDURAL MEMORY TOOLS ====================
+  {
+    name: 'add_procedure',
+    description: '3B.4 — Persist a new procedural memory (executable how-to sequence). Steps are ordered (1-indexed) with optional fallback chains. Auto-generates id when omitted. Distinct from semantic facts and episodic events.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Optional stable id; auto-generated if omitted' },
+        name: { type: 'string', description: 'Human-readable name' },
+        description: { type: 'string' },
+        steps: {
+          type: 'array',
+          description: 'Ordered step list',
+          items: {
+            type: 'object',
+            properties: {
+              order: { type: 'number', description: '1-indexed step order' },
+              action: { type: 'string', description: 'Caller-meaningful action identifier' },
+              parameters: { type: 'object', description: 'Parameter map (string → string)', additionalProperties: { type: 'string' } },
+              fallback: { type: 'object', description: 'Optional fallback step on failure' },
+              timeout: { type: 'number', description: 'Caller-enforced max duration in ms' },
+            },
+            required: ['order', 'action', 'parameters'],
+          },
+        },
+        triggers: { type: 'array', items: { type: 'string' }, description: 'Free-form trigger phrases for matching' },
+      },
+      required: ['steps'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_procedure',
+    description: '3B.4 — Load a procedure by id.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'match_procedure',
+    description: '3B.4 — Token-overlap match a context description against stored procedures. Returns ranked matches with Jaccard-like scores.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        context: { type: 'string', description: 'Context description to match against' },
+        threshold: { type: 'number', minimum: 0, maximum: 1, default: 0, description: 'Minimum match score' },
+        candidateIds: { type: 'array', items: { type: 'string' }, description: 'Optional procedure ids to match against (default: all)' },
+      },
+      required: ['context'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'refine_procedure',
+    description: '3B.4 — Apply caller feedback after a procedure execution. Increments executionCount and updates successRate via EWMA (α=0.2).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        succeeded: { type: 'boolean' },
+        notes: { type: 'string' },
+        recordedAt: { type: 'string' },
+      },
+      required: ['id', 'succeeded'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_procedure_step',
+    description: '3B.4 — Load a specific step from a procedure by 1-indexed order, OR get the next step relative to currentOrder.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        order: { type: 'number', description: '1-indexed step to fetch' },
+        next: { type: 'boolean', description: 'If true, returns the step after `order` instead of step `order` itself' },
+      },
+      required: ['id', 'order'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== 3B.5 ACTIVE RETRIEVAL TOOL ====================
+  {
+    name: 'adaptive_retrieve',
+    description: '3B.5 — Run iterative query-rewriting retrieval. Up to maxRounds of (search → score coverage → rewrite). Stops early when coverage ≥ minCoverage or no expansion tokens. Pure symbolic — no LLM provider required.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string' },
+        budgetTokens: { type: 'number', description: 'Optional token budget; rejects retrieval if cost exceeds budget' },
+        maxRounds: { type: 'number', default: 3 },
+        minCoverage: { type: 'number', minimum: 0, maximum: 1, default: 0.6 },
+        resultsPerRound: { type: 'number', default: 10 },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== 3B.6 CAUSAL REASONING TOOLS ====================
+  {
+    name: 'find_causes',
+    description: '3B.6 — Find causal chains ending at the named effect. Searches paths from candidate causes via causal relation types (causes/enables/prevents/precedes/correlates). Sorted by score = product of per-edge causalStrength.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        effect: { type: 'string', description: 'Target entity name (effect)' },
+        candidates: { type: 'array', items: { type: 'string' }, description: 'Candidate cause entity names' },
+        maxDepth: { type: 'number', default: 6 },
+      },
+      required: ['effect', 'candidates'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'find_effects',
+    description: '3B.6 — Find causal chains starting at the named cause and reaching any candidate effect. Symmetric counterpart to find_causes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cause: { type: 'string' },
+        candidates: { type: 'array', items: { type: 'string' } },
+        maxDepth: { type: 'number', default: 6 },
+      },
+      required: ['cause', 'candidates'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'counterfactual_query',
+    description: '3B.6 — "What if we remove edge (removeFrom → removeTo)? Is predict still reachable from seed?" Returns chains from seed to predict that DO NOT use the removed edge. Pure: does not mutate the graph.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        seed: { type: 'string' },
+        removeFrom: { type: 'string' },
+        removeTo: { type: 'string' },
+        predict: { type: 'string' },
+        maxDepth: { type: 'number', default: 6 },
+      },
+      required: ['seed', 'removeFrom', 'removeTo', 'predict'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'detect_causal_cycles',
+    description: '3B.6 — Detect cycles in the causal subgraph rooted at seed. CAVEAT: treats prevents as a directed edge, not as logical negation — prevents+enables triangles ARE flagged.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        seed: { type: 'string' },
+        maxDepth: { type: 'number', default: 6 },
+      },
+      required: ['seed'],
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== 3B.7 WORLD MODEL TOOLS ====================
+  {
+    name: 'get_world_state',
+    description: '3B.7 — Capture a fresh snapshot of the live graph: entitiesByName + takenAt timestamp + size. Capped at maxSnapshotSize (default 1000); over-cap prefers high-importance entities.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'validate_fact_against_world',
+    description: '3B.7 — Validate a candidate observation against a target entity. Delegates to MemoryValidator.validateConsistency. Returns null if no validator is wired.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        observation: { type: 'string' },
+        entityName: { type: 'string' },
+      },
+      required: ['observation', 'entityName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'predict_outcome',
+    description: '3B.7 — Predict downstream effects of an action by walking the causal subgraph. Delegates to CausalReasoner.findEffects.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', description: 'Action entity name' },
+        candidates: { type: 'array', items: { type: 'string' }, description: 'Candidate effect entity names' },
+      },
+      required: ['action', 'candidates'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 // Tool categories are documented in CLAUDE.md for reference:

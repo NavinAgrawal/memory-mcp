@@ -56,7 +56,7 @@ describe('MCPServer Integration', () => {
   });
 
   describe('Tool Registration', () => {
-    it('should have 94 tool definitions available', () => {
+    it('should have 137 tool definitions available', () => {
       // Phase 4 Sprint 9: Added 4 graph algorithm tools (find_shortest_path, find_all_paths, get_connected_components, get_centrality)
       // Phase 4 Sprint 12: Added 3 semantic search tools (semantic_search, find_similar_entities, index_embeddings)
       // Phase 10 Sprint 4: Added search_auto tool
@@ -66,7 +66,15 @@ describe('MCPServer Integration', () => {
       // Phase 13: Added 12 tools for memoryjs v1.8.0/v1.9.0 (list_projects, get_entity_versions, get_version_chain,
       //   forget_memory, get_profile, update_profile, invalidate_relation, query_as_of, timeline,
       //   ingest, diary_write, diary_read)
-      expect(toolDefinitions).toHaveLength(106);
+      // Phase 14: Added 31 tools for cognitive core, maintenance intelligence, decay/salience,
+      //   multi-agent, and observability (session_start, session_end, session_checkpoint, session_restore,
+      //   add_working_memory, promote_working_memory, confirm_memory, clear_expired_memories, wake_up,
+      //   auto_link_observations, extract_facts, detect_contradictions, consolidate_session, detect_patterns,
+      //   summarize_entity, priority_dedup, compress_context, run_decay_cycle, get_decayed_memories,
+      //   forget_weak_memories, reinforce_memory, score_salience, register_agent, search_cross_agent,
+      //   set_memory_visibility, get_visible_memories, resolve_agent_conflict, visualize_graph,
+      //   split_transcript, estimate_query_cost, get_context_profile)
+      expect(toolDefinitions).toHaveLength(137);
     });
 
     it('should have matching handlers for all definitions', async () => {

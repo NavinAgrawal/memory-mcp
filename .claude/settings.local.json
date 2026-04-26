@@ -178,7 +178,16 @@
       "Bash(claude/validate-phase-3-AK972 )",
       "Bash(claude/validate-phase-4-8YOp9 )",
       "Bash(claude/validate-phase-4-sprint-jvXJJ )",
-      "Bash(claude/validate-phase-9b-rKaiY)"
+      "Bash(claude/validate-phase-9b-rKaiY)",
+      "Read(//c/Users/danie/Dropbox/Github/memoryjs/**)",
+      "Bash(python -X utf8)",
+      "Bash(grep -n -A 10 \"interface ForgetOptions\" src/agent/DecayEngine.ts)",
+      "Bash(grep -n -A 10 \"interface VisualizeOptions\" src/IOManager.ts)",
+      "Bash(grep -rn \"interface VisualizeOptions\" src/)",
+      "Bash(grep -n -A 10 \"interface StartSessionOptions\" src/agent/SessionManager.ts)",
+      "Bash(python -X utf8 -c ':*)",
+      "Bash(python -X utf8 -c \" import json, sys data = json.load\\(sys.stdin\\) for file, cov in data.items\\(\\): if 'toolHandlers' in file or 'MCPServer' in file: print\\(f'{file}:'\\) for metric, vals in cov.items\\(\\): if isinstance\\(vals, dict\\) and 'pct' in vals: print\\(f' {metric}: {vals[\\\\\"pct\\\\\"]}% \\({vals.get\\(\\\\\"covered\\\\\",\\\\\"?\\\\\"\\)}/{vals.get\\(\\\\\"total\\\\\",\\\\\"?\\\\\"\\)}\\)'\\) \")",
+      "Bash(SKIP_BENCHMARKS=1 npm test)"
     ],
     "deny": [],
     "ask": []

@@ -386,4 +386,344 @@ describe('Handler Smoke Tests', () => {
       expect(result.isError).toBeUndefined();
     });
   });
+
+  // ==================== SEMANTIC SEARCH HANDLERS (no provider) ====================
+  describe('semantic_search handler', () => {
+    it('should handle search when no embedding provider configured', async () => {
+      const result = await handleToolCall('semantic_search', { query: 'test' }, manager);
+      // Without an embedding provider, returns a message (may or may not set isError)
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toBeDefined();
+    });
+  });
+
+  describe('index_embeddings handler', () => {
+    it('should handle indexing on empty graph', async () => {
+      const result = await handleToolCall('index_embeddings', {}, manager);
+      expect(result.content).toBeDefined();
+    });
+
+    it('should handle indexing with seeded data', async () => {
+      await seedGraph();
+      const result = await handleToolCall('index_embeddings', {}, manager);
+      expect(result.content).toBeDefined();
+    });
+  });
+
+  // ==================== ANALYZE QUERY HANDLER ====================
+  describe('analyze_query handler', () => {
+    it('should analyze a simple query', async () => {
+      const result = await handleToolCall('analyze_query', { query: 'software engineer' }, manager);
+      expect(result.isError).toBeUndefined();
+      const parsed = JSON.parse((result.content as Array<{ type: string; text: string }>)[0].text);
+      expect(parsed.query).toBe('software engineer');
+      expect(parsed.analysis).toBeDefined();
+    });
+
+    it('should include plan when includePlan is true', async () => {
+      const result = await handleToolCall('analyze_query', { query: 'find all engineers', includePlan: true }, manager);
+      expect(result.isError).toBeUndefined();
+      const parsed = JSON.parse((result.content as Array<{ type: string; text: string }>)[0].text);
+      expect(parsed.plan).toBeDefined();
+    });
+
+    it('should not include plan by default', async () => {
+      const result = await handleToolCall('analyze_query', { query: 'test query' }, manager);
+      expect(result.isError).toBeUndefined();
+      const parsed = JSON.parse((result.content as Array<{ type: string; text: string }>)[0].text);
+      expect(parsed.plan).toBeUndefined();
+    });
+  });
+
+  // ==================== INVALIDATE RELATION HANDLER ====================
+  describe('invalidate_relation handler', () => {
+    beforeEach(seedGraph);
+
+    it('should invalidate an existing relation', async () => {
+      const result = await handleToolCall('invalidate_relation', {
+        from: 'Alice',
+        relationType: 'works_on',
+        to: 'ProjectX',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('Invalidated');
+    });
+
+    it('should accept custom ended date', async () => {
+      const result = await handleToolCall('invalidate_relation', {
+        from: 'Alice',
+        relationType: 'collaborates_with',
+        to: 'Bob',
+        ended: '2025-01-01T00:00:00Z',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('2025-01-01');
+    });
+
+    it('should handle non-existent relation gracefully', async () => {
+      const result = await handleToolCall('invalidate_relation', {
+        from: 'Alice',
+        relationType: 'nonexistent',
+        to: 'Bob',
+      }, manager);
+      // May succeed or return error depending on implementation
+      expect(result.content).toBeDefined();
+    });
+  });
+
+  // ==================== NORMALIZE OBSERVATIONS HANDLER ====================
+  describe('normalize_observations handler', () => {
+    beforeEach(seedGraph);
+
+    it('should normalize all observations', async () => {
+      const result = await handleToolCall('normalize_observations', {}, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should normalize observations for a specific entity', async () => {
+      const result = await handleToolCall('normalize_observations', {
+        entityName: 'Alice',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== FORGET MEMORY HANDLER ====================
+  describe('forget_memory handler', () => {
+    beforeEach(seedGraph);
+
+    it('should handle non-matching content', async () => {
+      const result = await handleToolCall('forget_memory', {
+        content: 'completely nonexistent thing xyz123',
+      }, manager);
+      // Returns either not_found message or error - both are valid
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toBeDefined();
+    });
+
+    it('should perform dry run without deleting', async () => {
+      const result = await handleToolCall('forget_memory', {
+        content: 'software engineer',
+        dryRun: true,
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should forget matching content', async () => {
+      const result = await handleToolCall('forget_memory', {
+        content: 'software engineer',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== INGEST HANDLER ====================
+  describe('ingest handler', () => {
+    it('should return message when no messages provided', async () => {
+      const result = await handleToolCall('ingest', { messages: [] }, manager);
+      expect(result.isError).toBeUndefined();
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('No messages provided');
+    });
+
+    it('should ingest valid messages', async () => {
+      const result = await handleToolCall('ingest', {
+        messages: [
+          { role: 'user', content: 'What is the capital of France?' },
+          { role: 'assistant', content: 'The capital of France is Paris.' },
+        ],
+        source: 'test-conversation',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should support tags and projectId', async () => {
+      const result = await handleToolCall('ingest', {
+        messages: [
+          { role: 'user', content: 'Hello world' },
+        ],
+        source: 'test',
+        projectId: 'proj-1',
+        tags: ['test-tag'],
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== GET ENTITY VERSIONS HANDLER ====================
+  describe('get_entity_versions handler', () => {
+    beforeEach(seedGraph);
+
+    it('should return version info for existing entity', async () => {
+      const result = await handleToolCall('get_entity_versions', {
+        entityName: 'Alice',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should return error for non-existent entity', async () => {
+      const result = await handleToolCall('get_entity_versions', {
+        entityName: 'NonExistent',
+      }, manager);
+      expect(result.isError).toBe(true);
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('not found');
+    });
+  });
+
+  // ==================== GET CENTRALITY HANDLER ====================
+  describe('get_centrality handler', () => {
+    beforeEach(seedGraph);
+
+    it('should calculate degree centrality by default', async () => {
+      const result = await handleToolCall('get_centrality', {}, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should calculate betweenness centrality', async () => {
+      const result = await handleToolCall('get_centrality', {
+        algorithm: 'betweenness',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should calculate pagerank centrality', async () => {
+      const result = await handleToolCall('get_centrality', {
+        algorithm: 'pagerank',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should accept topN parameter', async () => {
+      const result = await handleToolCall('get_centrality', {
+        algorithm: 'degree',
+        direction: 'in',
+        topN: 2,
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== MERGE ENTITIES HANDLER ====================
+  describe('merge_entities handler', () => {
+    beforeEach(seedGraph);
+
+    it('should merge entities', async () => {
+      const result = await handleToolCall('merge_entities', {
+        entityNames: ['Alice', 'Bob'],
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should merge entities with custom target name', async () => {
+      const result = await handleToolCall('merge_entities', {
+        entityNames: ['Alice', 'Bob'],
+        targetName: 'AliceBob',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== FIND SHORTEST PATH HANDLER ====================
+  describe('find_shortest_path handler', () => {
+    beforeEach(seedGraph);
+
+    it('should find path between connected entities', async () => {
+      const result = await handleToolCall('find_shortest_path', {
+        source: 'Alice',
+        target: 'Bob',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should handle no path found', async () => {
+      // Create an isolated entity
+      await handleToolCall('create_entities', {
+        entities: [{ name: 'Isolated', entityType: 'person', observations: ['alone'] }],
+      }, manager);
+      const result = await handleToolCall('find_shortest_path', {
+        source: 'Alice',
+        target: 'Isolated',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('No path found');
+    });
+  });
+
+  // ==================== SMART SEARCH HANDLER ====================
+  describe('smart_search handler', () => {
+    beforeEach(seedGraph);
+
+    it('should perform smart search with defaults', async () => {
+      const result = await handleToolCall('smart_search', {
+        query: 'software engineer',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should accept maxIterations parameter', async () => {
+      const result = await handleToolCall('smart_search', {
+        query: 'project manager',
+        maxIterations: 1,
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== HYBRID SEARCH HANDLER ====================
+  describe('hybrid_search handler', () => {
+    beforeEach(seedGraph);
+
+    it('should perform hybrid search with defaults', async () => {
+      const result = await handleToolCall('hybrid_search', {
+        query: 'engineer',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should accept custom weights and filters', async () => {
+      const result = await handleToolCall('hybrid_search', {
+        query: 'engineer',
+        weights: { semantic: 0.3, lexical: 0.5, symbolic: 0.2 },
+        filters: { entityTypes: ['person'] },
+        limit: 5,
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
+
+  // ==================== UPDATE PROFILE HANDLER ====================
+  describe('update_profile handler', () => {
+    it('should add a static profile fact', async () => {
+      const result = await handleToolCall('update_profile', {
+        content: 'User prefers dark mode',
+        type: 'static',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('static');
+    });
+
+    it('should add a dynamic profile fact', async () => {
+      const result = await handleToolCall('update_profile', {
+        content: 'Currently working on ProjectX',
+        type: 'dynamic',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+      const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+      expect(text).toContain('dynamic');
+    });
+
+    it('should accept projectId', async () => {
+      const result = await handleToolCall('update_profile', {
+        content: 'Prefers TypeScript',
+        type: 'static',
+        projectId: 'proj-1',
+      }, manager);
+      expect(result.isError).toBeUndefined();
+    });
+  });
 });

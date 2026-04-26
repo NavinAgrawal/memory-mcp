@@ -34,7 +34,7 @@ npm run tools:build   # Build all standalone tools
 
 ## Architecture Overview
 
-This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 106 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
+This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing 137 knowledge graph tools via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs.
 
 **npm:** `@danielsimonjr/memory-mcp` | **Core lib:** `@danielsimonjr/memoryjs` (versions in package.json)
 
@@ -57,7 +57,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 |------|------|
 | `index.ts` | Entry point. Creates `ManagerContext`, starts `MCPServer`. Re-exports types from memoryjs for backward compatibility. |
 | `server/MCPServer.ts` | Creates MCP `Server`, registers `ListToolsRequest` and `CallToolRequest` handlers. Uses stdio transport. |
-| `server/toolDefinitions.ts` | Array of 106 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
+| `server/toolDefinitions.ts` | Array of 137 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
 | `server/toolHandlers.ts` | Handler registry (`Record<string, ToolHandler>`). Each handler validates args with Zod schemas from memoryjs, calls the appropriate manager method, and returns formatted responses. Large-response tools are wrapped with `withCompression()`. |
 | `server/responseCompressor.ts` | Auto-compresses responses >256KB with brotli + base64 encoding. Uses `compress`/`decompress` from memoryjs. |
 
@@ -71,7 +71,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 - **Lazy managers**: `ManagerContext` instantiates managers on first access. Available accessors: `ctx.entityManager`, `ctx.relationManager`, `ctx.observationManager`, `ctx.searchManager`, `ctx.tagManager`, `ctx.hierarchyManager`, `ctx.analyticsManager`, `ctx.compressionManager`, `ctx.archiveManager`, `ctx.ioManager`, `ctx.graphTraversal`, `ctx.semanticSearch`, `ctx.rankedSearch`, `ctx.storage` (direct GraphStorage).
 - **Backward compat**: `index.ts` re-exports `ManagerContext` as `KnowledgeGraphManager` alias, plus core types.
 
-### Tool Categories (106 tools across 38 categories)
+### Tool Categories (137 tools across 44 categories)
 
 | Category | Count | Key Purpose |
 |----------|-------|-------------|
@@ -111,8 +111,16 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 | **Temporal KG** | **3** | Temporal relation invalidation, time-travel queries, relation timeline (v1.9.0) |
 | **Ingestion** | **1** | Format-agnostic conversation/document ingestion pipeline (v1.9.0) |
 | **Agent Diary** | **2** | Per-agent persistent journal write and read (v1.9.0) |
+| **Session & Working Memory** | **9** | Session lifecycle, working memory CRUD, TTL, promotion, context wake-up (Phase 14) |
+| **Auto-Enhancement** | **3** | Auto-link entity mentions, fact extraction, contradiction detection (Phase 14) |
+| **Context Compression** | **1** | N-gram text abbreviation with legend for token savings (Phase 14) |
+| **Consolidation Pipeline** | **3** | Session consolidation, pattern detection, entity summarization (Phase 14) |
+| **Decay & Salience** | **5** | Time-based decay, importance scoring, weak memory cleanup, reinforcement (Phase 14) |
+| **Multi-Agent** | **5** | Agent registration, cross-agent search, visibility, conflict resolution (Phase 14) |
+| **Observability** | **4** | D3.js graph visualization, transcript splitting, query cost estimation (Phase 14) |
+| **Dedup** | **1** | Priority-based smart deduplication (Phase 14) |
 
-New categories (v1.8.0/v1.9.0, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories.
+New categories (v1.8.0/v1.9.0/Phase 14, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories.
 
 ### Adding a New Tool
 
@@ -135,18 +143,13 @@ New categories (v1.8.0/v1.9.0, bold above) are implemented in `toolDefinitions.t
 
 ## Test Structure
 
-8 test files, ~251 tests. Core graph tests are in the memoryjs package (2,882 tests).
+24 test files, ~657 tests, >92% statement coverage. Core graph tests are in the memoryjs package.
 
-| Test File | What It Tests |
-|-----------|---------------|
-| `tests/file-path.test.ts` | Storage path handling |
-| `tests/knowledge-graph.test.ts` | Core graph operations via memoryjs |
-| `tests/integration/server.test.ts` | MCP server integration |
-| `tests/e2e/tools/entity-tools.test.ts` | Entity tool end-to-end |
-| `tests/e2e/tools/observation-tools.test.ts` | Observation tool end-to-end |
-| `tests/e2e/tools/relation-tools.test.ts` | Relation tool end-to-end |
-| `tests/unit/response-compressor.test.ts` | Response compressor unit tests |
-| `tests/e2e/tools/handler-smoke.test.ts` | Smoke tests for 36 tool handlers |
+Tests are organized in three tiers:
+- **Unit** (`tests/unit/`): Isolated module tests (e.g., response compressor)
+- **Integration** (`tests/integration/`): MCP server lifecycle tests
+- **E2E** (`tests/e2e/tools/`): Per-category tool tests — one file per tool group (entity, relation, observation, governance, freshness, dream, entropy, etc.) plus `handler-smoke.test.ts` for broad handler coverage
+- **Root** (`tests/`): Core graph operations (`knowledge-graph.test.ts`) and storage path handling (`file-path.test.ts`)
 
 Vitest config: `vitest.config.ts`. Coverage targets `src/**/*.ts` (excludes index barrel files). Custom reporter at `tests/test-results/per-file-reporter.js`.
 
@@ -187,6 +190,7 @@ npm publish --access public
 
 ## Gotchas
 
+- **Local file dependency**: `@danielsimonjr/memoryjs` is linked via `file:C:/Users/danie/Dropbox/Github/memoryjs` in package.json. Changes to the memoryjs repo are picked up on `npm install` — no npm publish needed for local dev. This means `npm install` will fail on machines without that local path.
 - **Data files are gitignored**: `*.jsonl` and `memory.db` are in `.gitignore` — test runs create/modify these in the project root but they won't appear in `git status`.
 - **Error handling in dispatch**: `handleToolCall` catches exceptions from handlers and returns them as MCP-formatted error responses (not thrown). Check MCP response `isError` field when debugging.
 - **TypeScript target**: ES2022 with Node16 module resolution. The `prepare` script runs `npm run build` on install, so `dist/` is rebuilt automatically.

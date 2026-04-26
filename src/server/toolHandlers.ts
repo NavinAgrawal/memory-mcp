@@ -1,7 +1,7 @@
 /**
  * MCP Tool Handlers
  *
- * Contains handler functions for all 106 Knowledge Graph tools.
+ * Contains handler functions for all 137 Knowledge Graph tools.
  * Handlers call managers directly via ManagerContext.
  * All core functionality is imported from @danielsimonjr/memoryjs.
  *
@@ -52,6 +52,12 @@ import {
   EntropyFilterStage,
   getRoleProfile,
   listRoleProfiles,
+  QueryCostEstimator,
+  ContradictionDetector,
+  PiiRedactor,
+  RoleAssignmentStore,
+  RbacMiddleware,
+  CollaborationAuditEnforcer,
   type ManagerContext,
   type AgentRole,
   type ArtifactFilter,
@@ -62,6 +68,9 @@ import {
   type AgentEntity,
   type DreamEngineConfig,
   type DreamPhaseConfig,
+  type ForgetOptions,
+  type ConflictInfo,
+  type ConflictStrategy,
 } from '@danielsimonjr/memoryjs';
 import { z } from 'zod';
 import { maybeCompressResponse } from './responseCompressor.js';
@@ -79,6 +88,7 @@ const distillationPipelineMap = new WeakMap<ManagerContext, DistillationPipeline
 const failureDistillationMap = new WeakMap<ManagerContext, FailureDistillation>();
 const consolidationSchedulerMap = new WeakMap<ManagerContext, ConsolidationScheduler>();
 const dreamEngineMap = new WeakMap<ManagerContext, DreamEngine>();
+const queryCostEstimatorMap = new WeakMap<ManagerContext, QueryCostEstimator>();
 
 function getStorageFilePath(ctx: ManagerContext): string {
   // GraphStorage exposes filePath publicly; fall back to cwd-relative default
@@ -919,6 +929,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ? validateWithSchema(args.compressionQuality, z.number().int().min(0).max(11), 'Invalid compression quality (must be 0-11)')
       : undefined;
     const streaming = args.streaming !== undefined ? validateWithSchema(args.streaming, z.boolean(), 'Invalid streaming value') : undefined;
+    const redactPii = args.redactPii !== undefined ? validateWithSchema(args.redactPii, z.boolean(), 'Invalid redactPii value') : false;
     const rawOutputPath = args.outputPath !== undefined ? validateWithSchema(args.outputPath, z.string(), 'Invalid outputPath value') : undefined;
     // Validate outputPath to prevent path traversal attacks
     const outputPath = rawOutputPath !== undefined ? validateFilePath(rawOutputPath) : undefined;
@@ -934,6 +945,11 @@ export const toolHandlers: Record<string, ToolHandler> = {
       );
     } else {
       graph = await ctx.storage.loadGraph();
+    }
+
+    // η.6.3 — apply PII redactor on export when requested
+    if (redactPii) {
+      graph = new PiiRedactor().redactGraph(graph);
     }
 
     // Export with optional compression and streaming
@@ -1706,6 +1722,587 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const amm = ctx.agentMemory();
     const entries = await amm.readDiary(agentId, { lastN, topic });
     return formatToolResponse({ agentId, entries, count: entries.length });
+  },
+
+  // ==================== SESSION & WORKING MEMORY HANDLERS ====================
+
+  session_start: async (ctx, args) => {
+    const goalDescription = args.taskDescription !== undefined ? validateWithSchema(args.taskDescription, z.string(), 'Invalid taskDescription') : undefined;
+    const previousSessionId = args.parentSessionId !== undefined ? validateWithSchema(args.parentSessionId, z.string(), 'Invalid parentSessionId') : undefined;
+    const amm = ctx.agentMemory();
+    const session = await amm.startSession({ goalDescription, previousSessionId });
+    return formatToolResponse(session);
+  },
+
+  session_end: async (ctx, args) => {
+    const sessionId = validateWithSchema(args.sessionId, z.string().min(1), 'Invalid sessionId');
+    const status = args.status !== undefined
+      ? validateWithSchema(args.status, z.enum(['completed', 'abandoned']), 'Invalid status') as 'completed' | 'abandoned'
+      : undefined;
+    const amm = ctx.agentMemory();
+    const result = await amm.endSession(sessionId, status);
+    return formatToolResponse(result);
+  },
+
+  session_checkpoint: async (ctx, args) => {
+    const sessionId = validateWithSchema(args.sessionId, z.string().min(1), 'Invalid sessionId');
+    const name = args.name !== undefined ? validateWithSchema(args.name, z.string(), 'Invalid name') : undefined;
+    const amm = ctx.agentMemory();
+    const checkpoint = await amm.checkpointSession(sessionId, name);
+    return formatToolResponse(checkpoint);
+  },
+
+  session_restore: async (ctx, args) => {
+    const checkpointId = validateWithSchema(args.checkpointId, z.string().min(1), 'Invalid checkpointId');
+    const amm = ctx.agentMemory();
+    await amm.restoreSession(checkpointId);
+    return formatTextResponse(`Session restored from checkpoint '${checkpointId}'`);
+  },
+
+  add_working_memory: async (ctx, args) => {
+    const sessionId = validateWithSchema(args.sessionId, z.string().min(1), 'Invalid sessionId');
+    const content = validateWithSchema(args.content, z.string().min(1), 'Invalid content');
+    const taskId = args.taskId !== undefined ? validateWithSchema(args.taskId, z.string(), 'Invalid taskId') : undefined;
+    const importance = args.importance !== undefined ? validateWithSchema(args.importance, z.number().min(0).max(10), 'Invalid importance') : undefined;
+    const ttlHours = args.ttlHours !== undefined ? validateWithSchema(args.ttlHours, z.number().positive(), 'Invalid ttlHours') : undefined;
+    const amm = ctx.agentMemory();
+    const memory = await amm.addWorkingMemory({ sessionId, content, taskId, importance, ttlHours });
+    return formatToolResponse(memory);
+  },
+
+  promote_working_memory: async (ctx, args) => {
+    const memoryName = validateWithSchema(args.memoryName, z.string().min(1), 'Invalid memoryName');
+    const targetType = args.targetType !== undefined
+      ? validateWithSchema(args.targetType, z.enum(['episodic', 'semantic']), 'Invalid targetType') as 'episodic' | 'semantic'
+      : undefined;
+    const amm = ctx.agentMemory();
+    const result = await amm.promoteMemory(memoryName, targetType);
+    return formatToolResponse(result);
+  },
+
+  confirm_memory: async (ctx, args) => {
+    const memoryName = validateWithSchema(args.memoryName, z.string().min(1), 'Invalid memoryName');
+    const confidenceBoost = args.confidenceBoost !== undefined ? validateWithSchema(args.confidenceBoost, z.number(), 'Invalid confidenceBoost') : undefined;
+    const amm = ctx.agentMemory();
+    const result = await amm.confirmMemory(memoryName, confidenceBoost);
+    return formatToolResponse(result);
+  },
+
+  clear_expired_memories: async (ctx) => {
+    const amm = ctx.agentMemory();
+    const count = await amm.clearExpiredMemories();
+    return formatTextResponse(`Cleared ${count} expired working memories`);
+  },
+
+  wake_up: async (ctx, args) => {
+    const compress = args.compress !== undefined ? validateWithSchema(args.compress, z.boolean(), 'Invalid compress') : undefined;
+    const result = await ctx.contextWindowManager.wakeUp({ compress });
+    return formatToolResponse(result);
+  },
+
+  // ==================== AUTO-ENHANCEMENT HANDLERS ====================
+
+  auto_link_observations: async (ctx, args) => {
+    const text = validateWithSchema(args.text, z.string().min(1), 'Invalid text');
+    const graph = await ctx.storage.loadGraph();
+    const mentions = ctx.autoLinker.detectMentions(text, graph.entities);
+    return formatToolResponse({ mentions, count: mentions.length });
+  },
+
+  extract_facts: async (ctx, args) => {
+    const text = validateWithSchema(args.text, z.string().min(1), 'Invalid text');
+    const facts = ctx.factExtractor.extract(text);
+    return formatToolResponse({ facts, count: facts.length });
+  },
+
+  detect_contradictions: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const threshold = args.threshold !== undefined ? validateWithSchema(args.threshold, z.number().min(0).max(1), 'Invalid threshold') : undefined;
+    const graph = await ctx.storage.loadGraph();
+    const entity = graph.entities.find(e => e.name === entityName);
+    if (!entity) {
+      return { content: [{ type: 'text' as const, text: `Entity '${entityName}' not found` }], isError: true };
+    }
+    if (!ctx.semanticSearch) {
+      return formatTextResponse('Contradiction detection requires semantic search (set MEMORY_EMBEDDING_PROVIDER)');
+    }
+    const detector = new ContradictionDetector(ctx.semanticSearch, threshold ?? 0.85);
+    const contradictions = await detector.detect(entity, entity.observations);
+    return formatToolResponse({ entityName, contradictions, count: contradictions.length });
+  },
+
+  consolidate_session: async (ctx, args) => {
+    const sessionId = validateWithSchema(args.sessionId, z.string().min(1), 'Invalid sessionId');
+    const amm = ctx.agentMemory();
+    const result = await amm.consolidateSession(sessionId);
+    return formatToolResponse(result);
+  },
+
+  detect_patterns: async (ctx, args) => {
+    const entityType = validateWithSchema(args.entityType, z.string().min(1), 'Invalid entityType');
+    const minOccurrences = args.minOccurrences !== undefined ? validateWithSchema(args.minOccurrences, z.number().int().min(2), 'Invalid minOccurrences') : undefined;
+    const amm = ctx.agentMemory();
+    const patterns = await amm.consolidationPipeline.extractPatterns(entityType, minOccurrences);
+    return formatToolResponse({ patterns, count: patterns.length });
+  },
+
+  summarize_entity: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const threshold = args.threshold !== undefined ? validateWithSchema(args.threshold, z.number().min(0).max(1), 'Invalid threshold') : undefined;
+    const amm = ctx.agentMemory();
+    const result = await amm.consolidationPipeline.applySummarizationToEntity(entityName, threshold);
+    return formatToolResponse(result);
+  },
+
+  priority_dedup: async (ctx) => {
+    const result = await ctx.compressionManager.priorityDedup();
+    return formatToolResponse(result);
+  },
+
+  // ==================== CONTEXT COMPRESSION HANDLERS ====================
+
+  compress_context: async (ctx, args) => {
+    const text = validateWithSchema(args.text, z.string().min(1), 'Invalid text');
+    const level = args.level !== undefined
+      ? validateWithSchema(args.level, z.enum(['light', 'medium', 'aggressive']), 'Invalid level') as 'light' | 'medium' | 'aggressive'
+      : undefined;
+    const result = ctx.contextWindowManager.compressForContext(text, { level });
+    return formatToolResponse(result);
+  },
+
+  // ==================== DECAY & SALIENCE HANDLERS ====================
+
+  run_decay_cycle: async (ctx) => {
+    const amm = ctx.agentMemory();
+    const result = await amm.runDecayCycle();
+    return formatToolResponse(result);
+  },
+
+  get_decayed_memories: async (ctx, args) => {
+    const threshold = args.threshold !== undefined ? validateWithSchema(args.threshold, z.number(), 'Invalid threshold') : undefined;
+    const amm = ctx.agentMemory();
+    const memories = await amm.getDecayedMemories(threshold);
+    return formatToolResponse({ memories, count: memories.length });
+  },
+
+  forget_weak_memories: async (ctx, args) => {
+    const effectiveImportanceThreshold = args.threshold !== undefined
+      ? validateWithSchema(args.threshold, z.number(), 'Invalid threshold')
+      : 0.1;
+    const dryRun = args.dryRun !== undefined ? validateWithSchema(args.dryRun, z.boolean(), 'Invalid dryRun') : undefined;
+    const olderThanHours = args.maxCount !== undefined ? validateWithSchema(args.maxCount, z.number().int().positive(), 'Invalid olderThanHours') : undefined;
+    const options: ForgetOptions = { effectiveImportanceThreshold, dryRun, olderThanHours };
+    const amm = ctx.agentMemory();
+    const result = await amm.forgetWeakMemories(options);
+    return formatToolResponse(result);
+  },
+
+  reinforce_memory: async (ctx, args) => {
+    const memoryName = validateWithSchema(args.memoryName, z.string().min(1), 'Invalid memoryName');
+    const confirmationBoost = args.confirmationBoost !== undefined ? validateWithSchema(args.confirmationBoost, z.number(), 'Invalid confirmationBoost') : undefined;
+    const confidenceBoost = args.confidenceBoost !== undefined ? validateWithSchema(args.confidenceBoost, z.number(), 'Invalid confidenceBoost') : undefined;
+    const amm = ctx.agentMemory();
+    await amm.reinforceMemory(memoryName, { confirmationBoost, confidenceBoost });
+    return formatTextResponse(`Memory '${memoryName}' reinforced`);
+  },
+
+  score_salience: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const queryText = args.queryText !== undefined ? validateWithSchema(args.queryText, z.string(), 'Invalid queryText') : undefined;
+    const taskDescription = args.taskDescription !== undefined ? validateWithSchema(args.taskDescription, z.string(), 'Invalid taskDescription') : undefined;
+    const sessionId = args.sessionId !== undefined ? validateWithSchema(args.sessionId, z.string(), 'Invalid sessionId') : undefined;
+    const graph = await ctx.storage.loadGraph();
+    const entity = graph.entities.find(e => e.name === entityName);
+    if (!entity) {
+      return { content: [{ type: 'text' as const, text: `Entity '${entityName}' not found` }], isError: true };
+    }
+    const context: SalienceContext = { queryText, currentTask: taskDescription, currentSession: sessionId };
+    const scored = await ctx.salienceEngine.calculateSalience(entity as AgentEntity, context);
+    return formatToolResponse(scored);
+  },
+
+  // ==================== MULTI-AGENT HANDLERS ====================
+
+  register_agent: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const type = args.type !== undefined ? validateWithSchema(args.type, z.string(), 'Invalid type') as 'llm' | 'tool' | 'human' | 'system' | 'default' : 'default' as const;
+    const trustLevel = args.trustLevel !== undefined ? validateWithSchema(args.trustLevel, z.number().min(0).max(1), 'Invalid trustLevel') : 0.5;
+    const capabilities = args.capabilities !== undefined ? validateWithSchema(args.capabilities, z.array(z.string()), 'Invalid capabilities') : [];
+    const amm = ctx.agentMemory();
+    amm.registerAgent(agentId, { name: agentId, type, trustLevel, capabilities });
+    return formatTextResponse(`Agent '${agentId}' registered (type: ${type}, trust: ${trustLevel})`);
+  },
+
+  search_cross_agent: async (ctx, args) => {
+    const requestingAgentId = validateWithSchema(args.requestingAgentId, z.string().min(1), 'Invalid requestingAgentId');
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const agentIds = args.agentIds !== undefined ? validateWithSchema(args.agentIds, z.array(z.string()), 'Invalid agentIds') : undefined;
+    const amm = ctx.agentMemory();
+    const results = await amm.searchCrossAgent(requestingAgentId, query, { agentIds });
+    return withCompression(async () => formatToolResponse({ results, count: results.length }));
+  },
+
+  set_memory_visibility: async (ctx, args) => {
+    const memoryName = validateWithSchema(args.memoryName, z.string().min(1), 'Invalid memoryName');
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const visibility = validateWithSchema(args.visibility, z.enum(['private', 'team', 'org', 'shared', 'public']), 'Invalid visibility');
+    // η.5.5.b extensions
+    const allowedRoles = args.allowedRoles !== undefined
+      ? validateWithSchema(args.allowedRoles, z.array(z.string()), 'Invalid allowedRoles')
+      : undefined;
+    const visibleFrom = args.visibleFrom !== undefined ? validateWithSchema(args.visibleFrom, z.string(), 'Invalid visibleFrom') : undefined;
+    const visibleUntil = args.visibleUntil !== undefined ? validateWithSchema(args.visibleUntil, z.string(), 'Invalid visibleUntil') : undefined;
+
+    const amm = ctx.agentMemory();
+    const result = await amm.multiAgentManager.setMemoryVisibility(memoryName, agentId, visibility);
+
+    // Bug 3 fix: previously returned null silently when entity wasn't an
+    // AgentEntity. Auto-promote: stamp agentId + memoryType + role/window
+    // fields so the visibility takes effect. Error if the entity doesn't
+    // exist at all.
+    if (result === null) {
+      const graph = await ctx.storage.getGraphForMutation();
+      const entity = graph.entities.find(e => e.name === memoryName) as Record<string, unknown> | undefined;
+      if (!entity) {
+        return {
+          content: [{ type: 'text', text: `Entity '${memoryName}' not found — cannot set visibility` }],
+          isError: true,
+        };
+      }
+      // Promote plain Entity → AgentEntity by stamping multi-agent fields
+      entity.agentId = agentId;
+      entity.visibility = visibility;
+      if (entity.memoryType === undefined) entity.memoryType = 'semantic';
+      if (entity.confidence === undefined) entity.confidence = 0.8;
+      if (entity.confirmationCount === undefined) entity.confirmationCount = 0;
+      if (entity.accessCount === undefined) entity.accessCount = 0;
+      // η.5.5.b extension fields
+      if (allowedRoles !== undefined) entity.allowedRoles = allowedRoles;
+      if (visibleFrom !== undefined) entity.visibleFrom = visibleFrom;
+      if (visibleUntil !== undefined) entity.visibleUntil = visibleUntil;
+      await ctx.storage.saveGraph(graph);
+      return formatToolResponse({
+        memoryName,
+        agentId,
+        visibility,
+        allowedRoles,
+        visibleFrom,
+        visibleUntil,
+        promoted: true,
+        message: 'Plain entity auto-promoted to AgentEntity with visibility set',
+      });
+    }
+
+    // Already an AgentEntity — apply η.5.5.b extension fields if provided
+    if (allowedRoles !== undefined || visibleFrom !== undefined || visibleUntil !== undefined) {
+      const graph = await ctx.storage.getGraphForMutation();
+      const entity = graph.entities.find(e => e.name === memoryName) as Record<string, unknown> | undefined;
+      if (entity) {
+        if (allowedRoles !== undefined) entity.allowedRoles = allowedRoles;
+        if (visibleFrom !== undefined) entity.visibleFrom = visibleFrom;
+        if (visibleUntil !== undefined) entity.visibleUntil = visibleUntil;
+        await ctx.storage.saveGraph(graph);
+      }
+    }
+
+    return formatToolResponse(result);
+  },
+
+  get_visible_memories: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const amm = ctx.agentMemory();
+    const memories = await amm.multiAgentManager.getVisibleMemories(agentId);
+    return withCompression(async () => formatToolResponse({ memories, count: memories.length }));
+  },
+
+  resolve_agent_conflict: async (ctx, args) => {
+    const primaryMemory = validateWithSchema(args.primaryMemory, z.string().min(1), 'Invalid primaryMemory');
+    const conflictingMemory = validateWithSchema(args.conflictingMemory, z.string().min(1), 'Invalid conflictingMemory');
+    const strategy = args.strategy !== undefined
+      ? validateWithSchema(args.strategy, z.enum(['most_recent', 'highest_confidence', 'most_confirmations', 'trusted_agent']), 'Invalid strategy') as ConflictStrategy
+      : undefined;
+    const amm = ctx.agentMemory();
+    // Build a ConflictInfo structure for the two memories
+    const conflictInfo: ConflictInfo = {
+      primaryMemory,
+      conflictingMemories: [conflictingMemory],
+      detectionMethod: 'manual',
+      suggestedStrategy: strategy ?? 'most_recent',
+      detectedAt: new Date().toISOString(),
+    };
+    const result = await amm.resolveConflict(conflictInfo, strategy);
+    return formatToolResponse(result);
+  },
+
+  // ==================== OBSERVABILITY HANDLERS ====================
+
+  visualize_graph: async (ctx, args) => {
+    const maxEntities = args.maxEntities !== undefined ? validateWithSchema(args.maxEntities, z.number().int().positive(), 'Invalid maxEntities') : undefined;
+    const title = args.title !== undefined ? validateWithSchema(args.title, z.string(), 'Invalid title') : undefined;
+    const html = await ctx.ioManager.visualizeGraph({ maxEntities, title });
+    return formatRawResponse(html);
+  },
+
+  split_transcript: async (ctx, args) => {
+    const text = validateWithSchema(args.text, z.string().min(1), 'Invalid text');
+    const result = ctx.ioManager.splitTranscript(text);
+    return formatToolResponse(result);
+  },
+
+  estimate_query_cost: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    let estimator = queryCostEstimatorMap.get(ctx);
+    if (!estimator) {
+      estimator = new QueryCostEstimator();
+      queryCostEstimatorMap.set(ctx, estimator);
+    }
+    const graph = await ctx.storage.loadGraph();
+    const estimates = estimator.estimateAllMethods(query, graph.entities.length);
+    return formatToolResponse({ query, entityCount: graph.entities.length, estimates });
+  },
+
+  get_context_profile: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const profileManager = ctx.contextWindowManager.getContextProfileManager();
+    const profile = profileManager.getProfile(name);
+    return formatToolResponse(profile);
+  },
+
+  // ==================== η.4.4 BITEMPORAL ENTITY HANDLERS ====================
+  invalidate_entity: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const ended = args.ended !== undefined
+      ? validateWithSchema(args.ended, z.string(), 'Invalid ended')
+      : undefined;
+    await ctx.entityManager.invalidateEntity(name, ended);
+    return formatTextResponse(`Invalidated entity '${name}' (ended: ${ended ?? 'now'})`);
+  },
+
+  entity_as_of: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const asOf = validateWithSchema(args.asOf, z.string().min(1), 'Invalid asOf');
+    const entity = await ctx.entityManager.entityAsOf(name, asOf);
+    if (!entity) return formatToolResponse({ entity: null, valid: false, asOf });
+    return formatToolResponse({ entity, valid: true, asOf });
+  },
+
+  entity_timeline: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const versions = await ctx.entityManager.entityTimeline(name);
+    return formatToolResponse({ name, versions, count: versions.length });
+  },
+
+  invalidate_observation: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const content = validateWithSchema(args.content, z.string().min(1), 'Invalid content');
+    const ended = args.ended !== undefined
+      ? validateWithSchema(args.ended, z.string(), 'Invalid ended')
+      : undefined;
+    await ctx.observationManager.invalidateObservation(entityName, content, ended);
+    return formatTextResponse(`Invalidated observation on '${entityName}' (ended: ${ended ?? 'now'})`);
+  },
+
+  observations_as_of: async (ctx, args) => {
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const asOf = validateWithSchema(args.asOf, z.string().min(1), 'Invalid asOf');
+    const observations = await ctx.observationManager.observationsAsOf(entityName, asOf);
+    return formatToolResponse({ entityName, asOf, observations, count: observations.length });
+  },
+
+  // ==================== η.5.5.c OCC HANDLER ====================
+  update_entity: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const updates = validateWithSchema(
+      args.updates,
+      z.record(z.unknown()),
+      'Invalid updates',
+    );
+    const expectedVersion = args.expectedVersion !== undefined
+      ? validateWithSchema(args.expectedVersion, z.number().int().positive(), 'Invalid expectedVersion')
+      : undefined;
+    const updated = await ctx.entityManager.updateEntity(
+      name,
+      updates as Parameters<typeof ctx.entityManager.updateEntity>[1],
+      expectedVersion !== undefined ? { expectedVersion } : undefined,
+    );
+    return formatToolResponse(updated);
+  },
+
+  // ==================== η.6.1 RBAC HANDLERS ====================
+  rbac_assign_role: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const role = validateWithSchema(args.role, z.string().min(1), 'Invalid role');
+    const resourceType = args.resourceType !== undefined
+      ? validateWithSchema(
+          args.resourceType,
+          z.enum(['entity', 'relation', 'observation', 'session', 'artifact']),
+          'Invalid resourceType',
+        )
+      : undefined;
+    const scope = args.scope !== undefined ? validateWithSchema(args.scope, z.string(), 'Invalid scope') : undefined;
+    const validFrom = args.validFrom !== undefined ? validateWithSchema(args.validFrom, z.string(), 'Invalid validFrom') : undefined;
+    const validUntil = args.validUntil !== undefined ? validateWithSchema(args.validUntil, z.string(), 'Invalid validUntil') : undefined;
+    const notes = args.notes !== undefined ? validateWithSchema(args.notes, z.string(), 'Invalid notes') : undefined;
+    await ctx.roleAssignmentStore.assign({ agentId, role, resourceType, scope, validFrom, validUntil, notes });
+    return formatTextResponse(`Assigned role '${role}' to agent '${agentId}'${resourceType ? ` (resourceType=${resourceType})` : ''}${scope ? ` (scope=${scope})` : ''}`);
+  },
+
+  rbac_revoke_role: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const role = validateWithSchema(args.role, z.string().min(1), 'Invalid role');
+    const resourceType = args.resourceType !== undefined
+      ? validateWithSchema(
+          args.resourceType,
+          z.enum(['entity', 'relation', 'observation', 'session', 'artifact']),
+          'Invalid resourceType',
+        )
+      : undefined;
+    await ctx.roleAssignmentStore.revoke(agentId, role, resourceType);
+    return formatTextResponse(`Revoked role '${role}' from agent '${agentId}'`);
+  },
+
+  rbac_check_permission: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const action = validateWithSchema(
+      args.action,
+      z.enum(['read', 'write', 'delete', 'manage']),
+      'Invalid action',
+    );
+    const resourceType = validateWithSchema(
+      args.resourceType,
+      z.enum(['entity', 'relation', 'observation', 'session', 'artifact']),
+      'Invalid resourceType',
+    );
+    const resourceName = args.resourceName !== undefined ? validateWithSchema(args.resourceName, z.string(), 'Invalid resourceName') : undefined;
+    const now = args.now !== undefined ? validateWithSchema(args.now, z.string(), 'Invalid now') : undefined;
+    const allowed = ctx.rbacMiddleware.checkPermission(agentId, action, resourceType, resourceName, now);
+    return formatToolResponse({ agentId, action, resourceType, resourceName, allowed });
+  },
+
+  rbac_list_assignments: async (ctx, args) => {
+    const agentId = validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const activeOnly = args.activeOnly !== undefined ? validateWithSchema(args.activeOnly, z.boolean(), 'Invalid activeOnly') : false;
+    const now = args.now !== undefined ? validateWithSchema(args.now, z.string(), 'Invalid now') : undefined;
+    const assignments = activeOnly
+      ? ctx.roleAssignmentStore.listActive(agentId, now)
+      : ctx.roleAssignmentStore.list(agentId);
+    return formatToolResponse({ agentId, activeOnly, assignments, count: assignments.length });
+  },
+
+  // ==================== 3B.4 PROCEDURAL MEMORY HANDLERS ====================
+  add_procedure: async (ctx, args) => {
+    const procedure = await ctx.procedureManager.addProcedure(
+      args as Parameters<typeof ctx.procedureManager.addProcedure>[0],
+    );
+    return formatToolResponse(procedure);
+  },
+
+  get_procedure: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const procedure = await ctx.procedureManager.getProcedure(id);
+    if (!procedure) {
+      return { content: [{ type: 'text', text: `Procedure '${id}' not found` }], isError: true };
+    }
+    return formatToolResponse(procedure);
+  },
+
+  match_procedure: async (ctx, args) => {
+    const context = validateWithSchema(args.context, z.string().min(1), 'Invalid context');
+    const threshold = args.threshold !== undefined ? validateWithSchema(args.threshold, z.number().min(0).max(1), 'Invalid threshold') : 0;
+    const candidateIds = args.candidateIds !== undefined ? validateWithSchema(args.candidateIds, z.array(z.string()), 'Invalid candidateIds') : undefined;
+    // If specific candidates passed, load each; otherwise scan all 'procedure' entities.
+    const graph = await ctx.storage.loadGraph();
+    const allProcedureEntities = graph.entities.filter(e => e.entityType === 'procedure');
+    const candidates = await Promise.all(
+      (candidateIds ?? allProcedureEntities.map(e => e.name)).map(id => ctx.procedureManager.getProcedure(id)),
+    );
+    const valid = candidates.filter((p): p is NonNullable<typeof p> => p !== null);
+    const matches = await ctx.procedureManager.matchProcedure(context, valid, threshold);
+    return formatToolResponse({ context, threshold, matches, count: matches.length });
+  },
+
+  refine_procedure: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const succeeded = validateWithSchema(args.succeeded, z.boolean(), 'Invalid succeeded');
+    const notes = args.notes !== undefined ? validateWithSchema(args.notes, z.string(), 'Invalid notes') : undefined;
+    const recordedAt = args.recordedAt !== undefined ? validateWithSchema(args.recordedAt, z.string(), 'Invalid recordedAt') : undefined;
+    const updated = await ctx.procedureManager.refineProcedure(id, { succeeded, notes, recordedAt });
+    return formatToolResponse(updated);
+  },
+
+  get_procedure_step: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const order = validateWithSchema(args.order, z.number().int().positive(), 'Invalid order');
+    const next = args.next !== undefined ? validateWithSchema(args.next, z.boolean(), 'Invalid next') : false;
+    const step = next
+      ? await ctx.procedureManager.getNextStep(id, order)
+      : await ctx.procedureManager.getStep(id, order);
+    if (!step) {
+      return { content: [{ type: 'text', text: `Step ${order} not found in procedure '${id}'` }], isError: true };
+    }
+    return formatToolResponse(step);
+  },
+
+  // ==================== 3B.5 ACTIVE RETRIEVAL HANDLER ====================
+  adaptive_retrieve: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const budgetTokens = args.budgetTokens !== undefined ? validateWithSchema(args.budgetTokens, z.number().int().positive(), 'Invalid budgetTokens') : undefined;
+    const result = await ctx.activeRetrieval.adaptiveRetrieve({ query, budgetTokens });
+    return formatToolResponse(result);
+  },
+
+  // ==================== 3B.6 CAUSAL REASONING HANDLERS ====================
+  find_causes: async (ctx, args) => {
+    const effect = validateWithSchema(args.effect, z.string().min(1), 'Invalid effect');
+    const candidates = validateWithSchema(args.candidates, z.array(z.string()).min(1), 'Invalid candidates');
+    const maxDepth = args.maxDepth !== undefined ? validateWithSchema(args.maxDepth, z.number().int().positive(), 'Invalid maxDepth') : undefined;
+    const chains = await ctx.causalReasoner.findCauses(effect, candidates, maxDepth);
+    return formatToolResponse({ effect, candidates, chains, count: chains.length });
+  },
+
+  find_effects: async (ctx, args) => {
+    const cause = validateWithSchema(args.cause, z.string().min(1), 'Invalid cause');
+    const candidates = validateWithSchema(args.candidates, z.array(z.string()).min(1), 'Invalid candidates');
+    const maxDepth = args.maxDepth !== undefined ? validateWithSchema(args.maxDepth, z.number().int().positive(), 'Invalid maxDepth') : undefined;
+    const chains = await ctx.causalReasoner.findEffects(cause, candidates, maxDepth);
+    return formatToolResponse({ cause, candidates, chains, count: chains.length });
+  },
+
+  counterfactual_query: async (ctx, args) => {
+    const seed = validateWithSchema(args.seed, z.string().min(1), 'Invalid seed');
+    const removeFrom = validateWithSchema(args.removeFrom, z.string().min(1), 'Invalid removeFrom');
+    const removeTo = validateWithSchema(args.removeTo, z.string().min(1), 'Invalid removeTo');
+    const predict = validateWithSchema(args.predict, z.string().min(1), 'Invalid predict');
+    const maxDepth = args.maxDepth !== undefined ? validateWithSchema(args.maxDepth, z.number().int().positive(), 'Invalid maxDepth') : undefined;
+    const chains = await ctx.causalReasoner.counterfactual({ seed, removeFrom, removeTo, predict, maxDepth });
+    return formatToolResponse({ scenario: { seed, removeFrom, removeTo, predict }, chains, count: chains.length });
+  },
+
+  detect_causal_cycles: async (ctx, args) => {
+    const seed = validateWithSchema(args.seed, z.string().min(1), 'Invalid seed');
+    const maxDepth = args.maxDepth !== undefined ? validateWithSchema(args.maxDepth, z.number().int().positive(), 'Invalid maxDepth') : undefined;
+    const cycles = ctx.causalReasoner.detectCycles(seed, maxDepth);
+    return formatToolResponse({ seed, cycles, count: cycles.length });
+  },
+
+  // ==================== 3B.7 WORLD MODEL HANDLERS ====================
+  get_world_state: async (ctx) => {
+    const snapshot = await ctx.worldModelManager.getCurrentState();
+    return formatToolResponse(snapshot.toJSON());
+  },
+
+  validate_fact_against_world: async (ctx, args) => {
+    const observation = validateWithSchema(args.observation, z.string().min(1), 'Invalid observation');
+    const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
+    const result = await ctx.worldModelManager.validateFact(observation, entityName);
+    return formatToolResponse({ observation, entityName, result });
+  },
+
+  predict_outcome: async (ctx, args) => {
+    const action = validateWithSchema(args.action, z.string().min(1), 'Invalid action');
+    const candidates = validateWithSchema(args.candidates, z.array(z.string()).min(1), 'Invalid candidates');
+    const chains = await ctx.worldModelManager.predictOutcome(action, candidates);
+    return formatToolResponse({ action, candidates, chains, count: chains.length });
   },
 };
 
