@@ -2291,8 +2291,42 @@ export const toolHandlers: Record<string, ToolHandler> = {
   validate_fact_against_world: async (ctx, args) => {
     const observation = validateWithSchema(args.observation, z.string().min(1), 'Invalid observation');
     const entityName = validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName');
-    const result = await ctx.worldModelManager.validateFact(observation, entityName);
-    return formatToolResponse({ observation, entityName, result });
+    try {
+      const result = await ctx.worldModelManager.validateFact(observation, entityName);
+      return formatToolResponse({ observation, entityName, result });
+    } catch (err) {
+      // Graceful path for the documented "Returns null if no validator
+      // is wired" semantics: when memoryjs's local embedding provider is
+      // selected but `@xenova/transformers` isn't installed, the
+      // underlying EmbeddingService throws a raw Node module-resolution
+      // error. Translating to a structured null result keeps the MCP
+      // surface coherent and surfaces the configuration issue instead
+      // of leaking Node internals.
+      const msg = err instanceof Error ? err.message : String(err);
+      // Anchored on memoryjs EmbeddingService.ts:368 prefix and the
+      // package-name signal — narrow enough to avoid swallowing
+      // legitimate "Failed to initialize world model — entity has no
+      // embedding" or similar downstream errors.
+      const isProviderUnavailable =
+        /^Failed to initialize local embedding service:/.test(msg) ||
+        /Cannot find package ['"]@xenova\/transformers['"]/.test(msg);
+      if (isProviderUnavailable) {
+        // Log to stderr (stdout is the MCP JSON-RPC stream — must not
+        // be polluted). Operators piping stderr to a file see this once
+        // per process; LLM clients see only the structured null result.
+        console.warn(
+          '[validate_fact_against_world] embedding_provider_unavailable: ' + msg
+        );
+        return formatToolResponse({
+          observation,
+          entityName,
+          result: null,
+          reason: 'embedding_provider_unavailable',
+          detail: msg,
+        });
+      }
+      throw err;
+    }
   },
 
   predict_outcome: async (ctx, args) => {
