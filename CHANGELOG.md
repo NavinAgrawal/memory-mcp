@@ -5,6 +5,18 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`save_search` tool definition advertised an unsupported `searchType` field.** Underlying memoryjs `SavedSearchInputSchema` is `.strict()` Zod and rejects the field — clients passing `searchType: 'basic'` got `Invalid saved search data` errors. Discovered via end-to-end MCP smoke testing of memoryjs v1.14+ on 2026-04-25. Removed `searchType` from the JSON Schema; the contract now matches what the validator actually accepts.
+- **Strict typecheck blocked `npm run typecheck`** after the Phase 15 commit (`24092dd0`) imported `RoleAssignmentStore`, `RbacMiddleware`, and `CollaborationAuditEnforcer` defensively but never used them — handlers reach those services via `ctx.roleAssignmentStore` / `ctx.rbacMiddleware` already. Removed the unused imports.
+- **`tests/integration/server.test.ts` tool-count assertion was stale at 137.** Phase 15 (`24092dd0`) added 23 new MCP tools but the integration test was not updated. Bumped to 160 with a comment block enumerating all 23 names by feature area (η.4.4 / η.5.5.c / η.6.1 / 3B.4 / 3B.5 / 3B.6 / 3B.7).
+
+### Added
+
+- **`tests/unit/server/tool-definitions.test.ts`** — Contract-shape tests asserting the advertised JSON Schema for `save_search` matches what memoryjs Zod validators accept. Pins the absence of `searchType`, presence of `required: ['name', 'query']`, and `additionalProperties: false`. Designed to catch future tool-definition drift before it ships.
+
 ## [12.1.0] - 2026-04-10
 
 ### Added

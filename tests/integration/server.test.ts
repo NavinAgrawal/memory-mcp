@@ -56,7 +56,7 @@ describe('MCPServer Integration', () => {
   });
 
   describe('Tool Registration', () => {
-    it('should have 137 tool definitions available', () => {
+    it('should have 160 tool definitions available', () => {
       // Phase 4 Sprint 9: Added 4 graph algorithm tools (find_shortest_path, find_all_paths, get_connected_components, get_centrality)
       // Phase 4 Sprint 12: Added 3 semantic search tools (semantic_search, find_similar_entities, index_embeddings)
       // Phase 10 Sprint 4: Added search_auto tool
@@ -74,7 +74,17 @@ describe('MCPServer Integration', () => {
       //   forget_weak_memories, reinforce_memory, score_salience, register_agent, search_cross_agent,
       //   set_memory_visibility, get_visible_memories, resolve_agent_conflict, visualize_graph,
       //   split_transcript, estimate_query_cost, get_context_profile)
-      expect(toolDefinitions).toHaveLength(137);
+      // Phase 15 (24092dd0): Added 23 tools for memoryjs v1.14+ surfaces (η.4.4 entity bitemporal,
+      //   η.5.5.c OCC update, η.6.1 RBAC, 3B.4 procedural memory, 3B.5 active retrieval,
+      //   3B.6 causal reasoning, 3B.7 world model):
+      //   invalidate_entity, entity_as_of, entity_timeline, invalidate_observation, observations_as_of,
+      //   update_entity,
+      //   rbac_assign_role, rbac_revoke_role, rbac_check_permission, rbac_list_assignments,
+      //   add_procedure, get_procedure, match_procedure, refine_procedure, get_procedure_step,
+      //   adaptive_retrieve,
+      //   find_causes, find_effects, counterfactual_query, detect_causal_cycles,
+      //   get_world_state, validate_fact_against_world, predict_outcome
+      expect(toolDefinitions).toHaveLength(160);
     });
 
     it('should have matching handlers for all definitions', async () => {

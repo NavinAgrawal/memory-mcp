@@ -626,7 +626,6 @@ export const toolDefinitions: ToolDefinition[] = [
         tags: { type: 'array', items: { type: 'string' }, description: 'Optional tags filter' },
         minImportance: { type: 'number', description: 'Optional minimum importance' },
         maxImportance: { type: 'number', description: 'Optional maximum importance' },
-        searchType: { type: 'string', description: 'Type of search (basic, boolean, fuzzy, ranked)' },
         description: { type: 'string', description: 'Optional description of the search' },
       },
       required: ['name', 'query'],
