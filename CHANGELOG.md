@@ -5,18 +5,73 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [12.2.0] - 2026-04-26
+
+23 new MCP tools surfacing memoryjs v1.14+ (η.4.4 / η.5.5.c / η.6.1 / 3B.4 / 3B.5 / 3B.6 / 3B.7) brought into a documented release, plus four pre-publish fixes from end-to-end MCP smoke testing on 2026-04-25. Total tool count: **137 → 160**.
+
+### Added — Phase 15 (memoryjs v1.14+ surfaces)
+
+> Originally landed in commit `24092dd0`; documented here against this version. All 23 tools were verified end-to-end through both direct-handler smoke testing (172/172 assertions in memoryjs `.smoketest/full-surface-smoke.mjs`) and live MCP transport on 2026-04-26.
+
+#### η.4.4 — Entity bitemporal validity (5 tools)
+- **`invalidate_entity`** — Stamp `validUntil` on an entity (idempotent; entity remains queryable via `entity_as_of` for past timestamps)
+- **`entity_as_of`** — Time-travel query: returns entity if `validFrom <= asOf AND (validUntil is undefined OR validUntil >= asOf)`
+- **`entity_timeline`** — All temporal versions of an entity in chronological order; integrates the v1.8 supersession chain
+- **`invalidate_observation`** — Per-observation invalidation via parallel `observationMeta[]` entry
+- **`observations_as_of`** — Filter observations valid at a given timestamp; absent meta = unbounded
+
+#### η.5.5.c — Optimistic concurrency control (1 tool)
+- **`update_entity`** — Update with optional `expectedVersion` parameter; throws `VersionConflictError` on mismatch. OCC-guarded writes auto-increment `version`. Omit for legacy last-write-wins.
+
+#### η.6.1 — RBAC (4 tools)
+- **`rbac_assign_role`** — Grant `reader` / `writer` / `admin` / `owner` (or custom) role to an agent; optional `resourceType`, `scope` prefix, `validFrom` / `validUntil` window
+- **`rbac_revoke_role`** — Remove a specific role assignment (matched by `agentId + role + resourceType`)
+- **`rbac_check_permission`** — Check `read` / `write` / `delete` / `manage` action permission; falls back to `defaultRole=reader` for unassigned agents
+- **`rbac_list_assignments`** — List all assignments for an agent; optional `activeOnly` filter
+
+#### 3B.4 — Procedural memory (5 tools)
+- **`add_procedure`** — Persist an executable how-to sequence with 1-indexed steps + optional fallback chains + free-form trigger phrases; auto-generates id when omitted
+- **`get_procedure`** — Load a procedure by id
+- **`match_procedure`** — Token-overlap match a context description against stored procedures; returns ranked Jaccard-like scores
+- **`refine_procedure`** — Apply caller feedback after execution; updates `successRate` via EWMA (α=0.2)
+- **`get_procedure_step`** — Load step by 1-indexed `order`, or get the next step relative to `currentOrder`
+
+#### 3B.5 — Active retrieval (1 tool)
+- **`adaptive_retrieve`** — Iterative query-rewriting retrieval (search → score coverage → rewrite); stops early when `coverage ≥ minCoverage` or no expansion tokens remain. Pure symbolic — no LLM provider required.
+
+#### 3B.6 — Causal reasoning (4 tools)
+- **`find_causes`** — Causal chains ending at the named effect; sorted by product-of-edge-strength
+- **`find_effects`** — Symmetric counterpart starting at the named cause
+- **`counterfactual_query`** — "If we remove edge (removeFrom → removeTo), is `predict` still reachable from `seed`?" — returns chains that don't use the removed edge
+- **`detect_causal_cycles`** — Detect cycles in the causal subgraph rooted at `seed`
+
+#### 3B.7 — World model (3 tools)
+- **`get_world_state`** — Capture a snapshot of the live graph (capped at 1000 entities; over-cap prefers high-importance)
+- **`validate_fact_against_world`** — Validate a candidate observation against a target entity via `MemoryValidator.validateConsistency`
+- **`predict_outcome`** — Predict downstream effects of an action by walking the causal subgraph
+
+### Added — Pre-publish testing infrastructure
+
+- **`tests/unit/server/tool-definitions.test.ts`** — Contract-shape tests asserting the advertised JSON Schema matches what memoryjs Zod validators accept. Designed to catch tool-definition drift before it ships.
+- **`tests/unit/server/validate-fact-handler.test.ts`** — Unit tests for the embedding-provider-unavailable graceful path on `validate_fact_against_world`.
 
 ### Fixed
 
-- **`validate_fact_against_world` leaked raw Node module-resolution errors** through MCP transport when the local embedding provider was selected without `@xenova/transformers` installed. The underlying memoryjs `EmbeddingService` raised `Failed to initialize local embedding service: Cannot find package '@xenova/transformers'...`, which propagated verbatim to LLM clients. The handler now catches this specific class of error (anchored on the memoryjs prefix and the package-name signal — narrow enough to not swallow legitimate downstream errors), returns a structured `{ result: null, reason: 'embedding_provider_unavailable', detail }` consistent with the tool's documented "Returns null if no validator is wired" semantics, and warns to stderr for operator visibility. Discovered via end-to-end MCP smoke testing of memoryjs v1.14+ on 2026-04-25.
-- **`save_search` tool definition advertised an unsupported `searchType` field.** Underlying memoryjs `SavedSearchInputSchema` is `.strict()` Zod and rejects the field — clients passing `searchType: 'basic'` got `Invalid saved search data` errors. Discovered via end-to-end MCP smoke testing of memoryjs v1.14+ on 2026-04-25. Removed `searchType` from the JSON Schema; the contract now matches what the validator actually accepts.
-- **Strict typecheck blocked `npm run typecheck`** after the Phase 15 commit (`24092dd0`) imported `RoleAssignmentStore`, `RbacMiddleware`, and `CollaborationAuditEnforcer` defensively but never used them — handlers reach those services via `ctx.roleAssignmentStore` / `ctx.rbacMiddleware` already. Removed the unused imports.
-- **`tests/integration/server.test.ts` tool-count assertion was stale at 137.** Phase 15 (`24092dd0`) added 23 new MCP tools but the integration test was not updated. Bumped to 160 with a comment block enumerating all 23 names by feature area (η.4.4 / η.5.5.c / η.6.1 / 3B.4 / 3B.5 / 3B.6 / 3B.7).
+- **`validate_fact_against_world` leaked raw Node module-resolution errors** through MCP transport when the local embedding provider was selected without `@xenova/transformers` installed. The underlying memoryjs `EmbeddingService` raised `Failed to initialize local embedding service: Cannot find package '@xenova/transformers'...`, which propagated verbatim to LLM clients. The handler now catches this specific class of error (anchored on the memoryjs prefix and the package-name signal — narrow enough to not swallow legitimate downstream errors), returns a structured `{ result: null, reason: 'embedding_provider_unavailable', detail }` consistent with the tool's documented "Returns null if no validator is wired" semantics, and warns to stderr for operator visibility. Discovered via end-to-end MCP smoke testing on 2026-04-25.
+- **`save_search` tool definition advertised an unsupported `searchType` field.** Underlying memoryjs `SavedSearchInputSchema` is `.strict()` Zod and rejects the field — clients passing `searchType: 'basic'` got `Invalid saved search data` errors. Discovered via end-to-end MCP smoke testing on 2026-04-25. Removed `searchType` from the JSON Schema; the contract now matches what the validator actually accepts.
+- **`set_memory_visibility` silently returned `null`** when the target was a plain `Entity` (not yet an `AgentEntity`). The handler now auto-promotes plain entities by stamping `agentId`, `memoryType: 'semantic'`, `confidence: 0.8`, `confirmationCount: 0`, and `accessCount: 0` before applying the visibility level. Also stamps `allowedRoles` / `visibleFrom` / `visibleUntil` (η.5.5.b extensions) when provided. Errors out with a clear "Entity not found" message when the target doesn't exist at all.
+- **`export_graph` enum was missing the W3C Linked Data formats** (`turtle`, `rdf-xml`, `json-ld`) added in memoryjs η.5.4. The export call accepts the formats now and produces RDF 1.1 Turtle, JSON-LD 1.1 with `@context` mapping to RDFS + DCTerms, and RDF/XML with Statement reification for non-NCName predicates.
+- **`export_graph` did not advertise the `redactPii` flag** added with the η.6.3 `PiiRedactor`. When `redactPii: true`, the export pipeline scrubs PII (email / SSN / credit-card / phone / IPv4) from observations before serialization using the default pattern bank.
+- **`create_entities` schema rejected v1.6 freshness fields and η.4.4 bitemporal fields.** Extended the JSON Schema to accept `ttl` / `confidence` (v1.6), `projectId` (v1.8), and `validFrom` / `validUntil` / `observationMeta` (η.4.4) on each entity. Required fields unchanged.
+- **Strict typecheck blocked `npm run typecheck`** because Phase 15 (24092dd0) imported `RoleAssignmentStore`, `RbacMiddleware`, and `CollaborationAuditEnforcer` defensively but never referenced them directly — handlers reach those services via `ctx.roleAssignmentStore` / `ctx.rbacMiddleware`. Removed the unused imports.
+- **`tests/integration/server.test.ts` tool-count assertion was stale at 137.** Phase 15 added 23 tools but the assertion wasn't updated. Bumped to 160 with a comment block enumerating all new tool names by feature area.
 
-### Added
+### Verified
 
-- **`tests/unit/server/tool-definitions.test.ts`** — Contract-shape tests asserting the advertised JSON Schema for `save_search` matches what memoryjs Zod validators accept. Pins the absence of `searchType`, presence of `required: ['name', 'query']`, and `additionalProperties: false`. Designed to catch future tool-definition drift before it ships.
+- End-to-end MCP transport smoke test on 2026-04-26 against a fresh server build:
+  - All 23 new tools exercised through live MCP transport — RBAC permission gates, OCC version conflicts, bitemporal time-travel queries, causal counterfactual queries, procedural memory match/refine, RDF/Turtle/JSON-LD/RDF-XML exports, PII redaction. All passed expected behavior.
+  - All ~50 pre-existing tools sampled through MCP transport — search variants, hierarchy, graph algorithms, freshness, audit, sessions, working memory, multi-agent, diary, profile, decay, salience.
+- 161/161 unit + integration tests pass (`SKIP_BENCHMARKS=true npm test`); `npm run typecheck` clean.
 
 ## [12.1.0] - 2026-04-10
 
