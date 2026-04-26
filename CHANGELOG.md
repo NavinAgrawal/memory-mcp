@@ -5,6 +5,20 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [12.2.3] - 2026-04-26
+
+Publishability release. Switches the `@danielsimonjr/memoryjs` dep from a local `file:` reference to the published `^1.15.0`, which is now on npm. Required for memory-mcp itself to be publishable — npm rejects packages whose dependencies use `file:` refs since consumers cannot resolve the local path.
+
+### Changed
+
+- **`package.json`** — `"@danielsimonjr/memoryjs": "file:C:/Users/danie/Dropbox/Github/memoryjs"` → `"@danielsimonjr/memoryjs": "^1.15.0"`. memoryjs 1.15.0 was published earlier today with the η.6.3 PiiRedactor sub-feature, extended `CreateEntitySchema` (ttl/confidence/validFrom/validUntil/observationMeta), extended `ExtendedExportFormatSchema` (turtle/rdf-xml/json-ld), and the loosened `PiiRedactor.redactGraph` generic — all of which memory-mcp v12.2.x depends on for `create_entities` / `export_graph` / `set_memory_visibility` to function as advertised.
+
+### Verified
+
+- `npm install` resolves `@danielsimonjr/memoryjs@1.15.0` from the registry.
+- `npm run typecheck` clean.
+- 665/665 tests pass (26/26 test files; one Windows tmpdir flake in `consolidation-tools.test.ts` cleared on re-run — pre-existing, not from this change).
+
 ## [12.2.2] - 2026-04-26
 
 Doc-only patch release. Roadmap completion audit — followup to v12.2.1's doc consistency pass after a user catch that I had not actually graded existing roadmap items as shipped, only added new Phase 14/15 sections.
