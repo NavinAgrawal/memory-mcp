@@ -1,4 +1,7 @@
-﻿# Logs
+# Git internals — keeps Dropbox out of .git so git operations don't get blocked
+.git/
+
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -322,3 +325,4 @@ nul
 tests/test-results/json/
 tests/test-results/html/
 tests/test-results/summary/
+
