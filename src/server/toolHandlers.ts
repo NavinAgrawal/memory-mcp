@@ -353,15 +353,25 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const entityName = args.entityName !== undefined
       ? validateWithSchema(args.entityName, z.string().min(1), 'Invalid entity name')
       : undefined;
-    const options = (args.options as {
-      resolveCoreferences?: boolean;
-      anchorTimestamps?: boolean;
-      extractKeywords?: boolean;
-    }) ?? {};
+    const options = args.options !== undefined
+      ? validateWithSchema(
+          args.options,
+          z.object({
+            resolveCoreferences: z.boolean().optional(),
+            anchorTimestamps: z.boolean().optional(),
+            extractKeywords: z.boolean().optional(),
+          }).strict(),
+          'Invalid options'
+        )
+      : {};
     const persist = args.persist === true;
 
     const normalizer = new ObservationNormalizer();
-    const graph = await ctx.storage.loadGraph();
+    // Use getGraphForMutation() to acquire the storage write lock — prevents
+    // concurrent calls from overwriting each other's persisted normalizations.
+    const graph = persist
+      ? await ctx.storage.getGraphForMutation()
+      : await ctx.storage.loadGraph();
 
     const entities = entityName
       ? graph.entities.filter(e => e.name === entityName)
@@ -482,14 +492,30 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // Phase 11 Sprint 2: Hybrid search
   hybrid_search: async (ctx, args) => {
     const query = validateWithSchema(args.query, SearchQuerySchema, 'Invalid search query');
-    const weights = args.weights as { semantic?: number; lexical?: number; symbolic?: number } | undefined;
-    const filters = args.filters as {
-      tags?: string[];
-      entityTypes?: string[];
-      dateRange?: { start: string; end: string };
-      minImportance?: number;
-      maxImportance?: number;
-    } | undefined;
+    const weights = args.weights !== undefined
+      ? validateWithSchema(
+          args.weights,
+          z.object({
+            semantic: z.number().optional(),
+            lexical: z.number().optional(),
+            symbolic: z.number().optional(),
+          }).strict(),
+          'Invalid weights'
+        )
+      : undefined;
+    const filters = args.filters !== undefined
+      ? validateWithSchema(
+          args.filters,
+          z.object({
+            tags: z.array(z.string()).optional(),
+            entityTypes: z.array(z.string()).optional(),
+            dateRange: z.object({ start: z.string(), end: z.string() }).strict().optional(),
+            minImportance: z.number().optional(),
+            maxImportance: z.number().optional(),
+          }).strict(),
+          'Invalid filters'
+        )
+      : undefined;
     const limit = args.limit !== undefined
       ? validateWithSchema(args.limit, z.number().int().positive().max(200), 'Invalid limit')
       : 10;
@@ -1608,7 +1634,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ? validateWithSchema(args.distillFailures, z.boolean(), 'Invalid distillFailures')
       : true;
 
-    const graph = await ctx.storage.loadGraph();
+    // Use getGraphForMutation() to acquire the storage write lock — prevents
+    // concurrent end_session calls from clobbering each other's outcome writes.
+    const graph = await ctx.storage.getGraphForMutation();
     const sessionEntity = graph.entities.find(e => e.name === sessionId);
     if (!sessionEntity) {
       return formatTextResponse(`Session "${sessionId}" not found`);

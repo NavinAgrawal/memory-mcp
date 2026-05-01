@@ -5,6 +5,20 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`src/server/toolHandlers.ts` — harden tool handlers against concurrency races and unvalidated user input.** Three issues addressed in one pass since they all live in the same handler file and share the theme of input/state safety:
+  - **`normalize_observations` (line ~364)** — read-modify-write race. The persistence path was doing `loadGraph()` → mutate → `saveGraph()` without acquiring the storage write lock, so two concurrent calls could overwrite each other's normalized observations. Switched to `getGraphForMutation()` (the locking variant already used by `set_memory_visibility` at lines 1961/1995) when `persist === true`. Read-only calls still use `loadGraph()`.
+  - **`end_session` (line ~1611)** — same race. Concurrent `end_session` calls on overlapping sets of session entities could clobber each other's `outcome:` observation appends. Switched to `getGraphForMutation()`.
+  - **`normalize_observations` `options` (line ~356), `hybrid_search` `weights` and `filters` (lines ~485–492)** — unvalidated typecasts on user-supplied tool args. Previously cast directly to the expected TS shapes (`as { ... }`), which let malicious clients pass arbitrary objects, including prototype-polluting keys (`__proto__`, `constructor`). Replaced with inline `z.object({...}).strict()` schemas piped through `validateWithSchema` (the helper used by neighboring handlers). `.strict()` rejects unknown keys outright.
+
+### Verified
+
+- `npm run build` clean (tsc, no errors).
+- `npx vitest run`: 665/665 tests pass across 26/26 test files (~21.8s).
+
 ## [12.2.3] - 2026-04-26
 
 Publishability release. Switches the `@danielsimonjr/memoryjs` dep from a local `file:` reference to the published `^1.15.0`, which is now on npm. Required for memory-mcp itself to be publishable — npm rejects packages whose dependencies use `file:` refs since consumers cannot resolve the local path.
