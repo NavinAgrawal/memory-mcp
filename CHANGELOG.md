@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Add CycloneDX SBOM (sbom.json).
+
 ### Fixed
 
 - **`src/server/toolHandlers.ts` — harden tool handlers against concurrency races and unvalidated user input.** Three issues addressed in one pass since they all live in the same handler file and share the theme of input/state safety:
