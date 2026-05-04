@@ -34,7 +34,7 @@ npm run tools:build   # Build all standalone tools
 
 ## Architecture Overview
 
-This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing **160 knowledge graph tools** via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs. Phase 15 (v12.2.0) added 23 tools surfacing memoryjs v1.14+ features: entity bitemporal validity (η.4.4), optimistic concurrency control (η.5.5.c), RBAC (η.6.1), procedural memory (3B.4), active retrieval (3B.5), causal reasoning (3B.6), and world model (3B.7).
+This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing **160 knowledge graph tools** via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs (currently `^1.15.0`). Phase 15 (v12.2.0) added 23 tools surfacing memoryjs v1.14+ features: entity bitemporal validity (η.4.4), optimistic concurrency control (η.5.5.c), RBAC (η.6.1), procedural memory (3B.4), active retrieval (3B.5), causal reasoning (3B.6), and world model (3B.7). Latest release: v12.2.3.
 
 **npm:** `@danielsimonjr/memory-mcp` | **Core lib:** `@danielsimonjr/memoryjs` (versions in package.json)
 
@@ -150,7 +150,7 @@ New categories (v1.8.0/v1.9.0/Phase 14/Phase 15, bold above) are implemented in 
 
 ## Test Structure
 
-26 test files, 665 tests, >92% statement coverage. Core graph tests are in the memoryjs package.
+26 test files, 665 tests, ~81% statement coverage (verified via `coverage/coverage-summary.json`: statements 80.7%, lines 81.4%, functions 79.5%, branches 68.3%). Core graph tests — and the bulk of coverage — live in the memoryjs package.
 
 Tests are organized in three tiers:
 - **Unit** (`tests/unit/`): Isolated module tests (e.g., response compressor)
@@ -197,7 +197,7 @@ npm publish --access public
 
 ## Gotchas
 
-- **Local file dependency**: `@danielsimonjr/memoryjs` is linked via `file:C:/Users/danie/Dropbox/Github/memoryjs` in package.json. Changes to the memoryjs repo are picked up on `npm install` — no npm publish needed for local dev. This means `npm install` will fail on machines without that local path.
+- **memoryjs is a published dep** (v12.2.3+): `@danielsimonjr/memoryjs` resolves from npm at `^1.15.0`. For active dual-repo dev (editing memoryjs alongside memory-mcp), temporarily switch to `file:C:/Users/danie/Dropbox/Github/memoryjs` in package.json so changes are picked up on `npm install` without a publish — but **bump back to a registry version before `npm publish`**. The `release: bump @danielsimonjr/memoryjs file: → ^x.y.z (publishable)` commits in `git log` exist for exactly this swap. While in `file:` mode, `npm install` will fail on any machine without that local path.
 - **Data files are gitignored**: `*.jsonl` and `memory.db` are in `.gitignore` — test runs create/modify these in the project root but they won't appear in `git status`.
 - **Error handling in dispatch**: `handleToolCall` catches exceptions from handlers and returns them as MCP-formatted error responses (not thrown). Check MCP response `isError` field when debugging.
 - **TypeScript target**: ES2022 with Node16 module resolution. The `prepare` script runs `npm run build` on install, so `dist/` is rebuilt automatically.

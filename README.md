@@ -1,11 +1,11 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-12.2.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-12.2.3-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-96.6%25-brightgreen.svg)](docs/architecture/TEST_COVERAGE.md)
+[![Coverage](https://img.shields.io/badge/coverage-80.7%25-yellow.svg)](docs/architecture/TEST_COVERAGE.md)
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
@@ -46,9 +46,10 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Memory Compression** | 4 | Intelligent duplicate detection and merging with similarity scoring |
 | **Advanced Search** | 7 | TF-IDF ranking, boolean queries, fuzzy matching, auto-select |
 | **Observation Normalization** | 1 | Coreference resolution and temporal anchoring |
-| **Tag Management** | 11 | Tags, aliases, bulk operations, importance scores |
+| **Tag Management** | 6 | Tags, bulk operations, importance scores |
+| **Tag Aliases** | 5 | Tag synonym/alias management |
 | **Saved Searches** | 5 | Store and execute frequent queries |
-| **Import/Export** | 2 | 7 export formats with brotli compression, 3 import formats |
+| **Import/Export** | 2 | 7 export formats (incl. W3C Linked Data: Turtle / JSON-LD / RDF/XML) with brotli + PII redaction; 3 import formats |
 | **Graph Analytics** | 2 | Statistics, validation, integrity checks |
 | **Ref Index** | 4 | Cross-session symbolic reference registration and resolution |
 | **Artifacts** | 3 | Named versioned content blobs attached to entities |
@@ -64,6 +65,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Collaborative** | 1 | Multi-agent context synthesis |
 | **Failure Handling** | 2 | Session failure distillation and graceful session end |
 | **Cognitive Load** | 2 | Working-memory load analysis and adaptive reduction |
+| **Dream Engine** | 3 | Background memory maintenance: 8-phase sleep-cycle consolidation |
 | **Project Scoping** | 1 | List and filter entities by project |
 | **Memory Versioning** | 2 | Entity version chains and per-entity version history |
 | **Semantic Forget** | 1 | Two-tier deletion: exact match → semantic similarity fallback |
@@ -71,6 +73,21 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Temporal KG** | 3 | Temporal relation invalidation, time-travel queries, relation timeline |
 | **Ingestion** | 1 | Format-agnostic conversation/document ingestion pipeline |
 | **Agent Diary** | 2 | Per-agent persistent journal write and read |
+| **Session & Working Memory** | 9 | Session lifecycle, working memory CRUD, TTL, promotion, context wake-up *(Phase 14)* |
+| **Auto-Enhancement** | 3 | Auto-link entity mentions, fact extraction, contradiction detection *(Phase 14)* |
+| **Context Compression** | 1 | N-gram text abbreviation with legend for token savings *(Phase 14)* |
+| **Consolidation Pipeline** | 3 | Session consolidation, pattern detection, entity summarization *(Phase 14)* |
+| **Decay & Salience** | 5 | Time-based decay, importance scoring, weak memory cleanup, reinforcement *(Phase 14)* |
+| **Multi-Agent** | 5 | Agent registration, cross-agent search, visibility, conflict resolution *(Phase 14)* |
+| **Observability** | 4 | D3.js graph visualization, transcript splitting, query cost estimation *(Phase 14)* |
+| **Dedup** | 1 | Priority-based smart deduplication *(Phase 14)* |
+| **Entity Bitemporal** | 5 | Time-travel queries: invalidate entities/observations, entity_as_of, timelines *(Phase 15 / η.4.4)* |
+| **Optimistic Concurrency** | 1 | `update_entity` with `expectedVersion` → `VersionConflictError` on stale *(Phase 15 / η.5.5.c)* |
+| **RBAC** | 4 | Role-based access control: assign/revoke/check/list reader/writer/admin/owner permissions *(Phase 15 / η.6.1)* |
+| **Procedural Memory** | 5 | Executable how-to sequences with EWMA-refined success rate *(Phase 15 / 3B.4)* |
+| **Active Retrieval** | 1 | Iterative query rewriting until coverage threshold met *(Phase 15 / 3B.5)* |
+| **Causal Reasoning** | 4 | Chain discovery, counterfactual queries, cycle detection *(Phase 15 / 3B.6)* |
+| **World Model** | 3 | Graph snapshots, fact validation, outcome prediction *(Phase 15 / 3B.7)* |
 
 ### Comparison with Official Memory Server
 
@@ -93,8 +110,8 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 | **Backup & Restore** | ❌ | ✅ Compressed snapshots |
 | **Intelligent Search** | ❌ | ✅ Hybrid + Query Analysis + Reflection |
 | **Observation Normalization** | ❌ | ✅ Coreference resolution + temporal anchoring |
-| **Total Tools** | 11 | **106** |
-| **Code Structure** | Monolithic | **Modular** (77 files) |
+| **Total Tools** | 11 | **160** |
+| **Code Structure** | Monolithic | **Modular** (5 src files in this repo; core graph in [`@danielsimonjr/memoryjs`](https://www.npmjs.com/package/@danielsimonjr/memoryjs)) |
 
 ## Quick Start
 
@@ -163,7 +180,7 @@ cd memory-mcp
 npm install
 npm run build
 
-# Run tests (2800+ tests)
+# Run tests (665 tests, >80% statement coverage)
 npm test
 
 # Type check
@@ -628,7 +645,7 @@ node dist/migrate-from-jsonl-to-sqlite.js --from memory.db --to memory.jsonl
 ```bash
 npm install           # Install dependencies
 npm run build         # Build TypeScript
-npm test              # Run tests (2800+ tests)
+npm test              # Run tests (665 tests across 26 files; >80% coverage)
 npm run typecheck     # Strict type checking
 npm run watch         # Development watch mode
 npm run clean         # Remove dist/ directory
@@ -637,113 +654,78 @@ npm run docs:deps     # Generate dependency graph
 
 ### Architecture
 
+After the **Phase 13 extraction**, this repo is a thin MCP wrapper. All graph logic, managers, and storage live in [`@danielsimonjr/memoryjs`](https://www.npmjs.com/package/@danielsimonjr/memoryjs) (currently `^1.15.0`).
+
 ```
-┌─────────────────────────────────────────────────────┐
-│  Layer 1: MCP Protocol Layer                        │
-│  server/MCPServer.ts + toolDefinitions (160 tools)  │
-│  + toolHandlers + responseCompressor                │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────┐
-│  Layer 2: Managers + Context (Lazy Initialization)  │
-│  ManagerContext (aliased as KnowledgeGraphManager)  │
-│  • EntityManager   (CRUD + hierarchy + archive)     │
-│  • RelationManager (relation CRUD)                  │
-│  • SearchManager   (search + compression + stats)   │
-│  • IOManager       (import + export + backup)       │
-│  • TagManager      (tag aliases)                    │
-│  • GraphTraversal  (path finding, centrality)       │
-│  • SemanticSearch  (embeddings, similarity)         │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────┐
-│  Layer 3: Storage Layer                             │
-│  core/GraphStorage.ts (JSONL + in-memory cache)     │
-│  core/SQLiteStorage.ts (better-sqlite3 + FTS5)      │
-│  core/StorageFactory.ts (backend selection)         │
-└─────────────────────────────────────────────────────┘
+memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dep)
+┌──────────────────────────┐        ┌──────────────────────────────────┐
+│  src/index.ts            │        │  ManagerContext (lazy init)      │
+│  src/server/MCPServer.ts │───────▶│  EntityManager, RelationManager  │
+│  src/server/toolDefs.ts  │imports │  SearchManager, IOManager, etc.  │
+│  src/server/toolHandlers │        │  GraphStorage / SQLiteStorage    │
+│  src/server/responseComp.│        │  StorageFactory + 100+ modules   │
+└──────────────────────────┘        └──────────────────────────────────┘
+       5 source files                  77+ source files (extracted)
+       MCP protocol + dispatch         All graph + search + storage
 ```
+
+| Layer | Lives in | Files |
+|-------|----------|-------|
+| MCP protocol (stdio transport, tool registration, dispatch) | `memory-mcp` | 5 |
+| Tool schemas (160 tools across 51 categories) | `memory-mcp` (`toolDefinitions.ts`) | 1 |
+| Handler registry + Zod validation + response compression | `memory-mcp` (`toolHandlers.ts` + `responseCompressor.ts`) | 2 |
+| Managers (Entity / Relation / Search / IO / Tag / Hierarchy / Analytics / Compression / Archive / GraphTraversal / SemanticSearch / RankedSearch / etc.) | `memoryjs` | 100+ |
+| Storage (JSONL + SQLite with FTS5 + StorageFactory + TransactionManager) | `memoryjs` | — |
+| Embedding providers (OpenAI / local / none) + VectorStore | `memoryjs` | — |
 
 ### Project Structure
 
 ```
 memory-mcp/
-├── src/                            # Source (77 TypeScript files)
-│   ├── index.ts                    # Entry point
-│   ├── core/                       # Core managers (12 files)
-│   │   ├── ManagerContext.ts           # Context holder (lazy init)
-│   │   ├── EntityManager.ts            # Entity CRUD + hierarchy
-│   │   ├── RelationManager.ts          # Relation CRUD
-│   │   ├── GraphStorage.ts             # JSONL I/O + caching
-│   │   ├── SQLiteStorage.ts            # SQLite with better-sqlite3
-│   │   ├── TransactionManager.ts       # ACID transactions
-│   │   ├── StorageFactory.ts           # Storage backend factory
-│   │   ├── HierarchyManager.ts         # Tree operations
-│   │   ├── ObservationManager.ts       # Observation CRUD
-│   │   ├── GraphTraversal.ts           # Path finding, centrality
-│   │   ├── GraphEventEmitter.ts        # Event system
-│   │   └── index.ts
-│   ├── server/                     # MCP protocol (4 files)
-│   │   ├── MCPServer.ts                # Server setup
-│   │   ├── toolDefinitions.ts          # 160 tool schemas
-│   │   ├── toolHandlers.ts             # Handler registry
-│   │   └── responseCompressor.ts       # Brotli compression
-│   ├── search/                     # Search implementations (29 files)
-│   │   ├── SearchManager.ts            # Search orchestrator
-│   │   ├── BasicSearch.ts              # Text matching
-│   │   ├── RankedSearch.ts             # TF-IDF scoring
-│   │   ├── BooleanSearch.ts            # AND/OR/NOT logic
-│   │   ├── FuzzySearch.ts              # Typo tolerance
-│   │   ├── SemanticSearch.ts           # Embedding-based
-│   │   ├── EmbeddingService.ts         # Provider abstraction
-│   │   ├── VectorStore.ts              # Vector storage
-│   │   └── ...                         # + 12 more
-│   ├── features/                   # Advanced capabilities (9 files)
-│   │   ├── IOManager.ts                # Import/export/backup
-│   │   ├── TagManager.ts               # Tag aliases
-│   │   ├── AnalyticsManager.ts         # Graph stats
-│   │   ├── ArchiveManager.ts           # Entity archival
-│   │   ├── CompressionManager.ts       # Duplicate detection
-│   │   ├── StreamingExporter.ts        # Large graph exports
-│   │   ├── ObservationNormalizer.ts    # Coreference resolution
-│   │   ├── KeywordExtractor.ts         # Keyword extraction
-│   │   └── index.ts
-│   ├── types/                      # TypeScript definitions (2 files)
-│   ├── utils/                      # Shared utilities (18 files)
-│   └── workers/                    # Worker pool (2 files)
-├── tests/                          # Test suite (97 files, 2800+ tests)
-│   ├── unit/                       # Unit tests
-│   ├── integration/                # Integration tests
-│   ├── e2e/                        # End-to-end tests
-│   └── performance/                # Benchmarks
-├── dist/                           # Compiled output
-├── docs/                           # Documentation
-│   ├── architecture/               # Architecture docs
-│   ├── guides/                     # User guides
-│   └── reports/                    # Sprint reports
-├── tools/                          # Standalone utilities
-│   ├── chunking-for-files/         # File splitting
-│   ├── compress-for-context/       # CTON compression
-│   ├── create-dependency-graph/    # Dependency analyzer
-│   └── migrate-from-jsonl-to-sqlite/
-├── CHANGELOG.md                    # Version history
-└── README.md                       # This file
+├── src/                                    # Source (5 TypeScript files)
+│   ├── index.ts                            # Entry point: ManagerContext + start MCPServer; re-exports memoryjs types
+│   └── server/
+│       ├── MCPServer.ts                    # MCP Server setup, stdio transport, request handlers
+│       ├── toolDefinitions.ts              # 160 tool schemas (name, description, inputSchema)
+│       ├── toolHandlers.ts                 # Handler registry: validate args → call manager → format response
+│       └── responseCompressor.ts           # Brotli + base64 wrapper for >256KB payloads
+├── tests/                                  # Test suite (26 files, 665 tests, >80% statement coverage)
+│   ├── unit/                               # Unit tests (response compressor, tool defs, validate-fact handler)
+│   ├── integration/                        # MCP server lifecycle
+│   ├── e2e/tools/                          # Per-category tool tests + handler-smoke broad coverage
+│   ├── knowledge-graph.test.ts             # Core graph operations (smoke against memoryjs)
+│   └── file-path.test.ts                   # Storage path resolution
+├── dist/                                   # Compiled output (rebuilt on `npm install` via `prepare`)
+├── docs/                                   # Documentation
+│   ├── architecture/                       # API.md, ARCHITECTURE.md, COMPONENTS.md, OVERVIEW.md, TEST_COVERAGE.md
+│   ├── guides/                             # HIERARCHY.md, COMPRESSION.md, ARCHIVING.md, QUERY_LANGUAGE.md
+│   ├── development/                        # WORKFLOW.md
+│   ├── roadmap/                            # FUTURE_FEATURES.md, PERFORMANCE_AND_CAPABILITIES.md
+│   └── reports/                            # Historical sprint reports
+├── tools/                                  # Standalone utilities (each builds independently)
+│   ├── chunking-for-files/                 # File splitting
+│   ├── compress-for-context/               # CTON compression
+│   ├── create-dependency-graph/            # Dependency analyzer
+│   └── migrate-from-jsonl-to-sqlite/       # Storage backend converter
+├── CHANGELOG.md                            # Version history
+└── README.md                               # This file
 ```
 
 ### Dependencies
 
-**Production:**
-- `@modelcontextprotocol/sdk`: ^1.21.1
-- `better-sqlite3`: ^11.7.0
-- `zod`: ^4.1.13
-- `async-mutex`: ^0.5.0
-- `@danielsimonjr/workerpool`: ^10.0.1
+**Production** (3 direct deps — everything else is transitive via memoryjs):
+- `@danielsimonjr/memoryjs`: ^1.15.0 — knowledge graph engine (storage, managers, search, embeddings, RBAC, OCC, bitemporal, causal, etc.)
+- `@modelcontextprotocol/sdk`: ^1.21.1 — MCP protocol implementation
+- `zod`: ^3.24.1 — runtime input validation (schemas re-exported from memoryjs)
 
 **Development:**
 - `typescript`: ^5.6.2
 - `vitest`: ^4.0.13
 - `@vitest/coverage-v8`: ^4.0.13
-- `@types/better-sqlite3`: ^7.6.12
+- `shx`: ^0.4.0 — cross-platform shell commands for `clean` script
+- `@types/node`: ^22
+
+> Note: `better-sqlite3`, `async-mutex`, `@danielsimonjr/workerpool`, and the embedding providers (OpenAI / `@xenova/transformers`) are **transitive deps via `@danielsimonjr/memoryjs`** since the Phase 13 extraction. They are not listed in this repo's `package.json`.
 
 ## Documentation
 
@@ -785,9 +767,12 @@ We welcome contributions!
 
 All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-**Current version**: v12.2.0 - [View full changelog](CHANGELOG.md)
+**Current version**: v12.2.3 - [View full changelog](CHANGELOG.md)
 
 Recent highlights:
+- **v12.2.3**: Publishability — switched `@danielsimonjr/memoryjs` dep from local `file:` link to published `^1.15.0` (npm rejects `file:` deps for published packages).
+- **v12.2.2**: Doc-only — roadmap completion audit grading Phase 6-15 status against current code.
+- **v12.2.1**: Doc-only — comprehensive consistency pass across 68 markdown documents to align with v12.2.0's 160-tool surface.
 - **v12.2.0** (160 tools): 23 new tools — entity bitemporal validity (η.4.4), OCC update (η.5.5.c), RBAC (η.6.1), procedural memory (3B.4), active retrieval (3B.5), causal reasoning (3B.6), world model (3B.7), plus W3C Linked Data exports (η.5.4) and PII redaction (η.6.3) wired into existing `export_graph`. Plus four pre-publish fixes from end-to-end MCP smoke testing (memoryjs v1.14+).
 - **v12.1.0** (106 tools): 12 new tools — Project Scoping, Memory Versioning, Semantic Forget, Profiles, Temporal KG, Ingestion, Agent Diary (memoryjs v1.8.0/v1.9.0)
 - **v12.0.0** (94 tools): 32 new tools — Ref Index, Artifacts, Temporal Search, Distillation, Freshness, LLM Query, Governance, Role Profiles, Entropy, Consolidation, Formatter, Collaborative, Failure Handling, Cognitive Load
@@ -820,7 +805,7 @@ Enhanced fork of [Model Context Protocol memory server](https://github.com/model
 - Multi-format import/export with merge strategies
 - SQLite backend with better-sqlite3 (3-10x faster)
 - Transaction support with ACID guarantees
-- Comprehensive test suite (2800+ tests, 97 test files)
+- Comprehensive test suite (665 tests, 26 test files in this wrapper repo; full-coverage core graph tests live in `@danielsimonjr/memoryjs`)
 
 ---
 
