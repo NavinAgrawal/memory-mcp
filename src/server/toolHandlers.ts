@@ -218,6 +218,37 @@ async function withCompression(
  * Filtered/limited search tools (search_nodes_ranked, fuzzy_search, etc.) are not
  * wrapped because their results are bounded by query specificity or limit params.
  */
+
+/**
+ * v2.1.0 — Parse `find_duplicate_observations` / `find_jaccard_duplicate_observations`
+ * filter args into the manager's `ObservationDedupFilter` shape. Validates each
+ * field independently so a stray garbage value falls back to the manager default
+ * rather than throwing — REST-like leniency since these are diagnostic tools.
+ */
+function parseObservationDedupFilter(args: Record<string, unknown>): {
+  entityType?: string | string[];
+  projectId?: string;
+  sessionId?: string;
+  minOccurrences?: number;
+  maxGroups?: number;
+} {
+  const out: ReturnType<typeof parseObservationDedupFilter> = {};
+  if (typeof args.entityType === 'string') {
+    out.entityType = args.entityType;
+  } else if (Array.isArray(args.entityType) && args.entityType.every((s) => typeof s === 'string')) {
+    out.entityType = args.entityType as string[];
+  }
+  if (typeof args.projectId === 'string') out.projectId = args.projectId;
+  if (typeof args.sessionId === 'string') out.sessionId = args.sessionId;
+  if (typeof args.minOccurrences === 'number' && Number.isFinite(args.minOccurrences) && args.minOccurrences >= 2) {
+    out.minOccurrences = args.minOccurrences;
+  }
+  if (typeof args.maxGroups === 'number' && Number.isFinite(args.maxGroups) && args.maxGroups >= 1) {
+    out.maxGroups = args.maxGroups;
+  }
+  return out;
+}
+
 export const toolHandlers: Record<string, ToolHandler> = {
   // ==================== ENTITY HANDLERS ====================
   create_entities: async (ctx, args) => {
@@ -2362,6 +2393,47 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const candidates = validateWithSchema(args.candidates, z.array(z.string()).min(1), 'Invalid candidates');
     const chains = await ctx.worldModelManager.predictOutcome(action, candidates);
     return formatToolResponse({ action, candidates, chains, count: chains.length });
+  },
+
+  // ==================== v2.1.0 OBSERVATION DEDUP ====================
+
+  find_duplicate_observations: async (ctx, args) => {
+    const filter = parseObservationDedupFilter(args);
+    const groups = await ctx.observationDedupManager.findDuplicateObservations(filter);
+    return formatToolResponse({ filter, groups, count: groups.length });
+  },
+
+  find_jaccard_duplicate_observations: async (ctx, args) => {
+    const filter = parseObservationDedupFilter(args);
+    const groups = await ctx.observationDedupManager.findJaccardDuplicates(filter);
+    return formatToolResponse({ filter, groups, count: groups.length });
+  },
+
+  // ==================== v2.1.0 SPELL CORRECTION ====================
+
+  spell_suggest: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const limit = args.limit === undefined
+      ? undefined
+      : validateWithSchema(args.limit, z.number().int().min(1), 'Invalid limit');
+    const minScore = args.minScore === undefined
+      ? undefined
+      : validateWithSchema(args.minScore, z.number().min(0).max(1), 'Invalid minScore');
+    const maxDistance = args.maxDistance === undefined
+      ? undefined
+      : validateWithSchema(args.maxDistance, z.number().min(0), 'Invalid maxDistance');
+    const suggestions = await ctx.spellChecker.suggest(query, { limit, minScore, maxDistance });
+    return formatToolResponse({ query, suggestions, count: suggestions.length });
+  },
+
+  spell_rebuild_vocabulary: async (ctx) => {
+    await ctx.spellChecker.rebuild();
+    return formatToolResponse({ rebuilt: true, vocabularySize: ctx.spellChecker.vocabularySize() });
+  },
+
+  spell_vocabulary_size: async (ctx) => {
+    const size = ctx.spellChecker.vocabularySize();
+    return formatToolResponse({ vocabularySize: size });
   },
 };
 

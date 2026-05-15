@@ -2670,6 +2670,84 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+
+  // ==================== v2.1.0 OBSERVATION DEDUP TOOLS ====================
+  {
+    name: 'find_duplicate_observations',
+    description: 'v2.1.0 — Find verbatim duplicate observation strings across distinct entities (SHA-256 exact tier). Complementary to MemoryEngine.checkDuplicate (turn-level) and CompressionManager.findDuplicates (whole-entity). Report-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityType: {
+          oneOf: [
+            { type: 'string', description: 'Single entityType to include' },
+            { type: 'array', items: { type: 'string' }, description: 'Multiple entityTypes to include' },
+          ],
+          description: 'Optional entityType filter (single or array). Omit to scan all.',
+        },
+        projectId: { type: 'string', description: 'Restrict to entities with this projectId.' },
+        sessionId: { type: 'string', description: 'Restrict to entities with this sessionId.' },
+        minOccurrences: { type: 'number', minimum: 2, description: 'Minimum occurrences to count as a group. Default 2.' },
+        maxGroups: { type: 'number', minimum: 1, description: 'Cap on groups returned. Default 100.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'find_jaccard_duplicate_observations',
+    description: 'v2.1.0 — Find near-duplicate observation strings across distinct entities via token-Jaccard similarity with union-find grouping. More expensive than the exact tier (O(o²)); opt-in for higher recall.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityType: {
+          oneOf: [
+            { type: 'string' },
+            { type: 'array', items: { type: 'string' } },
+          ],
+        },
+        projectId: { type: 'string' },
+        sessionId: { type: 'string' },
+        minOccurrences: { type: 'number', minimum: 2 },
+        maxGroups: { type: 'number', minimum: 1 },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ==================== v2.1.0 SPELL CORRECTION TOOLS ====================
+  {
+    name: 'spell_suggest',
+    description: 'v2.1.0 — Suggest close matches for a (potentially misspelled) query over the vocabulary of entity names + tag values. Two-stage: bigram-Jaccard pre-filter (NGramIndex) + Levenshtein re-rank.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The (potentially misspelled) query string' },
+        limit: { type: 'number', minimum: 1, description: 'Maximum corrections to return. Default 5.' },
+        minScore: { type: 'number', minimum: 0, maximum: 1, description: 'Minimum final similarity score (1 - distance/maxLen). Default 0.4.' },
+        maxDistance: { type: 'number', minimum: 0, description: 'Maximum Levenshtein edit distance to allow. Default 3.' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'spell_rebuild_vocabulary',
+    description: 'v2.1.0 — Force a rebuild of the SpellChecker vocabulary + n-gram index. Call after bulk entity churn; the lazy cache is otherwise correct for low-churn graphs.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'spell_vocabulary_size',
+    description: 'v2.1.0 — Return the count of unique terms in the SpellChecker vocabulary (entity names + tag values by default). Mostly diagnostic.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
 ];
 
 // Tool categories are documented in CLAUDE.md for reference:
