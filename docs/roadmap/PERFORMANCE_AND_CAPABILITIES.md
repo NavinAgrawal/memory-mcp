@@ -1,9 +1,19 @@
 # Performance & Optimization Roadmap
 
-**Version:** 3.1.0
-**Last Updated:** 2026-04-26
-**Current Version:** 12.2.0
+**Version:** 3.2.0
+**Last Updated:** 2026-05-16
+**Current Version:** 12.3.1
 **Target Version:** 13.0.0
+
+**v12.3.0–12.3.1 update (Phase 16):** 53 new MCP tool surfaces for the v2.1.x
+memoryjs additions — Tool Affordance + Observer (11), Heuristic Guidelines (10),
+Project Context (12), Decision Rationale (10), `do_not_remember` / Exclusion (5),
+Observation Dedup (2), Spell Correction (3). All 213 tools have e2e handler
+tests under `tests/e2e/tools/`. v12.3.1 ships the dependabot security bumps
+(`fast-uri` 3.1.2, `hono` 4.12.18, `ip-address` + `express-rate-limit`), the
+`zod 3.x → 4.x` realignment with memoryjs, the `vitest 4.0.17 → 4.1.6`
+worker-bootstrap fix, and the upstream `memoryjs@2.1.1` bump that resolves the
+`UpdateEntitySchema` strict-mode bug blocking subclass-manager update paths.
 
 ---
 

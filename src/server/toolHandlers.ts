@@ -1163,7 +1163,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const entityName = args.entityName !== undefined
       ? validateWithSchema(args.entityName, z.string().min(1), 'Invalid entityName')
       : undefined;
-    const refs = await getRefIndex(ctx).listRefs(entityName ? { entityName } : undefined);
+    const refs = await getRefIndex(ctx).listRefs(entityName);
     return formatToolResponse({ refs, count: refs.length });
   },
 
@@ -2171,7 +2171,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
     const updates = validateWithSchema(
       args.updates,
-      z.record(z.unknown()),
+      z.record(z.string(), z.unknown()),
       'Invalid updates',
     );
     const expectedVersion = args.expectedVersion !== undefined
@@ -2454,7 +2454,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
       ? undefined
       : validateWithSchema(
           args.args,
-          z.record(z.unknown()),
+          z.record(z.string(), z.unknown()),
           'Invalid args (must be an object)',
         );
     const callId = ctx.toolCallObserver.observeStart(toolName, argsField);

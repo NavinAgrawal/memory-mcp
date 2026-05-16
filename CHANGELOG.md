@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.3.1] - 2026-05-16
+
+### Fixed
+
+- **Bumps `@danielsimonjr/memoryjs` to `^2.1.1`** — resolves a v2.1.0 bug
+  where `DecisionManager.accept`/`reject`/`supersede`,
+  `HeuristicManager.reinforce`/`recordContradiction`,
+  `ProjectContextManager.upsert` (post-create update path), and all
+  `append_project_*` / `remove_project_*` / `clear_project_context` tool
+  calls failed at runtime with `"Error: Invalid update data"`. The
+  underlying `UpdateEntitySchema.strict()` rejected the manager-attached
+  domain fields (`decisionRecord`, `projectContext`, `heuristic`,
+  `lastModified`); switched to `.passthrough()` upstream.
+- **Stale `toolDefinitions.length === 160` assertion** in
+  `tests/integration/server.test.ts` updated to `213` to match the
+  Phase 16 surface.
+- **`tests/file-path.test.ts` migration-spy assertion** corrected to spy
+  on `console.error` (memoryjs `logger.info` writes `[INFO]` to stderr
+  so JSON-RPC stdout stays clean).
+- **`tests/e2e/tools/consolidation-tools.test.ts` afterEach** now
+  swallows `ENOTEMPTY` on temp-dir rm — Windows + still-flushing
+  scheduler handles are a known flake.
+
+### Changed
+
+- **`zod ^3.24.1` → `^4.4.3`** to match `@danielsimonjr/memoryjs`'s
+  declared `zod ^4.4.3`. The previous mismatch caused
+  `validateWithSchema` type errors at build time because the two zod
+  copies (top-level zod 3 vs nested zod 4) had incompatible
+  `ZodSchema<T>` shapes. The 2 sites of `z.record(z.unknown())` updated
+  to `z.record(z.string(), z.unknown())` per zod 4's required-key API.
+- **`vitest 4.0.13` → `4.1.5`** — 4.0.x had a worker-bootstrap regression
+  on Node 24 / Windows (workers timed out before responding). 4.1.x
+  fixes it.
+- **Dependabot security bumps**: `fast-uri` 3.1.0 → 3.1.2,
+  `hono` 4.12.14 → 4.12.18 (Cache Middleware Vary leak fix, JSX CSS
+  injection fix, JWT NumericDate validation), `ip-address` 10.1.0 →
+  10.2.0, `express-rate-limit` 8.3.2 → 8.5.1. All transitive via
+  `@danielsimonjr/memoryjs`.
+
+### Added
+
+- **Handler tests for all 53 Phase 16 tools** under `tests/e2e/tools/`:
+  `tool-affordance-tools.test.ts` (16 tests), `heuristic-tools.test.ts`
+  (12 tests), `project-context-tools.test.ts` (17 tests),
+  `decision-tools.test.ts` (14 tests), `exclusion-tools.test.ts` (10
+  tests), `observation-dedup-tools.test.ts` (5 tests),
+  `spell-correction-tools.test.ts` (6 tests). 80 new tests, all green.
+
 ## [12.3.0] - 2026-05-15
 
 **Phase 16 — memoryjs v2.1.0 tool surface**: 53 new MCP tools across

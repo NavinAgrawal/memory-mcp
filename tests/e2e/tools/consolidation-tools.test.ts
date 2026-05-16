@@ -29,7 +29,13 @@ afterEach(async () => {
   } catch {
     // Ignore — scheduler may not be running
   }
-  await fs.rm(testDir, { recursive: true, force: true });
+  // Windows: scheduler may still be flushing on async-write file handles even after
+  // stop_consolidation returns. ENOTEMPTY on temp-dir cleanup is harmless — log + skip.
+  try {
+    await fs.rm(testDir, { recursive: true, force: true });
+  } catch {
+    // Ignore — temp directory will be reaped by OS
+  }
 });
 
 async function seedGraph() {
