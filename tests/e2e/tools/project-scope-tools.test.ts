@@ -79,4 +79,41 @@ describe('Project Scope Tools E2E', () => {
     const result = await handleToolCall('set_project_scope', {}, manager);
     expect(result.isError).toBe(true);
   });
+
+  describe('create_entities auto-applies active scope', () => {
+    it('stamps projectId on entities that lack one when a scope is active', async () => {
+      await handleToolCall('set_project_scope', { projectId: 'auto-stamp' }, manager);
+      await handleToolCall('create_entities', {
+        entities: [
+          { name: 'Inherits', entityType: 'thing', observations: [] },
+        ],
+      }, manager);
+
+      const node = parse(await handleToolCall('open_nodes', { names: ['Inherits'] }, manager));
+      expect(node.entities[0].projectId).toBe('auto-stamp');
+    });
+
+    it('does NOT override an explicit projectId on the entity', async () => {
+      await handleToolCall('set_project_scope', { projectId: 'auto-stamp' }, manager);
+      await handleToolCall('create_entities', {
+        entities: [
+          { name: 'Explicit', entityType: 'thing', observations: [], projectId: 'wins' },
+        ],
+      }, manager);
+
+      const node = parse(await handleToolCall('open_nodes', { names: ['Explicit'] }, manager));
+      expect(node.entities[0].projectId).toBe('wins');
+    });
+
+    it('leaves projectId undefined when no scope is active', async () => {
+      await handleToolCall('create_entities', {
+        entities: [
+          { name: 'Unscoped', entityType: 'thing', observations: [] },
+        ],
+      }, manager);
+
+      const node = parse(await handleToolCall('open_nodes', { names: ['Unscoped'] }, manager));
+      expect(node.entities[0].projectId).toBeUndefined();
+    });
+  });
 });

@@ -264,7 +264,13 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // ==================== ENTITY HANDLERS ====================
   create_entities: async (ctx, args) => {
     const entities = validateWithSchema(args.entities, BatchCreateEntitiesSchema, 'Invalid entities data');
-    return formatToolResponse(await ctx.entityManager.createEntities(entities));
+    // Phase 13 (v12.4.0): auto-stamp active project scope on entities lacking
+    // an explicit projectId. Set via set_project_scope; explicit projectId wins.
+    const activeScope = getActiveProjectScope(ctx);
+    const scoped = activeScope
+      ? entities.map((e) => (e.projectId === undefined ? { ...e, projectId: activeScope } : e))
+      : entities;
+    return formatToolResponse(await ctx.entityManager.createEntities(scoped));
   },
 
   delete_entities: async (ctx, args) => {

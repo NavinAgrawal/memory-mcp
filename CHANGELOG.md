@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.4.0] - 2026-05-16
+
+### Added
+
+- **`create_entities` auto-applies the active project scope.** When
+  `set_project_scope('p')` has been called, any entity in a subsequent
+  `create_entities` call that lacks an explicit `projectId` is
+  auto-stamped with `'p'`; entities that *do* set an explicit
+  `projectId` are passed through unchanged. Honours the Phase 13
+  roadmap promise ("new entities will be auto-stamped with this
+  projectId") for the create path; search-side auto-filtering remains
+  future work because it changes search semantics in ways that warrant
+  per-tool design. Three new TDD tests in
+  `tests/e2e/tools/project-scope-tools.test.ts`:
+  `stamps projectId on entities that lack one when a scope is active`,
+  `does NOT override an explicit projectId on the entity`,
+  `leaves projectId undefined when no scope is active`.
+- **Depends on `@danielsimonjr/memoryjs@^2.1.2`** — pulls in the new
+  `memory smoke` / `memoryjs smoke` CLI subcommand which is now
+  available to any Memory-mcp user via the bundled memoryjs CLI.
+  Useful for pre-deployment verification:
+  `npx -p @danielsimonjr/memoryjs memory smoke --keep`.
+
 ## [12.3.2] - 2026-05-16
 
 ### Added
