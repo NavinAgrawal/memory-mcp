@@ -2671,6 +2671,100 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // ==================== v2.1.0 HEURISTIC GUIDELINES TOOLS ====================
+  {
+    name: 'add_heuristic',
+    description: 'v2.1.0 — Register a new condition→action heuristic. Storage-backed; default confidence 0.5. Pass an explicit content-addressed id (e.g. h_<sha256(condition|action)>) for caller-managed idempotency.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        condition: { type: 'string', description: 'Natural-language condition that triggers the action.' },
+        action: { type: 'string', description: 'Recommended action when the condition matches.' },
+        priority: { type: 'number', description: 'Tie-breaker when multiple match (higher wins).' },
+        initialConfidence: { type: 'number', minimum: 0, maximum: 1, description: 'Default 0.5.' },
+        importance: { type: 'number', minimum: 0, maximum: 10 },
+        agentId: { type: 'string' },
+        id: { type: 'string', description: 'Optional explicit id for idempotent registration.' },
+      },
+      required: ['condition', 'action'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_heuristic',
+    description: 'v2.1.0 — Sync lookup by HeuristicId.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_heuristics',
+    description: 'v2.1.0 — All registered heuristics.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'heuristic_count',
+    description: 'v2.1.0 — Count of stored heuristics.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'match_heuristics',
+    description: 'v2.1.0 — Find heuristics whose condition matches input via Jaccard token-overlap × confidence; sorted descending, then by priority.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        input: { type: 'string', description: 'Text to match against heuristic conditions.' },
+        limit: { type: 'number', minimum: 1, description: 'Max matches returned. Default 10.' },
+        minScore: { type: 'number', minimum: 0, maximum: 1, description: 'Minimum score. Default 0.1.' },
+      },
+      required: ['input'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'reinforce_heuristic',
+    description: 'v2.1.0 — Record a successful application: bumps support; raises confidence asymptotically (new = old + (1-old)*0.1). OCC-protected — surfaces "conflict" when concurrent writer collides.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'record_heuristic_contradiction',
+    description: 'v2.1.0 — Record a counter-example: bumps contradictions; lowers confidence (new = old - old*0.2). OCC-protected.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'detect_heuristic_conflicts',
+    description: 'v2.1.0 — Pair-wise overlap/contradiction detection across stored heuristics. Surfaces overlap (same condition tokens, different actions) and contradiction (opposing actions on overlapping conditions; negation prefixes such as "do not" / "never" / "avoid").',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'remove_heuristic',
+    description: 'v2.1.0 — Drop a heuristic by id.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'clear_heuristics',
+    description: 'v2.1.0 — Drop every heuristic (across all entities of type "heuristic").',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+
   // ==================== v2.1.0 PROJECT CONTEXT TOOLS ====================
   {
     name: 'upsert_project_context',

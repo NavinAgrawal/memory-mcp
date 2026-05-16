@@ -2396,6 +2396,94 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatToolResponse({ action, candidates, chains, count: chains.length });
   },
 
+  // ==================== v2.1.0 HEURISTIC GUIDELINES ====================
+
+  add_heuristic: async (ctx, args) => {
+    const condition = validateWithSchema(args.condition, z.string().min(1), 'Invalid condition');
+    const action = validateWithSchema(args.action, z.string().min(1), 'Invalid action');
+    const priority = args.priority === undefined
+      ? undefined
+      : validateWithSchema(args.priority, z.number(), 'Invalid priority');
+    const initialConfidence = args.initialConfidence === undefined
+      ? undefined
+      : validateWithSchema(args.initialConfidence, z.number().min(0).max(1), 'Invalid initialConfidence');
+    const importance = args.importance === undefined
+      ? undefined
+      : validateWithSchema(args.importance, z.number().min(0).max(10), 'Invalid importance');
+    const agentId = args.agentId === undefined
+      ? undefined
+      : validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    const id = args.id === undefined
+      ? undefined
+      : validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const heuristicId = await ctx.heuristicManager.add({
+      condition,
+      action,
+      priority,
+      initialConfidence,
+      importance,
+      agentId,
+      id: id as unknown as Parameters<typeof ctx.heuristicManager.add>[0]['id'],
+    });
+    return formatToolResponse({ id: heuristicId });
+  },
+
+  get_heuristic: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const heuristic = ctx.heuristicManager.get(id);
+    return formatToolResponse({ id, heuristic: heuristic ?? null });
+  },
+
+  list_heuristics: async (ctx) => {
+    const heuristics = await ctx.heuristicManager.list();
+    return formatToolResponse({ heuristics, count: heuristics.length });
+  },
+
+  heuristic_count: async (ctx) => {
+    const size = await ctx.heuristicManager.size();
+    return formatToolResponse({ count: size });
+  },
+
+  match_heuristics: async (ctx, args) => {
+    const input = validateWithSchema(args.input, z.string().min(1), 'Invalid input');
+    const limit = args.limit === undefined
+      ? undefined
+      : validateWithSchema(args.limit, z.number().int().min(1), 'Invalid limit');
+    const minScore = args.minScore === undefined
+      ? undefined
+      : validateWithSchema(args.minScore, z.number().min(0).max(1), 'Invalid minScore');
+    const matches = await ctx.heuristicManager.match(input, { limit, minScore });
+    return formatToolResponse({ input, matches, count: matches.length });
+  },
+
+  reinforce_heuristic: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const result = await ctx.heuristicManager.reinforce(id);
+    return formatToolResponse({ id, result });
+  },
+
+  record_heuristic_contradiction: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const result = await ctx.heuristicManager.recordContradiction(id);
+    return formatToolResponse({ id, result });
+  },
+
+  detect_heuristic_conflicts: async (ctx) => {
+    const conflicts = await ctx.heuristicManager.detectConflicts();
+    return formatToolResponse({ conflicts, count: conflicts.length });
+  },
+
+  remove_heuristic: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const removed = await ctx.heuristicManager.remove(id);
+    return formatToolResponse({ id, removed });
+  },
+
+  clear_heuristics: async (ctx) => {
+    await ctx.heuristicManager.clear();
+    return formatToolResponse({ cleared: true });
+  },
+
   // ==================== v2.1.0 PROJECT CONTEXT ====================
 
   upsert_project_context: async (ctx, args) => {
