@@ -1,6 +1,6 @@
 # Memory MCP Server
 
-[![Version](https://img.shields.io/badge/version-12.2.3-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
+[![Version](https://img.shields.io/badge/version-12.3.0-blue.svg)](https://github.com/danielsimonjr/memory-mcp)
 [![NPM](https://img.shields.io/npm/v/@danielsimonjr/memory-mcp.svg)](https://www.npmjs.com/package/@danielsimonjr/memory-mcp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-1.0-purple.svg)](https://modelcontextprotocol.io)
@@ -9,7 +9,7 @@
 
 An **enhanced fork** of the official [Model Context Protocol](https://modelcontextprotocol.io) memory server with advanced features for **hierarchical nesting**, **intelligent compression**, **semantic search**, **graph algorithms**, **archiving**, **advanced search**, and **multi-format import/export**.
 
-> **Enterprise-grade knowledge graph** with **160 tools** including hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, project scoping, temporal knowledge graph, semantic forget, agent diary, **entity bitemporal validity (η.4.4)**, **optimistic concurrency control (η.5.5.c)**, **role-based access control (η.6.1)**, **W3C Linked Data exports** (Turtle / JSON-LD / RDF/XML — η.5.4), **PII redaction on export** (η.6.3), **procedural memory (3B.4)**, **active retrieval (3B.5)**, **causal reasoning (3B.6)**, and **world model (3B.7)** for long-term memory management.
+> **Enterprise-grade knowledge graph** with **213 tools** including hierarchical organization, semantic search with embeddings, graph traversal algorithms, duplicate detection, smart archiving, project scoping, temporal knowledge graph, semantic forget, agent diary, **entity bitemporal validity (η.4.4)**, **optimistic concurrency control (η.5.5.c)**, **role-based access control (η.6.1)**, **W3C Linked Data exports** (Turtle / JSON-LD / RDF/XML — η.5.4), **PII redaction on export** (η.6.3), **procedural memory (3B.4)**, **active retrieval (3B.5)**, **causal reasoning (3B.6)**, **world model (3B.7)**, **`do_not_remember` exclusions**, **decision rationale** (ADR memory + markdown dual-write), **structured project context** (facts / conventions / commands / glossary), **heuristic guidelines**, **tool affordance + ToolCallObserver pipeline** (with MCP shim), **observation dedup**, and **spell correction** (memoryjs v2.1.0 — Phase 16) for long-term memory management.
 
 ## Table of Contents
 
@@ -767,9 +767,10 @@ We welcome contributions!
 
 All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-**Current version**: v12.2.3 - [View full changelog](CHANGELOG.md)
+**Current version**: v12.3.0 - [View full changelog](CHANGELOG.md)
 
 Recent highlights:
+- **v12.3.0** (213 tools): **Phase 16** — 53 new tools surfacing memoryjs v2.1.0 across seven new manager surfaces: `do_not_remember` exclusion rules (5), decision rationale + ADR markdown dual-write (10), structured project context (12), heuristic guidelines (10), tool affordance + `ToolCallObserver` producer pipeline (11), observation dedup (2), spell correction (3). Bumped `@danielsimonjr/memoryjs` dep `^1.15.0` → `^2.1.0`.
 - **v12.2.3**: Publishability — switched `@danielsimonjr/memoryjs` dep from local `file:` link to published `^1.15.0` (npm rejects `file:` deps for published packages).
 - **v12.2.2**: Doc-only — roadmap completion audit grading Phase 6-15 status against current code.
 - **v12.2.1**: Doc-only — comprehensive consistency pass across 68 markdown documents to align with v12.2.0's 160-tool surface.

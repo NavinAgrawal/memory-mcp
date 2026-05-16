@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.3.0] - 2026-05-15
+
+**Phase 16 — memoryjs v2.1.0 tool surface**: 53 new MCP tools across
+seven new manager surfaces. Bumps `@danielsimonjr/memoryjs` dep
+`^1.15.0` → `^2.1.0`. Total tool count: **160 → 213**.
+
+### Added
+
+53 new MCP tools shipped over six batches (one commit per batch).
+
+**SpellChecker (3 tools)** — bigram-Jaccard + Levenshtein over entity
+names + tag values:
+- `spell_suggest(query, limit?, minScore?, maxDistance?)`
+- `spell_rebuild_vocabulary()`
+- `spell_vocabulary_size()`
+
+**ObservationDedupManager (2 tools)** — cross-entity duplicate-observation
+finder. Complements `MemoryEngine.checkDuplicate` (turn-level) and
+`CompressionManager.findDuplicates` (entity-grouping):
+- `find_duplicate_observations({entityType?, projectId?, sessionId?,
+  minOccurrences?, maxGroups?})` — SHA-256 exact tier
+- `find_jaccard_duplicate_observations(same filter)` — opt-in expensive
+  near-duplicate tier with union-find grouping
+
+**ExclusionManager (5 tools)** — `do_not_remember` content-pattern rules
+with hard-delete-existing + write-block-future semantics. v2.1.0 ships
+substring matching only (regex deferred):
+- `add_exclusion_rule(pattern, scope?, entityType?, reason?)`
+- `list_exclusion_rules()`
+- `remove_exclusion_rule(id)`
+- `check_exclusion(content, entityType?)` — used at the MemoryEngine /
+  WorkingMemoryManager hot paths in memoryjs
+- `find_matching_memories_for_rule(pattern, entityType?)` — dry-run preview
+
+**DecisionManager (10 tools)** — runtime-queryable ADR memory with
+discriminated lifecycle (proposed → accepted | rejected; accepted →
+superseded). All lifecycle mutations surface the `'conflict'` /
+`'illegal-transition'` arms via OCC:
+- `propose_decision` / `accept_decision` / `reject_decision` / `supersede_decision`
+- `find_decisions_by_context` / `get_decision_chain` / `list_decisions` / `get_decision`
+- `export_decision_as_adr_markdown(id)` — ADR-format markdown rendering
+- `parse_adr_markdown(text)` — static; hand-written ADR → DecisionInput
+
+**ProjectContextManager (12 tools)** — structured project-knowledge
+memory, one record per `projectId`:
+- `upsert_project_context({facts?, conventions?, commands?, glossary?})`
+- `get_project_context(projectId)`
+- 4× `append_project_*` (auto-create + dedup) and 4× `remove_project_*`
+- `clear_project_context(projectId)`
+- `format_project_context_for_llm(projectId, budgetChars?)` — renders
+  prose for the memoryjs `wakeUp` L0 layer
+
+**HeuristicManager (10 tools)** — storage-backed condition→action
+heuristics (`@experimental` match algorithm). OCC-protected mutations
+surface `'updated' | 'not-found' | 'conflict' | 'vanished-mid-update'`:
+- `add_heuristic` / `get_heuristic` / `list_heuristics` / `heuristic_count`
+- `match_heuristics(input, ...)` — Jaccard × confidence rank
+- `reinforce_heuristic` / `record_heuristic_contradiction`
+- `detect_heuristic_conflicts` — pair-wise overlap + contradiction
+- `remove_heuristic` / `clear_heuristics`
+
+**ToolAffordance + ToolCallObserver (11 tools)** — per-tool rolling
+outcome statistics for adaptive tool selection, plus the producer
+pipeline:
+- `record_tool_outcome` / `get_tool_affordance_stats` / `suggest_tool`
+- `list_tool_affordances` / `remove_tool_affordance`
+- `observe_tool_start(toolName, args?) → callId`
+- `observe_tool_complete` / `observe_tool_error` / `observe_tool_partial`
+  / `observe_tool_cancel(callId)`
+- `tool_observer_in_flight_count()`
+
+The observer's in-flight `Map` lives on the singleton
+`ToolCallObserver` bound to the `ManagerContext`, so `callId`s
+persist across MCP requests within the same server process.
+
+### Changed
+
+- `@danielsimonjr/memoryjs` dep: `^1.15.0` → `^2.1.0`. v2.1.0 is fully
+  back-compat for all existing Memory-mcp tools (strict typecheck
+  passes with zero changes to existing handlers). The v2.0.0/v2.1.0
+  soft-breaks (HeuristicManager storage-backed refactor — was
+  `@experimental`; `MemoryEngine.AddTurnResult.entity` became optional
+  on the opt-in `ExclusionManager` write-block path) do not affect
+  any code path Memory-mcp currently uses.
+
 ### Documentation
 - Add CycloneDX SBOM (sbom.json).
 
