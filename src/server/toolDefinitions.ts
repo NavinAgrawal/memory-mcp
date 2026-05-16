@@ -2671,6 +2671,167 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // ==================== v2.1.0 PROJECT CONTEXT TOOLS ====================
+  {
+    name: 'upsert_project_context',
+    description: 'v2.1.0 — Merge structured project knowledge into the ProjectContextRecord for `projectId`. Array fields (facts/conventions/commands/glossary) append + dedup; scalars overwrite. One record per projectId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'Project identifier (unique key).' },
+        facts: { type: 'array', items: { type: 'string' } },
+        conventions: { type: 'array', items: { type: 'string' } },
+        commands: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              command: { type: 'string' },
+              purpose: { type: 'string' },
+            },
+            required: ['name', 'command', 'purpose'],
+          },
+        },
+        glossary: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              term: { type: 'string' },
+              definition: { type: 'string' },
+            },
+            required: ['term', 'definition'],
+          },
+        },
+      },
+      required: ['projectId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_project_context',
+    description: 'v2.1.0 — Sync lookup of the ProjectContextRecord for projectId.',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' } },
+      required: ['projectId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'append_project_fact',
+    description: 'v2.1.0 — Append one fact to a project context (auto-creates the record on first call; dedups).',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' }, fact: { type: 'string' } },
+      required: ['projectId', 'fact'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'append_project_convention',
+    description: 'v2.1.0 — Append one convention to a project context (auto-creates; dedups).',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' }, convention: { type: 'string' } },
+      required: ['projectId', 'convention'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'append_project_command',
+    description: 'v2.1.0 — Append a documented project command (dedup by name).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string' },
+        name: { type: 'string', description: 'Short command name (e.g. "test").' },
+        command: { type: 'string', description: 'The command line (e.g. "npm test").' },
+        purpose: { type: 'string', description: 'What the command does.' },
+      },
+      required: ['projectId', 'name', 'command', 'purpose'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'append_project_glossary_term',
+    description: 'v2.1.0 — Append a glossary term (dedup by term).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string' },
+        term: { type: 'string' },
+        definition: { type: 'string' },
+      },
+      required: ['projectId', 'term', 'definition'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'remove_project_fact',
+    description: 'v2.1.0 — Remove a single fact. Returns true if found.',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' }, fact: { type: 'string' } },
+      required: ['projectId', 'fact'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'remove_project_convention',
+    description: 'v2.1.0 — Remove a single convention. Returns true if found.',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' }, convention: { type: 'string' } },
+      required: ['projectId', 'convention'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'remove_project_command',
+    description: 'v2.1.0 — Remove a command by name. Returns true if found.',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' }, commandName: { type: 'string' } },
+      required: ['projectId', 'commandName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'remove_project_glossary_term',
+    description: 'v2.1.0 — Remove a glossary entry by term. Returns true if found.',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' }, term: { type: 'string' } },
+      required: ['projectId', 'term'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'clear_project_context',
+    description: 'v2.1.0 — Wipe the four arrays (facts/conventions/commands/glossary) for projectId; keeps the entity.',
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'string' } },
+      required: ['projectId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'format_project_context_for_llm',
+    description: 'v2.1.0 — Render the ProjectContextRecord as a prose summary suitable for the wakeUp L0 layer or a system prompt. Honors budgetChars with ellipsis truncation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string' },
+        budgetChars: { type: 'number', minimum: 1, description: 'Character cap for the rendered prose.' },
+      },
+      required: ['projectId'],
+      additionalProperties: false,
+    },
+  },
+
   // ==================== v2.1.0 DECISION RATIONALE TOOLS ====================
   {
     name: 'propose_decision',

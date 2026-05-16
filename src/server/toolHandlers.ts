@@ -2396,6 +2396,123 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatToolResponse({ action, candidates, chains, count: chains.length });
   },
 
+  // ==================== v2.1.0 PROJECT CONTEXT ====================
+
+  upsert_project_context: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const facts = args.facts === undefined
+      ? undefined
+      : validateWithSchema(args.facts, z.array(z.string()), 'Invalid facts');
+    const conventions = args.conventions === undefined
+      ? undefined
+      : validateWithSchema(args.conventions, z.array(z.string()), 'Invalid conventions');
+    const commands = args.commands === undefined
+      ? undefined
+      : validateWithSchema(
+          args.commands,
+          z.array(z.object({
+            name: z.string().min(1),
+            command: z.string().min(1),
+            purpose: z.string().min(1),
+          })),
+          'Invalid commands',
+        );
+    const glossary = args.glossary === undefined
+      ? undefined
+      : validateWithSchema(
+          args.glossary,
+          z.array(z.object({
+            term: z.string().min(1),
+            definition: z.string().min(1),
+          })),
+          'Invalid glossary',
+        );
+    const record = await ctx.projectContextManager.upsert(projectId, {
+      facts, conventions, commands, glossary,
+    });
+    return formatToolResponse({ record });
+  },
+
+  get_project_context: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const record = ctx.projectContextManager.get(projectId);
+    return formatToolResponse({ projectId, record: record ?? null });
+  },
+
+  append_project_fact: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const fact = validateWithSchema(args.fact, z.string().min(1), 'Invalid fact');
+    const record = await ctx.projectContextManager.appendFact(projectId, fact);
+    return formatToolResponse({ record });
+  },
+
+  append_project_convention: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const convention = validateWithSchema(args.convention, z.string().min(1), 'Invalid convention');
+    const record = await ctx.projectContextManager.appendConvention(projectId, convention);
+    return formatToolResponse({ record });
+  },
+
+  append_project_command: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const command = validateWithSchema(args.command, z.string().min(1), 'Invalid command');
+    const purpose = validateWithSchema(args.purpose, z.string().min(1), 'Invalid purpose');
+    const record = await ctx.projectContextManager.appendCommand(projectId, { name, command, purpose });
+    return formatToolResponse({ record });
+  },
+
+  append_project_glossary_term: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const term = validateWithSchema(args.term, z.string().min(1), 'Invalid term');
+    const definition = validateWithSchema(args.definition, z.string().min(1), 'Invalid definition');
+    const record = await ctx.projectContextManager.appendGlossaryTerm(projectId, { term, definition });
+    return formatToolResponse({ record });
+  },
+
+  remove_project_fact: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const fact = validateWithSchema(args.fact, z.string().min(1), 'Invalid fact');
+    const removed = await ctx.projectContextManager.removeFact(projectId, fact);
+    return formatToolResponse({ projectId, fact, removed });
+  },
+
+  remove_project_convention: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const convention = validateWithSchema(args.convention, z.string().min(1), 'Invalid convention');
+    const removed = await ctx.projectContextManager.removeConvention(projectId, convention);
+    return formatToolResponse({ projectId, convention, removed });
+  },
+
+  remove_project_command: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const commandName = validateWithSchema(args.commandName, z.string().min(1), 'Invalid commandName');
+    const removed = await ctx.projectContextManager.removeCommand(projectId, commandName);
+    return formatToolResponse({ projectId, commandName, removed });
+  },
+
+  remove_project_glossary_term: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const term = validateWithSchema(args.term, z.string().min(1), 'Invalid term');
+    const removed = await ctx.projectContextManager.removeGlossaryTerm(projectId, term);
+    return formatToolResponse({ projectId, term, removed });
+  },
+
+  clear_project_context: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const cleared = await ctx.projectContextManager.clear(projectId);
+    return formatToolResponse({ projectId, cleared });
+  },
+
+  format_project_context_for_llm: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string().min(1), 'Invalid projectId');
+    const budgetChars = args.budgetChars === undefined
+      ? undefined
+      : validateWithSchema(args.budgetChars, z.number().int().min(1), 'Invalid budgetChars');
+    const prose = await ctx.projectContextManager.forContext(projectId, { budgetChars });
+    return formatTextResponse(prose);
+  },
+
   // ==================== v2.1.0 DECISION RATIONALE ====================
 
   propose_decision: async (ctx, args) => {
