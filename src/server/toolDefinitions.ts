@@ -2671,6 +2671,68 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // ==================== v2.1.0 do_not_remember (Exclusion) TOOLS ====================
+  {
+    name: 'add_exclusion_rule',
+    description: 'v2.1.0 — Add a content-pattern exclusion rule (do_not_remember). Hard-deletes existing matches (per `scope`) and write-blocks future ones when consulted by upstream callers. v1 substring-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pattern: { type: 'string', description: 'Substring to match (case-insensitive).' },
+        scope: {
+          type: 'string',
+          enum: ['future-only', 'past-only', 'both'],
+          description: 'When the rule applies. Default: both.',
+        },
+        entityType: { type: 'string', description: 'Optional restriction by entityType.' },
+        reason: { type: 'string', description: 'Free-text justification (e.g. "GDPR request 2026-05-15").' },
+      },
+      required: ['pattern'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_exclusion_rules',
+    description: 'v2.1.0 — Return every registered ExclusionRule.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'remove_exclusion_rule',
+    description: 'v2.1.0 — Drop an exclusion rule by id. Does NOT restore previously deleted memories — the contract is "user said forget".',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'Rule id (exclusion-...)' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'check_exclusion',
+    description: 'v2.1.0 — Check whether content would be blocked by any active forward-blocking rule. Returns {blocked, ruleId?, reason?}. Past-only rules are skipped.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Content to test.' },
+        entityType: { type: 'string', description: 'Optional entityType — narrows entityType-scoped rules.' },
+      },
+      required: ['content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'find_matching_memories_for_rule',
+    description: 'v2.1.0 — Dry-run preview: return entities whose observations would match the candidate exclusion pattern. Does NOT persist the rule.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pattern: { type: 'string', description: 'Candidate substring pattern.' },
+        entityType: { type: 'string', description: 'Optional entityType restriction.' },
+      },
+      required: ['pattern'],
+      additionalProperties: false,
+    },
+  },
+
   // ==================== v2.1.0 OBSERVATION DEDUP TOOLS ====================
   {
     name: 'find_duplicate_observations',

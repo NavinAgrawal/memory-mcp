@@ -2395,6 +2395,57 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatToolResponse({ action, candidates, chains, count: chains.length });
   },
 
+  // ==================== v2.1.0 do_not_remember (Exclusion) ====================
+
+  add_exclusion_rule: async (ctx, args) => {
+    const pattern = validateWithSchema(args.pattern, z.string().min(1), 'Invalid pattern');
+    const scope = args.scope === undefined
+      ? undefined
+      : validateWithSchema(args.scope, z.enum(['future-only', 'past-only', 'both']), 'Invalid scope');
+    const entityType = args.entityType === undefined
+      ? undefined
+      : validateWithSchema(args.entityType, z.string().min(1), 'Invalid entityType');
+    const reason = args.reason === undefined
+      ? undefined
+      : validateWithSchema(args.reason, z.string().min(1), 'Invalid reason');
+    const rule = await ctx.exclusionManager.add({ pattern, scope, entityType, reason });
+    return formatToolResponse({ rule });
+  },
+
+  list_exclusion_rules: async (ctx) => {
+    const rules = await ctx.exclusionManager.list();
+    return formatToolResponse({ rules, count: rules.length });
+  },
+
+  remove_exclusion_rule: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const removed = await ctx.exclusionManager.remove(id);
+    return formatToolResponse({ id, removed });
+  },
+
+  check_exclusion: async (ctx, args) => {
+    const content = validateWithSchema(args.content, z.string(), 'Invalid content');
+    const entityType = args.entityType === undefined
+      ? undefined
+      : validateWithSchema(args.entityType, z.string().min(1), 'Invalid entityType');
+    const verdict = await ctx.exclusionManager.check(content, entityType);
+    return formatToolResponse(verdict);
+  },
+
+  find_matching_memories_for_rule: async (ctx, args) => {
+    const pattern = validateWithSchema(args.pattern, z.string().min(1), 'Invalid pattern');
+    const entityType = args.entityType === undefined
+      ? undefined
+      : validateWithSchema(args.entityType, z.string().min(1), 'Invalid entityType');
+    const matches = await ctx.exclusionManager.findMatchingMemories({ pattern, entityType });
+    return formatToolResponse({
+      pattern,
+      entityType,
+      matches: matches.map((m) => ({ name: m.name, entityType: m.entityType })),
+      count: matches.length,
+    });
+  },
+
   // ==================== v2.1.0 OBSERVATION DEDUP ====================
 
   find_duplicate_observations: async (ctx, args) => {
