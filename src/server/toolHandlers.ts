@@ -68,6 +68,7 @@ import {
   type ForgetOptions,
   type ConflictInfo,
   type ConflictStrategy,
+  DecisionManager,
 } from '@danielsimonjr/memoryjs';
 import { z } from 'zod';
 import { maybeCompressResponse } from './responseCompressor.js';
@@ -2393,6 +2394,127 @@ export const toolHandlers: Record<string, ToolHandler> = {
     const candidates = validateWithSchema(args.candidates, z.array(z.string()).min(1), 'Invalid candidates');
     const chains = await ctx.worldModelManager.predictOutcome(action, candidates);
     return formatToolResponse({ action, candidates, chains, count: chains.length });
+  },
+
+  // ==================== v2.1.0 DECISION RATIONALE ====================
+
+  propose_decision: async (ctx, args) => {
+    const context = validateWithSchema(args.context, z.string().min(1), 'Invalid context');
+    const decision = validateWithSchema(args.decision, z.string().min(1), 'Invalid decision');
+    const alternatives = args.alternatives === undefined
+      ? []
+      : validateWithSchema(args.alternatives, z.array(z.string()), 'Invalid alternatives');
+    const consequences = args.consequences === undefined
+      ? []
+      : validateWithSchema(args.consequences, z.array(z.string()), 'Invalid consequences');
+    const relatedFiles = args.relatedFiles === undefined
+      ? undefined
+      : validateWithSchema(args.relatedFiles, z.array(z.string()), 'Invalid relatedFiles');
+    const supersedes = args.supersedes === undefined
+      ? undefined
+      : validateWithSchema(args.supersedes, z.string().min(1), 'Invalid supersedes');
+    const sourceSessionId = args.sourceSessionId === undefined
+      ? undefined
+      : validateWithSchema(args.sourceSessionId, z.string().min(1), 'Invalid sourceSessionId');
+    const sourceProjectId = args.sourceProjectId === undefined
+      ? undefined
+      : validateWithSchema(args.sourceProjectId, z.string().min(1), 'Invalid sourceProjectId');
+    const importance = args.importance === undefined
+      ? undefined
+      : validateWithSchema(args.importance, z.number().min(0).max(10), 'Invalid importance');
+    const agentId = args.agentId === undefined
+      ? undefined
+      : validateWithSchema(args.agentId, z.string().min(1), 'Invalid agentId');
+    // `supersedes` is a branded DecisionId at the type level; the
+    // manager casts internally so a string is fine here.
+    const record = await ctx.decisionManager.propose(
+      {
+        context,
+        decision,
+        alternatives,
+        consequences,
+        relatedFiles,
+        supersedes: supersedes as unknown as Parameters<typeof ctx.decisionManager.propose>[0]['supersedes'],
+        sourceSessionId,
+        sourceProjectId,
+      },
+      { importance, agentId },
+    );
+    return formatToolResponse({ record });
+  },
+
+  accept_decision: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const result = await ctx.decisionManager.accept(id);
+    return formatToolResponse({ id, result });
+  },
+
+  reject_decision: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const reason = validateWithSchema(args.reason, z.string().min(1), 'Invalid reason');
+    const result = await ctx.decisionManager.reject(id, reason);
+    return formatToolResponse({ id, reason, result });
+  },
+
+  supersede_decision: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const by = validateWithSchema(args.by, z.string().min(1), 'Invalid by');
+    const result = await ctx.decisionManager.supersede(
+      id,
+      by as unknown as Parameters<typeof ctx.decisionManager.supersede>[1],
+    );
+    return formatToolResponse({ id, by, result });
+  },
+
+  find_decisions_by_context: async (ctx, args) => {
+    const query = validateWithSchema(args.query, z.string().min(1), 'Invalid query');
+    const records = await ctx.decisionManager.findByContext(query);
+    return formatToolResponse({ query, records, count: records.length });
+  },
+
+  get_decision_chain: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const chain = await ctx.decisionManager.getChain(id);
+    return formatToolResponse({ id, chain, length: chain.length });
+  },
+
+  list_decisions: async (ctx, args) => {
+    const status = args.status === undefined
+      ? undefined
+      : validateWithSchema(
+          args.status,
+          z.enum(['proposed', 'accepted', 'superseded', 'rejected']),
+          'Invalid status',
+        );
+    const sourceSessionId = args.sourceSessionId === undefined
+      ? undefined
+      : validateWithSchema(args.sourceSessionId, z.string().min(1), 'Invalid sourceSessionId');
+    const sourceProjectId = args.sourceProjectId === undefined
+      ? undefined
+      : validateWithSchema(args.sourceProjectId, z.string().min(1), 'Invalid sourceProjectId');
+    const limit = args.limit === undefined
+      ? undefined
+      : validateWithSchema(args.limit, z.number().int().min(1), 'Invalid limit');
+    const records = await ctx.decisionManager.list({ status, sourceSessionId, sourceProjectId, limit });
+    return formatToolResponse({ records, count: records.length });
+  },
+
+  get_decision: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const record = ctx.decisionManager.get(id);
+    return formatToolResponse({ id, record: record ?? null });
+  },
+
+  export_decision_as_adr_markdown: async (ctx, args) => {
+    const id = validateWithSchema(args.id, z.string().min(1), 'Invalid id');
+    const markdown = ctx.decisionManager.exportAsAdrMarkdown(id);
+    return formatTextResponse(markdown);
+  },
+
+  parse_adr_markdown: async (_ctx, args) => {
+    const text = validateWithSchema(args.text, z.string().min(1), 'Invalid text');
+    const parsed = DecisionManager.parseAdrMarkdown(text);
+    return formatToolResponse({ parsed });
   },
 
   // ==================== v2.1.0 do_not_remember (Exclusion) ====================

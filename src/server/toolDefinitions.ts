@@ -2671,6 +2671,129 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // ==================== v2.1.0 DECISION RATIONALE TOOLS ====================
+  {
+    name: 'propose_decision',
+    description: 'v2.1.0 — Propose a new architecture-decision-record (ADR-equivalent). Creates a "proposed" DecisionRecord. Default importance 8.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        context: { type: 'string', description: 'Problem-space description (the question the decision answers)' },
+        decision: { type: 'string', description: 'The chosen path' },
+        alternatives: { type: 'array', items: { type: 'string' }, description: 'Considered-but-not-chosen options. Default [].' },
+        consequences: { type: 'array', items: { type: 'string' }, description: 'Anticipated downstream effects. Default [].' },
+        relatedFiles: { type: 'array', items: { type: 'string' }, description: 'Optional paths to related ADRs / code.' },
+        supersedes: { type: 'string', description: 'Optional backward link to the decision being replaced (DecisionId).' },
+        sourceSessionId: { type: 'string' },
+        sourceProjectId: { type: 'string' },
+        importance: { type: 'number', minimum: 0, maximum: 10, description: 'Entity-level importance. Default 8.' },
+        agentId: { type: 'string', description: 'Owning agent.' },
+      },
+      required: ['context', 'decision'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'accept_decision',
+    description: 'v2.1.0 — Transition a proposed decision to accepted. Returns one of: accepted | already-accepted | not-found | illegal-transition | conflict | vanished-mid-update.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'DecisionId' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'reject_decision',
+    description: 'v2.1.0 — Transition a proposed decision to rejected with a reason. Returns rejected | already-rejected | not-found | illegal-transition | conflict | vanished-mid-update.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'DecisionId' },
+        reason: { type: 'string', description: 'Why the decision is being rejected.' },
+      },
+      required: ['id', 'reason'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'supersede_decision',
+    description: 'v2.1.0 — Mark an accepted decision as superseded by another. illegal-transition when target is not accepted. not-found when target or replacement is missing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Decision being superseded' },
+        by: { type: 'string', description: 'DecisionId of the replacement' },
+      },
+      required: ['id', 'by'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'find_decisions_by_context',
+    description: 'v2.1.0 — Substring search across context, decision, and consequences fields.',
+    inputSchema: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'Substring to search for' } },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_decision_chain',
+    description: 'v2.1.0 — Walk the supersedes link backward from the supplied id to the original proposal. Returns chain oldest-first; cycle-protected.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'Any DecisionId in the chain' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_decisions',
+    description: 'v2.1.0 — List decisions, optionally filtered by status / sourceSessionId / sourceProjectId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['proposed', 'accepted', 'superseded', 'rejected'] },
+        sourceSessionId: { type: 'string' },
+        sourceProjectId: { type: 'string' },
+        limit: { type: 'number', minimum: 1 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_decision',
+    description: 'v2.1.0 — Sync lookup by DecisionId.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'DecisionId' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'export_decision_as_adr_markdown',
+    description: 'v2.1.0 — Render a stored decision as ADR-format markdown (# title, Status, Context, Decision, Consequences bullet list, Alternatives bullet list, optional Supersedes link).',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'DecisionId' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'parse_adr_markdown',
+    description: 'v2.1.0 — Parse a hand-written or previously-exported ADR markdown into a DecisionInput shape (static; no persistence). Returns null when required Context or Decision sections are missing.',
+    inputSchema: {
+      type: 'object',
+      properties: { text: { type: 'string', description: 'Raw ADR markdown text' } },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+
   // ==================== v2.1.0 do_not_remember (Exclusion) TOOLS ====================
   {
     name: 'add_exclusion_rule',
