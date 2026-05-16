@@ -2396,6 +2396,105 @@ export const toolHandlers: Record<string, ToolHandler> = {
     return formatToolResponse({ action, candidates, chains, count: chains.length });
   },
 
+  // ==================== v2.1.0 TOOL AFFORDANCE ====================
+
+  record_tool_outcome: async (ctx, args) => {
+    const toolName = validateWithSchema(args.toolName, z.string().min(1), 'Invalid toolName');
+    const outcome = validateWithSchema(
+      args.outcome,
+      z.enum(['success', 'failure', 'partial']),
+      'Invalid outcome',
+    );
+    const errorMessage = args.errorMessage === undefined
+      ? undefined
+      : validateWithSchema(args.errorMessage, z.string(), 'Invalid errorMessage');
+    const durationMs = args.durationMs === undefined
+      ? undefined
+      : validateWithSchema(args.durationMs, z.number().min(0), 'Invalid durationMs');
+    const record = await ctx.toolAffordanceManager.recordOutcome(toolName, {
+      outcome,
+      errorMessage,
+      durationMs,
+    });
+    return formatToolResponse({ record });
+  },
+
+  get_tool_affordance_stats: async (ctx, args) => {
+    const toolName = validateWithSchema(args.toolName, z.string().min(1), 'Invalid toolName');
+    const stats = ctx.toolAffordanceManager.rollingStats(toolName);
+    return formatToolResponse({ toolName, stats: stats ?? null });
+  },
+
+  suggest_tool: async (ctx, args) => {
+    const taskHint = validateWithSchema(args.taskHint, z.string().min(1), 'Invalid taskHint');
+    const limit = args.limit === undefined
+      ? undefined
+      : validateWithSchema(args.limit, z.number().int().min(1), 'Invalid limit');
+    const minScore = args.minScore === undefined
+      ? undefined
+      : validateWithSchema(args.minScore, z.number().min(0).max(1), 'Invalid minScore');
+    const suggestions = await ctx.toolAffordanceManager.suggestTool(taskHint, { limit, minScore });
+    return formatToolResponse({ taskHint, suggestions, count: suggestions.length });
+  },
+
+  list_tool_affordances: async (ctx) => {
+    const records = await ctx.toolAffordanceManager.list();
+    return formatToolResponse({ records, count: records.length });
+  },
+
+  remove_tool_affordance: async (ctx, args) => {
+    const toolName = validateWithSchema(args.toolName, z.string().min(1), 'Invalid toolName');
+    const removed = await ctx.toolAffordanceManager.remove(toolName);
+    return formatToolResponse({ toolName, removed });
+  },
+
+  observe_tool_start: (ctx, args) => {
+    const toolName = validateWithSchema(args.toolName, z.string().min(1), 'Invalid toolName');
+    const argsField = args.args === undefined
+      ? undefined
+      : validateWithSchema(
+          args.args,
+          z.record(z.unknown()),
+          'Invalid args (must be an object)',
+        );
+    const callId = ctx.toolCallObserver.observeStart(toolName, argsField);
+    return Promise.resolve(formatToolResponse({ callId, toolName }));
+  },
+
+  observe_tool_complete: async (ctx, args) => {
+    const callId = validateWithSchema(args.callId, z.string().min(1), 'Invalid callId');
+    const result = args.result === undefined
+      ? undefined
+      : validateWithSchema(args.result, z.string(), 'Invalid result');
+    await ctx.toolCallObserver.observeComplete(callId, result === undefined ? undefined : { result });
+    return formatToolResponse({ callId, recorded: 'success' });
+  },
+
+  observe_tool_error: async (ctx, args) => {
+    const callId = validateWithSchema(args.callId, z.string().min(1), 'Invalid callId');
+    const errorMessage = validateWithSchema(args.errorMessage, z.string().min(1), 'Invalid errorMessage');
+    await ctx.toolCallObserver.observeError(callId, errorMessage);
+    return formatToolResponse({ callId, recorded: 'failure', errorMessage });
+  },
+
+  observe_tool_partial: async (ctx, args) => {
+    const callId = validateWithSchema(args.callId, z.string().min(1), 'Invalid callId');
+    const reason = validateWithSchema(args.reason, z.string().min(1), 'Invalid reason');
+    await ctx.toolCallObserver.observePartial(callId, reason);
+    return formatToolResponse({ callId, recorded: 'partial', reason });
+  },
+
+  observe_tool_cancel: (ctx, args) => {
+    const callId = validateWithSchema(args.callId, z.string().min(1), 'Invalid callId');
+    ctx.toolCallObserver.cancel(callId);
+    return Promise.resolve(formatToolResponse({ callId, cancelled: true }));
+  },
+
+  tool_observer_in_flight_count: (ctx) => {
+    const count = ctx.toolCallObserver.inFlightCount();
+    return Promise.resolve(formatToolResponse({ inFlightCount: count }));
+  },
+
   // ==================== v2.1.0 HEURISTIC GUIDELINES ====================
 
   add_heuristic: async (ctx, args) => {

@@ -2671,6 +2671,129 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
+  // ==================== v2.1.0 TOOL AFFORDANCE TOOLS ====================
+  {
+    name: 'record_tool_outcome',
+    description: 'v2.1.0 — Record a single tool-call outcome directly via ToolAffordanceManager (bypasses ToolCallObserver). Creates the record on first call; appends to rolling window on subsequent. Throws "conflict" on concurrent writer mismatch.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        toolName: { type: 'string' },
+        outcome: { type: 'string', enum: ['success', 'failure', 'partial'] },
+        errorMessage: { type: 'string', description: 'Required when outcome is failure or partial (ranked in commonFailureModes).' },
+        durationMs: { type: 'number', minimum: 0, description: 'Wall-clock duration. Optional.' },
+      },
+      required: ['toolName', 'outcome'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_tool_affordance_stats',
+    description: 'v2.1.0 — Flat rolling stats for a tool: success_rate, total_calls, common_failure_modes, avg_duration_ms.',
+    inputSchema: {
+      type: 'object',
+      properties: { toolName: { type: 'string' } },
+      required: ['toolName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'suggest_tool',
+    description: 'v2.1.0 — Suggest tools matching a task hint, ranked by successRate × recency factor (1.0 at ≤1d, linearly decays to 0.1 at ≥30d).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskHint: { type: 'string', description: 'Substring matched against toolName.' },
+        limit: { type: 'number', minimum: 1, description: 'Max candidates. Default 5.' },
+        minScore: { type: 'number', minimum: 0, maximum: 1, description: 'Default 0.' },
+      },
+      required: ['taskHint'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_tool_affordances',
+    description: 'v2.1.0 — All recorded ToolAffordanceRecords.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'remove_tool_affordance',
+    description: 'v2.1.0 — Drop a tool-affordance record by toolName.',
+    inputSchema: {
+      type: 'object',
+      properties: { toolName: { type: 'string' } },
+      required: ['toolName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'observe_tool_start',
+    description: 'v2.1.0 — Begin observing a tool call. Returns a callId the caller threads through observe_tool_complete / observe_tool_error / observe_tool_partial / observe_tool_cancel. Emits toolCall:start on the observer EventEmitter.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        toolName: { type: 'string' },
+        args: { type: 'object', additionalProperties: true, description: 'Optional structured args for telemetry.' },
+      },
+      required: ['toolName'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'observe_tool_complete',
+    description: 'v2.1.0 — Record successful completion. Computes durationMs from observe_tool_start. No-op on unknown callId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        callId: { type: 'string' },
+        result: { type: 'string', description: 'Optional summary string for telemetry.' },
+      },
+      required: ['callId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'observe_tool_error',
+    description: 'v2.1.0 — Record failure with an error message. No-op on unknown callId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        callId: { type: 'string' },
+        errorMessage: { type: 'string' },
+      },
+      required: ['callId', 'errorMessage'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'observe_tool_partial',
+    description: 'v2.1.0 — Record a partial result (tool returned a usable but incomplete result). No-op on unknown callId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        callId: { type: 'string' },
+        reason: { type: 'string' },
+      },
+      required: ['callId', 'reason'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'observe_tool_cancel',
+    description: 'v2.1.0 — Drop an in-flight observation without recording (e.g. user cancelled). No-op on unknown callId.',
+    inputSchema: {
+      type: 'object',
+      properties: { callId: { type: 'string' } },
+      required: ['callId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'tool_observer_in_flight_count',
+    description: 'v2.1.0 — Diagnostic: number of in-flight (started but not yet completed) tool-call observations.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+
   // ==================== v2.1.0 HEURISTIC GUIDELINES TOOLS ====================
   {
     name: 'add_heuristic',
