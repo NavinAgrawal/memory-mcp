@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.3.2] - 2026-05-16
+
+### Added
+
+- **`set_project_scope` + `get_project_scope`** — Backports the
+  Phase 13 tool that was deferred from v12.1.0 with a TODO. The active
+  scope is stored in a `WeakMap<ManagerContext, string>`
+  (`projectScopeMap` in `src/server/toolHandlers.ts`); empty-string sets
+  clear the scope. Scope-aware handlers may consult
+  `getActiveProjectScope(ctx)` to auto-apply the scope — this is opt-in
+  and not retroactive across the existing tool surface. Total tool count
+  **213 → 215**. Six-test handler test suite at
+  `tests/e2e/tools/project-scope-tools.test.ts`.
+
+### Fixed
+
+- **Roadmap accuracy** — `docs/roadmap/PERFORMANCE_AND_CAPABILITIES.md`
+  now correctly reflects that Phase 13 shipped 13 tools (12 in v12.1.0
+  + the v12.3.2 backport), not 12. Bumped doc to 3.2.1 / current 12.3.2.
+
 ## [12.3.1] - 2026-05-16
 
 ### Fixed

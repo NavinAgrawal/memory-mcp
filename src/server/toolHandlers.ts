@@ -88,6 +88,16 @@ const consolidationSchedulerMap = new WeakMap<ManagerContext, ConsolidationSched
 const dreamEngineMap = new WeakMap<ManagerContext, DreamEngine>();
 const queryCostEstimatorMap = new WeakMap<ManagerContext, QueryCostEstimator>();
 
+// Active project scope (Phase 13 deferred item; ctx.defaultProjectId is readonly,
+// so we keep mutable scope state in a WeakMap keyed on the context. Set via the
+// `set_project_scope` tool; handlers may consult `getActiveProjectScope(ctx)`
+// when they want to auto-apply the scope.
+const projectScopeMap = new WeakMap<ManagerContext, string>();
+
+export function getActiveProjectScope(ctx: ManagerContext): string | undefined {
+  return projectScopeMap.get(ctx);
+}
+
 function getStorageFilePath(ctx: ManagerContext): string {
   // GraphStorage exposes filePath publicly; fall back to cwd-relative default
   return (ctx.storage as unknown as { filePath?: string }).filePath ?? 'memory.jsonl';
@@ -279,6 +289,21 @@ export const toolHandlers: Record<string, ToolHandler> = {
   list_projects: async (ctx, _args) => {
     const projects = await ctx.entityManager.listProjects();
     return formatToolResponse({ projects, count: projects.length });
+  },
+
+  set_project_scope: async (ctx, args) => {
+    const projectId = validateWithSchema(args.projectId, z.string(), 'Invalid projectId');
+    if (projectId === '') {
+      projectScopeMap.delete(ctx);
+      return formatToolResponse({ projectId: null });
+    }
+    projectScopeMap.set(ctx, projectId);
+    return formatToolResponse({ projectId });
+  },
+
+  get_project_scope: async (ctx, _args) => {
+    const projectId = projectScopeMap.get(ctx) ?? null;
+    return formatToolResponse({ projectId });
   },
 
   get_entity_versions: async (ctx, args) => {

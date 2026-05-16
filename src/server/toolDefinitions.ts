@@ -1898,9 +1898,30 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
 
-  // Phase 13: Config tool
-  // TODO: set_project_scope requires server state management (activeProjectId on MCPServer)
-  // Skipped in this pass — implement when MCPServer exposes mutable server state to handlers.
+  // Phase 13 (v12.3.2 backport): Active project scope. Mutable per-server state stored in a
+  // WeakMap keyed on ManagerContext (see toolHandlers.ts projectScopeMap). Handlers that
+  // want to apply the active scope may call getActiveProjectScope(ctx).
+  {
+    name: 'set_project_scope',
+    description: 'Set the active project scope for this server session. New entities passed without an explicit projectId may be auto-stamped with this value by scope-aware handlers; pass an empty string to clear the scope. Returns { projectId } where projectId is the new active scope (null when cleared).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'Project ID to scope to. Empty string clears the active scope.' },
+      },
+      required: ['projectId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_project_scope',
+    description: 'Returns the active project scope for this server session (set via set_project_scope). Returns { projectId } where projectId is null when no scope is active.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
 
   // ==================== SESSION & WORKING MEMORY TOOLS ====================
   {

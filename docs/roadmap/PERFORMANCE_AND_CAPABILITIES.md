@@ -1,8 +1,8 @@
 # Performance & Optimization Roadmap
 
-**Version:** 3.2.0
+**Version:** 3.2.1
 **Last Updated:** 2026-05-16
-**Current Version:** 12.3.1
+**Current Version:** 12.3.2
 **Target Version:** 13.0.0
 
 **v12.3.0–12.3.1 update (Phase 16):** 53 new MCP tool surfaces for the v2.1.x
@@ -1341,9 +1341,11 @@ MEMORY_TUNE_INTERVAL_MS=300000
 
 ---
 
-## Phase 13: New MCP Tools for memoryjs v1.8.0 + v1.9.0 ✅ SHIPPED in v12.1.0
+## Phase 13: New MCP Tools for memoryjs v1.8.0 + v1.9.0 ✅ SHIPPED in v12.1.0 (+ backport in v12.3.2)
 
-12 tools shipped in v12.1.0 (2026-04-10). See [`CHANGELOG.md`](../../CHANGELOG.md) [12.1.0] for the full per-tool list.
+13 tools total: **12 shipped in v12.1.0** (2026-04-10) and **`set_project_scope` + companion `get_project_scope` backported in v12.3.2** (2026-05-16). The original v12.1.0 commit deliberately deferred `set_project_scope` with a TODO citing server-state management; v12.3.2 supplies the missing piece by storing the active scope in a `WeakMap<ManagerContext, string>` (`projectScopeMap` in `src/server/toolHandlers.ts`). Scope-aware handlers may consult `getActiveProjectScope(ctx)` to auto-apply the scope; this is opt-in, not retroactive across the existing tool surface.
+
+See [`CHANGELOG.md`](../../CHANGELOG.md) [12.1.0] and [12.3.2] for the per-tool lists.
 
 **Goal**: Expose 13 new library methods as MCP tools to close the gap between memoryjs capabilities and memory-mcp's tool surface.
 **Effort**: 2-3 days | **Impact**: Unlocks project scoping, memory versioning, semantic forget, user profiles, temporal KG, conversation ingestion, agent diary for all MCP clients.

@@ -87,7 +87,9 @@ describe('MCPServer Integration', () => {
       // Phase 16 (v12.3.0): +53 tools for memoryjs v2.1.x surfaces — Tool Affordance (11),
       //   Heuristic Guidelines (10), Project Context (12), Decision Rationale (10),
       //   Exclusion / do_not_remember (5), Observation Dedup (2), Spell Correction (3).
-      expect(toolDefinitions).toHaveLength(213);
+      // v12.3.2: Backport of deferred Phase 13 set_project_scope plus a companion
+      //   get_project_scope (+2 tools).
+      expect(toolDefinitions).toHaveLength(215);
     });
 
     it('should have matching handlers for all definitions', async () => {
