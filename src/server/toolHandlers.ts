@@ -69,7 +69,13 @@ import {
   type ConflictInfo,
   type ConflictStrategy,
   DecisionManager,
+  RankedSearch,
+  clearAllSearchCaches,
+  getAllCacheStats,
+  type GraphStorage,
 } from '@danielsimonjr/memoryjs';
+import { promises as fs } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 import { maybeCompressResponse } from './responseCompressor.js';
 
@@ -99,8 +105,12 @@ export function getActiveProjectScope(ctx: ManagerContext): string | undefined {
 }
 
 function getStorageFilePath(ctx: ManagerContext): string {
-  // GraphStorage exposes filePath publicly; fall back to cwd-relative default
-  return (ctx.storage as unknown as { filePath?: string }).filePath ?? 'memory.jsonl';
+  // GraphStorage stores the path on `memoryFilePath` (private but reachable via
+  // type-cast). Older versions of this helper looked for `filePath` and
+  // silently fell back to 'memory.jsonl' — which made diag / size / reindex
+  // reports point at the wrong file. Try both field names defensively.
+  const storage = ctx.storage as unknown as { memoryFilePath?: string; filePath?: string };
+  return storage.memoryFilePath ?? storage.filePath ?? 'memory.jsonl';
 }
 
 function getRefIndex(ctx: ManagerContext): RefIndex {
@@ -2942,6 +2952,335 @@ export const toolHandlers: Record<string, ToolHandler> = {
   spell_vocabulary_size: async (ctx) => {
     const size = ctx.spellChecker.vocabularySize();
     return formatToolResponse({ vocabularySize: size });
+  },
+
+  // ==================== ENGINEERING / DIAGNOSTIC TOOLS (v12.5.0) ====================
+  // Parallel to the `memory diag` / `memory check` / etc. CLI surface in memoryjs v2.2+.
+  // Useful when the MCP server is up but the graph state is suspect.
+
+  diag: async (ctx) => {
+    const storagePath = getStorageFilePath(ctx);
+    let exists = false;
+    let sizeBytes = 0;
+    try {
+      const stat = await fs.stat(storagePath);
+      exists = true;
+      sizeBytes = stat.size;
+    } catch { /* file may not exist yet */ }
+    const stats = await ctx.analyticsManager.getGraphStats();
+    return formatToolResponse({
+      runtime: { node: process.version, platform: process.platform, arch: process.arch, pid: process.pid },
+      storage: {
+        path: storagePath,
+        type: process.env.MEMORY_STORAGE_TYPE ?? 'jsonl',
+        exists,
+        sizeBytes,
+        entities: stats.totalEntities,
+        relations: stats.totalRelations,
+      },
+      loadedAt: new Date().toISOString(),
+    });
+  },
+
+  health: async (ctx) => {
+    const checks: Array<{ name: string; ok: boolean; durationMs: number; detail?: string }> = [];
+
+    const t1 = performance.now();
+    let graph: Awaited<ReturnType<typeof ctx.storage.loadGraph>>;
+    try {
+      graph = await ctx.storage.loadGraph();
+      checks.push({ name: 'storage:loadGraph', ok: true, durationMs: performance.now() - t1 });
+    } catch (e) {
+      checks.push({
+        name: 'storage:loadGraph',
+        ok: false,
+        durationMs: performance.now() - t1,
+        detail: e instanceof Error ? e.message : String(e),
+      });
+      return formatToolResponse({ ok: false, failed: 1, totalChecks: 1, totalMs: performance.now() - t1, checks });
+    }
+
+    const t2 = performance.now();
+    const names = new Set<string>();
+    const dupes: string[] = [];
+    for (const e of graph.entities) {
+      if (names.has(e.name)) dupes.push(e.name);
+      else names.add(e.name);
+    }
+    checks.push({
+      name: 'entities:distinct-names',
+      ok: dupes.length === 0,
+      durationMs: performance.now() - t2,
+      detail: dupes.length === 0 ? undefined : `${dupes.length} duplicate(s)`,
+    });
+
+    const t3 = performance.now();
+    const orphans: string[] = [];
+    for (const r of graph.relations) {
+      if (!names.has(r.from) || !names.has(r.to)) {
+        orphans.push(`${r.from} → ${r.to}`);
+      }
+    }
+    checks.push({
+      name: 'relations:no-orphans',
+      ok: orphans.length === 0,
+      durationMs: performance.now() - t3,
+      detail: orphans.length === 0 ? undefined : `${orphans.length} orphan(s)`,
+    });
+
+    const t4 = performance.now();
+    const byName = new Map<string, AgentEntity>();
+    for (const e of graph.entities) byName.set(e.name, e as AgentEntity);
+    const cycleIssues: string[] = [];
+    for (const e of graph.entities) {
+      if (!e.parentId) continue;
+      if (!byName.has(e.parentId)) { cycleIssues.push(`${e.name}.parentId='${e.parentId}' missing`); continue; }
+      const visited = new Set<string>();
+      let cur = byName.get(e.parentId);
+      while (cur && cur.parentId) {
+        if (visited.has(cur.name)) { cycleIssues.push(`cycle through ${cur.name}`); break; }
+        visited.add(cur.name);
+        cur = byName.get(cur.parentId);
+      }
+    }
+    checks.push({
+      name: 'hierarchy:no-cycles-no-missing-parents',
+      ok: cycleIssues.length === 0,
+      durationMs: performance.now() - t4,
+      detail: cycleIssues.length === 0 ? undefined : cycleIssues.slice(0, 3).join('; '),
+    });
+
+    const failed = checks.filter((c) => !c.ok).length;
+    return formatToolResponse({
+      ok: failed === 0,
+      failed,
+      totalChecks: checks.length,
+      totalMs: Number(checks.reduce((a, c) => a + c.durationMs, 0).toFixed(2)),
+      checks,
+    });
+  },
+
+  check_graph: async (ctx, args) => {
+    const apply = args.apply === undefined
+      ? false
+      : validateWithSchema(args.apply, z.boolean(), 'Invalid apply');
+    const graph = await ctx.storage.loadGraph();
+    const names = new Set(graph.entities.map((e) => e.name));
+
+    const orphans: Array<{ from: string; to: string; relationType: string; reason: string }> = [];
+    for (const r of graph.relations) {
+      const fromMissing = !names.has(r.from);
+      const toMissing = !names.has(r.to);
+      if (fromMissing || toMissing) {
+        orphans.push({
+          from: r.from, to: r.to, relationType: r.relationType,
+          reason: fromMissing && toMissing ? 'both-missing' : fromMissing ? 'from-missing' : 'to-missing',
+        });
+      }
+    }
+
+    const byName = new Map<string, { name: string; parentId?: string }>();
+    for (const e of graph.entities) byName.set(e.name, { name: e.name, parentId: e.parentId });
+    const missing: Array<{ entity: string; parentId: string }> = [];
+    const cycles: Array<{ entityInCycle: string; cycleThrough: string }> = [];
+    for (const e of graph.entities) {
+      if (!e.parentId) continue;
+      if (!byName.has(e.parentId)) { missing.push({ entity: e.name, parentId: e.parentId }); continue; }
+      const visited = new Set<string>([e.name]);
+      let cur = byName.get(e.parentId);
+      while (cur && cur.parentId) {
+        if (visited.has(cur.name)) { cycles.push({ entityInCycle: e.name, cycleThrough: cur.name }); break; }
+        visited.add(cur.name);
+        cur = byName.get(cur.parentId);
+      }
+    }
+
+    const ok = orphans.length === 0 && missing.length === 0 && cycles.length === 0;
+    const result: Record<string, unknown> = {
+      ok, applied: apply, orphanRelations: orphans, missingParents: missing, hierarchyCycles: cycles,
+    };
+
+    if (apply && (orphans.length > 0 || missing.length > 0)) {
+      let deleted = 0;
+      let cleared = 0;
+      if (orphans.length > 0) {
+        await ctx.relationManager.deleteRelations(
+          orphans.map((o) => ({ from: o.from, to: o.to, relationType: o.relationType })),
+        );
+        deleted = orphans.length;
+      }
+      for (const m of missing) {
+        try {
+          await ctx.hierarchyManager.setEntityParent(m.entity, null);
+          cleared += 1;
+        } catch { /* skip; entity may have vanished */ }
+      }
+      result.actions = { orphanRelationsDeleted: deleted, missingParentsCleared: cleared };
+    }
+
+    return formatToolResponse(result);
+  },
+
+  reindex: async (ctx, args) => {
+    const ranked = args.ranked === undefined
+      ? true
+      : validateWithSchema(args.ranked, z.boolean(), 'Invalid ranked');
+    const spell = args.spell === undefined
+      ? true
+      : validateWithSchema(args.spell, z.boolean(), 'Invalid spell');
+    if (!ranked && !spell) {
+      return formatToolResponse({ ok: true, failed: 0, result: {} });
+    }
+    const result: Record<string, { ok: boolean; durationMs: number; detail?: string }> = {};
+
+    if (ranked) {
+      const t = performance.now();
+      try {
+        // Same workaround as the CLI: default ctx.rankedSearch is constructed
+        // without a storageDir so buildIndex() refuses. Construct an ad-hoc one
+        // alongside the JSONL.
+        const storageDir = path.dirname(getStorageFilePath(ctx));
+        const r = new RankedSearch(ctx.storage as GraphStorage, storageDir);
+        await r.buildIndex();
+        result.ranked = { ok: true, durationMs: performance.now() - t };
+      } catch (e) {
+        result.ranked = {
+          ok: false,
+          durationMs: performance.now() - t,
+          detail: e instanceof Error ? e.message : String(e),
+        };
+      }
+    }
+    if (spell) {
+      const t = performance.now();
+      try {
+        await ctx.spellChecker.rebuild();
+        result.spell = { ok: true, durationMs: performance.now() - t };
+      } catch (e) {
+        result.spell = {
+          ok: false,
+          durationMs: performance.now() - t,
+          detail: e instanceof Error ? e.message : String(e),
+        };
+      }
+    }
+    const failed = Object.values(result).filter((r) => !r.ok).length;
+    return formatToolResponse({ ok: failed === 0, failed, result });
+  },
+
+  cache_stats: async (_ctx) => {
+    return formatToolResponse({ stats: getAllCacheStats() });
+  },
+
+  cache_clear: async (_ctx) => {
+    clearAllSearchCaches();
+    return formatToolResponse({ cleared: true, caches: ['basic', 'ranked', 'boolean', 'fuzzy'] });
+  },
+
+  graph_size: async (ctx) => {
+    const storagePath = getStorageFilePath(ctx);
+    const graph = await ctx.storage.loadGraph();
+    let observationCount = 0;
+    const tagSet = new Set<string>();
+    for (const e of graph.entities) {
+      observationCount += e.observations.length;
+      if (e.tags) for (const t of e.tags) tagSet.add(t);
+    }
+    let exists = false;
+    let sizeBytes = 0;
+    let lineCount = 0;
+    try {
+      const stat = await fs.stat(storagePath);
+      exists = true;
+      sizeBytes = stat.size;
+      if (sizeBytes > 0) {
+        const content = await fs.readFile(storagePath, 'utf8');
+        lineCount = content.split('\n').filter((l) => l.length > 0).length;
+      }
+    } catch { /* file may not exist */ }
+    return formatToolResponse({
+      graph: {
+        entities: graph.entities.length,
+        relations: graph.relations.length,
+        observations: observationCount,
+        distinctTags: tagSet.size,
+        avgObservationsPerEntity: graph.entities.length === 0
+          ? 0
+          : Number((observationCount / graph.entities.length).toFixed(2)),
+      },
+      storage: { path: storagePath, exists, sizeBytes, lineCount },
+    });
+  },
+
+  inspect_entity: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    // getEntityByName reads an in-memory nameIndex hydrated by loadGraph.
+    const graph = await ctx.storage.loadGraph();
+    const entity = ctx.storage.getEntityByName(name);
+    if (!entity) throw new Error(`entity not found: ${name}`);
+    const observations = await ctx.observationManager.getObservationsFor(name);
+    const outgoing = graph.relations
+      .filter((r) => r.from === name)
+      .map((r) => ({ to: r.to, type: r.relationType }));
+    const incoming = graph.relations
+      .filter((r) => r.to === name)
+      .map((r) => ({ from: r.from, type: r.relationType }));
+    const children = (await ctx.hierarchyManager.getChildren(name)).map((c) => c.name);
+    const ancestors = (await ctx.hierarchyManager.getAncestors(name)).map((a) => a.name);
+    return formatToolResponse({
+      name: entity.name,
+      entityType: entity.entityType,
+      observations,
+      tags: entity.tags,
+      importance: entity.importance,
+      createdAt: entity.createdAt,
+      lastModified: entity.lastModified,
+      parentId: entity.parentId,
+      children,
+      ancestors,
+      relations: { outgoing, incoming },
+    });
+  },
+
+  hierarchy_tree: async (ctx, args) => {
+    const root = args.root === undefined
+      ? undefined
+      : validateWithSchema(args.root, z.string().min(1), 'Invalid root');
+    await ctx.storage.loadGraph();
+
+    interface TreeNode { name: string; entityType: string; children: TreeNode[] }
+    async function walk(n: string): Promise<TreeNode> {
+      const e = ctx.storage.getEntityByName(n);
+      const kids = await ctx.hierarchyManager.getChildren(n);
+      const childNodes: TreeNode[] = [];
+      for (const c of kids) childNodes.push(await walk(c.name));
+      return { name: n, entityType: e?.entityType ?? 'unknown', children: childNodes };
+    }
+
+    if (root) {
+      const e = ctx.storage.getEntityByName(root);
+      if (!e) throw new Error(`entity not found: ${root}`);
+      return formatToolResponse({ trees: [await walk(root)] });
+    }
+    const roots = await ctx.hierarchyManager.getRootEntities();
+    const trees = await Promise.all(roots.map((r) => walk(r.name)));
+    return formatToolResponse({ trees });
+  },
+
+  entity_neighbors: async (ctx, args) => {
+    const name = validateWithSchema(args.name, z.string().min(1), 'Invalid name');
+    const graph = await ctx.storage.loadGraph();
+    const entity = ctx.storage.getEntityByName(name);
+    if (!entity) throw new Error(`entity not found: ${name}`);
+    const outgoing = graph.relations.filter((r) => r.from === name).map((r) => ({ to: r.to, type: r.relationType }));
+    const incoming = graph.relations.filter((r) => r.to === name).map((r) => ({ from: r.from, type: r.relationType }));
+    return formatToolResponse({
+      entity: name,
+      outgoing,
+      incoming,
+      outDegree: outgoing.length,
+      inDegree: incoming.length,
+    });
   },
 };
 

@@ -1,8 +1,8 @@
 # Performance & Optimization Roadmap
 
-**Version:** 3.2.3
+**Version:** 3.2.4
 **Last Updated:** 2026-05-17
-**Current Version:** 12.4.1
+**Current Version:** 12.5.0
 **Target Version:** 13.0.0
 
 **v12.3.0–12.3.1 update (Phase 16):** 53 new MCP tool surfaces for the v2.1.x

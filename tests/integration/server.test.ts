@@ -89,7 +89,10 @@ describe('MCPServer Integration', () => {
       //   Exclusion / do_not_remember (5), Observation Dedup (2), Spell Correction (3).
       // v12.3.2: Backport of deferred Phase 13 set_project_scope plus a companion
       //   get_project_scope (+2 tools).
-      expect(toolDefinitions).toHaveLength(215);
+      // v12.5.0: 10 engineering / diagnostic tools mirroring the memoryjs CLI surface
+      //   (diag, health, check_graph, reindex, cache_stats, cache_clear, graph_size,
+      //   inspect_entity, hierarchy_tree, entity_neighbors).
+      expect(toolDefinitions).toHaveLength(225);
     });
 
     it('should have matching handlers for all definitions', async () => {

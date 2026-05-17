@@ -3332,6 +3332,94 @@ export const toolDefinitions: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+
+  // ==================== v12.5.0 ENGINEERING / DIAGNOSTIC TOOLS ====================
+  // Parallel surface to the memoryjs CLI engineering commands (`memory diag`,
+  // `memory check`, `memory reindex`, etc.). Useful when the MCP server is up
+  // but the graph state is suspect.
+  {
+    name: 'diag',
+    description: 'v12.5.0 — Runtime + storage diagnostic snapshot: node version, platform, storage path/type/size, entity + relation counts, ISO timestamp. Good first call when something feels off.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'health',
+    description: 'v12.5.0 — Fast integrity checks: storage:loadGraph, entities:distinct-names, relations:no-orphans, hierarchy:no-cycles-no-missing-parents. Returns per-check duration; ok=false when any check fails.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'check_graph',
+    description: 'v12.5.0 — Detect orphan relations (from/to references a missing entity), missing parents (entity.parentId references a missing entity), and hierarchy cycles. Reports findings. With apply=true, deletes orphan relations and clears missing parentIds; cycles are always reported but never auto-repaired (no safe default for which edge to break).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        apply: { type: 'boolean', description: 'When true, repair orphan relations + missing parentIds. Default false (dry-run).' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'reindex',
+    description: 'v12.5.0 — Rebuild search-side indexes that may have drifted (TF-IDF/BM25 ranked + spell-checker vocabulary). Pass ranked=false or spell=false to scope. Returns per-target ok flag + durationMs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ranked: { type: 'boolean', description: 'Rebuild the ranked-search (TF-IDF/BM25) index (default true)' },
+        spell: { type: 'boolean', description: 'Rebuild the spell-checker vocabulary (default true)' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'cache_stats',
+    description: 'v12.5.0 — Per-tier snapshot of the global search caches (basic / ranked / boolean / fuzzy) showing hits / misses / size / hitRate. Process-local — every fresh server process starts at zero.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'cache_clear',
+    description: 'v12.5.0 — Bust all four global search caches. Idempotent; safe after manual graph edits to drop stale results.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'graph_size',
+    description: 'v12.5.0 — Graph + storage footprint: entity / relation / observation counts, distinct tag count, avg observations per entity, on-disk byte size + JSONL line count.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'inspect_entity',
+    description: 'v12.5.0 — Verbose snapshot of one entity: observations (resolved via ObservationManager so the column-store sidecar is consulted), outgoing + incoming relations, tags, importance, timestamps, parentId, immediate children, full ancestors. Errors when entity not found.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Entity name to inspect' },
+      },
+      required: ['name'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'hierarchy_tree',
+    description: 'v12.5.0 — Hierarchy tree as nested JSON. With an explicit root, returns just that subtree; without, returns all root entities. Useful for visualising parent/child structure.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        root: { type: 'string', description: 'Root entity name. Omit to return all root entities.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'entity_neighbors',
+    description: 'v12.5.0 — Incoming + outgoing relations for one entity, plus in/out degree counts. Lighter than inspect_entity when you only need the graph-topology view.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Entity name' },
+      },
+      required: ['name'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 // Tool categories are documented in CLAUDE.md for reference:

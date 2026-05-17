@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.5.0] - 2026-05-17
+
+### Added
+
+- **10 engineering / diagnostic MCP tools** mirroring the memoryjs CLI
+  engineering surface. Total tool count **215 → 225**. Useful when the
+  MCP server is up but the graph state is suspect.
+
+  - **`diag`** — runtime + storage diagnostic snapshot (node version,
+    platform, storage path/type/size, entity + relation counts).
+  - **`health`** — fast integrity checks: `storage:loadGraph`,
+    `entities:distinct-names`, `relations:no-orphans`,
+    `hierarchy:no-cycles-no-missing-parents`. Returns per-check
+    duration; `ok=false` on any failure.
+  - **`check_graph`** — detect orphan relations + missing parents +
+    hierarchy cycles. Dry-run default; `{ apply: true }` deletes orphan
+    relations and clears missing parentIds. Cycles always reported but
+    never auto-repaired (no safe default for which edge to break).
+    Sibling of the `memory check --apply` CLI command.
+  - **`reindex`** — rebuild ranked-search (TF-IDF/BM25) + spell
+    vocabulary indexes. Pass `{ ranked: false }` or `{ spell: false }`
+    to scope. Per-target `ok` + `durationMs` in the result. Works
+    around the `ctx.rankedSearch` no-storageDir limitation by
+    constructing an ad-hoc `RankedSearch(storage, dirname(path))`
+    inline (same pattern as the CLI's `reindex` command).
+  - **`cache_stats`** — per-tier hits/misses/size/hitRate snapshot for
+    the four global search caches (`basic` / `ranked` / `boolean` /
+    `fuzzy`). Process-local: every fresh server process starts at zero.
+  - **`cache_clear`** — bust all four search caches.
+  - **`graph_size`** — entity/relation/observation counts, distinct
+    tag count, avg observations per entity, on-disk byte size + JSONL
+    line count.
+  - **`inspect_entity`** — verbose entity snapshot: observations
+    (via ObservationManager so the column-store sidecar is consulted),
+    outgoing + incoming relations, tags, importance, timestamps,
+    parent, immediate children, full ancestors.
+  - **`hierarchy_tree`** — nested-JSON hierarchy tree. With an explicit
+    `root`, returns just that subtree; without, returns all root
+    entities.
+  - **`entity_neighbors`** — incoming + outgoing relations with in/out
+    degree counts. Lighter than `inspect_entity` when only the
+    topology view is needed.
+
+  **Tests**: `tests/e2e/tools/engineering-tools.test.ts` (15 tests)
+  including a deliberately-broken JSONL graph exercising
+  `check_graph` dry-run vs `apply` repair, then asserting the repair
+  actually happened on disk.
+
+### Fixed
+
+- **`getStorageFilePath` helper** in `src/server/toolHandlers.ts`
+  was looking for `ctx.storage.filePath`, but `GraphStorage` exposes
+  the path as `memoryFilePath`. The fallback to a literal
+  `'memory.jsonl'` string silently masked the bug — any handler that
+  consulted this helper for a real path would report the wrong
+  location. Now reads `memoryFilePath` first, falls back to
+  `filePath`, then `'memory.jsonl'` as last resort. Pre-existing bug
+  uncovered while wiring the new `diag` / `graph_size` tools.
+
 ## [12.4.1] - 2026-05-17
 
 ### Fixed
