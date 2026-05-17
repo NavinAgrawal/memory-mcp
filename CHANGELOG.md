@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.4.1] - 2026-05-17
+
+### Fixed
+
+- **Depends on `@danielsimonjr/memoryjs@^2.3.0`** — pulls in the
+  upstream persistence-allowlist fix. Pre-fix, the v2.1.0 subclass
+  managers (`HeuristicManager`, `DecisionManager`, `ExclusionManager`,
+  `ProjectContextManager`, `ToolAffordanceManager`) wrote their
+  domain-record fields (`heuristicRecord`, `decisionRecord`, etc.) via
+  `createEntities`, but `GraphStorage.OPTIONAL_PERSISTED_ENTITY_FIELDS`
+  silently stripped those fields on save. After a process restart the
+  Memory-mcp tools `list_heuristics` / `list_decisions` /
+  `list_exclusion_rules` / `get_project_context` would return empty or
+  bare-entity shapes for any record persisted from a prior run.
+  Records created within a single process session worked because the
+  in-memory cache held the full shape; the bug only manifested on
+  reload. Bug discovered by dogfooding the new `memory heuristic list`
+  CLI subcommand. The v2.1.1 `UpdateEntitySchema.passthrough` fix was
+  the update-side sibling of this persistence bug — same root cause
+  (`.strict()`-style allowlists not anticipating subclass extension).
+
+### Added
+
+- **`memory heuristic` / `memory obs-dedup` / `memory spell` /
+  `memory check` CLI subcommands now available via the bundled
+  memoryjs CLI** — covers the v2.1.0 manager surfaces that previously
+  had no direct CLI access (only MCP-tool access). Useful as a
+  troubleshooting fallback when the MCP server isn't responding.
+  Combine with `memory check --apply` for orphan-relation and
+  missing-parent repair against the live graph.
+
 ## [12.4.0] - 2026-05-16
 
 ### Added
