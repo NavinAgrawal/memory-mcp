@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.5.1] - 2026-05-18
+
+### Changed
+
+- **Bumps `@danielsimonjr/memoryjs` `^2.3.0` → `^2.8.1`** — pulls in
+  everything between, none of which is a Memory-mcp breaking change
+  (verified via typecheck + the engineering / project-scope / server
+  integration suites, 46/46 green against the bumped dep):
+
+  - **v2.8.1** — `WorkerTaskManager.cancel` propagates through
+    `WorkerpoolPromise.cancel()` for mid-execution cancellation
+    (previously documented as best-effort; was actually wired wrong).
+  - **v2.8.0** — `PostgreSQLStorage.fullTextSearch(query, { limit? })`
+    backed by a generated `tsvector` column with weighted contributions
+    (name × A / observations × B / tags × C) and a GIN index.
+    `plainto_tsquery` on the query side accepts free-form input; results
+    ranked by `ts_rank`. Idempotent schema migration; PostgreSQL 12+
+    required.
+  - **v2.7.0** — `WorkerTaskManager` facade + `batchProcessViaWorkers`
+    helper. Combines `WorkerPoolManager` (named pools) with `TaskQueue`
+    (priority + concurrency + timeout + cancellation) behind a single
+    submission API. The recommended pattern for agent-system batch
+    operations that benefit from CPU parallelism.
+  - **v2.6.0** — PostgreSQL backend. Full `IGraphStorage`
+    implementation with `pg` as an optional peer dependency, JSONB
+    `extra` column for v2.1.0 subclass-manager records, GIN index on
+    tags, btree on `entity_type` / `project_id` / `content_hash`.
+    Selectable via `MEMORY_STORAGE_TYPE=postgres`.
+  - **v2.5.0** — 16 test-only orphan modules removed (SPARQL,
+    AnomalyDetector, CRDT, WriteAheadLog, EntityProxy, BufferMmapBackend,
+    BackgroundIndexer, LSH, Node2Vec, PartitionedInvertedIndex,
+    QueryLanguage, SearchStream, SynonymManager, BrotliCompressionAdapter,
+    IDatabaseAdapter, IVectorDBAdapter) + 8 redundant `XxxMemoryEntity`
+    type aliases. Public-API surface unchanged (`dist/index.d.ts`:
+    994KB → 994KB).
+  - **v2.4.0** — CLI `memory cache stats/clear/cleanup` + `memory
+    reindex` (with optional `--ranked` / `--spell` scoping). REPL
+    extensions for the v2.3.0 surface.
+  - **v2.3.0** — CLI `memory heuristic` / `memory obs-dedup` /
+    `memory spell` / `memory check` subcommand groups + an upstream
+    persistence-allowlist fix that resolves silent data loss for the
+    v2.1.0 subclass managers' record fields.
+  - **v2.2.0** — CLI `memory diag` / `memory env` / `memory health` /
+    `memory version` + `memory show` / `memory tree` / `memory
+    neighbors` / `memory size`.
+
+No source-code changes were required in Memory-mcp; the bump is
+infrastructure-only. Real-database PostgreSQL integration via
+`MEMORY_STORAGE_TYPE=postgres` is now reachable through MCP if the
+process has `pg` installed and the right connection-string config.
+
 ## [12.5.0] - 2026-05-17
 
 ### Added
