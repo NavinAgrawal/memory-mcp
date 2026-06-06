@@ -323,3 +323,6 @@ tests/test-results/json/
 tests/test-results/html/
 tests/test-results/summary/
 .claude-stash/settings.json
+
+# Runtime-generated search indexes
+.indexes/
