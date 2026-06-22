@@ -1,0 +1,65 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Configure Git
+        run: |
+          git config user.name "memory-mcp-sync-bot"
+          git config user.email "memory-mcp-sync-bot@users.noreply.github.com"
+          git remote add upstream https://github.com/danielsimonjr/memory-mcp.git || true
+
+      - name: Fetch Remotes
+        run: |
+          git fetch origin --prune
+          git fetch upstream --prune
+
+      - name: Rebase Main On Upstream
+        id: rebase
+        run: |
+          git checkout main
+          # Exit cleanly if already current
+          if git merge-base --is-ancestor upstream/main main; then
+            echo "already_current=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git rebase upstream/main
+          echo "already_current=false" >> "$GITHUB_OUTPUT"
+
+      - name: Install Dependencies
+        if: steps.rebase.outputs.already_current == 'false'
+        run: npm ci
+
+      - name: Build
+        if: steps.rebase.outputs.already_current == 'false'
+        run: npm run build
+
+      - name: Test
+        if: steps.rebase.outputs.already_current == 'false'
+        run: npm test
+
+      - name: Push Updated Main
+        if: steps.rebase.outputs.already_current == 'false'
+        run: git push origin main
