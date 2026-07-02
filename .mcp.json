@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "memory-mcp": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/bundle/index.mjs"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "C:/Users/danie/.claude/memory.db",
+        "MEMORY_STORAGE_TYPE": "sqlite"
+      }
+    }
+  }
+}
