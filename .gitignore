@@ -326,3 +326,6 @@ tests/test-results/summary/
 
 # Runtime-generated search indexes
 .indexes/
+
+# SDD scratch/ledger
+.superpowers/
