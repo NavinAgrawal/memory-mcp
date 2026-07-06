@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.6.0]
+
+### Added
+
+- Companion `memory` skill (`memory-mcp:memory`, `/memory`) consolidating the
+  MEMORY/EXPLORE/MIGRATE commands into a playbook. Commands unchanged. No
+  server/tool changes.
+
 ## [12.5.1] - 2026-05-18
 
 ### Changed

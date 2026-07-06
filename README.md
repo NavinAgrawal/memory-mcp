@@ -21,6 +21,7 @@ An **enhanced fork** of the official [Model Context Protocol](https://modelconte
 - [Configuration](#configuration)
 - [Development](#development)
 - [Documentation](#documentation)
+- [Companion Skill](#companion-skill)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 - [License](#license)
@@ -747,6 +748,10 @@ Comprehensive documentation in `docs/`:
 **Development**
 - [WORKFLOW.md](docs/development/WORKFLOW.md) - Development procedures
 - [MIGRATION.md](docs/guides/MIGRATION.md) - Version upgrade guide
+
+## Companion skill
+
+This plugin ships a `memory` skill (`memory-mcp:memory`, `/memory`) — a playbook over the knowledge-graph tools covering graph CRUD/search/maintenance, project indexing, and storage migration. See [skills/memory/SKILL.md](skills/memory/SKILL.md).
 
 ## Contributing
 
