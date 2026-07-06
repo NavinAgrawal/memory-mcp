@@ -34,7 +34,7 @@ npm run tools:build   # Build all standalone tools
 
 ## Architecture Overview
 
-This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing **213 knowledge graph tools** via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs (currently `^2.1.0`). Phase 15 (v12.2.0) added 23 tools surfacing memoryjs v1.14+ features (bitemporal validity, OCC, RBAC, procedural memory, active retrieval, causal reasoning, world model). Phase 16 (v12.3.0) added 53 tools surfacing memoryjs v2.1.0 — `do_not_remember` exclusions (5), decision rationale + ADR markdown dual-write (10), structured project context (12), heuristic guidelines (10), tool affordance + `ToolCallObserver` pipeline (11), observation dedup (2), spell correction (3). Latest release: v12.3.0.
+This is an **MCP protocol wrapper** around the `@danielsimonjr/memoryjs` library, exposing **225 knowledge graph tools** via the Model Context Protocol. After the Phase 13 extraction, this repo contains only 5 TypeScript source files — all core graph logic lives in memoryjs (currently `^2.1.0`). Phase 15 (v12.2.0) added 23 tools surfacing memoryjs v1.14+ features (bitemporal validity, OCC, RBAC, procedural memory, active retrieval, causal reasoning, world model). Phase 16 (v12.3.0) added 53 tools surfacing memoryjs v2.1.0 — `do_not_remember` exclusions (5), decision rationale + ADR markdown dual-write (10), structured project context (12), heuristic guidelines (10), tool affordance + `ToolCallObserver` pipeline (11), observation dedup (2), spell correction (3). Releases after Phase 16 added 12 more tools — a small "active project scope" pair (v12.3.2 backport) and a v12.5.0 engineering/diagnostics category — bringing the total to 225. Latest: v12.5.2 (npm) / plugin v12.6.0.
 
 **npm:** `@danielsimonjr/memory-mcp` | **Core lib:** `@danielsimonjr/memoryjs` (versions in package.json)
 
@@ -57,7 +57,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 |------|------|
 | `index.ts` | Entry point. Creates `ManagerContext`, starts `MCPServer`. Re-exports types from memoryjs for backward compatibility. |
 | `server/MCPServer.ts` | Creates MCP `Server`, registers `ListToolsRequest` and `CallToolRequest` handlers. Uses stdio transport. |
-| `server/toolDefinitions.ts` | Array of 213 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
+| `server/toolDefinitions.ts` | Array of 225 tool schemas (name, description, inputSchema). Organized by category with comment headers. |
 | `server/toolHandlers.ts` | Handler registry (`Record<string, ToolHandler>`). Each handler validates args with Zod schemas from memoryjs, calls the appropriate manager method, and returns formatted responses. Large-response tools are wrapped with `withCompression()`. |
 | `server/responseCompressor.ts` | Auto-compresses responses >256KB with brotli + base64 encoding. Uses `compress`/`decompress` from memoryjs. |
 
@@ -71,7 +71,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 - **Lazy managers**: `ManagerContext` instantiates managers on first access. Available accessors: `ctx.entityManager`, `ctx.relationManager`, `ctx.observationManager`, `ctx.searchManager`, `ctx.tagManager`, `ctx.hierarchyManager`, `ctx.analyticsManager`, `ctx.compressionManager`, `ctx.archiveManager`, `ctx.ioManager`, `ctx.graphTraversal`, `ctx.semanticSearch`, `ctx.rankedSearch`, `ctx.storage` (direct GraphStorage).
 - **Backward compat**: `index.ts` re-exports `ManagerContext` as `KnowledgeGraphManager` alias, plus core types.
 
-### Tool Categories (213 tools across 58 categories)
+### Tool Categories (225 tools across 60 categories)
 
 | Category | Count | Key Purpose |
 |----------|-------|-------------|
@@ -105,6 +105,7 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 | Cognitive Load | 2 | Working-memory load analysis and adaptive reduction |
 | Dream Engine | 3 | Background memory maintenance: 8-phase sleep-cycle consolidation |
 | **Project Scoping** | **1** | List and filter entities by project (v1.8.0) |
+| **Active Project Scope** | **2** | Set/get the server's active project-scope filter — mutable per-session state (`set_project_scope`, `get_project_scope`; v12.3.2 backport) |
 | **Memory Versioning** | **2** | Entity version chains and per-entity version history (v1.8.0) |
 | **Semantic Forget** | **1** | Two-tier deletion: exact match → semantic similarity fallback (v1.8.0) |
 | **Profiles** | **2** | User/agent profile get and update (v1.8.0) |
@@ -126,8 +127,16 @@ memory-mcp (this repo)              @danielsimonjr/memoryjs (npm dependency)
 | **Active Retrieval** | **1** | Iterative query rewriting until coverage threshold met (Phase 15 / memoryjs 3B.5) |
 | **Causal Reasoning** | **4** | Chain discovery, counterfactual queries, cycle detection (Phase 15 / memoryjs 3B.6) |
 | **World Model** | **3** | Graph snapshots, fact validation, outcome prediction (Phase 15 / memoryjs 3B.7) |
+| **Tool Affordance** | **11** | Per-tool outcome recording, affordance stats, suggestion, and the `ToolCallObserver` lifecycle (start/complete/error/partial/cancel/in-flight-count) (Phase 16 / memoryjs v2.1.0) |
+| **Heuristic Guidelines** | **10** | Add/get/list/match/reinforce heuristics, contradiction detection and resolution (Phase 16 / memoryjs v2.1.0) |
+| **Project Context** | **12** | Structured per-project facts, conventions, commands, and glossary — upsert/append/remove/clear/format-for-LLM (Phase 16 / memoryjs v2.1.0) |
+| **Decision Rationale** | **10** | Propose/accept/reject/supersede decisions, decision chains, and ADR markdown export/parse (Phase 16 / memoryjs v2.1.0) |
+| **Exclusion (`do_not_remember`)** | **5** | Rule-based memory exclusion: add/list/remove rules, check and find matches (Phase 16 / memoryjs v2.1.0) |
+| **Observation Dedup** | **2** | Exact and Jaccard-similarity duplicate observation detection (Phase 16 / memoryjs v2.1.0) |
+| **Spell Correction** | **3** | Query spell suggestion, vocabulary rebuild, and vocabulary size reporting (Phase 16 / memoryjs v2.1.0) |
+| **Engineering / Diagnostics** | **10** | `diag`, `health`, `check_graph`, `reindex`, cache stats/clear, `graph_size`, `inspect_entity`, `hierarchy_tree`, `entity_neighbors` (v12.5.0) |
 
-New categories (v1.8.0/v1.9.0/Phase 14/Phase 15, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories. Phase 15 surfaces also include W3C Linked Data export formats (`turtle`, `rdf-xml`, `json-ld` — memoryjs η.5.4) and PII redaction on export (`redactPii: true` — memoryjs η.6.3) wired into the existing `export_graph` tool rather than as new tools.
+New categories (v1.8.0/v1.9.0/Phase 14/Phase 15/Phase 16/v12.3.2/v12.5.0, bold above) are implemented in `toolDefinitions.ts` and `toolHandlers.ts` in the same pattern as existing categories. Phase 15 surfaces also include W3C Linked Data export formats (`turtle`, `rdf-xml`, `json-ld` — memoryjs η.5.4) and PII redaction on export (`redactPii: true` — memoryjs η.6.3) wired into the existing `export_graph` tool rather than as new tools.
 
 ### Adding a New Tool
 
