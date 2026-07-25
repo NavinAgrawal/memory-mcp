@@ -307,6 +307,11 @@ cython_debug/
 
 # Memory data files
 *.jsonl
+# Timestamped backups of the memory store (e.g. memory.jsonl.bak-premerge-YYYYMMDD).
+# These are real graph data, not build output — the `*.jsonl` rule above misses
+# them because the suffix comes after the extension, so they showed up as
+# untracked forever and were one `git add -A` away from being committed.
+*.jsonl.bak-*
 memory.db
 *.db-shm
 *.db-wal
