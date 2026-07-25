@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`.github/workflows/release.yml` and `scripts/release.py` — inherited upstream machinery that could never run here.** Both are vendored copies from the `modelcontextprotocol/servers` monorepo; the git history for the workflow still carries upstream commit messages and PR numbers (e.g. `Remove comments that break release.yml (#2735)`). The first job was gated on `if: github.repository_owner == 'modelcontextprotocol'`, and every other job (`update-packages`, `publish-pypi`, `publish-npm`, `create-release`) chained off it via `needs:`, so **the entire workflow was inert in this repo** — yet its `schedule: cron '0 10 * * *'` fired it *daily*, producing an unbroken run of `skipped` results that buried real runs in the Actions history. It also assumed a monorepo layout this repo does not have (it scanned `src/` for nested `package.json` / `pyproject.toml` manifests — there are none) and published **PyPI** packages, which this repo has never had. `scripts/release.py` was referenced *only* by that workflow, so it is deleted with it.
+
+- **The `release: [published]` trigger on the TypeScript CI workflow.** With the publish job gone, a release event only re-ran the same CI against a commit already tested on push to `main` — burning a redundant 4-leg matrix per release. Publishing is local-only (see below), so nothing about a release changes what CI would test. Same reasoning applied to the sibling `memoryjs` repo.
+
+  Publishing is **local-only** by policy: releases go out via `npm publish` from a workstation, and CI's job is the *gate* (typecheck · build · test), never delivery. No version of `@danielsimonjr/memory-mcp` was ever published from CI — `npm view @danielsimonjr/memory-mcp dist.attestations` is empty for every release, and the repo has no Actions secrets, so `secrets.NPM_TOKEN` resolved to an empty string.
+
 ### Fixed
 
 - **`engines.node: ">=18.0.0"` was false on Windows.** Adding the Windows CI leg (above) immediately proved it: `npm ci` **cannot install** on windows + Node 20. `better-sqlite3` — pulled in transitively via `@danielsimonjr/memoryjs` (`^11.7.0`) — ships **no prebuilt binary** for Node 20's ABI on win32, so install falls back to `node-gyp rebuild` and fails outright:
