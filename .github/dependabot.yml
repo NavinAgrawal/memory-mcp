@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # npm: the root package plus each standalone tool in tools/* (all four carry
+  # their own package.json + package-lock.json).
+  #
+  # Grouping matters here: before this file existed, the repo had NO Dependabot
+  # config at all, so only GitHub's *security* updates fired — one ungrouped PR
+  # per advisory, opened at whatever hour the advisory landed. Those PRs then sat
+  # open, and every subsequent security job for the same dependency+version
+  # aborted with `pull_request_exists_for_security_update`, which GitHub reports
+  # as a hard *failure* of the "Dependabot Updates" run. Grouped weekly version
+  # updates keep the dependency floor high enough that far fewer advisories ever
+  # become actionable in the first place.
+  - package-ecosystem: "npm"
+    directories:
+      - "/"
+      - "/tools/*"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    versioning-strategy: increase
+    groups:
+      # One PR per week for everything routine. Majors stay ungrouped so they
+      # get individual review — they are the ones that break builds.
+      npm-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "automated"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

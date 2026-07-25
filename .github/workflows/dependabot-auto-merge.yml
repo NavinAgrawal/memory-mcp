@@ -1,0 +1,68 @@
+name: Dependabot Auto-Merge
+
+# Why this exists: Dependabot PRs on this repo used to sit open indefinitely.
+# Every later security job for the same dependency+version then aborted with
+# `pull_request_exists_for_security_update`, which surfaces as a *failed*
+# "Dependabot Updates" run — so the repo showed a steady drip of red that was
+# really just "the previous PR was never merged". Landing green patch/minor
+# updates promptly removes the cause rather than the symptom.
+#
+# Safety: this does NOT bypass review gates. `--auto` queues a GitHub
+# auto-merge that only fires once branch protection is satisfied, which on
+# `main` means all four required CI contexts (ubuntu/windows x Node 22/24)
+# must be green. Major updates are never auto-merged — they get a comment.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # `gh pr merge --auto` hard-fails if the repository has auto-merge
+      # disabled. Probe first so a missing repo setting produces an actionable
+      # warning instead of a red X on every single Dependabot PR.
+      - name: Check repository auto-merge setting
+        id: repo
+        run: |
+          ENABLED=$(gh api "repos/$GITHUB_REPOSITORY" --jq '.allow_auto_merge')
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+          if [ "$ENABLED" != "true" ]; then
+            echo "::warning::Auto-merge is disabled for this repository. \
+          Enable Settings -> General -> 'Allow auto-merge' to activate this workflow."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-merge patch and minor updates
+        if: |
+          steps.repo.outputs.enabled == 'true' &&
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on major updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr comment "$PR_URL" --body \
+            "This is a **major** version update and will not be auto-merged. Please review carefully."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

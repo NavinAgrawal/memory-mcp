@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The recurring "Dependabot Updates" failures — root cause was that Dependabot PRs never landed.** The runs were failing with `pull_request_exists_for_security_update`, which is not a config error at all: Dependabot opens a security-update job, finds an open PR already bumping that dependency to that exact version, records an error, and the container exits 1. So each red run was really reporting *"the PR I opened days ago is still sitting there."* Three things kept them sitting:
+
+  1. **This repo had no `.github/dependabot.yml`.** It was missed by the workspace-wide Dependabot rollout, so only GitHub's *security* updates ever fired — one ungrouped PR per advisory, at whatever hour the advisory landed, with no schedule and no grouping. Added, covering the root package, all four `tools/*` packages, and GitHub Actions, with minor/patch grouped into a single weekly PR.
+  2. **There was no auto-merge workflow.** Added `.github/workflows/dependabot-auto-merge.yml`, matching the sibling repos: patch/minor queue a GitHub auto-merge (which still waits for all four required CI contexts under branch protection), majors get a comment and are never auto-merged.
+  3. **`ci (windows-latest, 24.x)` was intermittently red**, and branch protection requires it — so a flaky leg pinned a PR open indefinitely. See below.
+
+- **Flaky `ci (windows-latest, 24.x)` leg — `testTimeout` raised from vitest's 5s default to 30s.** `observation-tools.test.ts > should add single observation to entity` timed out at 5000ms on the hono PR while the *same commit* passed on both ubuntu legs, on windows/Node 22, and on a plain re-run of the identical job — so it was runner jitter, not a regression. The mechanism is oversubscription: these suites are I/O-bound (every test builds a real JSONL graph under `tmpdir`) and run heavily parallel, and the failing run logged **162s of test time inside 63s of wall clock**. Under that contention a trivial `add_observations` call can exceed a 5s budget. `hookTimeout` raised likewise, since `beforeEach`/`afterEach` do recursive `mkdir`/`rm` under `tmpdir` — the slowest operation on a Windows runner. Real hangs still fail; scheduling jitter no longer does.
+
+  **One manual step remains:** the repository has `allow_auto_merge: false` (the sibling repos have it `true` — another piece of the rollout this repo missed). `gh pr merge --auto` cannot work until *Settings → General → Allow auto-merge* is enabled. The workflow probes the setting and emits an actionable warning rather than failing red, so it activates automatically once the box is ticked.
+
 ### Removed
 
 - **`.github/workflows/release.yml` and `scripts/release.py` — inherited upstream machinery that could never run here.** Both are vendored copies from the `modelcontextprotocol/servers` monorepo; the git history for the workflow still carries upstream commit messages and PR numbers (e.g. `Remove comments that break release.yml (#2735)`). The first job was gated on `if: github.repository_owner == 'modelcontextprotocol'`, and every other job (`update-packages`, `publish-pypi`, `publish-npm`, `create-release`) chained off it via `needs:`, so **the entire workflow was inert in this repo** — yet its `schedule: cron '0 10 * * *'` fired it *daily*, producing an unbroken run of `skipped` results that buried real runs in the Actions history. It also assumed a monorepo layout this repo does not have (it scanned `src/` for nested `package.json` / `pyproject.toml` manifests — there are none) and published **PyPI** packages, which this repo has never had. `scripts/release.py` was referenced *only* by that workflow, so it is deleted with it.
