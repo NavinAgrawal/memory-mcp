@@ -108,8 +108,14 @@ async function main() {
   // Initialize memory file path with backward compatibility
   const memoryFilePath = await ensureMemoryFilePath();
 
-  // Initialize manager context with the memory file path
-  managerContext = new ManagerContext(memoryFilePath);
+  // Honour MEMORY_STORAGE_TYPE. Passing a bare string here selects memoryjs's default
+  // (jsonl) backend unconditionally, so `MEMORY_STORAGE_TYPE=sqlite` was documented but
+  // silently ignored — and `diag` reported it as sqlite while writes went to memory.jsonl.
+  const storageType = process.env.MEMORY_STORAGE_TYPE === "sqlite" ? "sqlite" : "jsonl";
+  managerContext = new ManagerContext({
+    storagePath: memoryFilePath,
+    storageType,
+  });
 
   // Initialize and start MCP server
   const server = new MCPServer(managerContext);

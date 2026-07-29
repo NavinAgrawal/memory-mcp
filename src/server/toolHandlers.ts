@@ -112,7 +112,21 @@ function getStorageFilePath(ctx: ManagerContext): string {
   // type-cast). Older versions of this helper looked for `filePath` and
   // silently fell back to 'memory.jsonl' — which made diag / size / reindex
   // reports point at the wrong file. Try both field names defensively.
-  const storage = ctx.storage as unknown as { memoryFilePath?: string; filePath?: string };
+  // SQLiteStorage exposes NEITHER field — it has a public `getFilePath()` accessor backed by
+  // `validatedDbFilePath`. Without this branch the helper fell through to the literal
+  // 'memory.jsonl', which resolves against cwd: diag then stat'd an unrelated file and reported
+  // it as your store (`exists: true` with that file's size) while writes went to memory.db.
+  const storage = ctx.storage as unknown as {
+    memoryFilePath?: string;
+    filePath?: string;
+    getFilePath?: () => string;
+  };
+  if (typeof storage.getFilePath === 'function') {
+    try {
+      const resolved = storage.getFilePath();
+      if (resolved) return resolved;
+    } catch { /* fall through to the field lookups below */ }
+  }
   return storage.memoryFilePath ?? storage.filePath ?? 'memory.jsonl';
 }
 
@@ -3004,7 +3018,10 @@ export const toolHandlers: Record<string, ToolHandler> = {
       runtime: { node: process.version, platform: process.platform, arch: process.arch, pid: process.pid },
       storage: {
         path: storagePath,
-        type: process.env.MEMORY_STORAGE_TYPE ?? 'jsonl',
+        // Mirror index.ts's normalization exactly. Echoing the raw env var made diag report
+        // whatever was set (e.g. a typo, or 'sqlite' back when it was ignored) rather than the
+        // backend actually in use — a diagnostic that confirmed the bug instead of exposing it.
+        type: process.env.MEMORY_STORAGE_TYPE === 'sqlite' ? 'sqlite' : 'jsonl',
         exists,
         sizeBytes,
         entities: stats.totalEntities,
