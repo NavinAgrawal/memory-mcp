@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.7.1] - 2026-08-02
+
+### Security
+
+- **Cleared all 4 open Dependabot alerts (4 moderate) — `npm audit` now reports 0.** One was
+  **runtime** and therefore consumer-facing: `@hono/node-server` (`< 2.0.5`), reaching the tree
+  transitively through `@modelcontextprotocol/sdk` (manifest `^1.21.1`, resolved 1.29.0). The
+  parent's own range permitted a patched version, so this was a **stale lockfile resolution**
+  rather than a manifest constraint; fixed at the parent (`^1.21.1` → **`^1.30.0`**) plus a lock
+  refresh instead of overriding the leaf. The remaining three (`tar`, development scope) dropped
+  out of the tree entirely with the refresh.
+  Verified against the **resolved lockfile**: `@hono/node-server` 1.19.14 → **2.0.12** (a major,
+  permitted by the SDK's `^1.19.9 || ^2.0.5` range); `tar` no longer resolved at all.
+  Gate: build clean, **791/791 tests passing** across 36 files.
+
 ### Fixed
 
 - **`MEMORY_STORAGE_TYPE=sqlite` was documented but silently ignored — every install has been writing JSONL.** `main()` called `new ManagerContext(memoryFilePath)` with a bare string, which selects memoryjs's default (jsonl) backend unconditionally. The env var appeared in exactly two places in the whole repo: a code comment, and the `diag` tool's output. So the *only* observable effect of setting it was that `diag` **reported** `sqlite` — a diagnostic that confirmed the setting had been applied while the process wrote to `memory.jsonl`. memoryjs 3.0.0 has supported this the whole time via `ManagerContextOptions { storagePath, storageType }`; it was simply never passed. Now normalized once in `index.ts` and mirrored in `diag`, so the reported type is the backend actually in use rather than an echo of the environment. Verified end-to-end against the built server on both backends: `sqlite` produces a real `memory.db` (`SQLite format 3` header) and `jsonl` produces `memory.jsonl`, each with the entity persisted and `diag` naming the correct file.
