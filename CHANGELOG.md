@@ -61,7 +61,7 @@ ode_modulesetter-sqlite3
 
 ### Added
 
-- **Windows CI leg.** CI ran on `ubuntu-latest` only — but Windows is the *production* platform for this MCP server (it runs on Daniel's Windows box), so CI had never tested the OS the server actually ships on. The `ci` job now matrixes over `[ubuntu-latest, windows-latest]` × Node 20/22.
+- **Windows CI leg.** CI ran on `ubuntu-latest` only — but Windows is the *production* platform for this MCP server (it runs on the user's Windows box), so CI had never tested the OS the server actually ships on. The `ci` job now matrixes over `[ubuntu-latest, windows-latest]` × Node 20/22.
 
 ## [12.7.0] - 2026-07-26
 
