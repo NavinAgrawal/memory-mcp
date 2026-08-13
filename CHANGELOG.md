@@ -38,6 +38,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Plugin manifest version aligned with the npm package (both 12.7.2).
 
+> **Known issue, not fixed by this release:** the deployed Claude Code plugin
+> (`bundle/index.mjs` in the plugin cache) still cannot open its SQLite storage —
+> confirmed live, 2026-08-12: `diag` fails with "Could not locate the bindings
+> file" against every candidate path. `better-sqlite3` needs `prebuild-install`
+> or `node-gyp rebuild` to run as an npm **install script**, and the Claude Code
+> plugin installer does not run install scripts for any dependency. The
+> `^12.11.1` bump above (and the override) narrow the problem for a registry
+> `npm install` — a prebuild is now available instead of a from-source
+> compile — but neither changes how the plugin cache is populated, so the
+> fetch step itself never runs there either way. This is the same class of
+> defect `librarian-mcp` shipped in 0.3.0 and fixed in 0.3.1 with a loader that
+> falls back to a sibling checkout; that fix does not transplant directly here
+> because this repo never imports `better-sqlite3` itself — it is entirely
+> internal to memoryjs's `StorageFactory`. A durable fix needs either an
+> upstream memoryjs change (ship a fallback/prebuild strategy that survives a
+> scriptless install) or the plugin installer opting in to install scripts for
+> this dependency.
+
 ## [12.7.1] - 2026-08-02
 
 ### Security
