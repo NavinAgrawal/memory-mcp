@@ -16,6 +16,14 @@
 //
 // Run: node scripts/build-bundle.mjs
 import { build } from 'esbuild';
+import { readFileSync } from 'node:fs';
+
+// Injected so MCPServer does not have to `require('../../package.json')` at
+// runtime. That relative path resolves from dist/server/ but NOT from bundle/,
+// so the bundled server died on startup with
+// "Cannot find module '../../package.json'" - which is why this bundle sat 40
+// days behind its own source: rebuilding it produced a crashing artifact.
+const { version: PKG_VERSION } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 const BANNER = [
   "import { createRequire as __createRequire } from 'node:module';",
@@ -36,6 +44,7 @@ await build({
   // No shebang here: esbuild already preserves the one on src/index.ts. Adding a second
   // puts it on line 2, where it is a syntax error rather than a comment.
   banner: { js: BANNER },
+  define: { __PKG_VERSION__: JSON.stringify(PKG_VERSION) },
   external: [
     'better-sqlite3',
     'fsevents',

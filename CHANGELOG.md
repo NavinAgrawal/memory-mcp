@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [12.7.2] - 2026-08-11
+## [12.8.0] - 2026-08-15
+
+### Fixed — the deployed plugin could not open its storage at all
+
+Every tool call in the installed plugin failed with **"Could not locate the bindings
+file"**. The plugin's `.mcp.json` pins `MEMORY_STORAGE_TYPE=sqlite`, and
+`better-sqlite3` obtains its binary from an `install` script — which the Claude Code
+plugin installer never runs. The result was a `better-sqlite3` directory in the plugin
+cache with no `better_sqlite3.node` in it, and a completely unusable server.
+
+Fixed upstream in **memoryjs 3.3.0**, which falls back to Node's built-in `node:sqlite`
+when the native addon is missing. Dependency raised to `^3.3.0`.
+
+Verified end-to-end against the rebuilt bundle rather than in theory: `diag` now returns
+`{"type":"sqlite","exists":true,"sizeBytes":4096,"entities":1}` after writing and reading
+back an entity with no native addon present.
+
+### Fixed — the bundle crashed on startup when rebuilt, so it was 40 days stale
+
+`bundle/index.mjs` is the artifact the plugin loads. It was last built **2026-07-02**
+while `src/` was last changed **2026-08-11** — every source change in between was
+undeployed.
+
+The reason it was never rebuilt is that rebuilding produced a **broken** artifact:
+`src/server/MCPServer.ts` read its version via `require('../../package.json')`, which
+resolves from `dist/server/` but not from `bundle/`, so the bundled server died
+immediately with *"Cannot find module '../../package.json'"*.
+
+The version is now injected at bundle time by `scripts/build-bundle.mjs` (esbuild
+`define`), with the runtime `require` kept as a fallback for the plain `tsc` build. The
+`typeof` guard is safe on an undeclared identifier, so esbuild dead-code-eliminates the
+require branch in the bundle and `dist/` keeps working unchanged.
+
+Rebuilt bundle: 3,099,537 → 3,452,765 bytes.
+
+typecheck 0, 791 tests pass.
 
 ### Changed
 
