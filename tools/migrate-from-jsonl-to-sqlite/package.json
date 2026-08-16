@@ -6,18 +6,24 @@
     "build": "npm run build:ts && npm run build:exe",
     "build:ts": "tsc",
     "build:exe": "npx @yao-pkg/pkg . --target node22-win-x64 --output migrate-from-jsonl-to-sqlite.exe",
-    "start": "node dist/migrate-from-jsonl-to-sqlite.js"
+    "start": "node dist/migrate-from-jsonl-to-sqlite.js",
+    "postinstall": "node scripts/rebuild-native.mjs",
+    "rebuild:native": "node scripts/rebuild-native.mjs"
   },
   "bin": {
     "migrate-from-jsonl-to-sqlite": "./dist/migrate-from-jsonl-to-sqlite.js"
   },
   "pkg": {
-    "scripts": ["dist/**/*.js"],
+    "scripts": [
+      "dist/**/*.js"
+    ],
     "assets": [
       "node_modules/better-sqlite3/build/Release/*.node",
       "node_modules/better-sqlite3/prebuilds/**/*"
     ],
-    "targets": ["node22-win-x64"]
+    "targets": [
+      "node22-win-x64"
+    ]
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3"
