@@ -11,7 +11,7 @@ updates:
   # as a hard *failure* of the "Dependabot Updates" run. Grouped weekly version
   # updates keep the dependency floor high enough that far fewer advisories ever
   # become actionable in the first place.
-  - package-ecosystem: "npm"
+  - package-ecosystem: "bun"
     directories:
       - "/"
       - "/tools/*"

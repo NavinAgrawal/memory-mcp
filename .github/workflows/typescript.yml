@@ -10,7 +10,7 @@ on:
 # previous detect-packages/matrix template scanned src/ for nested
 # package.json manifests (none exist), so the Build/Publish matrix expanded
 # empty and the run concluded failure. Replaced with a direct single-package
-# pipeline. (npm ci also runs the `prepare` build hook.)
+# pipeline. (bun install --frozen-lockfile
 
 jobs:
   ci:
@@ -23,7 +23,7 @@ jobs:
         # server actually ships on.
         os: [ubuntu-latest, windows-latest]
         # Node 20 reached EOL 2026-04 and, critically, better-sqlite3 (pulled in via
-        # @danielsimonjr/memoryjs) ships NO Windows prebuild for its ABI — so `npm ci`
+        # @danielsimonjr/memoryjs) ships NO Windows prebuild for its ABI — so `bun install --frozen-lockfile
         # cannot even install on windows+node20 (it falls back to node-gyp and fails).
         # Supporting a runtime the package cannot install on is not support.
         node-version: ['22.x', '24.x']
@@ -33,13 +33,18 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.0'
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Type check
-        run: npm run typecheck
+        run: bun run typecheck
       - name: Build
-        run: npm run build
+        run: bun run build
       - name: Test
-        run: npm test
+        run: bun run test
         env:
           SKIP_BENCHMARKS: '1'
