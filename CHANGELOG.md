@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.8.2] - 2026-08-25
+
+### Fixed — the architecture docs were unverifiable, and the generator could not reproduce itself
+
+- **All 8 documents under `docs/architecture/` now pass the drift gate** (previously 8 failures:
+  not one carried a `## Verification` section, so the gate could not distinguish "checked and
+  correct" from "never checked"). The five authored documents gained real claim tables; the
+  three generated reports carry a **generator-emitted** do-not-edit banner and an explicit
+  `repo-map:no-verification` opt-out.
+- **`TEST_COVERAGE.md` had not been regenerated since 2026-07-26.** It is a tracked, committed
+  file, but `docs:deps` did not pass `--include-tests`, so the one command anyone runs to
+  refresh the docs silently skipped it. The flag is now part of the script.
+- **The generator is reproducible.** Six date sources (`const today` ×3, a `d:` field, a
+  `generatedAt` ISO timestamp, and a `**Generated**` line) made every run differ from the last,
+  which is what makes drift indistinguishable from noise. All removed; nothing read them.
+  Verified by generating twice and diffing.
+
+### Note
+
+`unusedExportsCount` is 34 of 46 exports. That is expected for an MCP server — tool handlers are
+reached by protocol dispatch, not by static import — and is stated in `API.md` rather than left
+to look like dead code. `orphanedFiles` and `noImporterFileCount` are both **0**.
+
 ## [12.8.1] - 2026-08-25
 
 ### Fixed

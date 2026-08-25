@@ -1,11 +1,14 @@
-# Unused Files and Exports Analysis
+<!-- repo-map:no-verification -->
+<!-- GENERATED FILE -- do not edit by hand. Edit the generator at
+     tools/create-dependency-graph/create-dependency-graph.ts, then run
+     `npm run docs:deps`. Hand edits are lost on the next run. -->
 
-**Generated**: 2026-04-26
+# Unused Files and Exports Analysis
 
 ## Summary
 
 - **Potentially unused files**: 0
-- **Potentially unused exports**: 9
+- **Potentially unused exports**: 10
 
 ## Potentially Unused Files
 
@@ -30,6 +33,7 @@ These exports are not imported by any other file in the codebase:
 
 ### `src/server/toolHandlers.ts`
 
+- `getActiveProjectScope` (function)
 - `ToolResponse` (type)
 - `ToolHandler` (type)
 - `toolHandlers` (constant)

@@ -1,6 +1,10 @@
+<!-- repo-map:no-verification -->
+<!-- GENERATED FILE -- do not edit by hand. Edit the generator at
+     tools/create-dependency-graph/create-dependency-graph.ts, then run
+     `npm run docs:deps`. Hand edits are lost on the next run. -->
+
 # @danielsimonjr/memory-mcp - Dependency Graph
 
-**Version**: 12.7.0 | **Last Updated**: 2026-07-26
 
 This document provides a comprehensive dependency graph of all files, components, imports, functions, and variables in the codebase.
 
@@ -101,13 +105,15 @@ The codebase is organized into the following modules:
 **External Dependencies:**
 | Package | Import |
 |---------|--------|
-| `@danielsimonjr/memoryjs` | `formatToolResponse, formatTextResponse, formatRawResponse, validateWithSchema, validateFilePath, BatchCreateEntitiesSchema, BatchCreateRelationsSchema, EntityNamesSchema, DeleteRelationsSchema, AddObservationsInputSchema, DeleteObservationsInputSchema, ArchiveCriteriaSchema, SavedSearchInputSchema, SavedSearchUpdateSchema, ImportFormatSchema, ExtendedExportFormatSchema, MergeStrategySchema, ExportFilterSchema, SearchQuerySchema, HybridSearchManager, QueryAnalyzer, QueryPlanner, ReflectionManager, ObservationNormalizer, RefIndex, AuditLog, GovernanceManager, FreshnessManager, ArtifactManager, CollaborativeSynthesis, FailureDistillation, CognitiveLoadAnalyzer, ConsolidationScheduler, DreamEngine, DistillationPipeline, DefaultDistillationPolicy, NoOpDistillationPolicy, computeEntropy, passesEntropyFilter, EntropyFilterStage, getRoleProfile, listRoleProfiles, QueryCostEstimator, ContradictionDetector, PiiRedactor, ManagerContext, AgentRole, ArtifactFilter, CollaborativeSynthesisConfig, FailureDistillationConfig, AuditFilter, SalienceContext, AgentEntity, DreamEngineConfig, DreamPhaseConfig, ForgetOptions, ConflictInfo, ConflictStrategy` |
+| `@danielsimonjr/memoryjs` | `formatToolResponse, formatTextResponse, formatRawResponse, validateWithSchema, validateFilePath, BatchCreateEntitiesSchema, BatchCreateRelationsSchema, EntityNamesSchema, DeleteRelationsSchema, AddObservationsInputSchema, DeleteObservationsInputSchema, ArchiveCriteriaSchema, SavedSearchInputSchema, SavedSearchUpdateSchema, ImportFormatSchema, ExtendedExportFormatSchema, MergeStrategySchema, ExportFilterSchema, SearchQuerySchema, HybridSearchManager, QueryAnalyzer, QueryPlanner, ReflectionManager, ObservationNormalizer, RefIndex, FreshnessManager, ArtifactManager, CollaborativeSynthesis, FailureDistillation, CognitiveLoadAnalyzer, ConsolidationScheduler, DreamEngine, DistillationPipeline, DefaultDistillationPolicy, NoOpDistillationPolicy, computeEntropy, passesEntropyFilter, EntropyFilterStage, getRoleProfile, listRoleProfiles, QueryCostEstimator, ContradictionDetector, PiiRedactor, ManagerContext, AgentRole, ArtifactFilter, CollaborativeSynthesisConfig, FailureDistillationConfig, AuditFilter, SalienceContext, AgentEntity, DreamEngineConfig, DreamPhaseConfig, ForgetOptions, ConflictInfo, ConflictStrategy, DecisionManager, RankedSearch, RelationConsolidator, clearAllSearchCaches, getAllCacheStats, GraphStorage, RecordEventInput, EventQueryFilter, EventTimeRange, WhoDidWhatFilter, DialogueTurn, CTCGraphSnapshot` |
 | `zod` | `z` |
 
 **Node.js Built-in Dependencies:**
 | Module | Import |
 |--------|--------|
 | `path` | `path` |
+| `fs` | `promises` |
+| `perf_hooks` | `performance` |
 
 **Internal Dependencies:**
 | File | Imports | Type |
@@ -115,7 +121,7 @@ The codebase is organized into the following modules:
 | `./responseCompressor.js` | `maybeCompressResponse` | Import |
 
 **Exports:**
-- Functions: `handleToolCall`
+- Functions: `getActiveProjectScope`, `handleToolCall`
 - Constants: `toolHandlers`
 
 ---
@@ -168,12 +174,12 @@ graph TD
 |----------|-------|
 | Total TypeScript Files | 5 |
 | Total Modules | 2 |
-| Total Lines of Code | 7667 |
-| Total Exports | 11 |
+| Total Lines of Code | 7709 |
+| Total Exports | 12 |
 | Total Re-exports | 0 |
 | Total Classes | 1 |
 | Total Interfaces | 3 |
-| Total Functions | 5 |
+| Total Functions | 6 |
 | Total Type Guards | 1 |
 | Total Enums | 0 |
 | Type-only Imports | 0 |
@@ -182,5 +188,4 @@ graph TD
 
 ---
 
-*Last Updated*: 2026-07-26
-*Version*: 12.7.0
+*Version*: 12.8.1

@@ -1,6 +1,6 @@
 {
   "name": "@danielsimonjr/memory-mcp",
-  "version": "12.8.1",
+  "version": "12.8.2",
   "description": "Enhanced MCP memory server with hierarchies, compression, archiving, graph algorithms, semantic search, temporal KG, RBAC, bitemporal validity, OCC, procedural memory, causal reasoning, world model, do_not_remember exclusions, decision rationale, project context, heuristic guidelines, tool affordance + observer, observation dedup, spell correction, event memory, reconstructive memory, relation consolidation, agent reflection, and 241 advanced tools",
   "license": "MIT",
   "engines": {
@@ -53,7 +53,7 @@
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit --noUnusedLocals --noUnusedParameters --strict",
     "clean": "shx rm -rf dist",
-    "docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts",
+    "docs:deps": "npx tsx tools/create-dependency-graph/create-dependency-graph.ts --include-tests",
     "tools:install": "cd tools/chunking-for-files && npm install && cd ../compress-for-context && npm install && cd ../create-dependency-graph && npm install && cd ../migrate-from-jsonl-to-sqlite && npm install",
     "tools:build": "cd tools/chunking-for-files && npm run build && cd ../compress-for-context && npm run build && cd ../create-dependency-graph && npm run build && cd ../migrate-from-jsonl-to-sqlite && npm run build"
   },

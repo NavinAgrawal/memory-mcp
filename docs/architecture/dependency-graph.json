@@ -1,11 +1,10 @@
 {
   "metadata": {
     "name": "@danielsimonjr/memory-mcp",
-    "version": "12.2.0",
-    "lastUpdated": "2026-04-26",
+    "version": "12.8.1",
     "totalFiles": 5,
     "totalModules": 2,
-    "totalExports": 11
+    "totalExports": 12
   },
   "entryPoints": [
     {
@@ -210,8 +209,6 @@
               "ReflectionManager",
               "ObservationNormalizer",
               "RefIndex",
-              "AuditLog",
-              "GovernanceManager",
               "FreshnessManager",
               "ArtifactManager",
               "CollaborativeSynthesis",
@@ -242,7 +239,19 @@
               "DreamPhaseConfig",
               "ForgetOptions",
               "ConflictInfo",
-              "ConflictStrategy"
+              "ConflictStrategy",
+              "DecisionManager",
+              "RankedSearch",
+              "RelationConsolidator",
+              "clearAllSearchCaches",
+              "getAllCacheStats",
+              "GraphStorage",
+              "RecordEventInput",
+              "EventQueryFilter",
+              "EventTimeRange",
+              "WhoDidWhatFilter",
+              "DialogueTurn",
+              "CTCGraphSnapshot"
             ]
           },
           {
@@ -258,6 +267,18 @@
             "imports": [
               "path"
             ]
+          },
+          {
+            "module": "fs",
+            "imports": [
+              "promises"
+            ]
+          },
+          {
+            "module": "perf_hooks",
+            "imports": [
+              "performance"
+            ]
           }
         ],
         "internalDependencies": [
@@ -270,9 +291,11 @@
         ],
         "exports": [
           "toolHandlers",
+          "getActiveProjectScope",
           "handleToolCall"
         ],
         "functions": [
+          "getActiveProjectScope",
           "handleToolCall"
         ],
         "constants": [
@@ -310,11 +333,11 @@
   "statistics": {
     "totalTypeScriptFiles": 5,
     "totalModules": 2,
-    "totalLinesOfCode": 5423,
-    "totalExports": 11,
+    "totalLinesOfCode": 7709,
+    "totalExports": 12,
     "totalClasses": 1,
     "totalInterfaces": 3,
-    "totalFunctions": 5,
+    "totalFunctions": 6,
     "totalTypeGuards": 1,
     "totalEnums": 0,
     "totalConstants": 2,
@@ -323,6 +346,6 @@
     "runtimeCircularDeps": 0,
     "typeOnlyCircularDeps": 0,
     "unusedFilesCount": 0,
-    "unusedExportsCount": 9
+    "unusedExportsCount": 10
   }
 }
