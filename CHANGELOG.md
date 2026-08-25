@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.8.1] - 2026-08-25
+
+### Fixed
+
+- **The native-addon rebuild on install is portable and load-tested.** The `postinstall`
+  rebuild assumed an install layout that does not hold everywhere, and reported success
+  without ever loading the addon it had just built — so a rebuild that produced nothing
+  stayed silent until the first query died with *"Could not locate the bindings file"*.
+  It is now portable and proves the addon loads before claiming success.
+- **Floor raised to `@danielsimonjr/memoryjs@^3.3.1`**, which carries the same fix. The
+  previous `^3.3.0` range would have accepted it eventually; this makes it a guarantee
+  rather than a coincidence of resolution order.
+- **CI runs on Bun**, with the npm cache directive the migration invalidated removed.
+- Dependabot: `@types/better-sqlite3` and the npm minor/patch group across 5 directories.
+
 ## [12.8.0] - 2026-08-15
 
 ### Fixed — the deployed plugin could not open its storage at all
