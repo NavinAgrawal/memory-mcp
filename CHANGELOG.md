@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`main` had been red since 2026-08-25: `bun install --frozen-lockfile` rejected the lockfile.**
+  The v12.8.1 and v12.8.2 release commits edited `package.json` — including raising the
+  `@danielsimonjr/memoryjs` floor from `^3.3.0` to `^3.3.1` — without regenerating `bun.lock`, so
+  the lockfile still declared `^3.3.0` and resolved 3.3.0. CI installs with `--frozen-lockfile`,
+  which is exactly the check that catches that, and it had been failing on every push for two days.
+  Regenerated: the lockfile now declares `^3.3.1` and resolves **3.3.2** (3.3.1 is the
+  broken-install release). Two lines changed. Verified by reproducing CI's condition locally —
+  `bun install --frozen-lockfile` exits 0 and `tsc` is clean.
+  **A release that touches `package.json` must regenerate `bun.lock` in the same commit.**
+
 ### Security
 
 - **SHA-pinned `anthropics/claude-code-action`.** It was pinned to `@beta`, a mutable tag, in a
