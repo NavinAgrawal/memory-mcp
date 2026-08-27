@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **SHA-pinned `anthropics/claude-code-action`.** It was pinned to `@beta`, a mutable tag, in a
+  workflow that grants `id-token: write`. That combination is the one worth removing: a mutable
+  ref means the code running with that permission can change without any change here. Pinned to
+  the commit `@beta` resolved to, with `# beta` kept as a trailing comment so the intended track
+  is still visible. This freezes the action until deliberately re-pinned, which is the trade the
+  workspace's SHA-pin rule asks for.
+  The `id-token: write` grant itself is correct and stays: it mints an OIDC token for Anthropic
+  API auth, and this workflow performs no npm publishing.
+
 ## [12.8.2] - 2026-08-25
 
 ### Fixed — the architecture docs were unverifiable, and the generator could not reproduce itself
