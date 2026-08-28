@@ -5,6 +5,14 @@ on:
     branches:
       - main
   pull_request:
+  # A Dependabot PR auto-merged by dependabot-auto-merge.yml is pushed with GITHUB_TOKEN, and
+  # GitHub's recursion guard suppresses workflow triggers for those pushes -- so `main`
+  # can carry a dependency commit with no run at all (bc341764 did). The PR gate still
+  # held, but main's own history goes dark. A nightly run re-exercises main regardless of
+  # who pushed it, and workflow_dispatch lets a gap be backfilled on the spot.
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
 
 # This package is a single TypeScript package at the repository root. The
 # previous detect-packages/matrix template scanned src/ for nested

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Auto-merged Dependabot commits landed on `main` with no CI run at all.** `bc341764` sits on
+  `main` with zero workflow runs and a `pending` combined status. Cause: the auto-merge workflow
+  merges with `GITHUB_TOKEN`, and GitHub's recursion guard suppresses workflow triggers for pushes
+  made with that token, so `on: push` never fires. The merge gate itself held — branch protection
+  requires `ci (ubuntu|windows, 22|24)` and those passed on the pull request — but `main`'s own
+  history goes dark for every auto-merged dependency bump. `typescript.yml` now also runs on a
+  nightly `schedule` (07:00 UTC) and on `workflow_dispatch`, so `main` is exercised regardless of
+  who pushed it and a gap can be backfilled immediately. Chosen over granting the auto-merge
+  workflow a PAT, which would trigger CI but widens the token's blast radius to close a telemetry
+  hole rather than a gate hole.
+
 - **`main` had been red since 2026-08-25: `bun install --frozen-lockfile` rejected the lockfile.**
   The v12.8.1 and v12.8.2 release commits edited `package.json` — including raising the
   `@danielsimonjr/memoryjs` floor from `^3.3.0` to `^3.3.1` — without regenerating `bun.lock`, so
