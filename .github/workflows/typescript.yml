@@ -20,6 +20,12 @@ on:
 # empty and the run concluded failure. Replaced with a direct single-package
 # pipeline. (bun install --frozen-lockfile
 
+# Pinned explicitly rather than inheriting the repository default. The default is
+# `read` today, but it is a repo-level setting any future change can widen silently;
+# this job only checks out and builds, so it never needs more than read.
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: ${{ matrix.os }}

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`typescript.yml` now pins `permissions: contents: read` explicitly** instead of inheriting the
+  repository default. The default is `read` today — verified, not assumed — so this changes no
+  behaviour, but the default is a repo-level setting that any later change widens silently across
+  every workflow that omits a block. The job only checks out and builds, so read is all it can ever
+  need. Found while re-checking workflow invariants after the trigger change below.
+
 ### Fixed
 
 - **Auto-merged Dependabot commits landed on `main` with no CI run at all.** `bc341764` sits on
