@@ -24,10 +24,12 @@ holds only what is still outstanding.
   and stopping Dependabot from maintaining a file nothing installs from. Needs a decision on whether
   root dependencies are bun-managed or npm-managed, so it is not a drive-by fix.
 
-- [ ] **Confirm the nightly `schedule` on `typescript.yml` actually fires.** Added 2026-08-28 at
-  07:00 UTC to cover auto-merged Dependabot commits, which GitHub's recursion guard leaves with no
-  `on: push` run. The trigger is in place but has not yet had a scheduled run — verify one lands
-  before treating that gap as closed.
+- [x] **Confirm the nightly `schedule` on `typescript.yml` actually fires.** — **VERIFIED
+  2026-08-29**: first scheduled run fired at 07:05:39Z, conclusion `success`, event `schedule`.
+  The gap is closed by behaviour, not by syntax; the trigger validating was never the same as the
+  trigger running. Added 2026-08-28 at 07:00 UTC to cover auto-merged Dependabot commits, which
+  GitHub's recursion guard leaves with no `on: push` run. `bc341764` itself stays permanently
+  ungauged — it predates the `workflow_dispatch` trigger, so no workflow can be run against it.
 
 ## Five-axis assessment — 2026-08-28
 
