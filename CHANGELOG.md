@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.8.3] - 2026-09-03
+
 ### Security
 
 - **`typescript.yml` now pins `permissions: contents: read` explicitly** instead of inheriting the
