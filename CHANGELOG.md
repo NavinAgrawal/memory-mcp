@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **This package now also publishes under the legacy name `@danielsimonjr/enhanced-memory-mcp`.**
+  That name had exactly one version ever -- `0.7.0`, from 2025-11-11 -- while its `repository`
+  field already pointed here. It was refreshed to **12.8.3** on 2026-09-03 by publishing this tree
+  with only the `name` field changed; nothing was committed and the manifest was restored
+  byte-identical.
+
+  > **RELEASE OBLIGATION, and the reason this is in the CHANGELOG and not only in an agent's
+  > notes:** two names now ship identical code. **Every future release of this package must be
+  > published twice** -- once as `@danielsimonjr/memory-mcp` and once as
+  > `@danielsimonjr/enhanced-memory-mcp` -- or the legacy name silently goes stale again, exactly
+  > as it did for ten months. Both also declare the same `mcp-server-memory` bin, so installing
+  > both globally collides.
+  >
+  > The alternative is a one-time `npm deprecate` on the legacy name pointing at this one, which
+  > ends the obligation permanently. That is outward-facing and is the owner's call.
+
+
 ## [12.8.3] - 2026-09-03
 
 ### Security
