@@ -1,7 +1,5 @@
 # Future Features Roadmap
 
-**Version:** 3.2.0
-**Last Updated:** 2026-04-26
 **Current Version:** 12.2.0
 **Target Version:** 13.0.0 (post-v12.2.0)
 
@@ -904,5 +902,4 @@ When implementing features from this roadmap:
 
 ---
 
-*Document Version: 3.0.0 | Last Updated: 2026-01-08*
 *Feature design inspired by: SimpleMem three-stage semantic lossless compression architecture*

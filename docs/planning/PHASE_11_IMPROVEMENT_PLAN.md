@@ -1,6 +1,5 @@
 # Phase 11: Three-Layer Hybrid Search & Intelligent Retrieval
 
-**Version**: 1.1.0
 **Created**: 2026-01-08
 **Status**: PLANNED
 **Total Sprints**: 6

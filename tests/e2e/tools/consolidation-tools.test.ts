@@ -29,13 +29,23 @@ afterEach(async () => {
   } catch {
     // Ignore — scheduler may not be running
   }
-  // Windows: scheduler may still be flushing on async-write file handles even after
-  // stop_consolidation returns. ENOTEMPTY on temp-dir cleanup is harmless — log + skip.
-  try {
-    await fs.rm(testDir, { recursive: true, force: true });
-  } catch {
-    // Ignore — temp directory will be reaped by OS
-  }
+  // `stop_consolidation` stops the scheduler, but the manager still owns storage
+  // handles and the writer may have work in flight. Removing the directory under a
+  // live writer produced ENOENT noise on every run:
+  //
+  //   ENOENT: no such file or directory, open '...\memory.jsonl.tmp.51840.a0156...'
+  //
+  // The previous code swallowed that with an empty catch, which hid a real teardown
+  // race behind a comment calling it harmless. `close()` is the actual signal — it is
+  // idempotent — and the bounded retry covers anything already in flight when it
+  // returned. Same fix as `multi-agent-tools.test.ts`.
+  manager.close();
+  await fs.rm(testDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 50,
+  });
 });
 
 async function seedGraph() {
@@ -82,6 +92,23 @@ describe('Consolidation Tools E2E', () => {
         autoMergeDuplicates: 'yes',
       }, manager);
       expect(result.isError).toBe(true);
+    });
+
+    // `start()` runs one cycle immediately rather than waiting out the default
+    // one-hour interval, and `stop()` cannot cancel a cycle already in flight.
+    // Before the fix, `stop_consolidation` returned while that cycle was still
+    // writing, leaving a `memory.jsonl.tmp.*` file behind and producing
+    // `ConsolidationScheduler cycle error: ENOENT` when teardown removed the
+    // directory underneath it.
+    it('should leave no in-flight write after stop_consolidation returns', async () => {
+      await seedGraph();
+      await handleToolCall('start_consolidation', {}, manager);
+
+      const stopped = await handleToolCall('stop_consolidation', {}, manager);
+      expect(stopped.isError).toBeUndefined();
+
+      const remaining = await fs.readdir(testDir);
+      expect(remaining.filter(f => f.includes('.tmp.'))).toEqual([]);
     });
 
     it('should include interval in success message', async () => {

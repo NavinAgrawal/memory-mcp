@@ -1,7 +1,5 @@
 # Performance & Optimization Roadmap
 
-**Version:** 3.2.4
-**Last Updated:** 2026-05-17
 **Current Version:** 12.5.0
 **Target Version:** 13.0.0
 
@@ -1896,7 +1894,6 @@ diary_read: async (ctx, args) => {
 
 ---
 
-*Document Version: 4.0.0 | Last Updated: 2026-04-10*
 *Performance insights from: SimpleMem three-stage semantic lossless compression architecture*
 *New tools from: memoryjs v1.8.0 (supermemory gap-closing) + v1.9.0/v1.9.1 (mempalace gap-closing)*
 
@@ -1939,4 +1936,3 @@ See [`CHANGELOG.md`](../../CHANGELOG.md) [12.2.0] for the full Verified section.
 
 ---
 
-*Document Version: 4.1.0 | Last Updated: 2026-04-26*

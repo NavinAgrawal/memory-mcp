@@ -58,9 +58,8 @@ The codebase is organized into the following modules:
 **External Dependencies:**
 | Package | Import |
 |---------|--------|
-| `@modelcontextprotocol/sdk/server/index.js` | `Server` |
-| `@modelcontextprotocol/sdk/server/stdio.js` | `StdioServerTransport` |
-| `@modelcontextprotocol/sdk/types.js` | `CallToolRequestSchema, ListToolsRequestSchema` |
+| `@modelcontextprotocol/server` | `Server, CallToolRequest, ListToolsResult, Tool` |
+| `@modelcontextprotocol/server/stdio` | `serveStdio, StdioServerHandle` |
 | `@danielsimonjr/memoryjs` | `logger, ManagerContext` |
 
 **Node.js Built-in Dependencies:**
@@ -174,7 +173,7 @@ graph TD
 |----------|-------|
 | Total TypeScript Files | 5 |
 | Total Modules | 2 |
-| Total Lines of Code | 7709 |
+| Total Lines of Code | 7737 |
 | Total Exports | 12 |
 | Total Re-exports | 0 |
 | Total Classes | 1 |
@@ -188,4 +187,4 @@ graph TD
 
 ---
 
-*Version*: 12.8.1
+*Version*: 12.9.0

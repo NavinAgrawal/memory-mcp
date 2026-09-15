@@ -1,7 +1,5 @@
 # Memory MCP - API Reference
 
-**Version**: 12.7.0
-**Last Updated**: 2026-07-26
 
 Complete reference for all 241 MCP tools provided by the Memory MCP server. The reference is in two parts: the original hand-written sections below (through Phase 15), then generated sections covering everything added since — Phase 12/14 surfaces that were previously undocumented here, Phase 16 (memoryjs v2.1.0), v12.3.2/v12.5.0, and v12.7.0 (memoryjs v3.0.0). Phase 15 extends three existing tools (`export_graph`, `create_entities`, `set_memory_visibility`) and v12.7.0 extends `hybrid_search` (graph channel, neighbor expansion, evidence-path explain, lookFor) — those updates are noted inline in their respective sections.
 
@@ -4755,10 +4753,7 @@ All tools return errors in this format:
 
 ---
 
-**Document Version**: 6.0
-**Last Updated**: 2026-07-26
 **Total Tools**: 241
-**Maintained By**: Daniel Simon Jr.
 
 ## Verification
 

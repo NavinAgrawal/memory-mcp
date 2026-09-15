@@ -126,5 +126,3 @@ We appreciate security researchers who responsibly disclose vulnerabilities. Con
 
 ---
 
-**Last Updated**: 2025-11-09  
-**Version**: 0.7.0

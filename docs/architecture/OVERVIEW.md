@@ -1,8 +1,5 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 12.7.0
-**Last Updated**: 2026-07-26
-
 ## What Is This?
 
 Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides persistent knowledge graph storage for AI assistants. It extends the official MCP memory server with advanced features for organizing, searching, and maintaining structured knowledge.
@@ -259,7 +256,6 @@ Set `MEMORY_FILE_PATH` environment variable to customize storage location.
 
 ---
 
-**Maintained by**: Daniel Simon Jr.
 
 ## Verification
 
@@ -268,12 +264,12 @@ Regenerate: `python repo_map.py map <repo> --out <dir>` · Check: `python repo_m
 
 | Claim | Value | Source |
 |---|---|---|
-| totalSourceFiles | 48 | dependency-graph.json |
-| totalLinesOfCode | 22564 | dependency-graph.json |
+| totalSourceFiles | 50 | dependency-graph.json |
+| totalLinesOfCode | 22868 | dependency-graph.json |
 | totalExports | 46 | dependency-graph.json |
 | entryRoots | 2 | dependency-graph.json |
 
-**`reachableFiles` is 5 of 48, and that is expected.** The two entry roots reach the
+**`reachableFiles` is 5 of 50, and that is expected.** The two entry roots reach the
 server surface; the remaining files are the test suite and tooling, which nothing imports
 because the runner invokes them. `orphanedFiles` is **0** and `noImporterFileCount` is **0** —
 nothing here is unreachable-and-unexplained.

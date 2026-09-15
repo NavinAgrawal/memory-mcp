@@ -2,7 +2,6 @@
 
 ## Project Refactoring: memory-mcp → memoryjs + memory-mcp
 
-**Version**: 1.0.0
 **Created**: 2026-01-09
 **Status**: Completed
 **Completed**: 2026-01-10
@@ -1718,6 +1717,3 @@ import {
 
 ---
 
-**Document Version**: 1.1.0
-**Last Updated**: 2026-01-10
-**Author**: Claude (with Daniel Simon Jr.)

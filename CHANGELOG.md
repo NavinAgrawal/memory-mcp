@@ -5,15 +5,80 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [12.9.0] - 2026-09-15
 
 ### Changed
+
+- **`@danielsimonjr/memoryjs` `^4.0.0` → `^4.2.0`.** The manifest range already admitted 4.2.0,
+  so nothing looked out of date — but `bun.lock` pinned **4.0.0** and 4.0.0 is what installed.
+  A satisfied semver range is not an uptake; the lock decides. Manifest and lock now both say
+  4.2.0.
+
+  The change that reaches this wrapper is **`loadGraph()`'s ownership contract**: the result is
+  now a read-only borrowed view, deep-frozen outside production, so any consumer that mutates it
+  throws `TypeError`. All 20 `ctx.storage.loadGraph()` call sites in `toolHandlers.ts` were
+  audited; every one reads (`.filter`, `.find`, `.map`, `.length`) and none writes, so no call
+  site needed a change. `tests/unit/storage-readonly-contract.test.ts` pins the contract —
+  verified RED on 4.0.0 (3 failures: the graph was not frozen) and GREEN on 4.2.0.
+
+  The other four 4.x behaviour changes are **not reachable from this package**: project-scoped
+  API keys, fixed REST 4xx message bodies and the new `RateLimiter` TTL/LRU defaults are all
+  REST-surface changes, and this repo mounts no REST router (no `RestRouter`, `withDefaults`,
+  `APIKeyStore` or `RateLimiter` reference exists in `src/`). `DurableReplaceError` on locked
+  Windows writes is raised inside memoryjs storage and surfaces through the existing handler
+  error path unchanged.
+
+- **`overrides.better-sqlite3` `^12.11.1` → `^13.0.3`.** memoryjs 4.2.0 depends on
+  `better-sqlite3@^13.0.3`, so the old override was silently *downgrading* its own dependency to
+  a 12.x line. The override exists to guarantee a prebuild is available rather than a from-source
+  MSVC compile; 13.0.3 is the current release, declares `engines.node >= 22` against this
+  package's `>= 22`, and installs and tests clean. Keeping an override that contradicts the
+  library it serves is the failure the override was added to prevent.
+
+- **`zod` `^4.5.4` → `^4.6.2`** (Dependabot #176, on `main` as `c2724ee7` since 2026-09-14);
+  the lockfile resolves **4.6.5**. Routine uptake with no security angle — 4.6.5 is current and
+  carries no advisories.
+
+  Listed only because it ships under this heading. A routine dependency bump does not earn its
+  own entry in isolation, but a version heading has to account for what actually releases under
+  it, and this landed on `main` while `[Unreleased]` was open.
+
+  Note for anyone reading the source PR: its title says *"bump zod from 4.6.5 to 4.6.2"*, which
+  reads as a downgrade and is not one. Dependabot compared the previously **resolved** version
+  (4.6.5) against the new declared **floor** (4.6.2). The manifest moved forward, 4.5.4 → 4.6.2.
 
 - **Bun pinned to 1.4.2** in `packageManager`, `engines.bun` and the CI workflow.
   All three together: a manifest pin that CI does not honour describes an install
   nothing actually performs.
 
 ### Fixed
+
+- **`stop_consolidation` reported "stopped" while a write was still in flight.**
+  `ConsolidationScheduler.start()` does not wait out its interval — it fires one cycle
+  **immediately** and only `unref()`s the timer, so the one-hour default interval never
+  protected anything. `stop()` clears the interval but cannot cancel a cycle already running:
+  `runConsolidationCycle` checks `running` on entry and then awaits a full graph save. Every
+  start/stop pair therefore left a `memory.jsonl.tmp.*` write in flight after the tool said it
+  had stopped, and any caller that acted on that answer — test teardown removing the storage
+  directory, or a shutdown path — raced it:
+
+      ConsolidationScheduler cycle error: ENOENT ... memory.jsonl.tmp.11948.b194517c5e4a
+
+  The handler now awaits `scheduler.initialCyclePromise` (exposed by memoryjs 4.2.0) after
+  `stop()`, so "stopped" means quiesced. Measured across the full suite: the
+  `ConsolidationScheduler cycle error` count went from 2 to **0**. The noise had been present
+  for some time and was previously suppressed by an empty `catch` in the test's `afterEach`
+  whose comment called it "harmless" — it was a real unquiesced write, not a Windows quirk.
+
+- **`consolidation-tools.test.ts` teardown swallowed the failure instead of fixing it.**
+  It removed the temp directory inside `try { } catch { }` with no `close()`, which hid the
+  race above. It now calls `ManagerContext.close()` and removes with bounded `maxRetries`, the
+  same shape `multi-agent-tools.test.ts` already uses.
+
+- **`CHANGELOG.md` had two separate `## [Unreleased]` headings**, split by a dated
+  `## 2026-09-03` section, so "unreleased" named two different sets of changes. The dated
+  section moved below them and the duplicate heading is gone; the surviving section is this
+  release.
 
 - **Test teardown no longer races the manager it is tearing down.**
   `multi-agent-tools.test.ts` turned `main` red on a **docs-only** commit (run 34119539526,
@@ -32,19 +97,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   coverage directory.
 
   Third instance of one shape in a night: a wall-clock duration standing in for a real signal.
-
-## 2026-09-03 - CI now exercises the NODE runtime, not just Bun
-
-- Every CI step ran through `bun run` while `setup-node` was installed and never invoked, so
-  the production runtime was never exercised. Bun is the dev toolchain; Node is what ships.
-- Added a Node smoke step importing the shipped entry (`./dist/index.js`) under Node; fails on a throw, a
-  syntax error, or an unresolvable import. A server that self-starts on import passes after 5s.
-- **Proven failure-capable before adoption** (on librarian-mcp): corrupt artifact -> exit 1,
-  missing dependency -> exit 1, good artifact -> exit 0. The missing-dependency case is the
-  class that forced six repos to revert during the Bun migration.
-- Smoke run locally against this repo's own artifact before the step was added.
-
-## [Unreleased]
 
 ### Changed
 
@@ -70,6 +122,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   > The alternative is a one-time `npm deprecate` on the legacy name pointing at this one, which
   > ends the obligation permanently. That is outward-facing and is the owner's call.
 
+
+## 2026-09-03 - CI now exercises the NODE runtime, not just Bun
+
+- Every CI step ran through `bun run` while `setup-node` was installed and never invoked, so
+  the production runtime was never exercised. Bun is the dev toolchain; Node is what ships.
+- Added a Node smoke step importing the shipped entry (`./dist/index.js`) under Node; fails on a throw, a
+  syntax error, or an unresolvable import. A server that self-starts on import passes after 5s.
+- **Proven failure-capable before adoption** (on librarian-mcp): corrupt artifact -> exit 1,
+  missing dependency -> exit 1, good artifact -> exit 0. The missing-dependency case is the
+  class that forced six repos to revert during the Bun migration.
+- Smoke run locally against this repo's own artifact before the step was added.
 
 ## [12.8.3] - 2026-09-03
 

@@ -1,8 +1,6 @@
 # Migration Guide: v0.7.0 → v0.8.0
 ## Upgrading to Enhanced Memory MCP v0.8.0
 
-**Version:** 0.8.0
-**Last Updated:** 2025-11-23
 
 ---
 
