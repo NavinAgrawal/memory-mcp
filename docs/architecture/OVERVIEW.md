@@ -1,8 +1,5 @@
 # Memory MCP Server - Project Overview
 
-**Version**: 12.7.0
-**Last Updated**: 2026-07-26
-
 ## What Is This?
 
 Memory MCP is an **enhanced Model Context Protocol (MCP) server** that provides persistent knowledge graph storage for AI assistants. It extends the official MCP memory server with advanced features for organizing, searching, and maintaining structured knowledge.

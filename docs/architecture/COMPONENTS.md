@@ -1,8 +1,5 @@
 # Memory MCP - Component Reference
 
-**Version**: 12.7.0
-**Last Updated**: 2026-07-26
-
 > **⚠️ Partially historical** — The `core/`, `search/`, `features/`, `utils/`, `types/`, and `workers/` component sections below describe modules that moved into the [`@danielsimonjr/memoryjs`](https://github.com/danielsimonjr/memoryjs) library in the Phase 13 extraction. This repo now contains only the server layer (`src/index.ts` + `src/server/`, 5 files). The pre-extraction sections are preserved as a reference to the component design, which lives on in memoryjs.
 
 ---

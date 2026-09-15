@@ -1,8 +1,5 @@
 # Memory MCP - System Architecture
 
-**Version**: 12.7.0
-**Last Updated**: 2026-07-26
-
 ---
 
 ## Table of Contents
