@@ -68,6 +68,42 @@ holds only what is still outstanding.
   GitHub's recursion guard leaves with no `on: push` run. `bc341764` itself stays permanently
   ungauged — it predates the `workflow_dispatch` trigger, so no workflow can be run against it.
 
+- [x] **`overrides.better-sqlite3` pinned `^12.11.1` while memoryjs 4.2.0 required `^13.0.3`.**
+      Filed and ticked in one pass: **found during the 4.2.0 uptake**, not planned work. The
+      override existed to guarantee a prebuild instead of a from-source MSVC compile, and had
+      inverted into pinning the library's own dependency a major behind. Raised to `^13.0.3`.
+
+- [x] **`stop_consolidation` answered "stopped" with a write still in flight.**
+      **Found during the 4.2.0 uptake.** `ConsolidationScheduler.start()` fires a cycle
+      immediately rather than waiting out its hour-long default interval, and `stop()` cannot
+      cancel a cycle already running. Any caller acting on that answer raced the write. The
+      handler now awaits `initialCyclePromise`; cycle-error count across the suite went 2 -> 0.
+
+- [x] **`CHANGELOG.md` carried two separate `## [Unreleased]` headings**, split by a dated
+      section, so "unreleased" named two different change sets. **Found during the uptake** while
+      converting the heading into a released `[12.9.0]`.
+
+- [x] **Doc hygiene: personal-name attributions and hand-maintained version/date stamps across
+      `docs/**` and the root `*.md`.** 34 files, 69 lines, in two sweeps. **Directed in review and
+      completed before the file-open-first process correction arrived**, so it is recorded ticked
+      rather than retro-filed as open — an item that was never open cannot be completed, and
+      back-dating one to move a counter is worse than the original miss.
+
+- [x] **Two scope misses in my own sweep, recorded because an unwritten process miss repeats.**
+      The first pass grepped `Maintained By` case-sensitively and missed `Maintained by` in
+      `OVERVIEW.md`; it also matched `Document Version` and `Last Updated` but not a bare
+      `**Version**:` header, leaving 23 files stamped. Both were caught by spot-checking the
+      result rather than by review. The lesson is to match the pattern, not the strings already
+      seen.
+
+- [ ] **Decide the fate of the `README.md` "Developer" credit** (raised 2026-09-15). The
+      `### Developer` section names a person. Repos are products written for a general reader, and
+      the narrow exceptions are LICENSE and copyright lines, `package.json` author fields, git
+      commit authorship, and the org name in URLs and package names — a README credits section is
+      none of those. But it is the project's own authorship credit rather than a maintainer
+      footer, and removing it is an owner decision, not a side effect of a stamp sweep. Left in
+      place pending that call.
+
 ## Five-axis assessment — 2026-08-28
 
 Per the workspace standing mandate, recorded so a later reader can see what was looked at and what
