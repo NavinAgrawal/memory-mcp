@@ -1,6 +1,5 @@
 # Phase 2B Test Plan: MCP Client-Side Tool Testing
 
-**Version**: 1.1.0
 **Created**: 2025-12-29
 **Updated**: 2025-12-31
 **Status**: Planned

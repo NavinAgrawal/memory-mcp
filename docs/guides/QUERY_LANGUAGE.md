@@ -1,7 +1,6 @@
 # Query Language Reference
 ## Boolean Search Syntax for Advanced Queries
 
-**Version:** 0.8.0
 
 ---
 

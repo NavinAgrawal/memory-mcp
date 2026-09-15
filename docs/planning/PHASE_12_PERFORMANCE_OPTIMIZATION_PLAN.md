@@ -1,6 +1,5 @@
 # Phase 12: Performance Optimization Plan
 
-**Version:** 1.0.0
 **Created:** 2026-01-09
 **Target Version:** 10.0.0
 **Source Document:** `docs/roadmap/PERFORMANCE_AND_CAPABILITIES.md`

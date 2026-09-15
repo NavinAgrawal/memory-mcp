@@ -1,6 +1,5 @@
 # Performance & Optimization Roadmap
 
-**Version:** 3.2.4
 **Current Version:** 12.5.0
 **Target Version:** 13.0.0
 

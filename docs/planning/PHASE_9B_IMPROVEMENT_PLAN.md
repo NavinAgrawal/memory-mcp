@@ -1,6 +1,5 @@
 # Phase 9B: TaskScheduler Integration
 
-**Version**: 1.1.0
 **Created**: 2026-01-05
 **Updated**: 2026-01-05
 **Status**: PLANNED

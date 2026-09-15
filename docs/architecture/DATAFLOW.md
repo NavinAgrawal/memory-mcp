@@ -1,6 +1,5 @@
 # Memory MCP - Data Flow Documentation
 
-**Version**: 10.0.0
 
 ---
 

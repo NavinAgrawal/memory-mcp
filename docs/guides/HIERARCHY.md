@@ -1,7 +1,6 @@
 # Hierarchical Nesting Guide
 ## Organizing Knowledge with Parent-Child Relationships
 
-**Version:** 0.8.0
 
 ---
 

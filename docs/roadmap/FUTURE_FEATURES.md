@@ -1,6 +1,5 @@
 # Future Features Roadmap
 
-**Version:** 3.2.0
 **Current Version:** 12.2.0
 **Target Version:** 13.0.0 (post-v12.2.0)
 
