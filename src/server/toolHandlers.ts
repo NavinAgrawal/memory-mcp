@@ -103,6 +103,15 @@ const queryCostEstimatorMap = new WeakMap<ManagerContext, QueryCostEstimator>();
 // when they want to auto-apply the scope.
 const projectScopeMap = new WeakMap<ManagerContext, string>();
 
+/**
+ * Read the active project scope for a context.
+ *
+ * The scope is per-context session state set by the `set_project_scope` tool.
+ * It is held in a WeakMap because `ctx.defaultProjectId` is readonly.
+ *
+ * @param ctx - The manager context to read the scope from.
+ * @returns The active project id, or `undefined` when no scope is set.
+ */
 export function getActiveProjectScope(ctx: ManagerContext): string | undefined {
   return projectScopeMap.get(ctx);
 }
@@ -1559,6 +1568,17 @@ export const toolHandlers: Record<string, ToolHandler> = {
       return formatTextResponse('No active consolidation scheduler found. Start one first with start_consolidation.');
     }
     scheduler.stop();
+    // `stop()` clears the interval but cannot cancel a cycle already running:
+    // `runConsolidationCycle` checks `running` only on entry, then awaits a full
+    // graph save. `start()` fires one cycle IMMEDIATELY -- it does not wait for
+    // the interval, which defaults to an hour -- so a start/stop pair always
+    // leaves a write in flight. Returning "stopped" there is a lie the caller
+    // acts on: teardown that deletes the storage directory races the write and
+    // logs `ConsolidationScheduler cycle error: ENOENT ... memory.jsonl.tmp.*`.
+    // memoryjs 4.2.0 exposes that cycle as `initialCyclePromise`; awaiting it
+    // makes "stopped" mean quiesced. The cycle handles its own errors, so this
+    // settles rather than rejects.
+    await scheduler.initialCyclePromise;
     return formatTextResponse('Consolidation scheduler stopped');
   },
 
