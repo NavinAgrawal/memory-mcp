@@ -1034,10 +1034,10 @@ Regenerate: `python repo_map.py map <repo> --out <dir>` · Check: `python repo_m
 
 | Claim | Value | Source |
 |---|---|---|
-| totalSourceFiles | 49 | dependency-graph.json |
+| totalSourceFiles | 50 | dependency-graph.json |
 | totalExports | 46 | dependency-graph.json |
 
-**`reachableFiles` is 5 of 49, and that is expected.** The two entry roots reach the
+**`reachableFiles` is 5 of 50, and that is expected.** The two entry roots reach the
 server surface; the remaining files are the test suite and tooling, which nothing imports
 because the runner invokes them. `orphanedFiles` is **0** and `noImporterFileCount` is **0** —
 nothing here is unreachable-and-unexplained.
