@@ -1,7 +1,7 @@
 {
   "metadata": {
     "name": "@danielsimonjr/memory-mcp",
-    "version": "12.8.1",
+    "version": "12.9.0",
     "totalFiles": 5,
     "totalModules": 2,
     "totalExports": 12
@@ -77,22 +77,19 @@
         "description": "MCP Server",
         "externalDependencies": [
           {
-            "package": "@modelcontextprotocol/sdk/server/index.js",
+            "package": "@modelcontextprotocol/server",
             "imports": [
-              "Server"
+              "Server",
+              "CallToolRequest",
+              "ListToolsResult",
+              "Tool"
             ]
           },
           {
-            "package": "@modelcontextprotocol/sdk/server/stdio.js",
+            "package": "@modelcontextprotocol/server/stdio",
             "imports": [
-              "StdioServerTransport"
-            ]
-          },
-          {
-            "package": "@modelcontextprotocol/sdk/types.js",
-            "imports": [
-              "CallToolRequestSchema",
-              "ListToolsRequestSchema"
+              "serveStdio",
+              "StdioServerHandle"
             ]
           },
           {
@@ -333,7 +330,7 @@
   "statistics": {
     "totalTypeScriptFiles": 5,
     "totalModules": 2,
-    "totalLinesOfCode": 7709,
+    "totalLinesOfCode": 7737,
     "totalExports": 12,
     "totalClasses": 1,
     "totalInterfaces": 3,

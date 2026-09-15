@@ -1,6 +1,6 @@
 metadata:
-  name: "@danielsimonjr/memory-mcp"
-  version: 12.8.1
+  name: '@danielsimonjr/memory-mcp'
+  version: 12.9.0
   totalFiles: 5
   totalModules: 2
   totalExports: 12
@@ -13,7 +13,7 @@ modules:
     src/index.ts:
       description: MCP Memory Server Entry Point
       externalDependencies:
-        - package: "@danielsimonjr/memoryjs"
+        - package: '@danielsimonjr/memoryjs'
           imports:
             - logger
             - defaultMemoryPath
@@ -60,17 +60,17 @@ modules:
     src/server/MCPServer.ts:
       description: MCP Server
       externalDependencies:
-        - package: "@modelcontextprotocol/sdk/server/index.js"
+        - package: '@modelcontextprotocol/server'
           imports:
             - Server
-        - package: "@modelcontextprotocol/sdk/server/stdio.js"
+            - CallToolRequest
+            - ListToolsResult
+            - Tool
+        - package: '@modelcontextprotocol/server/stdio'
           imports:
-            - StdioServerTransport
-        - package: "@modelcontextprotocol/sdk/types.js"
-          imports:
-            - CallToolRequestSchema
-            - ListToolsRequestSchema
-        - package: "@danielsimonjr/memoryjs"
+            - serveStdio
+            - StdioServerHandle
+        - package: '@danielsimonjr/memoryjs'
           imports:
             - logger
             - ManagerContext
@@ -92,7 +92,7 @@ modules:
     src/server/responseCompressor.ts:
       description: MCP Response Compression Module
       externalDependencies:
-        - package: "@danielsimonjr/memoryjs"
+        - package: '@danielsimonjr/memoryjs'
           imports:
             - compress
             - decompress
@@ -126,7 +126,7 @@ modules:
     src/server/toolHandlers.ts:
       description: MCP Tool Handlers
       externalDependencies:
-        - package: "@danielsimonjr/memoryjs"
+        - package: '@danielsimonjr/memoryjs'
           imports:
             - formatToolResponse
             - formatTextResponse
@@ -242,7 +242,7 @@ dependencyGraph:
 statistics:
   totalTypeScriptFiles: 5
   totalModules: 2
-  totalLinesOfCode: 7709
+  totalLinesOfCode: 7737
   totalExports: 12
   totalClasses: 1
   totalInterfaces: 3
