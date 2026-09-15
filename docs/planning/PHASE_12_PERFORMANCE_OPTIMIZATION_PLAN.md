@@ -2354,5 +2354,4 @@ npm run benchmark
 
 ---
 
-*Document Version: 1.0.0 | Created: 2026-01-09*
 *Phase 12 targets v10.0.0 release as foundation for memoryjs/memory-mcp split*

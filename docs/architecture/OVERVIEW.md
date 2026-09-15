@@ -256,7 +256,6 @@ Set `MEMORY_FILE_PATH` environment variable to customize storage location.
 
 ---
 
-**Maintained by**: Daniel Simon Jr.
 
 ## Verification
 

@@ -1563,7 +1563,4 @@ index.ts (entry point)
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-23
-**Author**: Claude (AI Assistant)
 **Status**: Draft - Awaiting Review

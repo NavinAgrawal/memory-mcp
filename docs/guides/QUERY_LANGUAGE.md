@@ -2,7 +2,6 @@
 ## Boolean Search Syntax for Advanced Queries
 
 **Version:** 0.8.0
-**Last Updated:** 2025-11-23
 
 ---
 

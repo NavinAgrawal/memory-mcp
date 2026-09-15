@@ -2,7 +2,6 @@
 ## Managing Memory Lifecycle and Long-Term Storage
 
 **Version:** 0.8.0
-**Last Updated:** 2025-11-23
 
 ---
 
