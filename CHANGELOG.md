@@ -35,6 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   package's `>= 22`, and installs and tests clean. Keeping an override that contradicts the
   library it serves is the failure the override was added to prevent.
 
+- **`zod` `^4.5.4` → `^4.6.2`** (Dependabot #176, on `main` as `c2724ee7` since 2026-09-14);
+  the lockfile resolves **4.6.5**. Routine uptake with no security angle — 4.6.5 is current and
+  carries no advisories.
+
+  Listed only because it ships under this heading. A routine dependency bump does not earn its
+  own entry in isolation, but a version heading has to account for what actually releases under
+  it, and this landed on `main` while `[Unreleased]` was open.
+
+  Note for anyone reading the source PR: its title says *"bump zod from 4.6.5 to 4.6.2"*, which
+  reads as a downgrade and is not one. Dependabot compared the previously **resolved** version
+  (4.6.5) against the new declared **floor** (4.6.2). The manifest moved forward, 4.5.4 → 4.6.2.
+
 - **Bun pinned to 1.4.2** in `packageManager`, `engines.bun` and the CI workflow.
   All three together: a manifest pin that CI does not honour describes an install
   nothing actually performs.
