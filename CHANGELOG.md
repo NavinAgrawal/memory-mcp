@@ -5,6 +5,18 @@ All notable changes to the Enhanced Memory MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`.claude-plugin/plugin.json` still declared `12.8.2` after the 12.9.0 release.** The release
+  bumped `package.json` and not the plugin manifest, so the Claude Code plugin system — and the
+  `local-marketplace` entry that mirrors this version — could not see 12.9.0 at all. The stale
+  value is inside the `v12.9.0` tag itself. Synced to `12.9.0`. This does not affect the npm
+  package: `plugin.json` is plugin-system metadata and is not part of the published tarball, so
+  no republish is implied. Root cause worth keeping: a repo that carries BOTH a `package.json`
+  and a `.claude-plugin/plugin.json` has two version fields and nothing enforces that they agree.
+
 ## [12.9.0] - 2026-09-15
 
 ### Changed
